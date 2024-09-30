@@ -68,6 +68,8 @@
         "list": "cpp",
         "source_location": "cpp",
         "future": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "cinttypes": "cpp",
+        "set": "cpp"
     }
 }

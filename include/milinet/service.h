@@ -27,10 +27,10 @@ public:
     bool ProcessMsg();
     void ProcessMsgs(size_t count);
 
-    virtual SessionCoroutine OnMsg(MsgUnique msg);
+    virtual Task OnMsg(MsgUnique msg);
 
     void Send(ServiceId id, MsgUnique msg);
-    SessionAwaiter Recv(SessionId session_id);
+    Awaiter Recv(SessionId session_id);
 
     ServiceId id() const { return id_; }
     bool in_queue() const { return in_queue_; }

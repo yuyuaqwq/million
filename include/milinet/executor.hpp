@@ -8,7 +8,7 @@
 
 #include "milinet/noncopyable.h"
 #include "milinet/msg_def.h"
-#include "milinet/session_coroutine.hpp"
+#include "milinet/task.hpp"
 
 namespace milinet {
 
@@ -27,15 +27,15 @@ class ServiceMsgExecutor {
         iter->second.handle.promise().set_result(std::move(msg));
         iter->second.handle.resume();
         if (!iter->second.handle.done()) {
-            // 协程仍未完成，即表示再次调用了Recv等待了一个新的会话
+            // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
             RePush(id, iter->second.handle.promise().get_waiting());
         }
         return std::nullopt;
     }
 
     // 加入待调度队列等待调度
-    void Push(SessionId id, SessionCoroutine&& co) {
-        executable_map_.emplace(std::make_pair(id, std::move(co)));
+    void Push(SessionId id, Task&& task) {
+        executable_map_.emplace(std::make_pair(id, std::move(task)));
     }
 
 private:
@@ -51,7 +51,7 @@ private:
     }
 
 private:
-    std::unordered_map<SessionId, SessionCoroutine> executable_map_;
+    std::unordered_map<SessionId, Task> executable_map_;
 };
 
 } // namespace milinet

@@ -59,7 +59,7 @@ void Service::ProcessMsgs(size_t count) {
     }
 }
 
-SessionCoroutine Service::OnMsg(MsgUnique msg) {
+Task Service::OnMsg(MsgUnique msg) {
     co_return;
 }
 
@@ -68,8 +68,8 @@ void Service::Send(ServiceId id, MsgUnique msg) {
     milinet_->Send(id, std::move(msg));
 }
 
-SessionAwaiter Service::Recv(SessionId session_id) {
-    return SessionAwaiter(session_id);
+Awaiter Service::Recv(SessionId session_id) {
+    return Awaiter(session_id);
 }
 
 } // namespace milinet
