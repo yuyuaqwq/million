@@ -17,6 +17,7 @@ namespace milinet {
 class Task;
 struct TaskPromise;
 
+template <typename MsgT>
 struct Awaiter {
     explicit Awaiter(SessionId session_id)
         : session_id_(session_id) {}
@@ -36,15 +37,21 @@ struct Awaiter {
         return false;
     }
 
-    void await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept;
+    void await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
+        // resume交给调度器，等待是必定挂起的
+        parent_handle_ = parent_handle;
+        parent_handle_.promise().set_waiting(session_id_);
+    }
 
-    MsgUnique await_resume() noexcept;
+    std::unique_ptr<MsgT> await_resume() noexcept {
+        // 调度器恢复了当前Awaiter的执行，说明已经等到结果了
+        return parent_handle_.promise().get_result();
+    }
 
 private:
     std::coroutine_handle<TaskPromise> parent_handle_;
     SessionId session_id_;
 };
-
 
 struct Task {
     using promise_type = TaskPromise;
@@ -100,8 +107,9 @@ struct TaskPromise {
 
     }
 
-    Awaiter await_transform(Awaiter&& awaiter) {
-        return Awaiter(std::move(awaiter));
+    template <typename MsgT>
+    Awaiter<MsgT> await_transform(Awaiter<MsgT>&& awaiter) {
+        return Awaiter<MsgT>(std::move(awaiter));
     }
 
     Task await_transform(Task&& task) {
@@ -138,17 +146,6 @@ private:
     SessionId waiting_session_id_;
     std::coroutine_handle<TaskPromise> waiting_handle_;
 };
-
-inline void Awaiter::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
-    // resume交给调度器，等待是必定挂起的
-    parent_handle_ = parent_handle;
-    parent_handle_.promise().set_waiting(session_id_);
-}
-
-inline MsgUnique Awaiter::await_resume() noexcept {
-    // 调度器恢复了当前Awaiter的执行，说明已经等到结果了
-    return parent_handle_.promise().get_result();
-}
 
 inline void Task::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
     // 这里的handle是parent coroutine的handle

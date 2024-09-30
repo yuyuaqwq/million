@@ -30,7 +30,16 @@ public:
     virtual Task OnMsg(MsgUnique msg);
 
     void Send(ServiceId id, MsgUnique msg);
-    Awaiter Recv(SessionId session_id);
+    
+    template <typename MsgT, typename ...Args>
+    void Send(ServiceId id, Args&&... args) {
+        milinet_->template Send<MsgT>(id, std::forward<Args>(args)...);
+    }
+
+    template <typename MsgT = Msg>
+    Awaiter<MsgT> Recv(SessionId session_id) {
+        return Awaiter<MsgT>(session_id);
+    }
 
     ServiceId id() const { return id_; }
     bool in_queue() const { return in_queue_; }

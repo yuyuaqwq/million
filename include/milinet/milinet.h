@@ -36,9 +36,20 @@ public:
     void PushService(Service* service);
     Service& PopService();
 
+    template <typename MsgT = Msg, typename ...Args>
+    std::unique_ptr<MsgT> MakeMsg(Args&&... args) {
+        auto id = AllocSessionId();
+        return std::make_unique<MsgT>(id, std::forward<Args>(args)...);
+    }
+
     SessionId AllocSessionId();
     void Send(ServiceId id, MsgUnique msg);
     void Send(Service* service, MsgUnique msg);
+
+    template <typename MsgT, typename ...Args>
+    void Send(ServiceId id, Args&&... args) {
+        Send(id, MakeMsg<MsgT>(std::forward<Args>(args)...));
+    }
 
 private:
     inline static size_t kWorkThreadNum = std::thread::hardware_concurrency();

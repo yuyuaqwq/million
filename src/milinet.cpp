@@ -71,9 +71,9 @@ void Milinet::PushService(Service* service) {
             has_push = true;
         }
     }
-    //if (has_push) {
+    if (has_push) {
         service_queue_cv_.notify_one();
-    //}
+    }
 }
 
 Service& Milinet::PopService() {

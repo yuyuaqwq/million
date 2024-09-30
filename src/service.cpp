@@ -68,8 +68,4 @@ void Service::Send(ServiceId id, MsgUnique msg) {
     milinet_->Send(id, std::move(msg));
 }
 
-Awaiter Service::Recv(SessionId session_id) {
-    return Awaiter(session_id);
-}
-
 } // namespace milinet
