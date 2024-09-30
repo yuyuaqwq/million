@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include <atomic>
+#include <coroutine>
 #include <vector>
 #include <memory>
 #include <mutex>
@@ -13,8 +14,7 @@
 
 #include "noncopyable.h"
 
-// 等待移动
-#include "milinet/worker.h"
+#include "milinet/msg.h"
 #include "milinet/service.h"
 
 namespace milinet {
@@ -28,28 +28,28 @@ public:
 
     void Start();
 
-    uint32_t AllocServiceId();
+    ServiceId AllocServiceId();
     Service& AddService(std::unique_ptr<Service> service);
-    void RemoveService(uint32_t id);
-    Service* GetService(uint32_t id);
+    void RemoveService(ServiceId id);
+    Service* GetService(ServiceId id);
 
     void PushService(Service* service);
     Service& PopService();
 
-    void Send(uint32_t service_id, std::unique_ptr<Msg> msg);
-    void Send(Service* service, std::unique_ptr<Msg> msg);
-    // 用协程实现
-    // std::unique_ptr<Msg> Call(uint32_t service_id, std::unique_ptr<Msg> msg);
+    SessionId AllocSessionId();
+    void Send(ServiceId id, MsgUnique msg);
+    void Send(Service* service, MsgUnique msg);
 
 private:
     inline static size_t kWorkThreadNum = std::thread::hardware_concurrency();
 
-    std::atomic_uint32_t service_id_;
+    std::atomic<ServiceId> service_id_;
+    std::atomic<SessionId> session_id_;
 
     std::vector<std::unique_ptr<Worker>> workers_;
 
     std::mutex service_map_mutex_;
-    std::unordered_map<uint32_t, std::unique_ptr<Service>> service_map_;
+    std::unordered_map<ServiceId, std::unique_ptr<Service>> service_map_;
 
     std::mutex service_queue_mutex_;
     std::queue<Service*> service_queue_;

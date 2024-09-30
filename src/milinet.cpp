@@ -24,7 +24,7 @@ void Milinet::Start() {
     }
 }
 
-uint32_t Milinet::AllocServiceId() {
+ServiceId Milinet::AllocServiceId() {
     auto id = ++service_id_;
     if (id == 0) {
         std::runtime_error("service id rolled back.");
@@ -36,23 +36,23 @@ Service& Milinet::AddService(std::unique_ptr<Service> service) {
     auto id = service->id();
     auto ptr = service.get();
     {
-        std::unique_lock<std::mutex> guard(service_map_mutex_);
+        std::lock_guard guard(service_map_mutex_);
         service_map_.emplace(std::make_pair(id, std::move(service)));
     }
     return *ptr;
 }
 
-void Milinet::RemoveService(uint32_t id) {
+void Milinet::RemoveService(ServiceId id) {
     {
-        std::unique_lock<std::mutex> guard(service_map_mutex_);
+        std::lock_guard guard(service_map_mutex_);
         service_map_.erase(id);
     }
 }
 
-Service* Milinet::GetService(uint32_t id) {
+Service* Milinet::GetService(ServiceId id) {
     decltype(service_map_)::iterator iter;
     {
-        std::unique_lock<std::mutex> guard(service_map_mutex_);
+        std::lock_guard guard(service_map_mutex_);
         iter = service_map_.find(id);
         if (iter == service_map_.end()){
             return nullptr;
@@ -64,20 +64,20 @@ Service* Milinet::GetService(uint32_t id) {
 void Milinet::PushService(Service* service) {
     bool has_push = false;
     {
-        std::unique_lock<std::mutex> guard(service_queue_mutex_);
+        std::lock_guard guard(service_queue_mutex_);
         if (!service->in_queue()){
             service_queue_.emplace(service);
             service->set_in_queue(true);
             has_push = true;
         }
     }
-    if (has_push) {
+    //if (has_push) {
         service_queue_cv_.notify_one();
-    }
+    //}
 }
 
 Service& Milinet::PopService() {
-    std::unique_lock<std::mutex> guard(service_queue_mutex_);
+    std::unique_lock guard(service_queue_mutex_);
     while (service_queue_.empty()) {
         service_queue_cv_.wait(guard);
     }
@@ -89,15 +89,24 @@ Service& Milinet::PopService() {
     return *service;
 }
 
-void Milinet::Send(uint32_t service_id, std::unique_ptr<Msg> msg) {
-    auto* service = GetService(service_id);
+SessionId Milinet::AllocSessionId() {
+    auto id = ++session_id_;
+    if (id == 0) {
+        std::runtime_error("session id rolled back.");
+    }
+    return id;
+}
+
+void Milinet::Send(ServiceId target_id, MsgUnique msg) {
+    assert(msg);
+    auto* service = GetService(target_id);
     if (!service) return;
     Send(service, std::move(msg));
 }
 
-void Milinet::Send(Service* service, std::unique_ptr<Msg> msg) {
-    service->PushMsg(std::move(msg));
-    PushService(service);
+void Milinet::Send(Service* target, MsgUnique msg) {
+    target->PushMsg(std::move(msg));
+    PushService(target);
 }
 
 } //namespace milinet

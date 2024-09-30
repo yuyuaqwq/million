@@ -5,10 +5,10 @@ set(CMAKE_CXX_STANDARD 20)
 
 aux_source_directory(./ SRC)
 include_directories(${HEAD_PATH})
-
-find_package (Threads)
+include_directories(${ASIO_HEAD_PATH})
 
 set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
 
 add_library(${MILINET_LIB} STATIC ${SRC})
+find_package (Threads)
 target_link_libraries (${MILINET_LIB} ${CMAKE_THREAD_LIBS_INIT})

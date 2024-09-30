@@ -1,9 +1,9 @@
 #include "milinet/worker.h"
 
-#include <system_error>
-
 #include "milinet/service.h"
 #include "milinet/milinet.h"
+
+#include "asio.hpp"
 
 namespace milinet {
 
@@ -23,12 +23,6 @@ void Worker::Start() {
             }
         }
     });
-    if (!thread_) {
-        throw std::system_error(
-            std::make_error_code(std::errc::resource_unavailable_try_again), 
-            "failed to create thread."
-        );
-    }
 }
 
 void Worker::Join() {

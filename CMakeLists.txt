@@ -4,6 +4,7 @@ project(milinet)
 set(LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(EXEC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(HEAD_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(ASIO_HEAD_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/asio/include)
 
 set(MILINET_LIB milinet)
 

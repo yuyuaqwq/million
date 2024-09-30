@@ -8,5 +8,9 @@ link_directories(${LIB_PATH})
 
 link_libraries(${MILINET_LIB})
 
+find_package(Threads)
+
 set(EXECUTABLE_OUTPUT_PATH ${EXEC_PATH})
 add_executable(game game.cpp)
+
+target_link_libraries (game ${CMAKE_THREAD_LIBS_INIT})

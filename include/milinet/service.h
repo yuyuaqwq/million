@@ -9,32 +9,42 @@
 #include "noncopyable.h"
 
 #include "milinet/msg.h"
+#include "milinet/executor.hpp"
+#include "milinet/service_def.h"
 
 namespace milinet {
 
+class Milinet;
 class Service : noncopyable {
 public:
-    Service(uint32_t id);
+    Service(Milinet* milinet, ServiceId id);
     virtual ~Service();
 
-    void PushMsg(std::unique_ptr<Msg> msg);
-    std::unique_ptr<Msg> PopMsg();
+    void PushMsg(MsgUnique msg);
+    MsgUnique PopMsg();
     bool MsgQueueEmpty();
 
     bool ProcessMsg();
     void ProcessMsgs(size_t count);
 
-    virtual void OnMsg(std::unique_ptr<Msg> msg);
+    virtual SessionCoroutine OnMsg(MsgUnique msg);
 
-    uint32_t id() const { return id_; }
+    void Send(ServiceId id, MsgUnique msg);
+    SessionAwaiter Recv(SessionId session_id);
+
+    ServiceId id() const { return id_; }
     bool in_queue() const { return in_queue_; }
     void set_in_queue(bool in_queue) { in_queue_ = in_queue; }
 
 private:
-    uint32_t id_;
+    Milinet* milinet_;
+
+    ServiceId id_;
 
     std::mutex msgs_mutex_;
-    std::queue<std::unique_ptr<Msg>> msgs_;
+    std::queue<MsgUnique> msgs_;
+
+    ServiceMsgExecutor excutor_;
 
     bool in_queue_ = false;
 };
