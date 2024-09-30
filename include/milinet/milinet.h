@@ -19,6 +19,8 @@
 
 namespace milinet {
 
+// todo：分个Impl类，只暴露必要的接口
+
 class Worker;
 class Service;
 class Milinet : noncopyable {

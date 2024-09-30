@@ -160,7 +160,7 @@ inline void Task::await_resume() noexcept {
     auto waiting_handle = parent_handle_.promise().get_waiting_handle();
     assert(waiting_handle);
     assert(waiting_handle == handle);
-    handle.promise().set_result(parent_handle_.promise().get_result());
+    waiting_handle.promise().set_result(parent_handle_.promise().get_result());
     waiting_handle.resume();
 }
 

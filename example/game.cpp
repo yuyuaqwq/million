@@ -3,6 +3,8 @@
 #include "milinet/milinet.h"
 #include "milinet/service.h"
 
+// #include "asio.hpp"
+
 class TestMsg : public milinet::Msg {
 public:
     TestMsg(milinet::SessionId session_id, int value1, std::string_view value2)
@@ -20,7 +22,8 @@ class TestService : public milinet::Service {
     using Base::Base;
 
     virtual milinet::Task OnMsg(milinet::MsgUnique msg) override {
-        std::cout << msg->session_id() << std::endl;
+        auto test_msg = static_cast<TestMsg*>(msg.get());
+        std::cout << test_msg->session_id() << test_msg->value1 << test_msg->value2 << std::endl;
 
         auto res = co_await Recv(2);
         std::cout << res->session_id() << std::endl;

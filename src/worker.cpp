@@ -3,8 +3,6 @@
 #include "milinet/service.h"
 #include "milinet/milinet.h"
 
-#include "asio.hpp"
-
 namespace milinet {
 
 Worker::Worker(Milinet* milinet) : milinet_(milinet) {

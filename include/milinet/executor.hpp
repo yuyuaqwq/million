@@ -19,7 +19,7 @@ class ServiceMsgExecutor {
     ~ServiceMsgExecutor() = default;
 
     // 尝试调度
-    std::optional<MsgUnique> TrySchedule(SessionId id, MsgUnique msg) {
+    MsgUnique TrySchedule(SessionId id, MsgUnique msg) {
         auto iter = executable_map_.find(id);
         if (iter == executable_map_.end()) {
             return msg;
@@ -30,7 +30,7 @@ class ServiceMsgExecutor {
             // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
             RePush(id, iter->second.handle.promise().get_waiting());
         }
-        return std::nullopt;
+        return nullptr;
     }
 
     // 加入待调度队列等待调度
@@ -45,9 +45,9 @@ private:
         if (iter == executable_map_.end()) {
             return;
         }
-        auto co = std::move(iter->second);
+        auto task = std::move(iter->second);
         executable_map_.erase(iter);
-        executable_map_.emplace(std::make_pair(new_id, std::move(co)));
+        executable_map_.emplace(std::make_pair(new_id, std::move(task)));
     }
 
 private:

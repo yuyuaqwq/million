@@ -1,6 +1,6 @@
-#include <cassert>
-
 #include "milinet/service.h"
+
+#include <cassert>
 
 #include "milinet/msg.h"
 #include "milinet/milinet.h"
@@ -39,14 +39,13 @@ bool Service::ProcessMsg() {
         return false;
     }
     auto session_id = msg->session_id();
-    auto op_msg = excutor_.TrySchedule(session_id, std::move(msg));
-    if (!op_msg) {
+    msg = excutor_.TrySchedule(session_id, std::move(msg));
+    if (!msg) {
         return true;
     }
-    msg = std::move(*op_msg);
-    auto co = OnMsg(std::move(msg));
-    if (!co.handle.done()) {
-        excutor_.Push(co.handle.promise().get_waiting(), std::move(co));
+    auto task = OnMsg(std::move(msg));
+    if (!task.handle.done()) {
+        excutor_.Push(task.handle.promise().get_waiting(), std::move(task));
     }
     return true;
 }
