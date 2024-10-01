@@ -5,6 +5,8 @@
 
 // #include "asio.hpp"
 
+#include "milinet/dl.hpp"
+
 class TestMsg : public milinet::Msg {
 public:
     TestMsg(milinet::SessionId session_id, int value1, std::string_view value2)
@@ -51,6 +53,12 @@ class TestService : public milinet::Service {
 
 
 int main() {
+    milinet::Dll dll;
+    dll.Load("../lib/libnetservice.so");
+    auto func = dll.GetFuncPtr<int()>("sb");
+    auto ret = func();
+    // auto ret = dll.Call<int>(func, 1);
+
     milinet::Milinet net(1);
 
     
