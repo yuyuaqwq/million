@@ -55,7 +55,7 @@ class TestService : public milinet::Service {
 int main() {
     milinet::Dll dll;
     dll.Load("../lib/libnetservice.so");
-    auto func = dll.GetFuncPtr<int()>("sb");
+    auto func = dll.GetFunc<int()>("sb");
     auto ret = func();
     // auto ret = dll.Call<int>(func, 1);
 

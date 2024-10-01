@@ -20,7 +20,6 @@ public:
         handle_ = ::dlopen(path.data(), RTLD_LAZY);
         if (handle_ == nullptr)
         {
-            printf("dlopen err:%s.\n",dlerror());
             return false;
         }
         return true;
@@ -33,21 +32,20 @@ public:
         auto func = ::dlsym(handle_, func_name.data());
         if (func == nullptr)
         {
-            printf("dlopen err:%s.\n",dlerror());
             return nullptr;
         }
         return func;
     }
 
     template <typename FuncPtrT>
-    FuncPtrT GetFuncAddr(std::string_view func_name) {
+    FuncPtrT GetFuncPtr(std::string_view func_name) {
         auto func_addr = GetFuncAddr(func_name);
         FuncPtrT func = reinterpret_cast<FuncPtrT>(func_addr);
         return func;
     }
 
     template <typename FuncT>
-    auto GetFuncPtr(std::string_view func_name) {
+    auto GetFunc(std::string_view func_name) {
         auto func_addr = GetFuncAddr(func_name);
         using FuncPtrType = typename std::add_pointer<FuncT>::type;
         auto func = reinterpret_cast<FuncPtrType>(func_addr);
