@@ -3,12 +3,12 @@
 #include <cassert>
 
 #include "milinet/msg.h"
-#include "milinet/milinet.h"
+#include "milinet/service_mgr.h"
 
 namespace milinet {
 
-Service::Service(Milinet* milinet, ServiceId id) 
-    : milinet_(milinet), id_(id) {}
+Service::Service(ServiceMgr* mgr, ServiceId service_id) 
+    : mgr_(mgr), service_id_(service_id) {}
 
 Service::~Service() = default;
 
@@ -60,11 +60,6 @@ void Service::ProcessMsgs(size_t count) {
 
 Task Service::OnMsg(MsgUnique msg) {
     co_return;
-}
-
-
-void Service::Send(ServiceId id, MsgUnique msg) {
-    milinet_->Send(id, std::move(msg));
 }
 
 } // namespace milinet

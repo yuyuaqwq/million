@@ -13,11 +13,12 @@ Worker::~Worker() = default;
 
 void Worker::Start() {
     thread_ = std::make_unique<std::thread>([this]() {
+        auto& service_mgr = milinet_->service_mgr();
         while (true) {
-            auto& service = milinet_->PopService();
+            auto& service = service_mgr.PopService();
             service.ProcessMsg();
             if (!service.MsgQueueEmpty()) {
-                milinet_->PushService(&service);
+                service_mgr.PushService(&service);
             }
         }
     });

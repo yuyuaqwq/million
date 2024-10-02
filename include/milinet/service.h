@@ -8,16 +8,16 @@
 
 #include "noncopyable.h"
 
-#include "milinet/msg.h"
-#include "milinet/executor.hpp"
 #include "milinet/service_def.h"
+#include "milinet/msg.h"
+#include "milinet/msg_executor.h"
 
 namespace milinet {
 
-class Milinet;
+class ServiceMgr;
 class Service : noncopyable {
 public:
-    Service(Milinet* milinet, ServiceId id);
+    Service(ServiceMgr* mgr, ServiceId service_id);
     virtual ~Service();
 
     void PushMsg(MsgUnique msg);
@@ -29,31 +29,27 @@ public:
 
     virtual Task OnMsg(MsgUnique msg);
 
-    void Send(ServiceId id, MsgUnique msg);
-    
     template <typename MsgT, typename ...Args>
-    void Send(ServiceId id, Args&&... args) {
-        milinet_->template Send<MsgT>(id, std::forward<Args>(args)...);
-    }
+    SessionId Send(ServiceId id, Args&&... args);
 
     template <typename MsgT = Msg>
     Awaiter<MsgT> Recv(SessionId session_id) {
         return Awaiter<MsgT>(session_id);
     }
 
-    ServiceId id() const { return id_; }
+    ServiceId service_id() const { return service_id_; }
     bool in_queue() const { return in_queue_; }
     void set_in_queue(bool in_queue) { in_queue_ = in_queue; }
 
 private:
-    Milinet* milinet_;
+    ServiceMgr* mgr_;
 
-    ServiceId id_;
+    ServiceId service_id_;
 
     std::mutex msgs_mutex_;
     std::queue<MsgUnique> msgs_;
 
-    ServiceMsgExecutor excutor_;
+    MsgExecutor excutor_;
 
     bool in_queue_ = false;
 };

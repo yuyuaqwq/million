@@ -70,6 +70,10 @@
         "future": "cpp",
         "*.ipp": "cpp",
         "cinttypes": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "filesystem": "cpp",
+        "map": "cpp",
+        "valarray": "cpp",
+        "queue": "cpp"
     }
 }

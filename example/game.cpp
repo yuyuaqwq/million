@@ -5,7 +5,8 @@
 
 // #include "asio.hpp"
 
-#include "milinet/dl.hpp"
+#include "milinet/detail/dl.hpp"
+#include "milinet/module.h"
 
 class TestMsg : public milinet::Msg {
 public:
@@ -45,7 +46,8 @@ class TestService : public milinet::Service {
     }
 
     milinet::Task On5() {
-        auto res = co_await Recv(5);
+        auto session_id = Send<TestMsg>(service_id(), 5, std::string_view("好家伙"));
+        auto res = co_await Recv(session_id);
         std::cout << res->session_id() << std::endl;
         co_return;
     }
@@ -53,38 +55,33 @@ class TestService : public milinet::Service {
 
 
 int main() {
-    milinet::Dll dll;
+    milinet::detail::Dll dll;
     dll.Load("../lib/libnetservice.so");
     auto func = dll.GetFunc<int()>("sb");
     auto ret = func();
     // auto ret = dll.Call<int>(func, 1);
 
-    milinet::Milinet net(1);
+    milinet::Milinet net("");
 
-    
-    auto session_id = net.AllocServiceId();
-    auto service = std::make_unique<TestService>(&net, session_id);
-    auto& service_ref = net.AddService(std::move(service));
-
+    auto& service = net.CreateService<TestService>();
     net.Start();
 
-    // net.Send<TestMsg>(service_ref.id(), 666, std::string_view("sb"));
+    // service_mgr.Send<TestMsg>(service.service_id(), 666, std::string_view("sb"));
 
-    service_ref.Send<TestMsg>(service_ref.id(), 666, std::string_view("sb"));
+    net.Send<TestMsg>(service.service_id(), 666, std::string_view("sb"));
 
-    // net.Send(&service_ref, net.MakeMsg<TestMsg>(666, std::string_view("sb")));
-
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    net.Send(&service_ref, net.MakeMsg());
+    // service_mgr.Send(&service, net.MakeMsg<TestMsg>(666, std::string_view("sb")));
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    net.Send(&service_ref, net.MakeMsg());
+    net.Send<TestMsg>(service.service_id(), 2, "6");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    net.Send(&service_ref, net.MakeMsg());
+    net.Send<TestMsg>(service.service_id(), 3, "emm");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    net.Send(&service_ref, net.MakeMsg());
+    net.Send<TestMsg>(service.service_id(), 4, "hhh");
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     std::this_thread::sleep_for(std::chrono::seconds(100));
 
