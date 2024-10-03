@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "milinet/imilinet.h"
+#include "milinet/imilinet.hpp"
 
 namespace milinet {
 

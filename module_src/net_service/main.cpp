@@ -1,6 +1,6 @@
 #include "iostream"
 
-#include "milinet/imilinet.h"
+#include "milinet/imilinet.hpp"
 #include "milinet/msg.h"
 
 class TestMsg : public milinet::Msg {
