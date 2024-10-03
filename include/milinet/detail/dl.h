@@ -2,13 +2,6 @@
 
 #include <cstdint>
 
-#ifdef __linux__
-#include <dlfcn.h>
-#elif WIN32
-#include <Windows.h>
-#endif
-
-
 #include <filesystem>
 #include <string_view>
 
@@ -20,38 +13,14 @@ namespace detail {
 
 class Dll : noncopyable {
 public:
-    ~Dll() {
-        Unload();
-    }
+    Dll();
+    ~Dll();
 
-    bool Load(const std::filesystem::path& path) {
-        Unload();
-#ifdef __linux__
-        handle_ = ::dlopen(path.c_str(), RTLD_LAZY);
-#elif WIN32
-        handle_ = ::LoadLibraryW(path.c_str());
-#endif
-        if (handle_ == nullptr) {
-            return false;
-        }
-        return true;
-    }
+    bool Load(const std::filesystem::path& path);
 
-    void Unload() {
-        if (!Loaded()) {
-            return;
-        }
-#ifdef __linux__
-        ::dlclose(handle_);
-#elif WIN32
-        ::FreeLibrary(static_cast<HMODULE>(handle_));
-#endif
-        handle_ = nullptr;
-    }
+    void Unload();
 
-    bool Loaded() const {
-        return handle_;
-    }
+    bool Loaded() const;
 
     template <typename FuncPtrT>
     FuncPtrT GetFuncPtr(std::string_view func_name) const {
@@ -69,20 +38,7 @@ public:
     }
 
 private:
-    void* GetFuncAddr(std::string_view func_name) const {
-        if (handle_ == nullptr) {
-            return nullptr;
-        }
-#ifdef __linux__
-        auto func = ::dlsym(handle_, func_name.data());
-#elif WIN32
-        auto func = ::GetProcAddress(static_cast<HMODULE>(handle_), func_name.data());
-#endif
-        if (func == nullptr) {
-            return nullptr;
-        }
-        return func;
-    }
+    void* GetFuncAddr(std::string_view func_name) const;
 
     template <typename RetT, typename ...Args>
     RetT Call(void* func_addr, Args&&... args) const {

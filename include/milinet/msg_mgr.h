@@ -15,12 +15,6 @@ public:
 
     SessionId AllocSessionId();
 
-    template <typename MsgT, typename ...Args>
-    std::unique_ptr<MsgT> MakeMsg(Args&&... args) {
-        auto id = AllocSessionId();
-        return std::make_unique<MsgT>(id, std::forward<Args>(args)...);
-    }
-
 private:
     Milinet* milinet_;
     std::atomic<SessionId> session_id_ = 0;

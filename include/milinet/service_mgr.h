@@ -20,24 +20,17 @@ public:
 
     ServiceId AllocServiceId();
 
-    template <typename ServiceT, typename ...Args>
-    std::unique_ptr<ServiceT> MakeService(Args&&... args) {
-        auto id = AllocServiceId();
-        return std::make_unique<ServiceT>(this, id, std::forward<Args>(args)...);
-    }
-
-    Service& AddService(std::unique_ptr<Service> service);
+    ServiceId AddService(std::unique_ptr<IService> service);
     void RemoveService(ServiceId service_id);
     Service* GetService(ServiceId service_id);
 
     void PushService(Service* service);
     Service& PopService();
 
-    SessionId Send(Service* service, MsgUnique msg);
-    SessionId Send(ServiceId service_id, MsgUnique msg);
+    SessionId Send(ServiceId target_id, MsgUnique msg);
+    SessionId Send(Service* target, MsgUnique msg);
     
-    template <typename MsgT, typename ...Args>
-    SessionId Send(ServiceId service_id, Args&&... args);
+    Milinet* milinet() const { return milinet_; }
 
 private:
     Milinet* milinet_;
@@ -51,10 +44,5 @@ private:
     std::queue<Service*> service_queue_;
     std::condition_variable service_queue_cv_;
 };
-
-template <typename MsgT, typename ...Args>
-SessionId Service::Send(ServiceId service_id, Args&&... args) {
-    return mgr_->Send<MsgT>(service_id, std::forward<Args>(args)...);
-}
 
 } // namespace milinet

@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include "milinet/detail/dl.hpp"
+#include "milinet/detail/dl.h"
 #include "milinet/noncopyable.h"
 
 namespace milinet {

@@ -4,11 +4,9 @@
 
 #include <memory>
 
-#include "milinet/noncopyable.h"
+#include "milinet/imilinet.h"
 #include "milinet/service_mgr.h"
 #include "milinet/msg_mgr.h"
-#include "milinet/module_mgr.h"
-#include "milinet/worker_mgr.h"
 
 namespace milinet {
 
@@ -18,9 +16,9 @@ public:
         : std::runtime_error("YAML config error: " + message) {}
 };
 
-// todo：分个Impl类，只暴露必要的接口
-
-class Milinet : noncopyable {
+class ModuleMgr;
+class WorkerMgr;
+class Milinet : public IMilinet {
 public:
     Milinet(std::string_view config_path);
     ~Milinet();
@@ -28,14 +26,18 @@ public:
     void Init();
     void Start();
 
-    template <typename ServiceT, typename ...Args>
-    Service& CreateService(Args&&... args) {
-        return service_mgr_->AddService(service_mgr_->MakeService<ServiceT>(std::forward<Args>(args)...));
+    virtual ServiceId CreateService(std::unique_ptr<IService> iservice) override {
+        return service_mgr_->AddService(std::move(iservice));
+    }
+
+    virtual SessionId Send(ServiceId service_id, MsgUnique msg) override {
+        msg->set_session_id(msg_mgr_->AllocSessionId());
+        return service_mgr_->Send(service_id, std::move(msg));
     }
 
     template <typename MsgT, typename ...Args>
     SessionId Send(ServiceId service_id, Args&&... args) {
-        return service_mgr_->Send(service_id, msg_mgr_->MakeMsg<MsgT>(std::forward<Args>(args)...));
+        return Send(service_id, msg_mgr_->MakeMsg<MsgT>(std::forward<Args>(args)...));
     }
 
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
@@ -49,10 +51,5 @@ private:
     std::unique_ptr<ModuleMgr> module_mgr_;
     std::unique_ptr<WorkerMgr> worker_mgr_;
 };
-
-template <typename MsgT, typename ...Args>
-SessionId ServiceMgr::Send(ServiceId service_id, Args&&... args) {
-    return milinet_->Send<MsgT>(service_id, std::forward<Args>(args)...);
-}
 
 } // namespace milinet

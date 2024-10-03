@@ -9,11 +9,12 @@ namespace milinet {
 
 class Msg : noncopyable {
 public:
-    Msg(SessionId session_id)
-        : session_id_(session_id) {}
+    Msg() {}
     virtual ~Msg() = default;
 
-    SessionId session_id() { return session_id_; }
+    SessionId session_id() const { return session_id_; }
+    void set_session_id(SessionId session_id) { session_id_ = session_id; }
+
 private:
     SessionId session_id_;
 };
