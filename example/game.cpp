@@ -46,7 +46,7 @@ class TestService : public milinet::Service {
     }
 
     milinet::Task On5() {
-        auto session_id = Send<TestMsg>(service_id(), 5, std::string_view("好家伙"));
+        auto session_id = Send<TestMsg>(service_id(), 5, std::string_view("hjh"));
         auto res = co_await Recv(session_id);
         std::cout << res->session_id() << std::endl;
         co_return;

@@ -11,10 +11,10 @@ add_executable(game game.cpp)
 
 target_link_libraries(game PRIVATE ${MILINET_LIB})
 
-target_link_libraries(game PRIVATE netservice)
-
 find_package(Threads)
 target_link_libraries(game PRIVATE Threads::Threads)
 
-find_library(DL_LIBRARIES dl)
-target_link_libraries(game PRIVATE ${DL_LIBRARIES})
+if (UNIX)
+    find_library(DL_LIBRARIES dl)
+    target_link_libraries(game PRIVATE ${DL_LIBRARIES})
+endif()

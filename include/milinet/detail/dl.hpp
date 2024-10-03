@@ -2,7 +2,12 @@
 
 #include <cstdint>
 
+#ifdef __linux__
 #include <dlfcn.h>
+#elif WIN32
+#include <Windows.h>
+#endif
+
 
 #include <filesystem>
 #include <string_view>
@@ -21,7 +26,11 @@ public:
 
     bool Load(const std::filesystem::path& path) {
         Unload();
+#ifdef __linux__
         handle_ = ::dlopen(path.c_str(), RTLD_LAZY);
+#elif WIN32
+        handle_ = ::LoadLibraryW(path.c_str());
+#endif
         if (handle_ == nullptr) {
             return false;
         }
@@ -29,10 +38,15 @@ public:
     }
 
     void Unload() {
-        if (Loaded()) {
-            ::dlclose(handle_);
-            handle_ = nullptr;
+        if (!Loaded()) {
+            return;
         }
+#ifdef __linux__
+        ::dlclose(handle_);
+#elif WIN32
+        ::FreeLibrary(static_cast<HMODULE>(handle_));
+#endif
+        handle_ = nullptr;
     }
 
     bool Loaded() const {
@@ -59,7 +73,11 @@ private:
         if (handle_ == nullptr) {
             return nullptr;
         }
+#ifdef __linux__
         auto func = ::dlsym(handle_, func_name.data());
+#elif WIN32
+        auto func = ::GetProcAddress(static_cast<HMODULE>(handle_), func_name.data());
+#endif
         if (func == nullptr) {
             return nullptr;
         }

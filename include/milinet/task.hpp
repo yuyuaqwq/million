@@ -13,7 +13,7 @@
 
 namespace milinet {
 
-class Task;
+struct Task;
 struct TaskPromise;
 
 template <typename MsgT>

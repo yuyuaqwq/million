@@ -23,7 +23,11 @@ public:
             return false;
         }
         std::filesystem::path path = module_dir_path_;
+#ifdef __linux__
         path /=  module_name + ".so";
+#elif WIN32
+        path /= module_name + ".dll";
+#endif
         auto module = std::make_unique<Module>(milinet_, path);
         if (!module->Loaded()) {
             return false;
