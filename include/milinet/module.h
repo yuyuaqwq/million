@@ -8,20 +8,22 @@
 namespace milinet {
 
 class Milinet;
-using MiliModuleInitFunc = bool(Milinet*);
-using MiliModuleExitFunc = void(Milinet*);
 
-constexpr std::string_view MiliModuleInitName = "MiliModuleInit";
-constexpr std::string_view MiliModuleExitName = "MiliModuleExit";
+using ModuleInitFunc = bool(Milinet*);
+using ModuleExitFunc = void(Milinet*);
+
+constexpr std::string_view kModuleInitName = "MiliModuleInit";
+constexpr std::string_view kModuleExitName = "MiliModuleExit";
 
 class Module : noncopyable {
 public:
-    Module(std::string_view module_name);
+    Module(Milinet* milinet, std::string_view module_file_path);
     ~Module();
 
     bool Loaded();
 
 private:
+    Milinet* milinet_;
     detail::Dll dll_;
 };
 

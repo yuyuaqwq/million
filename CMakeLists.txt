@@ -13,7 +13,7 @@ set(YAML_CPP_HEAD_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include)
 set(YAML_CPP_LIB yaml-cpp)
 
 add_subdirectory(src)
-add_subdirectory(service_src)
+add_subdirectory(module_src)
 add_subdirectory(example)
 
 add_subdirectory(third_party/yaml-cpp)

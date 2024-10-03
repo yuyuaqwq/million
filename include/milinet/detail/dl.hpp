@@ -16,18 +16,23 @@ namespace detail {
 class Dll : noncopyable {
 public:
     ~Dll() {
-        if (handle_) {
-            ::dlclose(handle_);
-            handle_ = nullptr;
-        }
+        Unload();
     }
 
     bool Load(std::filesystem::path path) {
+        Unload();
         handle_ = ::dlopen(path.c_str(), RTLD_LAZY);
         if (handle_ == nullptr) {
             return false;
         }
         return true;
+    }
+
+    void Unload() {
+        if (Loaded()) {
+            ::dlclose(handle_);
+            handle_ = nullptr;
+        }
     }
 
     bool Loaded() const {

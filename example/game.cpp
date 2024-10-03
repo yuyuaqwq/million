@@ -55,13 +55,7 @@ class TestService : public milinet::Service {
 
 
 int main() {
-    milinet::detail::Dll dll;
-    dll.Load("../lib/libnetservice.so");
-    auto func = dll.GetFunc<int()>("sb");
-    auto ret = func();
-    // auto ret = dll.Call<int>(func, 1);
-
-    milinet::Milinet net("");
+    milinet::Milinet net("game_config.yaml");
 
     auto& service = net.CreateService<TestService>();
     net.Start();
