@@ -9,43 +9,24 @@ ServiceMgr::ServiceMgr(Milinet* milinet)
 
 ServiceMgr::~ServiceMgr() = default;
 
-ServiceId ServiceMgr::AllocServiceId() {
-    auto id = ++service_id_;
-    if (id == 0) {
-        std::runtime_error("service id rolled back.");
-    }
-    return id;
-}
-
-ServiceId ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
-    auto id = AllocServiceId();
-    iservice->set_service_id(id);
+ServiceHandle ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
+    decltype(services_)::iterator iter;
     auto service = std::make_unique<Service>(std::move(iservice));
-    auto ptr = service.get();
     {
-        std::lock_guard guard(service_map_mutex_);
-        service_map_.emplace(std::make_pair(id, std::move(service)));
+        std::lock_guard guard(services_mutex_);
+        services_.emplace_back(std::move(service));
+        iter = --services_.end();
     }
-    return id;
+    auto handle = ServiceHandle(iter);
+    handle.service_ptr()->iservice().set_service_handle(handle);
+    return handle;
 }
 
-void ServiceMgr::RemoveService(ServiceId service_id) {
+void ServiceMgr::RemoveService(ServiceHandle handle) {
     {
-        std::lock_guard guard(service_map_mutex_);
-        service_map_.erase(service_id);
+        std::lock_guard guard(services_mutex_);
+        services_.erase(handle.iter());
     }
-}
-
-Service* ServiceMgr::GetService(ServiceId service_id) {
-    decltype(service_map_)::iterator iter;
-    {
-        std::lock_guard guard(service_map_mutex_);
-        iter = service_map_.find(service_id);
-        if (iter == service_map_.end()){
-            return nullptr;
-        }
-    }
-    return iter->second.get();
 }
 
 void ServiceMgr::PushService(Service* service) {
@@ -76,17 +57,11 @@ Service& ServiceMgr::PopService() {
     return *service;
 }
 
-SessionId ServiceMgr::Send(ServiceId target_id, MsgUnique msg) {
-    assert(msg);
-    auto* service = GetService(target_id);
-    if (!service) return kSessionIdInvalid;
-    return Send(service, std::move(msg));
-}
-
-SessionId ServiceMgr::Send(Service* target, MsgUnique msg) {
+SessionId ServiceMgr::Send(ServiceHandle target, MsgUnique msg) {
     auto id = msg->session_id();
-    target->PushMsg(std::move(msg));
-    PushService(target);
+    auto service = target.service_ptr();
+    service->PushMsg(std::move(msg));
+    PushService(service);
     return id;
 }
 

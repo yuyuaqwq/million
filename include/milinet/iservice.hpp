@@ -16,11 +16,11 @@ public:
         : imilinet_(imilinet) {}
     virtual ~IService() = default;
 
-    SessionId Send(ServiceId target_id, MsgUnique msg);
+    SessionId Send(ServiceHandle handle, MsgUnique msg);
 
     template <typename MsgT, typename ...Args>
-    SessionId Send(ServiceId target_id, Args&&... args) {
-        return Send(target_id, std::make_unique<MsgT>(std::forward<Args>(args)...));
+    SessionId Send(ServiceHandle handle, Args&&... args) {
+        return Send(handle, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
     template <typename MsgT>
@@ -30,12 +30,12 @@ public:
 
     virtual Task OnMsg(MsgUnique msg) = 0;
 
-    ServiceId service_id() const { return service_id_; }
-    void set_service_id(ServiceId service_id) { service_id_ = service_id; }
+    ServiceHandle service_handle() const { return service_handle_; }
+    void set_service_handle(ServiceHandle handle) { service_handle_ = handle; }
 
 private:
     IMilinet* imilinet_;
-    ServiceId service_id_;
+    ServiceHandle service_handle_;
 };
 
 } // namespace milinet

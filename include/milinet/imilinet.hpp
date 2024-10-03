@@ -14,23 +14,23 @@ namespace milinet {
 
 class IMilinet : noncopyable {
 public:
-    virtual ServiceId CreateService(std::unique_ptr<IService> iservice) = 0;
+    virtual ServiceHandle CreateService(std::unique_ptr<IService> iservice) = 0;
 
     template <typename IServiceT, typename ...Args>
-    ServiceId CreateService(Args&&... args) {
+    ServiceHandle CreateService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
         return CreateService(std::move(iservice));
     }
 
-    virtual SessionId Send(ServiceId target_id, MsgUnique msg) = 0;
+    virtual SessionId Send(ServiceHandle target, MsgUnique msg) = 0;
     template <typename MsgT, typename ...Args>
-    SessionId Send(ServiceId target_id, Args&&... args) {
-        return Send(target_id, std::make_unique<MsgT>(std::forward<Args>(args)...));
+    SessionId Send(ServiceHandle target, Args&&... args) {
+        return Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 };
 
-inline SessionId IService::Send(ServiceId target_id, MsgUnique msg) {
-    return imilinet_->Send(target_id, std::move(msg));
+inline SessionId IService::Send(ServiceHandle target, MsgUnique msg) {
+    return imilinet_->Send(target, std::move(msg));
 }
 
 } // namespace milinet

@@ -30,7 +30,8 @@ public:
     bool in_queue() const { return in_queue_; }
     void set_in_queue(bool in_queue) { in_queue_ = in_queue; }
 
-    ServiceId service_id() const { return iservice_->service_id(); }
+    IService& iservice() const { assert(iservice_); return *iservice_; }
+    ServiceHandle service_handle() const { return iservice_->service_handle(); }
 
 private:
     std::mutex msgs_mutex_;

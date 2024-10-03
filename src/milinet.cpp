@@ -50,13 +50,13 @@ void Milinet::Start() {
     worker_mgr_->Start();
 }
 
-ServiceId Milinet::CreateService(std::unique_ptr<IService> iservice) {
+ServiceHandle Milinet::CreateService(std::unique_ptr<IService> iservice) {
     return service_mgr_->AddService(std::move(iservice));
 }
 
-SessionId Milinet::Send(ServiceId target_id, MsgUnique msg) {
+SessionId Milinet::Send(ServiceHandle target, MsgUnique msg) {
     msg->set_session_id(msg_mgr_->AllocSessionId());
-    return service_mgr_->Send(target_id, std::move(msg));
+    return service_mgr_->Send(target, std::move(msg));
 }
 
 } //namespace milinet

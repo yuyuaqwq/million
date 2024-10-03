@@ -26,8 +26,8 @@ public:
     void Init();
     void Start();
 
-    virtual ServiceId CreateService(std::unique_ptr<IService> iservice) override;
-    virtual SessionId Send(ServiceId target_id, MsgUnique msg) override;
+    virtual ServiceHandle CreateService(std::unique_ptr<IService> iservice) override;
+    virtual SessionId Send(ServiceHandle target, MsgUnique msg) override;
 
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& msg_mgr() { assert(service_mgr_); return *msg_mgr_; }

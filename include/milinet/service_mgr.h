@@ -4,7 +4,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
-#include <unordered_map>
+#include <list>
 #include <queue>
 
 #include "milinet/msg_def.h"
@@ -18,27 +18,21 @@ public:
     ServiceMgr(Milinet* milinet);
     ~ServiceMgr();
 
-    ServiceId AllocServiceId();
-
-    ServiceId AddService(std::unique_ptr<IService> service);
-    void RemoveService(ServiceId service_id);
-    Service* GetService(ServiceId service_id);
+    ServiceHandle AddService(std::unique_ptr<IService> service);
+    void RemoveService(ServiceHandle handle);
 
     void PushService(Service* service);
     Service& PopService();
 
-    SessionId Send(ServiceId target_id, MsgUnique msg);
-    SessionId Send(Service* target, MsgUnique msg);
+    SessionId Send(ServiceHandle target, MsgUnique msg);
     
     Milinet* milinet() const { return milinet_; }
 
 private:
     Milinet* milinet_;
 
-    std::atomic<ServiceId> service_id_ = 0;
-
-    std::mutex service_map_mutex_;
-    std::unordered_map<ServiceId, std::unique_ptr<Service>> service_map_;
+    std::mutex services_mutex_;
+    std::list<std::unique_ptr<Service>> services_;
     
     std::mutex service_queue_mutex_;
     std::queue<Service*> service_queue_;

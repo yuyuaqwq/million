@@ -40,7 +40,7 @@ class TestService : public milinet::IService {
     }
 
     milinet::Task On5() {
-        auto session_id = Send<TestMsg>(service_id(), 5, std::string_view("hjh"));
+        auto session_id = Send<TestMsg>(service_handle(), 5, std::string_view("hjh"));
         auto res = co_await Recv<milinet::Msg>(session_id);
         std::cout << res->session_id() << std::endl;
         co_return;
@@ -49,19 +49,19 @@ class TestService : public milinet::IService {
 
 MILINET_FUNC_EXPORT bool MiliModuleInit(milinet::IMilinet* imilinet) {
  
-    auto service_id = imilinet->CreateService<TestService>();
+    auto service_handle = imilinet->CreateService<TestService>();
      
-    imilinet->Send<TestMsg>(service_id, 666, std::string_view("sb"));
+    imilinet->Send<TestMsg>(service_handle, 666, std::string_view("sb"));
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    imilinet->Send<TestMsg>(service_id, 2, "6");
+    imilinet->Send<TestMsg>(service_handle, 2, "6");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    imilinet->Send<TestMsg>(service_id, 3, "emm");
+    imilinet->Send<TestMsg>(service_handle, 3, "emm");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    imilinet->Send<TestMsg>(service_id, 4, "hhh");
+    imilinet->Send<TestMsg>(service_handle, 4, "hhh");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
