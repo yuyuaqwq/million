@@ -7,9 +7,8 @@
 
 namespace milinet {
 
-Service::Service(ServiceMgr* mgr, std::unique_ptr<IService> iservice)
-    : mgr_(mgr)
-    , iservice_(std::move(iservice)){}
+Service::Service(std::unique_ptr<IService> iservice)
+    : iservice_(std::move(iservice)){}
 
 Service::~Service() = default;
 

@@ -17,7 +17,7 @@ namespace milinet {
 class ServiceMgr;
 class Service : noncopyable {
 public:
-    Service(ServiceMgr* mgr, std::unique_ptr<IService> iservice);
+    Service(std::unique_ptr<IService> iservice);
     ~Service();
 
     void PushMsg(MsgUnique msg);
@@ -33,8 +33,6 @@ public:
     ServiceId service_id() const { return iservice_->service_id(); }
 
 private:
-    ServiceMgr* mgr_;
-
     std::mutex msgs_mutex_;
     std::queue<MsgUnique> msgs_;
 

@@ -20,7 +20,7 @@ ServiceId ServiceMgr::AllocServiceId() {
 ServiceId ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
     auto id = AllocServiceId();
     iservice->set_service_id(id);
-    auto service = std::make_unique<Service>(this, std::move(iservice));
+    auto service = std::make_unique<Service>(std::move(iservice));
     auto ptr = service.get();
     {
         std::lock_guard guard(service_map_mutex_);
