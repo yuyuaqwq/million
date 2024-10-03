@@ -4,7 +4,7 @@
 
 #include "milinet/noncopyable.h"
 #include "milinet/service_def.h"
-#include "milinet/msg_def.h"
+#include "milinet/msg.h"
 #include "milinet/task.hpp"
 
 namespace milinet {

@@ -48,6 +48,6 @@ class TestService : public milinet::IService {
 };
 
 MILINET_FUNC_EXPORT bool MiliModuleInit(milinet::IMilinet* imilinet) {
-    imilinet->CreateService<TestService>(imilinet);
+    imilinet->CreateService<TestService>();
     return true;
 }

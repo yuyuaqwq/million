@@ -52,23 +52,23 @@ int main() {
     milinet::Milinet net("game_config.yaml");
     net.Init();
 
-    auto& service = net.CreateService<TestService>();
+    auto service_id = net.CreateService<TestService>();
     net.Start();
 
     // service_mgr.Send<TestMsg>(service.service_id(), 666, std::string_view("sb"));
 
-    net.Send<TestMsg>(service.service_id(), 666, std::string_view("sb"));
+    net.Send<TestMsg>(service_id, 666, std::string_view("sb"));
 
     // service_mgr.Send(&service, net.MakeMsg<TestMsg>(666, std::string_view("sb")));
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    net.Send<TestMsg>(service.service_id(), 2, "6");
+    net.Send<TestMsg>(service_id, 2, "6");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    net.Send<TestMsg>(service.service_id(), 3, "emm");
+    net.Send<TestMsg>(service_id, 3, "emm");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    net.Send<TestMsg>(service.service_id(), 4, "hhh");
+    net.Send<TestMsg>(service_id, 4, "hhh");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 

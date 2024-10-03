@@ -18,7 +18,7 @@ public:
 
     template <typename IServiceT, typename ...Args>
     ServiceId CreateService(Args&&... args) {
-        auto iservice = std::make_unique<IServiceT>(std::forward<Args>(args)...);
+        auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
         return CreateService(std::move(iservice));
     }
 
