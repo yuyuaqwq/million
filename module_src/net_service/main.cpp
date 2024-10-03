@@ -48,6 +48,22 @@ class TestService : public milinet::IService {
 };
 
 MILINET_FUNC_EXPORT bool MiliModuleInit(milinet::IMilinet* imilinet) {
-    imilinet->CreateService<TestService>();
+ 
+    auto service_id = imilinet->CreateService<TestService>();
+     
+    imilinet->Send<TestMsg>(service_id, 666, std::string_view("sb"));
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    imilinet->Send<TestMsg>(service_id, 2, "6");
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    imilinet->Send<TestMsg>(service_id, 3, "emm");
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    imilinet->Send<TestMsg>(service_id, 4, "hhh");
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
     return true;
 }

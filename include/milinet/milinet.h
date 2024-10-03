@@ -27,17 +27,7 @@ public:
     void Start();
 
     virtual ServiceId CreateService(std::unique_ptr<IService> iservice) override;
-    template <typename IServiceT, typename ...Args>
-    ServiceId CreateService(Args&&... args) {
-        auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
-        return CreateService(std::move(iservice));
-    }
-
-    virtual SessionId Send(ServiceId service_id, MsgUnique msg) override;
-    template <typename MsgT, typename ...Args>
-    SessionId Send(ServiceId service_id, Args&&... args) {
-        return Send(service_id, std::make_unique<MsgT>(std::forward<Args>(args)...));
-    }
+    virtual SessionId Send(ServiceId target_id, MsgUnique msg) override;
 
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& msg_mgr() { assert(service_mgr_); return *msg_mgr_; }

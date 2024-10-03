@@ -22,7 +22,11 @@ public:
         return CreateService(std::move(iservice));
     }
 
-    virtual SessionId Send(ServiceId service_id, MsgUnique msg) = 0;
+    virtual SessionId Send(ServiceId target_id, MsgUnique msg) = 0;
+    template <typename MsgT, typename ...Args>
+    SessionId Send(ServiceId target_id, Args&&... args) {
+        return Send(target_id, std::make_unique<MsgT>(std::forward<Args>(args)...));
+    }
 };
 
 inline SessionId IService::Send(ServiceId target_id, MsgUnique msg) {

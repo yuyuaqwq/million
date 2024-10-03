@@ -17,9 +17,7 @@ public:
     ~Dll();
 
     bool Load(const std::filesystem::path& path);
-
     void Unload();
-
     bool Loaded() const;
 
     template <typename FuncPtrT>
