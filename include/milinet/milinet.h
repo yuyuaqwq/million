@@ -12,6 +12,12 @@
 
 namespace milinet {
 
+class ConfigException : public std::runtime_error {
+public:
+    explicit ConfigException(const std::string& message)
+        : std::runtime_error("YAML config error: " + message) {}
+};
+
 // todo：分个Impl类，只暴露必要的接口
 
 class Milinet : noncopyable {
@@ -19,6 +25,7 @@ public:
     Milinet(std::string_view config_path);
     ~Milinet();
 
+    void Init();
     void Start();
 
     template <typename ServiceT, typename ...Args>
@@ -31,8 +38,10 @@ public:
         return service_mgr_->Send(service_id, msg_mgr_->MakeMsg<MsgT>(std::forward<Args>(args)...));
     }
 
-    ServiceMgr& service_mgr() { assert(service_mgr_); return *service_mgr_; }
-    MsgMgr& msg_mgr() { assert(service_mgr_); return *msg_mgr_; }
+    auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
+    auto& msg_mgr() { assert(service_mgr_); return *msg_mgr_; }
+    auto& module_mgr() { assert(module_mgr_); return *module_mgr_; }
+    auto& worker_mgr() { assert(worker_mgr_); return *worker_mgr_; }
 
 private:
     std::unique_ptr<ServiceMgr> service_mgr_;

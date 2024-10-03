@@ -4,21 +4,13 @@
 
 namespace milinet {
 
-Module::Module(Milinet* milinet, std::string_view module_file_path)
+Module::Module(Milinet* milinet, const std::filesystem::path& module_file_path)
     : milinet_(milinet) {
     dll_.Load(module_file_path);
-    if (!dll_.Loaded()) {
-        return;
-    }
-    auto init_func = dll_.GetFunc<ModuleInitFunc>(kModuleInitName);
-    if (!init_func || !init_func(milinet)) {
-        dll_.Unload();
-        return;
-    }
 }
 
 Module::~Module() {
-    if (!dll_.Loaded()) {
+    if (!dll_.Loaded() || !init_) {
         return;
     }
     auto exit_func = dll_.GetFunc<ModuleExitFunc>(kModuleExitName);
@@ -30,6 +22,16 @@ Module::~Module() {
 
 bool Module::Loaded() {
     return dll_.Loaded();
+}
+
+bool Module::Init() {
+    assert(!init_);
+    auto init_func = dll_.GetFunc<ModuleInitFunc>(kModuleInitName);
+    if (!init_func) {
+        return false;
+    }
+    init_ = init_func(milinet_);
+    return init_;
 }
 
 } //namespace milinet

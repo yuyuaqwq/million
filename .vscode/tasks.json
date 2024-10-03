@@ -11,6 +11,11 @@
 			"group": "build",
 			"problemMatcher": [],
 			"detail": "CMake 模板 生成 任务"
+		},
+		{
+			"label": "build",
+			"dependsOn": ["CMake: build"],
+			"problemMatcher": []
 		}
 	]
 }

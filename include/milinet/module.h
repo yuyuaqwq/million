@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string_view>
+#include <filesystem>
 
 #include "milinet/detail/dl.hpp"
 #include "milinet/noncopyable.h"
@@ -17,14 +17,17 @@ constexpr std::string_view kModuleExitName = "MiliModuleExit";
 
 class Module : noncopyable {
 public:
-    Module(Milinet* milinet, std::string_view module_file_path);
+    Module(Milinet* milinet, const std::filesystem::path& module_file_path);
     ~Module();
 
     bool Loaded();
 
+    bool Init();
+
 private:
     Milinet* milinet_;
     detail::Dll dll_;
+    bool init_ = false;
 };
 
 } // namespace milinet

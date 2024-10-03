@@ -2,3 +2,6 @@
 worker_num: 0
 
 module_path: ./module
+
+modules:
+    - net_service

@@ -56,6 +56,7 @@ class TestService : public milinet::Service {
 
 int main() {
     milinet::Milinet net("game_config.yaml");
+    net.Init();
 
     auto& service = net.CreateService<TestService>();
     net.Start();

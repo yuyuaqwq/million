@@ -14,7 +14,7 @@ class ModuleMgr {
 public:
     ModuleMgr(Milinet* milinet, std::string_view module_dir_path)
         : milinet_(milinet)
-        , module_dir_path_(module_dir_path_) {
+        , module_dir_path_(module_dir_path) {
         
     }
 
@@ -22,13 +22,20 @@ public:
         if (modules_.find(module_name) != modules_.end()) {
             return false;
         }
-        auto module_file_path = module_dir_path_ + module_name + ".so";
-        auto module = std::make_unique<Module>(milinet_, module_file_path);
+        std::filesystem::path path = module_dir_path_;
+        path /=  module_name + ".so";
+        auto module = std::make_unique<Module>(milinet_, path);
         if (!module->Loaded()) {
             return false;
         }
         modules_.emplace(std::make_pair(module_name, std::move(module)));
         return true;
+    }
+
+    void Init() {
+        for (auto& module : modules_) {
+            module.second->Init();
+        }
     }
 
 private:

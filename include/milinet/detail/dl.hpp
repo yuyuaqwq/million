@@ -19,7 +19,7 @@ public:
         Unload();
     }
 
-    bool Load(std::filesystem::path path) {
+    bool Load(const std::filesystem::path& path) {
         Unload();
         handle_ = ::dlopen(path.c_str(), RTLD_LAZY);
         if (handle_ == nullptr) {
