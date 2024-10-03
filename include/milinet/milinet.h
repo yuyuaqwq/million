@@ -5,8 +5,6 @@
 #include <memory>
 
 #include "milinet/imilinet.h"
-#include "milinet/service_mgr.h"
-#include "milinet/msg_mgr.h"
 
 namespace milinet {
 
@@ -16,6 +14,8 @@ public:
         : std::runtime_error("YAML config error: " + message) {}
 };
 
+class ServiceMgr;
+class MsgMgr;
 class ModuleMgr;
 class WorkerMgr;
 class Milinet : public IMilinet {
@@ -26,18 +26,12 @@ public:
     void Init();
     void Start();
 
-    virtual ServiceId CreateService(std::unique_ptr<IService> iservice) override {
-        return service_mgr_->AddService(std::move(iservice));
-    }
-
-    virtual SessionId Send(ServiceId service_id, MsgUnique msg) override {
-        msg->set_session_id(msg_mgr_->AllocSessionId());
-        return service_mgr_->Send(service_id, std::move(msg));
-    }
+    virtual ServiceId CreateService(std::unique_ptr<IService> iservice) override;
+    virtual SessionId Send(ServiceId service_id, MsgUnique msg) override;
 
     template <typename MsgT, typename ...Args>
     SessionId Send(ServiceId service_id, Args&&... args) {
-        return Send(service_id, msg_mgr_->MakeMsg<MsgT>(std::forward<Args>(args)...));
+        return Send(service_id, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }

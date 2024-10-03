@@ -5,6 +5,8 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include "milinet/service_mgr.h"
+#include "milinet/msg_mgr.h"
 #include "milinet/module_mgr.h"
 #include "milinet/worker_mgr.h"
 
@@ -46,6 +48,15 @@ void Milinet::Init() {
 void Milinet::Start() {
     assert(worker_mgr_);
     worker_mgr_->Start();
+}
+
+ServiceId Milinet::CreateService(std::unique_ptr<IService> iservice) {
+    return service_mgr_->AddService(std::move(iservice));
+}
+
+SessionId Milinet::Send(ServiceId service_id, MsgUnique msg) {
+    msg->set_session_id(msg_mgr_->AllocSessionId());
+    return service_mgr_->Send(service_id, std::move(msg));
 }
 
 } //namespace milinet

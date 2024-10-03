@@ -1,6 +1,6 @@
 #include "iostream"
 
-#include "milinet/iservice.hpp"
+#include "milinet/imilinet.h"
 #include "milinet/msg.h"
 
 class TestMsg : public milinet::Msg {
@@ -48,6 +48,6 @@ class TestService : public milinet::IService {
 };
 
 MILINET_FUNC_EXPORT bool MiliModuleInit(milinet::IMilinet* imilinet) {
-    imilinet->CreateService<TestService>();
+    imilinet->CreateService<TestService>(imilinet);
     return true;
 }

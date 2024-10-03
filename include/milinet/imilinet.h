@@ -19,7 +19,7 @@ public:
     template <typename IServiceT, typename ...Args>
     ServiceId CreateService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(std::forward<Args>(args)...);
-        return CreateService(iservice);
+        return CreateService(std::move(iservice));
     }
 
     virtual SessionId Send(ServiceId service_id, MsgUnique msg) = 0;

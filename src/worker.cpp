@@ -1,7 +1,8 @@
 #include "milinet/worker.h"
 
-#include "milinet/service.h"
 #include "milinet/milinet.h"
+#include "milinet/service_mgr.h"
+#include "milinet/service.h"
 
 namespace milinet {
 
