@@ -5,7 +5,8 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include "milinet/worker.h"
+#include "milinet/module_mgr.h"
+#include "milinet/worker_mgr.h"
 
 namespace milinet {
 

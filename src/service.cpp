@@ -7,8 +7,9 @@
 
 namespace milinet {
 
-Service::Service(ServiceMgr* mgr, ServiceId service_id) 
-    : mgr_(mgr), service_id_(service_id) {}
+Service::Service(ServiceMgr* mgr, std::unique_ptr<IService> iservice)
+    : mgr_(mgr)
+    , iservice_(std::move(iservice)){}
 
 Service::~Service() = default;
 
@@ -43,7 +44,7 @@ bool Service::ProcessMsg() {
     if (!msg) {
         return true;
     }
-    auto task = OnMsg(std::move(msg));
+    auto task = iservice_->OnMsg(std::move(msg));
     if (!task.handle.done()) {
         excutor_.Push(task.handle.promise().get_waiting(), std::move(task));
     }
@@ -56,10 +57,6 @@ void Service::ProcessMsgs(size_t count) {
             break;
         }
     }
-}
-
-Task Service::OnMsg(MsgUnique msg) {
-    co_return;
 }
 
 } // namespace milinet

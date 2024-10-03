@@ -17,14 +17,16 @@ ServiceId ServiceMgr::AllocServiceId() {
     return id;
 }
 
-Service& ServiceMgr::AddService(std::unique_ptr<Service> service) {
-    auto id = service->service_id();
+ServiceId ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
+    auto id = AllocServiceId();
+    iservice->set_service_id(id);
+    auto service = std::make_unique<Service>(this, std::move(iservice));
     auto ptr = service.get();
     {
         std::lock_guard guard(service_map_mutex_);
         service_map_.emplace(std::make_pair(id, std::move(service)));
     }
-    return *ptr;
+    return id;
 }
 
 void ServiceMgr::RemoveService(ServiceId service_id) {
@@ -74,18 +76,18 @@ Service& ServiceMgr::PopService() {
     return *service;
 }
 
-SessionId ServiceMgr::Send(Service* target, MsgUnique msg) {
-    auto id = msg->session_id();
-    target->PushMsg(std::move(msg));
-    PushService(target);
-    return id;
-}
-
 SessionId ServiceMgr::Send(ServiceId target_id, MsgUnique msg) {
     assert(msg);
     auto* service = GetService(target_id);
     if (!service) return kSessionIdInvalid;
     return Send(service, std::move(msg));
+}
+
+SessionId ServiceMgr::Send(Service* target, MsgUnique msg) {
+    auto id = msg->session_id();
+    target->PushMsg(std::move(msg));
+    PushService(target);
+    return id;
 }
 
 } // namespace milinet

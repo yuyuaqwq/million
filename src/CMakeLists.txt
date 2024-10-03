@@ -4,6 +4,7 @@ project(MILINET_LIB)
 set(CMAKE_CXX_STANDARD 20)
 
 aux_source_directory(./ SRC)
+aux_source_directory(./detail/ SRC)
 
 include_directories(${HEAD_PATH})
 
