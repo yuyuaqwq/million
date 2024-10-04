@@ -18,7 +18,7 @@ class ServiceMgr;
 class MsgMgr;
 class ModuleMgr;
 class WorkerMgr;
-class Milinet : public IMilinet {
+class MILINET_CLASS_EXPORT Milinet : public IMilinet {
 public:
     Milinet(std::string_view config_path);
     ~Milinet();
@@ -27,7 +27,10 @@ public:
     void Start();
 
     virtual ServiceHandle CreateService(std::unique_ptr<IService> iservice) override;
+    using IMilinet::CreateService;
+
     virtual SessionId Send(ServiceHandle target, MsgUnique msg) override;
+    using IMilinet::Send;
 
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& msg_mgr() { assert(service_mgr_); return *msg_mgr_; }

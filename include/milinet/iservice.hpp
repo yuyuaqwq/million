@@ -2,15 +2,16 @@
 
 #include <memory>
 
+#include "milinet/detail/dl_export.hpp"
 #include "milinet/noncopyable.h"
 #include "milinet/service_def.h"
-#include "milinet/msg.h"
+#include "milinet/imsg.hpp"
 #include "milinet/task.hpp"
 
 namespace milinet {
 
 class IMilinet;
-class IService : noncopyable {
+class MILINET_CLASS_EXPORT IService : noncopyable {
 public:
     IService(IMilinet* imilinet)
         : imilinet_(imilinet) {}

@@ -1,18 +1,13 @@
 #pragma once
 
+#include "milinet/detail/dl_export.hpp"
 #include "milinet/noncopyable.h"
 #include "milinet/msg_def.h"
 #include "milinet/iservice.hpp"
 
 namespace milinet {
 
-#ifdef __linux__
-#define MILINET_FUNC_EXPORT extern "C"
-#elif WIN32
-#define MILINET_FUNC_EXPORT extern "C" __declspec(dllexport)
-#endif
-
-class IMilinet : noncopyable {
+class MILINET_CLASS_EXPORT IMilinet : noncopyable {
 public:
     virtual ~IMilinet() = default;
 

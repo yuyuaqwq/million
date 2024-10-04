@@ -9,7 +9,7 @@
 #include "milinet/noncopyable.h"
 #include "milinet/iservice.hpp"
 #include "milinet/service_def.h"
-#include "milinet/msg.h"
+#include "milinet/imsg.hpp"
 #include "milinet/msg_executor.h"
 
 namespace milinet {

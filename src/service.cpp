@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-#include "milinet/msg.h"
+#include "milinet/imsg.hpp"
 #include "milinet/service_mgr.h"
 
 namespace milinet {

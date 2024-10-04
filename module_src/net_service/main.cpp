@@ -1,9 +1,9 @@
 #include "iostream"
 
 #include "milinet/imilinet.hpp"
-#include "milinet/msg.h"
+#include "milinet/imsg.hpp"
 
-class TestMsg : public milinet::Msg {
+class TestMsg : public milinet::IMsg {
 public:
     TestMsg(int value1, std::string_view value2)
         : value1(value1)
@@ -22,10 +22,10 @@ class TestService : public milinet::IService {
         auto test_msg = static_cast<TestMsg*>(msg.get());
         std::cout << test_msg->session_id() << test_msg->value1 << test_msg->value2 << std::endl;
 
-        auto res = co_await Recv<milinet::Msg>(2);
+        auto res = co_await Recv<milinet::IMsg>(2);
         std::cout << res->session_id() << std::endl;
 
-        res = co_await Recv<milinet::Msg>(3);
+        res = co_await Recv<milinet::IMsg>(3);
         std::cout << res->session_id() << std::endl;
 
         co_await On4();
@@ -34,14 +34,14 @@ class TestService : public milinet::IService {
     }
 
     milinet::Task On4() {
-        auto res = co_await Recv<milinet::Msg>(4);
+        auto res = co_await Recv<milinet::IMsg>(4);
         std::cout << res->session_id() << std::endl;
         co_return;
     }
 
     milinet::Task On5() {
         auto session_id = Send<TestMsg>(service_handle(), 5, std::string_view("hjh"));
-        auto res = co_await Recv<milinet::Msg>(session_id);
+        auto res = co_await Recv<milinet::IMsg>(session_id);
         std::cout << res->session_id() << std::endl;
         co_return;
     }
