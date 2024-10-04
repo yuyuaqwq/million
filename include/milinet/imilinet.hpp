@@ -14,6 +14,8 @@ namespace milinet {
 
 class IMilinet : noncopyable {
 public:
+    virtual ~IMilinet() = default;
+
     virtual ServiceHandle CreateService(std::unique_ptr<IService> iservice) = 0;
 
     template <typename IServiceT, typename ...Args>

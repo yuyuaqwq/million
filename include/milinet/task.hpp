@@ -149,7 +149,7 @@ void Awaiter<MsgT>::await_suspend(std::coroutine_handle<TaskPromise> parent_hand
 template <typename MsgT>
 std::unique_ptr<MsgT> Awaiter<MsgT>::await_resume() noexcept {
     // 调度器恢复了当前Awaiter的执行，说明已经等到结果了
-    return parent_handle_.promise().get_result();
+    return std::unique_ptr<MsgT>(static_cast<MsgT*>(parent_handle_.promise().get_result().release()));
 }
 
 inline void Task::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {

@@ -10,6 +10,8 @@
 
 #include "milinet/noncopyable.h"
 
+#include "milinet/detail/functional.hpp"
+
 namespace milinet {
 
 namespace detail {

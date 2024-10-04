@@ -3,9 +3,6 @@
 #include "milinet/milinet.h"
 #include "milinet/service.h"
 
-#include "milinet/detail/time_wheel.hpp"
-#include "milinet/detail/time_wheel_heap.hpp"
-
 //class TestMsg : public milinet::Msg {
 //public:
 //    TestMsg(int value1, std::string_view value2)
@@ -52,28 +49,6 @@
 
 
 int main() {
-
-    int count = 0;
-    auto tw = milinet::detail::MinHeapTimer();
-    // tw.Init();
-
-    auto start = std::chrono::high_resolution_clock::now(); // 开始时间
-
-
-    int j = 0;
-    for (int i = 0; i < 1000000; i++) {
-        tw.AddTask(1, [&j](const milinet::detail::MinHeapTimer::Task& task) {
-            ++j;
-            // std::cout << "666" << std::endl;
-        });
-    }
-
-    tw.Tick();
-
-    auto end = std::chrono::high_resolution_clock::now(); // 结束时间
-    auto duratioin = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Elapsed time: " << duratioin.count() << "ms:" << j << " seconds\n";
-
     milinet::Milinet net("game_config.yaml");
     net.Init();
     net.Start();
