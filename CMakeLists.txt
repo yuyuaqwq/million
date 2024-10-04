@@ -19,4 +19,5 @@ add_subdirectory(module_src)
 add_subdirectory(example)
 
 add_subdirectory(third_party/yaml-cpp)
-add_subdirectory(third_party/pocketpy)
+# add_subdirectory(third_party/pocketpy)
+add_subdirectory(third_party/quickjs)
