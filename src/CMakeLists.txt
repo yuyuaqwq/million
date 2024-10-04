@@ -13,7 +13,7 @@ include_directories(${YAML_CPP_HEAD_PATH})
 
 set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
 
-add_library(${MILINET_LIB} STATIC ${SRC})
+add_library(${MILINET_LIB} SHARED ${SRC})
 
 find_package(Threads)
 target_link_libraries(${MILINET_LIB} PRIVATE Threads::Threads)
