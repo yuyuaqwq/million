@@ -74,6 +74,12 @@
         "filesystem": "cpp",
         "map": "cpp",
         "valarray": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "bitset": "cpp",
+        "cfenv": "cpp",
+        "complex": "cpp",
+        "forward_list": "cpp",
+        "regex": "cpp",
+        "typeindex": "cpp"
     }
 }
