@@ -4,7 +4,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "milinet/noncopyable.h"
+#include "milinet/detail/noncopyable.h"
 #include "milinet/module.h"
 
 namespace milinet {

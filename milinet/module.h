@@ -3,7 +3,7 @@
 #include <filesystem>
 
 #include "milinet/detail/dl.h"
-#include "milinet/noncopyable.h"
+#include "milinet/detail/noncopyable.h"
 
 namespace milinet {
 

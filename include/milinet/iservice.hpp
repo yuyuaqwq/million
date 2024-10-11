@@ -2,11 +2,11 @@
 
 #include <memory>
 
-#include "milinet/detail/dl_export.hpp"
-#include "milinet/noncopyable.h"
-#include "milinet/service_def.h"
-#include "milinet/imsg.hpp"
-#include "milinet/task.hpp"
+#include <milinet/detail/dl_export.hpp>
+#include <milinet/detail/noncopyable.h>
+#include <milinet/service_handle.h>
+#include <milinet/imsg.hpp>
+#include <milinet/task.hpp>
 
 namespace milinet {
 
@@ -29,7 +29,9 @@ public:
         return Awaiter<MsgT>(session_id);
     }
 
+    virtual void OnInit() {};
     virtual Task OnMsg(MsgUnique msg) = 0;
+    virtual void OnExit() {};
 
     ServiceHandle service_handle() const { return service_handle_; }
     void set_service_handle(ServiceHandle handle) { service_handle_ = handle; }

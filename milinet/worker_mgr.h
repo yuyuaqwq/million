@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "milinet/noncopyable.h"
+#include "milinet/detail/noncopyable.h"
 
 namespace milinet {
 

@@ -6,9 +6,9 @@
 #include <mutex>
 #include <queue>
 
-#include "milinet/noncopyable.h"
+#include "milinet/detail/noncopyable.h"
 #include "milinet/iservice.hpp"
-#include "milinet/service_def.h"
+#include "milinet/service_handle.h"
 #include "milinet/imsg.hpp"
 #include "milinet/msg_executor.h"
 

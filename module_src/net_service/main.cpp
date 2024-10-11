@@ -1,109 +1,165 @@
 #include "iostream"
 
+#include <atomic>
+#include <chrono>
+#include <optional>
+#include <mutex>
+#include <queue>
+#include <random>
+#include <sstream>
+#include <iomanip>
+
 #include "milinet/imilinet.hpp"
 #include "milinet/imsg.hpp"
 
-#include <asio.hpp>
+#include <yaml-cpp/yaml.h>
 
 
-class TestMsg : public milinet::IMsg {
-public:
-    TestMsg(int value1, std::string_view value2)
-        : value1(value1)
-        , value2(value2) {}
 
-public:
-    int value1;
-    std::string value2;
+
+enum class NetMsgType {
+    kRegister,
+    kConnection,
+    kSend,
+    kRecv,
 };
 
-class TestService : public milinet::IService {
+class NetMsg : public milinet::IMsg {
+public:
+    NetMsg(NetMsgType type)
+        : type_(type) {}
+
+    NetMsgType type() const { return type_; }
+
+private:
+    NetMsgType type_;
+};
+
+class RegisterMsg : public NetMsg {
+public:
+    RegisterMsg(milinet::ServiceHandle handle)
+        : NetMsg(NetMsgType::kRegister)
+        , handle_(handle) {}
+
+    milinet::ServiceHandle handle() const { return handle_; }
+
+private:
+    milinet::ServiceHandle handle_;
+};
+
+class ConnectionMsg : public NetMsg {
+public:
+    ConnectionMsg()
+        : NetMsg(NetMsgType::kConnection) {}
+
+private:
+
+};
+
+class SendMsg : public NetMsg {
+public:
+    SendMsg()
+        : NetMsg(NetMsgType::kSend) {}
+
+private:
+
+};
+
+class RecvMsg : public NetMsg {
+public:
+    RecvMsg()
+        : NetMsg(NetMsgType::kRecv) {}
+
+public:
+
+};
+
+
+//struct NetPacket {
+//
+//    std::vector<uint8_t> buff;
+//};
+
+
+class TokenGenerator {
+public:
+    TokenGenerator()
+        : gen_(rd_())
+        , dis_(0, std::numeric_limits<uint32_t>::max()) {}
+
+    uint64_t generate_token() {
+        auto now = std::chrono::system_clock::now();
+        uint32_t timestamp = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count());
+
+        uint32_t random_value = dis_(gen_);
+
+        // 将时间戳和随机数组合为 64 位的 token
+        uint64_t token = (static_cast<uint64_t>(timestamp) << 32) | random_value;
+        return token;
+    }
+
+private:
+    std::random_device rd_;
+    std::mt19937_64 gen_;
+    std::uniform_int_distribution<uint32_t> dis_;
+};
+
+
+
+
+class NetService : public milinet::IService {
+public:
     using Base = milinet::IService;
     using Base::Base;
 
+    virtual void OnInit() override {
+        
+    }
+
     virtual milinet::Task OnMsg(milinet::MsgUnique msg) override {
-        auto test_msg = static_cast<TestMsg*>(msg.get());
-        std::cout << test_msg->session_id() << test_msg->value1 << test_msg->value2 << std::endl;
-
-        auto res = co_await Recv<milinet::IMsg>(2);
-        std::cout << res->session_id() << std::endl;
-
-        res = co_await Recv<milinet::IMsg>(3);
-        std::cout << res->session_id() << std::endl;
-
-        co_await On4();
-        co_await On5();
+        auto netmsg = static_cast<NetMsg*>(msg.get());
+        switch (netmsg->type()) {
+        case NetMsgType::kRegister: {
+            OnRegister(static_cast<RegisterMsg*>(netmsg));
+            break;
+        }
+        case NetMsgType::kSend: {
+            OnSend(static_cast<SendMsg*>(netmsg));
+            break;
+        }
+        }
         co_return;
     }
 
-    milinet::Task On4() {
-        auto res = co_await Recv<milinet::IMsg>(4);
-        std::cout << res->session_id() << std::endl;
-        co_return;
+    void OnRegister(RegisterMsg* msg) {
+        std::lock_guard guard(register_service_mutex_);
+        register_service_.emplace_back(msg->handle());
     }
 
-    milinet::Task On5() {
-        auto session_id = Send<TestMsg>(service_handle(), 5, std::string_view("hjh"));
-        auto res = co_await Recv<milinet::IMsg>(session_id);
-        std::cout << res->session_id() << std::endl;
-        co_return;
+    void OnSend(SendMsg* msg) {
+
     }
+
+private:
+    std::mutex register_service_mutex_;
+    std::vector<milinet::ServiceHandle> register_service_;
+
 };
 
+// 向其他服务发接收网络消息，也通过OnMsg，需要先注册服务Handle
+// 其他服务发网络消息，通过OnMsg接收
 
 
-asio::awaitable<void> echo(asio::ip::tcp::socket socket)
-{
-    try
-    {
-        char data[1024];
-        for (;;)
-        {
-            std::size_t n = co_await socket.async_read_some(asio::buffer(data), asio::use_awaitable);
-            co_await asio::async_write(socket, asio::buffer(data, n), asio::use_awaitable);
-        }
-    }
-    catch (std::exception& e)
-    {
-        std::printf("echo Exception: %s\n", e.what());
-    }
-}
 
-asio::awaitable<void> listener()
-{
-    auto executor = co_await asio::this_coro::executor;
-    asio::ip::tcp::acceptor acceptor(executor, { asio::ip::tcp::v4(), 10086 });
-    for (;;)
-    {
-        asio::ip::tcp::socket socket = co_await acceptor.async_accept(asio::use_awaitable);
-        asio::co_spawn(executor, echo(std::move(socket)), asio::detached);
-    }
-}
-
-void Loop() {
-    asio::io_context io_context(1);
-    asio::co_spawn(io_context, listener(), asio::detached);
-    io_context.run();
+void MainLoop() {
+    
 }
 
 MILINET_FUNC_EXPORT bool MiliModuleInit(milinet::IMilinet* imilinet) {
-    Loop();
+    auto& config = imilinet->config();
     
-    auto service_handle = imilinet->CreateService<TestService>();
-     
-    imilinet->Send<TestMsg>(service_handle, 666, std::string_view("sb"));
-
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    imilinet->Send<TestMsg>(service_handle, 2, "6");
-
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    imilinet->Send<TestMsg>(service_handle, 3, "emm");
-
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    imilinet->Send<TestMsg>(service_handle, 4, "hhh");
-
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    
+    auto service_handle = imilinet->CreateService<NetService>();
 
     return true;
 }

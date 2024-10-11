@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-#include "milinet/noncopyable.h"
+#include "milinet/detail/noncopyable.h"
 #include "milinet/msg_def.h"
 
 namespace milinet {

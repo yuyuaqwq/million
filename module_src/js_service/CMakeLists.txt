@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 project(JS_SERVICE_LIB)
 
 set(CMAKE_CXX_STANDARD 20)

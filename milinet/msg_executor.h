@@ -8,7 +8,7 @@
 #include <queue>
 #include <unordered_map>
 
-#include "milinet/noncopyable.h"
+#include "milinet/detail/noncopyable.h"
 #include "milinet/msg_def.h"
 #include "milinet/task.hpp"
 

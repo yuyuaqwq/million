@@ -3,7 +3,7 @@
 #include <memory>
 #include <thread>
 
-#include "noncopyable.h"
+#include "milinet/detail/noncopyable.h"
 
 namespace milinet {
 

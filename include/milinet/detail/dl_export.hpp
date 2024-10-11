@@ -1,4 +1,4 @@
-#pragma
+#pragma once
 
 #ifdef __linux__
 #define MILINET_FUNC_EXPORT extern "C"

@@ -18,7 +18,8 @@ ServiceHandle ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
         iter = --services_.end();
     }
     auto handle = ServiceHandle(iter);
-    handle.service_ptr()->iservice().set_service_handle(handle);
+    handle.service().iservice().set_service_handle(handle);
+    handle.service().iservice().OnInit();
     return handle;
 }
 
@@ -59,9 +60,9 @@ Service& ServiceMgr::PopService() {
 
 SessionId ServiceMgr::Send(ServiceHandle target, MsgUnique msg) {
     auto id = msg->session_id();
-    auto service = target.service_ptr();
-    service->PushMsg(std::move(msg));
-    PushService(service);
+    auto& service = target.service();
+    service.PushMsg(std::move(msg));
+    PushService(&service);
     return id;
 }
 

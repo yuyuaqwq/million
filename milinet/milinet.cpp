@@ -13,7 +13,8 @@
 namespace milinet {
 
 Milinet::Milinet(std::string_view config_path) {
-    auto config = YAML::LoadFile(std::string(config_path));
+    config_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(config_path)));
+    auto config = *config_;
 
     service_mgr_ = std::make_unique<ServiceMgr>(this);
     msg_mgr_ = std::make_unique<MsgMgr>(this);
@@ -50,13 +51,17 @@ void Milinet::Start() {
     worker_mgr_->Start();
 }
 
-ServiceHandle Milinet::CreateService(std::unique_ptr<IService> iservice) {
+ServiceHandle Milinet::AddService(std::unique_ptr<IService> iservice) {
     return service_mgr_->AddService(std::move(iservice));
 }
 
 SessionId Milinet::Send(ServiceHandle target, MsgUnique msg) {
     msg->set_session_id(msg_mgr_->AllocSessionId());
     return service_mgr_->Send(target, std::move(msg));
+}
+
+const YAML::Node& Milinet::config() const {
+    return *config_;
 }
 
 } //namespace milinet

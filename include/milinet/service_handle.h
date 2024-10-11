@@ -20,8 +20,9 @@ public:
         iter_ = v.iter_;
     }
 
-    Service* service_ptr() const { return iter_->get(); }
+    Service& service() const { return *iter_->get(); }
     auto iter() const { return iter_; }
+
 private:
     std::list<std::unique_ptr<Service>>::iterator iter_;
 };

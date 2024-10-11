@@ -48,6 +48,10 @@ class TestService : public milinet::IService {
 };
 
 
+
+
+
+
 int main() {
     milinet::Milinet net("game_config.yaml");
     net.Init();
