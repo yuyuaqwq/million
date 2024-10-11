@@ -12,6 +12,17 @@
 
 namespace milinet {
 
+MILINET_FUNC_EXPORT IMilinet* NewMilinet(std::string_view config_path) {
+    auto mili = new Milinet(config_path);
+    mili->Init();
+    mili->Start();
+    return mili;
+}
+
+MILINET_FUNC_EXPORT void DeleteMilinet(IMilinet* mili) {
+    delete mili;
+}
+
 Milinet::Milinet(std::string_view config_path) {
     config_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(config_path)));
     auto config = *config_;

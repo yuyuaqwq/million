@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 #include <milinet/detail/dl_export.hpp>
 #include <milinet/detail/noncopyable.h>
 #include <milinet/msg_def.h>
@@ -37,5 +39,9 @@ public:
 inline SessionId IService::Send(ServiceHandle target, MsgUnique msg) {
     return imilinet_->Send(target, std::move(msg));
 }
+
+MILINET_FUNC_EXPORT IMilinet* NewMilinet(std::string_view config_path);
+
+MILINET_FUNC_EXPORT void DeleteMilinet(IMilinet* milinet);
 
 } // namespace milinet

@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "milinet/milinet.h"
-#include "milinet/service.h"
+#include "milinet/imilinet.hpp"
+#include "milinet/iservice.hpp"
 
 class TestMsg : public milinet::IMsg {
 public:
@@ -48,51 +48,24 @@ class TestService : public milinet::IService {
 };
 
 
-
-
-
-
 int main() {
-    milinet::Milinet net("game_config.yaml");
-    net.Init();
-    net.Start();
+    auto mili = milinet::NewMilinet("game_config.yaml");
 
-    auto service_handle = net.CreateService<TestService>();
+    auto service_handle = mili->MakeService<TestService>();
 
-    net.Send<TestMsg>(service_handle, 666, std::string_view("sb"));
+    mili->Send<TestMsg>(service_handle, 666, std::string_view("sb"));
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    net.Send<TestMsg>(service_handle, 2, "6");
+    mili->Send<TestMsg>(service_handle, 2, "6");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    net.Send<TestMsg>(service_handle, 3, "emm");
+    mili->Send<TestMsg>(service_handle, 3, "emm");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    net.Send<TestMsg>(service_handle, 4, "hhh");
+    mili->Send<TestMsg>(service_handle, 4, "hhh");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-
-
-
-    // auto service_id = net.CreateService<TestService>();
-    // 
-    // service_mgr.Send<TestMsg>(service.service_id(), 666, std::string_view("sb"));
-
-    //net.Send<TestMsg>(service_id, 666, std::string_view("sb"));
-
-    //// service_mgr.Send(&service, net.MakeMsg<TestMsg>(666, std::string_view("sb")));
-
-    //std::this_thread::sleep_for(std::chrono::seconds(1));
-    //net.Send<TestMsg>(service_id, 2, "6");
-
-    //std::this_thread::sleep_for(std::chrono::seconds(1));
-    //net.Send<TestMsg>(service_id, 3, "emm");
-
-    //std::this_thread::sleep_for(std::chrono::seconds(1));
-    //net.Send<TestMsg>(service_id, 4, "hhh");
-
-    // std::this_thread::sleep_for(std::chrono::seconds(1));
 
     std::this_thread::sleep_for(std::chrono::seconds(100));
 
