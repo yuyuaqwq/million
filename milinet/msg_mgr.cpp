@@ -14,7 +14,7 @@ MsgMgr::~MsgMgr() = default;
 SessionId MsgMgr::AllocSessionId() {
     auto id = ++session_id_;
     if (id == 0) {
-        std::runtime_error("session id rolled back.");
+        throw std::runtime_error("session id rolled back.");
     }
     return id;
 }
