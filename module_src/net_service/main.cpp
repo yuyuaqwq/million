@@ -105,8 +105,6 @@ private:
 };
 
 
-
-
 class NetService : public milinet::IService {
 public:
     using Base = milinet::IService;
@@ -150,7 +148,6 @@ private:
 // 其他服务发网络消息，通过OnMsg接收
 
 
-
 void MainLoop() {
     
 }
@@ -158,8 +155,7 @@ void MainLoop() {
 MILINET_FUNC_EXPORT bool MiliModuleInit(milinet::IMilinet* imilinet) {
     auto& config = imilinet->config();
     
-    
-    auto service_handle = imilinet->CreateService<NetService>();
+    auto service_handle = imilinet->MakeService<NetService>();
 
     return true;
 }
