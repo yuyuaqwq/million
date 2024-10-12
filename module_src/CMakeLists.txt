@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
-project(SERVICE_LIB)
+project(module_src)
 
-set(NET_SERVICE_LIB netservice)
-set(JS_SERVICE_LIB jsservice)
+set(GATEWAY_LIB gateway)
+set(PYSVR_LIB pysvr)
 
-add_subdirectory(net_service)
-# add_subdirectory(js_service)
+add_subdirectory(gateway)
+# add_subdirectory(pysvr)
