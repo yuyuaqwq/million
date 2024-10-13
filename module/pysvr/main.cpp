@@ -10,7 +10,7 @@ struct Point {
     int y;
 };
 
-MILLION_FUNC_EXPORT bool MiliModuleInit(million::IMillion* imillion) {
+MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
     auto vm = std::make_unique<pkpy::VM>();
     auto mod = vm->new_module("test");
     vm->register_user_class<Point>(mod, "Point",

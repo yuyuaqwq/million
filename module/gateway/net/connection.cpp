@@ -38,9 +38,12 @@ void Connection::Process() {
                     break;
                 }
                 total_packet_size = asio::detail::socket_ops::network_to_host_long(total_packet_size);
+                if (total_packet_size > kPacketMaxSize) {
+                    continue;
+                }
 
                 // 避免恶意total_packet_size
-                constexpr uint32_t max_read_size = 65536u;
+                constexpr uint32_t max_read_size = 65536;
                 constexpr uint32_t max_expansion_size = 1024 * 1024 * 64;
                 auto packet = Packet(std::min(total_packet_size, max_read_size));
                 uint32_t total_bytes_read = 0;
@@ -65,6 +68,10 @@ void Connection::Process() {
                     }
                     total_bytes_read += bytes_read;
                 }
+                const auto& on_msg = server_->on_msg();
+                if (on_msg) {
+                    on_msg(*iter_->get(), std::move(packet));
+                }
             }
         }
         catch (std::exception&) {
@@ -83,7 +90,7 @@ void Connection::Send(Packet&& packet) {
             return;
         }
     }
-    // ����Ҫ���͵İ�����һ��Э��ȥ����������Ϣ
+
     asio::co_spawn(executor_, [this]() -> asio::awaitable<void> {
         std::queue<Packet> tmp_queue;
         try {

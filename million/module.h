@@ -12,8 +12,8 @@ class Million;
 using ModuleInitFunc = bool(Million*);
 using ModuleExitFunc = void(Million*);
 
-constexpr std::string_view kModuleInitName = "MiliModuleInit";
-constexpr std::string_view kModuleExitName = "MiliModuleExit";
+constexpr std::string_view kModuleInitName = "MillionModuleInit";
+constexpr std::string_view kModuleExitName = "MillionModuleExit";
 
 class Module : noncopyable {
 public:

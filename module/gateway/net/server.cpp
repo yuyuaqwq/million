@@ -56,6 +56,9 @@ asio::awaitable<void> Server::Listen(uint16_t port) {
     while (true) {
         asio::ip::tcp::socket socket = co_await acceptor.async_accept(asio::use_awaitable);
         auto handle = AddConnection(std::move(socket), executor);
+        if (on_connection_) {
+            on_connection_(handle);
+        }
         handle.connection().Process();
     }
 }

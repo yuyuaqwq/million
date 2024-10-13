@@ -36,7 +36,7 @@ public:
     ServiceHandle service_handle() const { return service_handle_; }
     void set_service_handle(ServiceHandle handle) { service_handle_ = handle; }
 
-private:
+protected:
     IMillion* imillion_;
     ServiceHandle service_handle_;
 };

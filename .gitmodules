@@ -8,3 +8,15 @@
 	path = third_party/pocketpy
 	url = git@github.com:yuyuaqwq/pocketpy.git
 	branch = v1.x
+[submodule "third_party/nlohmann_json"]
+	path = third_party/nlohmann_json
+	url = https://github.com/nlohmann/json.git
+[submodule "third_party/spdlog"]
+	path = third_party/spdlog
+	url = git@github.com:gabime/spdlog.git
+[submodule "third_party/hiredis"]
+	path = third_party/hiredis
+	url = git@github.com:redis/hiredis.git
+[submodule "third_party/redis-plus-plus"]
+	path = third_party/redis-plus-plus
+	url = git@github.com:sewenew/redis-plus-plus.git

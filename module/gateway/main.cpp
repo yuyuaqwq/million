@@ -12,6 +12,8 @@
 #include "million/imillion.h"
 #include "million/imsg.h"
 
+#include "net/server.h"
+
 #include <yaml-cpp/yaml.h>
 
 
@@ -109,7 +111,16 @@ public:
     using Base::Base;
 
     virtual void OnInit() override {
-        
+        server_.set_on_connection([](auto connection_handle) {
+            // 新连接到来
+            std::cout << "on_connection" << std::endl;
+        });
+        server_.set_on_msg([](auto& connection, auto&& packet) {
+            // 在这里向注册过的服务发送RecvMsg
+            std::cout << "on_msg" << std::endl;
+        });
+
+        server_.Start(1, 8001);
     }
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
@@ -140,12 +151,13 @@ private:
     std::mutex register_service_mutex_;
     std::vector<million::ServiceHandle> register_service_;
 
+    million::net::Server server_;
 };
 
 
-MILLION_FUNC_EXPORT bool MiliModuleInit(million::IMillion* imillion) {
+MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
     auto& config = imillion->config();
-    
+
     auto service_handle = imillion->NewService<NetService>();
 
     return true;

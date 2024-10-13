@@ -2,7 +2,11 @@
 worker_num: 0
 
 module_path: ./module
-
 modules:
-    - gateway
     - pysvr
+    - gateway
+    
+gateway:
+    - 
+        io_thread_num:1
+        port:10086
