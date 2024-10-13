@@ -39,7 +39,7 @@ private:
 
     MsgExecutor excutor_;
 
-    std::atomic_bool in_queue_ = false;
+    bool in_queue_ = false;
 
     std::unique_ptr<IService> iservice_;
 };

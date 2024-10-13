@@ -19,6 +19,7 @@ void Worker::Start() {
             auto& service = service_mgr.PopService();
             // std::cout << "workid:" <<  std::this_thread::get_id() << std::endl;
             service.ProcessMsg();
+            // 可以将service放到队列了
             service.set_in_queue(false);
             if (!service.MsgQueueEmpty()) {
                 service_mgr.PushService(&service);
