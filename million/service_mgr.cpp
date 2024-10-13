@@ -35,11 +35,11 @@ void ServiceMgr::PushService(Service* service) {
         {
             std::lock_guard guard(service_queue_mutex_);
             service_queue_.emplace(service);
+            // set为false的时机，在ProcessMsg完成后设置
+            // 避免当前Service在ProcessMsg时，被通过Send投递消息
+            // 再次将当前ServicePush到队列，使得当前Service被多个Work线程持有
+            service->set_in_queue(true);
         }
-        // set为false的时机，在ProcessMsg完成后设置
-        // 避免当前Service在ProcessMsg时，被通过Send投递消息
-        // 再次将当前ServicePush到队列，使得当前Service被多个Work线程持有
-        service->set_in_queue(true);
         service_queue_cv_.notify_one();
     }
 }
