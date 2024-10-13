@@ -39,7 +39,7 @@ void Connection::Process() {
                 }
                 total_packet_size = asio::detail::socket_ops::network_to_host_long(total_packet_size);
 
-                // �ֶζ�ȡ���������total_packet_size
+                // 避免恶意total_packet_size
                 constexpr uint32_t max_read_size = 65536u;
                 constexpr uint32_t max_expansion_size = 1024 * 1024 * 64;
                 auto packet = Packet(std::min(total_packet_size, max_read_size));
@@ -67,7 +67,7 @@ void Connection::Process() {
                 }
             }
         }
-        catch (std::exception& e) {
+        catch (std::exception&) {
             Close();
             server_->RemoveConnection(iter_);
         }
