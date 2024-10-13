@@ -22,7 +22,7 @@ public:
     virtual ServiceHandle AddService(std::unique_ptr<IService> iservice) = 0;
 
     template <typename IServiceT, typename ...Args>
-    ServiceHandle MakeService(Args&&... args) {
+    ServiceHandle NewService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
         return AddService(std::move(iservice));
     }

@@ -5,11 +5,11 @@ set(CMAKE_CXX_STANDARD 20)
 
 aux_source_directory(./ SRC)
 
-include_directories(${HEAD_PATH})
-include_directories(${POCKET_PY_HEAD_PATH})
-
 set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
 
 add_library(${PYSVR_LIB} SHARED ${SRC})
+
+target_include_directories(${PYSVR_LIB} PRIVATE ${MILLION_HEAD_PATH})
+target_include_directories(${PYSVR_LIB} PRIVATE ${POCKET_PY_HEAD_PATH})
 
 target_link_libraries(${PYSVR_LIB} ${POCKET_PY_LIB})

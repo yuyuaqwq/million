@@ -8,7 +8,7 @@
 #include <asio.hpp>
 
 #include "million/detail/noncopyable.h"
-#include "million/net/connection_handle.h"
+#include "net/connection_handle.h"
 
 namespace million {
 namespace net {

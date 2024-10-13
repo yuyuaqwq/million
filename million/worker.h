@@ -7,19 +7,17 @@
 
 namespace million {
 
-class million;
+class Million;
 class Worker : noncopyable {
 public:
-    Worker(million* million);
+    Worker(Million* million);
     ~Worker();
 
     void Start();
-    void Join();
-    void Detach();
 
 private:
-    million* million_;
-    std::unique_ptr<std::thread> thread_;
+    Million* million_;
+    std::unique_ptr<std::jthread> thread_;
 };
 
 } // namespace million

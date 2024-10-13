@@ -15,8 +15,6 @@
 #include <yaml-cpp/yaml.h>
 
 
-
-
 enum class NetMsgType {
     kRegister,
     kConnection,
@@ -145,14 +143,10 @@ private:
 };
 
 
-void MainLoop() {
-    
-}
-
 MILLION_FUNC_EXPORT bool MiliModuleInit(million::IMillion* imillion) {
     auto& config = imillion->config();
     
-    auto service_handle = imillion->MakeService<NetService>();
+    auto service_handle = imillion->NewService<NetService>();
 
     return true;
 }

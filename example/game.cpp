@@ -51,7 +51,7 @@ class TestService : public million::IService {
 int main() {
     auto mili = million::NewMillion("game_config.yaml");
 
-    auto service_handle = mili->MakeService<TestService>();
+    auto service_handle = mili->NewService<TestService>();
 
     mili->Send<TestMsg>(service_handle, 666, std::string_view("sb"));
 

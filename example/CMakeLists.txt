@@ -3,11 +3,12 @@ project(example)
 
 set(CMAKE_CXX_STANDARD 20)
 
-include_directories(${HEAD_PATH})
 link_directories(${LIB_PATH})
 
 set(EXECUTABLE_OUTPUT_PATH ${EXEC_PATH})
 add_executable(game game.cpp)
+
+target_include_directories(game PRIVATE ${MILLION_HEAD_PATH})
 
 target_link_libraries(game PRIVATE ${MILLION_LIB})
 

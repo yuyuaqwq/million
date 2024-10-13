@@ -27,7 +27,7 @@ public:
     void Start();
 
     virtual ServiceHandle AddService(std::unique_ptr<IService> iservice) override;
-    using IMillion::MakeService;
+    using IMillion::NewService;
 
     virtual SessionId Send(ServiceHandle target, MsgUnique msg) override;
     using IMillion::Send;

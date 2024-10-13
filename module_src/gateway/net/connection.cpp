@@ -1,6 +1,6 @@
-#include "million/net/connection.h"
+#include "net/connection.h"
 
-#include "million/net/server.h"
+#include "net/server.h"
 
 namespace million {
 namespace net {

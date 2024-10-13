@@ -1,13 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 project(million)
 
-set(ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(EXEC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-set(HEAD_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set(MILLION_LIB million)
 
+set(MILLION_HEAD_PATH ${CMAKE_CURRENT_SOURCE_DIR}/million/include)
 set(ASIO_HEAD_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/asio/include)
 set(YAML_CPP_HEAD_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include)
 set(YAML_CPP_LIB yaml-cpp)

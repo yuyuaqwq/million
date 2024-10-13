@@ -6,7 +6,7 @@
 
 #include <asio.hpp>
 
-#include "million/net/packet.h"
+#include "net/packet.h"
 
 namespace million {
 namespace net {

@@ -4,3 +4,7 @@
 [submodule "third_party/asio"]
 	path = third_party/asio
 	url = git@github.com:chriskohlhoff/asio.git
+[submodule "third_party/pocketpy"]
+	path = third_party/pocketpy
+	url = git@github.com:yuyuaqwq/pocketpy.git
+	branch = v1.x
