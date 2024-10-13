@@ -29,6 +29,12 @@ public:
         return Awaiter<MsgT>(session_id);
     }
 
+    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
+    Awaiter<RecvMsgT> Call(ServiceHandle handle, Args&&... args) {
+        auto session_id = Send(handle, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
+        return Recv<RecvMsgT>(session_id);
+    }
+
     virtual void OnInit() {};
     virtual Task OnMsg(MsgUnique msg) = 0;
     virtual void OnExit() {};

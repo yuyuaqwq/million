@@ -43,6 +43,9 @@ class TestService : public million::IService {
         auto session_id = Send<TestMsg>(service_handle(), 5, std::string_view("hjh"));
         auto res = co_await Recv<million::IMsg>(session_id);
         std::cout << res->session_id() << std::endl;
+
+        res = co_await Call<million::IMsg, TestMsg>(service_handle(), 6, std::string_view("sbsb"));
+
         co_return;
     }
 };

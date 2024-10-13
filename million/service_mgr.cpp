@@ -31,16 +31,15 @@ void ServiceMgr::RemoveService(ServiceHandle handle) {
 }
 
 void ServiceMgr::PushService(Service* service) {
-    bool has_push = false;
-    {
-        std::lock_guard guard(service_queue_mutex_);
-        if (!service->in_queue()){
+    if (!service->in_queue()){
+        {
+            std::lock_guard guard(service_queue_mutex_);
             service_queue_.emplace(service);
-            service->set_in_queue(true);
-            has_push = true;
         }
-    }
-    if (has_push) {
+        // set 为 false 的时机，在 ProcessMsg 完成后设置
+        // 避免 当前Service 在 ProcessMsg 时调用 Send
+        // 再次将 当前Service Push 到队列，使得 当前Service 被其他 Work线程 持有
+        service->set_in_queue(true);
         service_queue_cv_.notify_one();
     }
 }
@@ -54,7 +53,6 @@ Service& ServiceMgr::PopService() {
     auto* service = service_queue_.front();
     assert(service);
     service_queue_.pop();
-    service->set_in_queue(false);
     return *service;
 }
 
