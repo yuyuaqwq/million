@@ -37,7 +37,7 @@ void ServiceMgr::PushService(Service* service) {
             service_queue_.emplace(service);
         }
         // set 为 false 的时机，在 ProcessMsg 完成后设置
-        // 避免 当前Service 在 ProcessMsg 时调用 Send
+        // 避免 当前Service 在 ProcessMsg 时，被通过 Send 投递消息
         // 再次将 当前Service Push 到队列，使得 当前Service 被其他 Work线程 持有
         service->set_in_queue(true);
         service_queue_cv_.notify_one();
