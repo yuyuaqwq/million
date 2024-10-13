@@ -20,3 +20,6 @@
 [submodule "third_party/redis-plus-plus"]
 	path = third_party/redis-plus-plus
 	url = git@github.com:sewenew/redis-plus-plus.git
+[submodule "third_party/soci"]
+	path = third_party/soci
+	url = git@github.com:SOCI/soci.git

@@ -15,8 +15,14 @@ target_include_directories(${DB_LIB} PRIVATE ${MILLION_HEADER})
 target_include_directories(${DB_LIB} PRIVATE ${YAML_CPP_HEADER})
 target_link_libraries(${DB_LIB} PRIVATE ${YAML_CPP_LIB})
 
-target_include_directories(${DB_LIB} PRIVATE ${HIREDIS_HEADER})
-target_link_libraries(${DB_LIB} PRIVATE ${HIREDIS_LIB})
+target_include_directories(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_HEADER})
+target_link_libraries(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_LIB})
+
+
+target_include_directories(${DB_LIB} PRIVATE ${MYSQL_HEADER})
+target_link_libraries(${DB_LIB} PRIVATE ${MYSQL_LIB})
+target_include_directories(${DB_LIB} PRIVATE ${SOCI_HEADER})
+target_link_libraries(${DB_LIB} PRIVATE soci_core_static soci_mysql_static)
 
 if (WIN32)
     message(STATUS "Compiling on Windows")

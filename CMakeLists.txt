@@ -24,6 +24,11 @@ set(POCKET_PY_LIB pocketpy)
 set(HIREDIS_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/hiredis/..)
 set(HIREDIS_LIB hiredis)
 
+set(REDIS_PLUS_PLUS_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/redis-plus-plus/src)
+set(REDIS_PLUS_PLUS_LIB redis++_static hiredis)
+
+set(SOCI_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/soci/include)
+
 
 add_subdirectory(million)
 add_subdirectory(module)
@@ -40,7 +45,9 @@ add_subdirectory(third_party/pocketpy)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
 add_subdirectory(third_party/hiredis)
-set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries" FORCE)
 
 set(REDIS_PLUS_PLUS_BUILD_TEST OFF CACHE BOOL "Disable redis-plus-plus test" FORCE)
+set(REDIS_PLUS_PLUS_BUILD_STATIC ON CACHE BOOL "Build redis-plus-plus static library" FORCE)
 add_subdirectory(third_party/redis-plus-plus)
+
+add_subdirectory(third_party/soci)
