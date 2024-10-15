@@ -40,6 +40,7 @@ private:
 
 private:
     IMillion* imillion_;
+
     std::mutex connections_mutex_;
     std::list<std::shared_ptr<Connection>> connections_;
 

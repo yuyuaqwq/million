@@ -108,7 +108,9 @@ private:
 class NetService : public million::IService {
 public:
     using Base = million::IService;
-    using Base::Base;
+    NetService(million::IMillion* imillion)
+        : Base(imillion)
+        , server_(imillion) { }
 
     virtual void OnInit() override {
         server_.set_on_connection([](auto connection_handle) {
@@ -120,7 +122,7 @@ public:
             std::cout << "on_msg" << std::endl;
         });
 
-        server_.Start(1, 8001);
+        server_.Start(8001);
     }
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
