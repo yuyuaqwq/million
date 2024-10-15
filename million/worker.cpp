@@ -13,7 +13,7 @@ Worker::Worker(Million* million) : million_(million) {
 Worker::~Worker() = default;
 
 void Worker::Start() {
-    thread_ = std::make_unique<std::jthread>([this]() {
+    thread_.emplace([this]() {
         auto& service_mgr = million_->service_mgr();
         while (true) {
             auto& service = service_mgr.PopService();

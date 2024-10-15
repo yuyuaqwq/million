@@ -9,9 +9,11 @@
 
 #include "million/detail/noncopyable.h"
 #include "net/connection_handle.h"
+#include "million/imillion.h"
 #include "net/packet.h"
 
 namespace million {
+
 namespace net {
 
 class Server : noncopyable {
@@ -20,7 +22,7 @@ public:
     using MsgFunc = std::function<void(Connection&, Packet&&)>;
 
 public:
-    Server();
+    Server(IMillion* imillion);
     ~Server();
 
     auto& on_connection() const { return on_connection_; }
@@ -28,8 +30,7 @@ public:
     auto& on_msg() const { return on_msg_; }
     void set_on_msg(const MsgFunc& on_msg) { on_msg_ = on_msg; }
 
-
-    void Start(size_t io_thread_num, uint16_t port);
+    void Start(uint16_t port);
     void Stop();
     void RemoveConnection(std::list<std::shared_ptr<Connection>>::iterator iter);
 
@@ -38,11 +39,7 @@ private:
     asio::awaitable<void> Listen(uint16_t port);
 
 private:
-    std::optional<asio::io_context::work> work_;
-    asio::io_context io_context_;
-
-    std::vector<std::thread> io_threads_;
-
+    IMillion* imillion_;
     std::mutex connections_mutex_;
     std::list<std::shared_ptr<Connection>> connections_;
 

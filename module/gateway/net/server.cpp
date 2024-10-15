@@ -5,18 +5,14 @@
 namespace million {
 namespace net {
 
-Server::Server() = default;
+Server::Server(IMillion* imillion)
+    : imillion_(imillion) {}
 Server::~Server() = default;
 
-void Server::Start(size_t io_thread_num, uint16_t port) {
-    work_.emplace(io_context_);
-    asio::co_spawn(io_context_, Listen(port), asio::detached);
-    io_threads_.reserve(io_thread_num);
-    for (size_t i = 0; i < io_threads_.capacity(); ++i) {
-        io_threads_.emplace_back([this]() {
-            io_context_.run();
-        });
-    }
+void Server::Start(uint16_t port) {
+    // 获取一个io_context，绑定acceptor
+    auto& io_context = imillion_->NextIoContext();
+    asio::co_spawn(io_context, Listen(port), asio::detached);
 }
 
 void Server::Stop() {
@@ -25,10 +21,6 @@ void Server::Stop() {
         for (auto& connection : connections_) {
             connection->Close();
         }
-    }
-    work_ = std::nullopt;
-    for (auto& thread : io_threads_) {
-        thread.join();
     }
 }
 
@@ -55,7 +47,9 @@ asio::awaitable<void> Server::Listen(uint16_t port) {
     asio::ip::tcp::acceptor acceptor(executor, { asio::ip::tcp::v4(), port });
     while (true) {
         asio::ip::tcp::socket socket = co_await acceptor.async_accept(asio::use_awaitable);
-        auto handle = AddConnection(std::move(socket), executor);
+        // 获取io_context，新连接绑定到该io_context中
+        auto& io_context = imillion_->NextIoContext();
+        auto handle = AddConnection(std::move(socket), io_context.get_executor());
         if (on_connection_) {
             on_connection_(handle);
         }

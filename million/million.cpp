@@ -9,6 +9,8 @@
 #include "million/msg_mgr.h"
 #include "million/module_mgr.h"
 #include "million/worker_mgr.h"
+#include "million/io_context.h"
+#include "million/io_context_mgr.h"
 
 namespace million {
 
@@ -35,6 +37,12 @@ Million::Million(std::string_view config_path) {
     }
     auto worker_num = config["worker_num"].as<size_t>();
     worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
+
+    if (!config["io_context_num"]) {
+        throw ConfigException("cannot find 'io_context_num'.");
+    }
+    auto io_context_num = config["io_context_num"].as<size_t>();
+    io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
 
     if (!config["module_path"]) {
         throw ConfigException("cannot find 'module_path'.");
@@ -72,6 +80,10 @@ SessionId Million::Send(ServiceHandle target, MsgUnique msg) {
 
 const YAML::Node& Million::config() const {
     return *config_;
+}
+
+asio::io_context& Million::NextIoContext() {
+    return io_context_mgr_->NextIoContext().io_context();
 }
 
 } //namespace million

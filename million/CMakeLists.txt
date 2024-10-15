@@ -13,6 +13,8 @@ add_library(${MILLION_LIB} SHARED ${SRC})
 target_include_directories(${MILLION_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_include_directories(${MILLION_LIB} PRIVATE ${MILLION_HEADER})
 
+target_include_directories(${MILLION_LIB} PRIVATE ${ASIO_HEADER})
+
 find_package(Threads)
 target_link_libraries(${MILLION_LIB} PRIVATE Threads::Threads)
 

@@ -13,6 +13,12 @@ class Node;
 
 } // namespace YAML
 
+namespace asio {
+
+class io_context;
+
+} // namespace asio
+
 namespace million {
 
 class MILLION_CLASS_EXPORT IMillion : noncopyable {
@@ -34,6 +40,8 @@ public:
     }
 
     virtual const YAML::Node& config() const = 0;
+
+    virtual asio::io_context& NextIoContext() = 0;
 };
 
 inline SessionId IService::Send(ServiceHandle target, MsgUnique msg) {
