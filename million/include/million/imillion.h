@@ -4,7 +4,7 @@
 
 #include <million/detail/dl_export.h>
 #include <million/detail/noncopyable.h>
-#include <million/msg_def.h>
+#include <million/imsg.h>
 #include <million/iservice.h>
 
 namespace YAML {

@@ -47,4 +47,18 @@ protected:
     ServiceHandle service_handle_;
 };
 
+#define MILLION_HANDLE_MSG_BEGIN(_MSG, _MSG_TYPE) \
+    auto _MSG_2 = _MSG->get<_MSG_TYPE>(); \
+    switch (_MSG_2->type()) {
+
+#define MILLION_HANDLE_MSG(_MSG, _TYPE, _CODE_BLOCK) \
+    case _TYPE::TypeValue: { \
+        auto _MSG = _MSG_2->get<_TYPE>(); \
+        _CODE_BLOCK \
+        break; \
+    }
+
+#define MILLION_HANDLE_MSG_END() \
+    }
+
 } // namespace million

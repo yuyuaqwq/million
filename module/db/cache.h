@@ -3,7 +3,6 @@
 #include <any>
 
 #include "million/imillion.h"
-#include "million/imsg.h"
 
 #include <sw/redis++/redis++.h>
 
@@ -12,11 +11,32 @@
 
 #undef GetMessage
 
+using ProtoMsgUnique = std::unique_ptr<google::protobuf::Message>;
+
+enum CacheMsgType {
+    kParseFromCache,
+    kSerializeToCache,
+};
+
+using CacheMsgBase = million::MsgBaseT<CacheMsgType>;
+
+struct ParseFromCacheMsg : million::MsgT<kParseFromCache> {
+    ParseFromCacheMsg(auto&& msg)
+        : proto_msg(std::move(msg)) { }
+
+    ProtoMsgUnique proto_msg;
+};
+
+struct SerializeToCacheMsg : million::MsgT<kSerializeToCache> {
+    SerializeToCacheMsg(auto&& msg)
+        : proto_msg(std::move(msg)) { }
+
+    ProtoMsgUnique proto_msg;
+};
+
 // »º´æ·þÎñ
 class CacheService : public million::IService {
 public:
-    using ProtoMsgUnique = std::unique_ptr<google::protobuf::Message>;
-
     using Base = million::IService;
     using Base::Base;
 
@@ -37,7 +57,17 @@ public:
                         queue_cv_.wait(guard);
                     }
                     auto& msg = queue_.front();
-                    ParseFromCache(msg.get());
+
+                    MILLION_HANDLE_MSG_BEGIN(msg, CacheMsgBase);
+
+                    MILLION_HANDLE_MSG(msg, ParseFromCacheMsg, {
+                        ParseFromCache(msg->proto_msg.get());
+                    });
+                    MILLION_HANDLE_MSG(msg, SerializeToCacheMsg, {
+                        SerializeToCache(*msg->proto_msg);
+                    });
+
+                    MILLION_HANDLE_MSG_END();
 
                     queue_.pop();
                 }
@@ -53,6 +83,7 @@ public:
     }
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
+        Post(std::move(msg));
         co_return;
     }
 
@@ -60,7 +91,7 @@ public:
         // Close();
     }
 
-    void PostParseFromCache(ProtoMsgUnique msg) {
+    void Post(million::MsgUnique msg) {
         auto guard = std::lock_guard(queue_mutex_);
         queue_.emplace(std::move(msg));
     }
@@ -231,7 +262,7 @@ private:
     std::optional<sw::redis::Redis> redis_;
 
     std::optional<std::jthread> thread_;
-    std::queue<ProtoMsgUnique> queue_;
+    std::queue<million::MsgUnique> queue_;
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;
 };

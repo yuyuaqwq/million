@@ -3,13 +3,27 @@
 #include "million/imillion.h"
 #include "million/iservice.h"
 
-class TestMsg : public million::IMsg {
-public:
-    TestMsg(int value1, std::string_view value2)
-        : value1(value1)
-        , value2(value2) {}
 
-public:
+enum Test {
+    kTest1,
+    kTest2,
+    kTest3,
+};
+
+using TestMsgBase = million::MsgBaseT<Test>;
+
+struct Test1Msg : million::MsgT<kTest1> {
+    Test1Msg(auto&& value1, auto&& value2)
+        : value1(value1), value2(value2) { }
+
+    int value1;
+    std::string value2;
+};
+
+struct Test2Msg : million::MsgT<kTest2> {
+    Test2Msg(auto&& value1, auto&& value2)
+        : value1(value1), value2(value2) {}
+
     int value1;
     std::string value2;
 };
@@ -19,8 +33,17 @@ class TestService : public million::IService {
     using Base::Base;
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
-        auto test_msg = static_cast<TestMsg*>(msg.get());
-        std::cout << test_msg->session_id() << test_msg->value1 << test_msg->value2 << std::endl;
+
+        MILLION_HANDLE_MSG_BEGIN(msg, TestMsgBase);
+
+        MILLION_HANDLE_MSG(test1, Test1Msg, {
+            std::cout << test1->session_id() << test1->value1 << test1->value2 << std::endl;
+        });
+        MILLION_HANDLE_MSG(test2, Test2Msg, {
+            std::cout << test2->session_id() << test2->value1 << test2->value2 << std::endl;
+        });
+
+        MILLION_HANDLE_MSG_END();
 
         auto res = co_await Recv<million::IMsg>(2);
         std::cout << res->session_id() << std::endl;
@@ -40,11 +63,11 @@ class TestService : public million::IService {
     }
 
     million::Task On5() {
-        auto session_id = Send<TestMsg>(service_handle(), 5, std::string_view("hjh"));
+        auto session_id = Send<Test1Msg>(service_handle(), 5, std::string_view("hjh"));
         auto res = co_await Recv<million::IMsg>(session_id);
         std::cout << res->session_id() << std::endl;
 
-        res = co_await Call<million::IMsg, TestMsg>(service_handle(), 6, std::string_view("sbsb"));
+        res = co_await Call<million::IMsg, Test1Msg>(service_handle(), 6, std::string_view("sbsb"));
 
         co_return;
     }
@@ -56,17 +79,17 @@ int main() {
 
     auto service_handle = mili->NewService<TestService>();
 
-    mili->Send<TestMsg>(service_handle, 666, std::string_view("sb"));
+    mili->Send<Test1Msg>(service_handle, 666, std::string_view("sb"));
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    mili->Send<TestMsg>(service_handle, 2, "6");
+    mili->Send<Test1Msg>(service_handle, 2, "6");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    mili->Send<TestMsg>(service_handle, 3, "emm");
+    mili->Send<Test1Msg>(service_handle, 3, "emm");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    mili->Send<TestMsg>(service_handle, 4, "hhh");
+    mili->Send<Test1Msg>(service_handle, 4, "hhh");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
