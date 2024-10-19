@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-// #include <meta/macro.hpp>
+#include <meta/macro.hpp>
 
 #include <million/detail/dl_export.h>
 #include <million/msg_def.h>
