@@ -1,9 +1,12 @@
+#pragma once
+
 #include <iostream>
 #include <queue>
 #include <any>
 
 #include <soci/soci.h>
 #include <soci/mysql/soci-mysql.h>
+#undef GetMessage
 
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
@@ -11,8 +14,6 @@
 #include <million/imillion.h>
 #include <million/imsg.h>
 #include <million/proto_msg.h>
-
-#undef GetMessage
 
 class SqlService : public million::IService {
 public:
@@ -85,8 +86,6 @@ public:
         sql += "FROM ";
         sql += table;
         sql += ";";
-
-        sizeof(std::any);
 
         // ²éÑ¯Êý¾Ý
         soci::rowset<soci::row> rs = (sql_.prepare << sql);

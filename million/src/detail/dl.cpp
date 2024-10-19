@@ -1,4 +1,4 @@
-#include "dl.h"
+#include "detail/dl.h"
 
 #ifdef __linux__
 #include <dlfcn.h>

@@ -3,14 +3,16 @@ project(GATEWAY_LIB)
 
 set(CMAKE_CXX_STANDARD 20)
 
-aux_source_directory(./ SRC)
-aux_source_directory(./net/ SRC)
+aux_source_directory(./src/ SRC)
+aux_source_directory(./src/net/ SRC)
 
 set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
 
 add_library(${GATEWAY_LIB} SHARED ${SRC})
 
-target_include_directories(${GATEWAY_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${GATEWAY_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${GATEWAY_LIB} PRIVATE ${GATEWAY_HEADER})
+
 target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_HEADER})
 target_include_directories(${GATEWAY_LIB} PRIVATE ${ASIO_HEADER})
 

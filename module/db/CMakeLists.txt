@@ -3,13 +3,15 @@ project(DB_LIB)
 
 set(CMAKE_CXX_STANDARD 20)
 
-aux_source_directory(./ SRC)
+aux_source_directory(./src/ SRC)
 
 set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
 
 add_library(${DB_LIB} SHARED ${SRC})
 
-target_include_directories(${DB_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${DB_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${DB_LIB} PRIVATE ${DB_HEADER})
+
 target_include_directories(${DB_LIB} PRIVATE ${MILLION_HEADER})
 
 target_include_directories(${DB_LIB} PRIVATE ${PROTOGEN_HEADER})

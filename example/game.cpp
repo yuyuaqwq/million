@@ -19,7 +19,7 @@ class TestService : public million::IService {
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
 
-        MILLION_HANDLE_MSG_BEGIN(msg, TestMsgBase);
+        MILLION_HANDLE_MSG_BEGIN(std::move(msg), TestMsgBase);
 
         MILLION_HANDLE_MSG(msg, Test1Msg, {
             std::cout << msg->session_id() << msg->value1 << msg->value2 << std::endl;
