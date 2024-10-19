@@ -1,21 +1,21 @@
-#include "net/connection.h"
+#include "net/tcp_connection.h"
 
-#include "net/server.h"
+#include "net/tcp_server.h"
 
 namespace million {
 namespace net {
 
-Connection::Connection(
-    Server* server,
+TcpConnection::TcpConnection(
+    TcpServer* server,
     asio::ip::tcp::socket&& socket,
     const asio::any_io_executor& executor)
     : server_(server)
     , socket_(std::move(socket))
     , executor_(executor) {};
 
-Connection::~Connection() = default;
+    TcpConnection::~TcpConnection() = default;
 
-void Connection::Close() {
+void TcpConnection::Close() {
     std::lock_guard guard(close_mutex_);
     if (!socket_.is_open()) {
         return;
@@ -25,7 +25,7 @@ void Connection::Close() {
     socket_.close(ec);
 }
 
-void Connection::Process() {
+void TcpConnection::Process() {
     asio::co_spawn(executor_, [this]() -> asio::awaitable<void> {
         try {
             while (true) {
@@ -81,7 +81,7 @@ void Connection::Process() {
     }, asio::detached);
 }
 
-void Connection::Send(Packet&& packet) {
+void TcpConnection::Send(Packet&& packet) {
     {
         auto guard = std::lock_guard(send_queue_mutex_);
         bool send_in_progress = !send_queue_.empty();

@@ -21,7 +21,7 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include "net/server.h"
+#include "net/tcp_server.h"
 
 class TokenGenerator {
 public:
@@ -119,22 +119,25 @@ private:
 };
 
 
-class GateWayService : public million::IService {
+class GatewayService : public million::IService {
 public:
     using Base = million::IService;
-    GateWayService(million::IMillion* imillion)
+    GatewayService(million::IMillion* imillion)
         : Base(imillion)
-        , server_(imillion) { }
+        , tcp_server_(imillion) { }
 
     virtual void OnInit() override {
-        server_.set_on_connection([](auto connection_handle) {
+        proto_manager_.Init();
+        proto_manager_.RegistrySubMsgId(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
+        // auto desc = proto_manager_.GetMsgDesc(Cs::MSG_ID_USER, Cs::SUB_MSG_ID_USER_LOGIN);
+
+        tcp_server_.set_on_connection([](auto connection_handle) {
             std::cout << "on_connection" << std::endl;
         });
-        server_.set_on_msg([](auto& connection, auto&& packet) {
+        tcp_server_.set_on_msg([](auto& connection, auto&& packet) {
             std::cout << "on_msg" << std::endl;
         });
-
-        server_.Start(8001);
+        tcp_server_.Start(8001);
     }
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
@@ -143,27 +146,15 @@ public:
     }
 
 private:
-    million::net::Server server_;
+    million::net::TcpServer tcp_server_;
+    ProtoManager proto_manager_;
 };
 
 
 
 MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
-    // 初始化 Protobuf 库
-    GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-    ProtoManager mgr;
-    mgr.Init();
-    mgr.RegistrySubMsgId(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
-
-    auto desc = mgr.GetMsgDesc(Cs::MSG_ID_USER, Cs::SUB_MSG_ID_USER_LOGIN);
-
-    // 清理 Protobuf 资源
-    // google::protobuf::ShutdownProtobufLibrary();
-
-
     auto& config = imillion->config();
-    auto handle = imillion->NewService<GateWayService>();
+    auto handle = imillion->NewService<GatewayService>();
 
 
 

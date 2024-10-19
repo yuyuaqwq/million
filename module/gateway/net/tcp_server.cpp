@@ -1,21 +1,21 @@
-#include "net/server.h"
+#include "net/tcp_server.h"
 
-#include "net/connection.h"
+#include "net/tcp_connection.h"
 
 namespace million {
 namespace net {
 
-Server::Server(IMillion* imillion)
+TcpServer::TcpServer(IMillion* imillion)
     : imillion_(imillion) {}
-Server::~Server() = default;
+TcpServer::~TcpServer() = default;
 
-void Server::Start(uint16_t port) {
+void TcpServer::Start(uint16_t port) {
     // 获取一个io_context，绑定acceptor
     auto& io_context = imillion_->NextIoContext();
     asio::co_spawn(io_context, Listen(port), asio::detached);
 }
 
-void Server::Stop() {
+void TcpServer::Stop() {
     {
         auto guard = std::lock_guard(connections_mutex_);
         for (auto& connection : connections_) {
@@ -24,15 +24,15 @@ void Server::Stop() {
     }
 }
 
-void Server::RemoveConnection(std::list<std::shared_ptr<Connection>>::iterator iter) {
+void TcpServer::RemoveConnection(std::list<std::shared_ptr<TcpConnection>>::iterator iter) {
     auto guard = std::lock_guard(connections_mutex_);
     connections_.erase(iter);
 }
 
-ConnectionHandle Server::AddConnection(asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) {
+TcpConnectionHandle TcpServer::AddConnection(asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) {
     decltype(connections_)::iterator iter;
-    auto connection = std::make_shared<Connection>(this, std::move(socket), executor);
-    auto handle = ConnectionHandle(connection);
+    auto connection = std::make_shared<TcpConnection>(this, std::move(socket), executor);
+    auto handle = TcpConnectionHandle(connection);
     {
         auto guard = std::lock_guard(connections_mutex_);
         connections_.emplace_back(std::move(connection));
@@ -42,7 +42,7 @@ ConnectionHandle Server::AddConnection(asio::ip::tcp::socket&& socket, const asi
     return handle;
 }
 
-asio::awaitable<void> Server::Listen(uint16_t port) {
+asio::awaitable<void> TcpServer::Listen(uint16_t port) {
     auto executor = co_await asio::this_coro::executor;
     asio::ip::tcp::acceptor acceptor(executor, { asio::ip::tcp::v4(), port });
     while (true) {

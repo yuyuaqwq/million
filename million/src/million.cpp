@@ -14,6 +14,14 @@
 
 namespace million {
 
+MILLION_FUNC_EXPORT void InitMillion() {
+    // 初始化 Protobuf 库
+    // GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+    // 清理 Protobuf 资源
+    // google::protobuf::ShutdownProtobufLibrary();
+}
+
 MILLION_FUNC_EXPORT IMillion* NewMillion(std::string_view config_path) {
     auto mili = new Million(config_path);
     mili->Init();

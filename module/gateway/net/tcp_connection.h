@@ -11,11 +11,11 @@
 namespace million {
 namespace net {
 
-class Server;
-class Connection : public std::enable_shared_from_this<Connection> {
+class TcpServer;
+class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
 public:
-    Connection(Server* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
-    ~Connection();
+    TcpConnection(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
+    ~TcpConnection();
 
     void Close();
 
@@ -24,13 +24,13 @@ public:
     void Send(Packet&& packet);
 
     auto iter() const { return iter_; }
-    void set_iter(std::list<std::shared_ptr<Connection>>::iterator iter) { iter_ = iter; }
+    void set_iter(std::list<std::shared_ptr<TcpConnection>>::iterator iter) { iter_ = iter; }
 
     asio::ip::tcp::socket& socket() { return socket_; }
 
 public:
-    Server* server_;
-    std::list<std::shared_ptr<Connection>>::iterator iter_;
+    TcpServer* server_;
+    std::list<std::shared_ptr<TcpConnection>>::iterator iter_;
 
     std::mutex close_mutex_;
 

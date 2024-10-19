@@ -48,8 +48,8 @@ inline SessionId IService::Send(ServiceHandle target, MsgUnique msg) {
     return imillion_->Send(target, std::move(msg));
 }
 
+MILLION_FUNC_EXPORT void InitMillion();
 MILLION_FUNC_EXPORT IMillion* NewMillion(std::string_view config_path);
-
 MILLION_FUNC_EXPORT void DeleteMillion(IMillion* million);
 
 } // namespace million
