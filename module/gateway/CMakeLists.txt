@@ -11,6 +11,7 @@ set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
 add_library(${GATEWAY_LIB} SHARED ${SRC})
 
 target_include_directories(${GATEWAY_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_PROTO})
 target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_HEADER})
 target_include_directories(${GATEWAY_LIB} PRIVATE ${ASIO_HEADER})
 

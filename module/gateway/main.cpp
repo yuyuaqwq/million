@@ -12,9 +12,8 @@
 #include <million/imillion.h>
 #include <million/imsg.h>
 
-#include <proto/cs/csmsgid.pb.h>
-#include <proto/cs/cspackage.pb.h>
-#include <proto/cs/csguild.pb.h>
+#include <protogen/cs/cs_msgid.pb.h>
+#include <protogen/cs/cs_user.pb.h>
 
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
@@ -129,11 +128,9 @@ public:
 
     virtual void OnInit() override {
         server_.set_on_connection([](auto connection_handle) {
-            // 新连接到来
             std::cout << "on_connection" << std::endl;
         });
         server_.set_on_msg([](auto& connection, auto&& packet) {
-            // 在这里向注册过的服务发送RecvMsg
             std::cout << "on_msg" << std::endl;
         });
 
@@ -157,10 +154,9 @@ MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
 
     ProtoManager mgr;
     mgr.Init();
-    mgr.RegistrySubMsgId(Cs::MSG_ID_GUILD, Cs::cs_sub_msg_id_guild);
-    mgr.RegistrySubMsgId(Cs::MSG_ID_PACKAGE, Cs::cs_sub_msg_id_package);
+    mgr.RegistrySubMsgId(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
 
-    auto desc = mgr.GetMsgDesc(Cs::MSG_ID_PACKAGE, Cs::SUB_MSG_ID_PACKAGE_OPEN);
+    auto desc = mgr.GetMsgDesc(Cs::MSG_ID_USER, Cs::SUB_MSG_ID_USER_LOGIN);
 
     // 清理 Protobuf 资源
     // google::protobuf::ShutdownProtobufLibrary();

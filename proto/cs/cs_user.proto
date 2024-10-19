@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package Cs;
+
+import "google/protobuf/descriptor.proto";
+import "cs/cs_msgid.proto";
+
+enum SubMsgIdUser {
+    option (cs_msg_id) = MSG_ID_USER;
+    
+    SUB_MSG_ID_USER_INVALID = 0;
+    SUB_MSG_ID_USER_REGISTER = 1;
+    SUB_MSG_ID_USER_LOGIN = 2;
+}
+
+extend google.protobuf.MessageOptions {
+    SubMsgIdUser cs_sub_msg_id_user = 11001;
+}
+
+message UserRegisterReq {
+    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_REGISTER;
+    string user_name = 1;
+    string password = 2;
+}
+
+message UserRegisterRes {
+    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_REGISTER;
+    
+}
+
+message UserLoginReq {
+    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_LOGIN;
+    string user_name = 1;
+    string password = 2;
+}
+
+message UserLoginRes {
+    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_LOGIN;
+    
+}

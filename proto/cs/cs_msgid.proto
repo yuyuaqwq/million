@@ -10,6 +10,5 @@ extend google.protobuf.EnumOptions {
 
 enum MsgId {
     MSG_ID_INVALID = 0;
-    MSG_ID_GUILD = 1;
-    MSG_ID_PACKAGE = 2;
+    MSG_ID_USER = 1;
 }
