@@ -26,7 +26,7 @@ set(SPDLOG_LIB spdlog::spdlog)
 set(POCKET_PY_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/pocketpy)
 set(POCKET_PY_LIB pocketpy)
 
-set(HIREDIS_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/hiredis/..)
+set(HIREDIS_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/hiredis)
 set(HIREDIS_LIB hiredis)
 
 set(REDIS_PLUS_PLUS_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/redis-plus-plus/src)

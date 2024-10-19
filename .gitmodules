@@ -20,6 +20,9 @@
 [submodule "third_party/soci"]
 	path = third_party/soci
 	url = git@github.com:SOCI/soci.git
-[submodule "hiredis/hiredis"]
-	path = hiredis/hiredis
+[submodule "third_party/hiredis/hiredis"]
+	path = third_party/hiredis/hiredis
 	url = git@github.com:redis/hiredis.git
+[submodule "third_party/meta"]
+	path = third_party/meta
+	url = https://github.com/fuyouawa/meta.git
