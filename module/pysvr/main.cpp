@@ -1,7 +1,7 @@
 #include "iostream"
 
-#include "million/imillion.h"
-#include "million/imsg.h"
+#include <million/imillion.h>
+#include <million/imsg.h>
 
 #include <pocketpy/pocketpy.h>
 
