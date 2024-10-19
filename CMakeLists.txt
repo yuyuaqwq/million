@@ -7,7 +7,9 @@ set(EXEC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(MILLION_LIB million)
 
 set(MILLION_PROTO ${CMAKE_CURRENT_SOURCE_DIR}/proto)
-set(MILLION_PROTOGEN ${CMAKE_CURRENT_SOURCE_DIR}/protogen)
+
+set(PROTOGEN_LIB protogen)
+set(PROTOGEN_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/protogen)
 
 set(MILLION_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/million/include ${CMAKE_CURRENT_SOURCE_DIR})
 set(ASIO_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/asio/include)
@@ -32,10 +34,11 @@ set(REDIS_PLUS_PLUS_LIB redis++_static hiredis)
 
 set(SOCI_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/soci/include)
 
-
 add_subdirectory(million/src)
 add_subdirectory(module)
 add_subdirectory(example)
+
+add_subdirectory(protogen)
 
 set(YAML_BUILD_SHARED_LIBS ON)
 add_subdirectory(third_party/yaml-cpp)

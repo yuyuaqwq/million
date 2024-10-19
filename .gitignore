@@ -1,4 +1,7 @@
 build
 bin
 lib
-protogen
+protogen/comm
+protogen/cs
+protogen/ss
+protogen/db

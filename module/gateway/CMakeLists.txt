@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD 20)
 aux_source_directory(./ SRC)
 aux_source_directory(./net/ SRC)
 
-aux_source_directory(${MILLION_PROTOGEN}/cs/ SRC)
-
 set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
 
 add_library(${GATEWAY_LIB} SHARED ${SRC})
@@ -16,7 +14,8 @@ target_include_directories(${GATEWAY_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_HEADER})
 target_include_directories(${GATEWAY_LIB} PRIVATE ${ASIO_HEADER})
 
-target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_PROTOGEN})
+target_include_directories(${GATEWAY_LIB} PRIVATE ${PROTOGEN_HEADER})
+target_link_libraries(${GATEWAY_LIB} PRIVATE ${PROTOGEN_LIB})
 
 find_package(Threads)
 target_link_libraries(${GATEWAY_LIB} PRIVATE Threads::Threads)
