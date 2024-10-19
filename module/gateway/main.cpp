@@ -1,5 +1,3 @@
-#include "iostream"
-
 #include <atomic>
 #include <chrono>
 #include <optional>
@@ -9,9 +7,6 @@
 #include <sstream>
 #include <iomanip>
 
-#include <million/imillion.h>
-#include <million/imsg.h>
-
 #include <protogen/cs/cs_msgid.pb.h>
 #include <protogen/cs/cs_user.pb.h>
 
@@ -20,6 +15,9 @@
 #include <google/protobuf/compiler/importer.h>
 
 #include <yaml-cpp/yaml.h>
+
+#include <million/imillion.h>
+#include <million/imsg.h>
 
 #include "net/tcp_server.h"
 
@@ -129,7 +127,7 @@ public:
     virtual void OnInit() override {
         proto_manager_.Init();
         proto_manager_.RegistrySubMsgId(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
-        // auto desc = proto_manager_.GetMsgDesc(Cs::MSG_ID_USER, Cs::SUB_MSG_ID_USER_LOGIN);
+        auto desc = proto_manager_.GetMsgDesc(Cs::MSG_ID_USER, Cs::SUB_MSG_ID_USER_LOGIN);
 
         tcp_server_.set_on_connection([](auto connection_handle) {
             std::cout << "on_connection" << std::endl;

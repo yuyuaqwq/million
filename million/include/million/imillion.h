@@ -33,10 +33,10 @@ public:
         return AddService(std::move(iservice));
     }
 
-    virtual SessionId Send(ServiceHandle target, MsgUnique msg) = 0;
+    virtual SessionId Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) = 0;
     template <typename MsgT, typename ...Args>
-    SessionId Send(ServiceHandle target, Args&&... args) {
-        return Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
+    SessionId Send(ServiceHandle sender, ServiceHandle target, Args&&... args) {
+        return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
     virtual const YAML::Node& config() const = 0;
@@ -45,7 +45,7 @@ public:
 };
 
 inline SessionId IService::Send(ServiceHandle target, MsgUnique msg) {
-    return imillion_->Send(target, std::move(msg));
+    return imillion_->Send(service_handle_, target, std::move(msg));
 }
 
 MILLION_FUNC_EXPORT void InitMillion();

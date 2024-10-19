@@ -19,7 +19,7 @@ namespace net {
 
 class TcpServer : noncopyable {
 public:
-    using TcpConnectionFunc = std::function<void(TcpConnectionHandle)>;
+    using TcpConnectionFunc = std::function<void(TcpConnectionShared)>;
     using TcpMsgFunc = std::function<void(TcpConnection&, Packet&&)>;
 
 public:
@@ -33,17 +33,17 @@ public:
 
     void Start(uint16_t port);
     void Stop();
-    void RemoveConnection(std::list<std::shared_ptr<TcpConnection>>::iterator iter);
+    void RemoveConnection(std::list<TcpConnectionShared>::iterator iter);
 
 private:
-    TcpConnectionHandle AddConnection(asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
+    TcpConnectionShared AddConnection(asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
     asio::awaitable<void> Listen(uint16_t port);
 
 private:
     IMillion* imillion_;
 
     std::mutex connections_mutex_;
-    std::list<std::shared_ptr<TcpConnection>> connections_;
+    std::list<TcpConnectionShared> connections_;
 
     TcpConnectionFunc on_connection_;
     TcpMsgFunc on_msg_;

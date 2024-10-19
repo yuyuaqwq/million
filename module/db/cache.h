@@ -2,13 +2,13 @@
 #include <queue>
 #include <any>
 
-#include <million/imillion.h>
-#include <million/proto_msg.h>
-
 #include <sw/redis++/redis++.h>
 
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
+
+#include <million/imillion.h>
+#include <million/proto_msg.h>
 
 #undef GetMessage
 
@@ -16,29 +16,16 @@
 enum CacheMsgType {
     kParseFromCache,
     kSerializeToCache,
-    kGet,
-    kSet,
+    kCacheGet,
+    kCacheSet,
 };
-
 using CacheMsgBase = million::MsgBaseT<CacheMsgType>;
-
-struct GetMsg {
-
-};
-
-struct ParseFromCacheMsg : million::MsgT<kParseFromCache> {
-    ParseFromCacheMsg(auto&& msg)
-        : proto_msg(std::move(msg)) { }
-
-    million::ProtoMsgUnique proto_msg;
-};
-
-struct SerializeToCacheMsg : million::MsgT<kSerializeToCache> {
-    SerializeToCacheMsg(auto&& msg)
-        : proto_msg(std::move(msg)) { }
-
-    million::ProtoMsgUnique proto_msg;
-};
+MILLION_MSG_DEFINE(ParseFromCacheMsg, kParseFromCache, (million::ProtoMsgUnique) proto_msg)
+MILLION_MSG_DEFINE(SerializeToCacheMsg, kSerializeToCache, (million::ProtoMsgUnique) proto_msg)
+MILLION_MSG_DEFINE(CacheGetReqMsg, kCacheGet, (std::string) key)
+MILLION_MSG_DEFINE(CacheGetResMsg, kCacheGet, (std::string) value)
+MILLION_MSG_DEFINE(CacheSetReqMsg, kCacheSet, (std::string) key, (std::string) value)
+MILLION_MSG_DEFINE(CacheSetResMsg, kCacheSet, (bool) success)
 
 // 缓存服务
 class CacheService : public million::IService {
@@ -62,15 +49,21 @@ public:
                     while (queue_.empty()) {
                         queue_cv_.wait(guard);
                     }
-                    auto& msg = queue_.front();
+                    auto msg = std::move(queue_.front());
 
-                    MILLION_HANDLE_MSG_BEGIN(msg, CacheMsgBase);
+                    MILLION_HANDLE_MSG_BEGIN(std::move(msg), CacheMsgBase);
 
                     MILLION_HANDLE_MSG(msg, ParseFromCacheMsg, {
-                        ParseFromCache(msg->proto_msg.get());
+                        ParseFromCache(std::move(msg));
                     });
                     MILLION_HANDLE_MSG(msg, SerializeToCacheMsg, {
-                        SerializeToCache(*msg->proto_msg);
+                        SerializeToCache(std::move(msg));
+                    });
+                    MILLION_HANDLE_MSG(msg, CacheGetReqMsg, {
+                        Get(std::move(msg));
+                    });
+                    MILLION_HANDLE_MSG(msg, CacheSetReqMsg, {
+                        Set(std::move(msg));
                     });
 
                     MILLION_HANDLE_MSG_END();
@@ -102,17 +95,22 @@ public:
         queue_.emplace(std::move(msg));
     }
 
-    void Get() {
-
+    void Get(std::unique_ptr<CacheGetReqMsg> msg) {
+        auto value =  redis_->get(msg->key);
+        if (!value) {
+            return;
+        }
+        Send<CacheGetResMsg>(msg->sender(), std::move(*value));
     }
 
-    void Set() {
-
+    void Set(std::unique_ptr<CacheSetReqMsg> msg) {
+        Send<CacheSetResMsg>(msg->sender(), redis_->set(msg->key, msg->value));
     }
 
-    void ParseFromCache(google::protobuf::Message* msg) {
-        const google::protobuf::Descriptor* descriptor = msg->GetDescriptor();
-        const google::protobuf::Reflection* reflection = msg->GetReflection();
+    void ParseFromCache(std::unique_ptr<ParseFromCacheMsg> msg) {
+        auto proto_msg = msg->proto_msg.get();
+        const google::protobuf::Descriptor* descriptor = proto_msg->GetDescriptor();
+        const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
         auto& table = descriptor->name();
 
         // 通过 Redis 哈希表存取 Protobuf 字段
@@ -129,58 +127,58 @@ public:
 
             std::string value = iter->second;
             if (field->is_repeated()) {
-                google::protobuf::Message* sub_message = reflection->MutableMessage(msg, field);
+                google::protobuf::Message* sub_message = reflection->MutableMessage(proto_msg, field);
                 sub_message->ParseFromString(value);
             }
             else {
                 switch (field->type()) {
                 case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
-                    reflection->SetDouble(msg, field, std::stod(value));
+                    reflection->SetDouble(proto_msg, field, std::stod(value));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-                    reflection->SetFloat(msg, field, std::stof(value));
+                    reflection->SetFloat(proto_msg, field, std::stof(value));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_INT64:
                 case google::protobuf::FieldDescriptor::TYPE_SINT64:
                 case google::protobuf::FieldDescriptor::TYPE_SFIXED64: {
-                    reflection->SetInt64(msg, field, std::stoll(value));
+                    reflection->SetInt64(proto_msg, field, std::stoll(value));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_UINT64:
                 case google::protobuf::FieldDescriptor::TYPE_FIXED64: {
-                    reflection->SetUInt64(msg, field, std::stoull(value));
+                    reflection->SetUInt64(proto_msg, field, std::stoull(value));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_INT32:
                 case google::protobuf::FieldDescriptor::TYPE_SINT32:
                 case google::protobuf::FieldDescriptor::TYPE_SFIXED32: {
-                    reflection->SetInt32(msg, field, std::stoi(value));
+                    reflection->SetInt32(proto_msg, field, std::stoi(value));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_UINT32:
                 case google::protobuf::FieldDescriptor::TYPE_FIXED32: {
-                    reflection->SetUInt32(msg, field, static_cast<uint32_t>(std::stoul(value)));
+                    reflection->SetUInt32(proto_msg, field, static_cast<uint32_t>(std::stoul(value)));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-                    reflection->SetBool(msg, field, value == "1" || value == "true");
+                    reflection->SetBool(proto_msg, field, value == "1" || value == "true");
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_STRING:
                 case google::protobuf::FieldDescriptor::TYPE_BYTES: {
-                    reflection->SetString(msg, field, value);
+                    reflection->SetString(proto_msg, field, value);
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_ENUM: {
                     const google::protobuf::EnumValueDescriptor* enum_value =
                         field->enum_type()->FindValueByName(value);
-                    reflection->SetEnum(msg, field, enum_value);
+                    reflection->SetEnum(proto_msg, field, enum_value);
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-                    google::protobuf::Message* sub_message = reflection->MutableMessage(msg, field);
+                    google::protobuf::Message* sub_message = reflection->MutableMessage(proto_msg, field);
                     sub_message->ParseFromString(value);
                     break;
                 }
@@ -190,11 +188,15 @@ public:
                 }
             }
         }
+
+        auto sender = msg->sender();
+        Send(sender, std::move(msg));
     }
 
-    void SerializeToCache(const google::protobuf::Message& msg) {
-        const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
-        const google::protobuf::Reflection* reflection = msg.GetReflection();
+    void SerializeToCache(std::unique_ptr<SerializeToCacheMsg> msg) {
+        auto& proto_msg = *msg->proto_msg;
+        const google::protobuf::Descriptor* descriptor = proto_msg.GetDescriptor();
+        const google::protobuf::Reflection* reflection = proto_msg.GetReflection();
         auto& table = descriptor->name();
 
         // 使用 std::unordered_map 来存储要更新到 Redis 的字段和值
@@ -205,57 +207,57 @@ public:
             const google::protobuf::FieldDescriptor* field = descriptor->field(i);
             
             if (field->is_repeated()) {
-                const google::protobuf::Message& sub_message = reflection->GetMessage(msg, field);
+                const google::protobuf::Message& sub_message = reflection->GetMessage(proto_msg, field);
                 redis_hash[field->name()] = sub_message.SerializeAsString();
             }
             else {
                 switch (field->type()) {
                 case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
-                    redis_hash[field->name()] = std::to_string(reflection->GetDouble(msg, field));
+                    redis_hash[field->name()] = std::to_string(reflection->GetDouble(proto_msg, field));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-                    redis_hash[field->name()] = std::to_string(reflection->GetFloat(msg, field));
+                    redis_hash[field->name()] = std::to_string(reflection->GetFloat(proto_msg, field));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_INT64:
                 case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
                 case google::protobuf::FieldDescriptor::TYPE_SINT64: {
-                    redis_hash[field->name()] = std::to_string(reflection->GetInt64(msg, field));
+                    redis_hash[field->name()] = std::to_string(reflection->GetInt64(proto_msg, field));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_UINT64:
                 case google::protobuf::FieldDescriptor::TYPE_FIXED64: {
-                    redis_hash[field->name()] = std::to_string(reflection->GetUInt64(msg, field));
+                    redis_hash[field->name()] = std::to_string(reflection->GetUInt64(proto_msg, field));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_INT32:
                 case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
                 case google::protobuf::FieldDescriptor::TYPE_SINT32: {
-                    redis_hash[field->name()] = std::to_string(reflection->GetInt32(msg, field));
+                    redis_hash[field->name()] = std::to_string(reflection->GetInt32(proto_msg, field));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_UINT32:
                 case google::protobuf::FieldDescriptor::TYPE_FIXED32: {
-                    redis_hash[field->name()] = std::to_string(reflection->GetUInt32(msg, field));
+                    redis_hash[field->name()] = std::to_string(reflection->GetUInt32(proto_msg, field));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-                    redis_hash[field->name()] = reflection->GetBool(msg, field) ? "true" : "false";
+                    redis_hash[field->name()] = reflection->GetBool(proto_msg, field) ? "true" : "false";
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_STRING:
                 case google::protobuf::FieldDescriptor::TYPE_BYTES: {
-                    redis_hash[field->name()] = reflection->GetString(msg, field);
+                    redis_hash[field->name()] = reflection->GetString(proto_msg, field);
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_ENUM: {
-                    int enum_value = reflection->GetEnumValue(msg, field);
+                    int enum_value = reflection->GetEnumValue(proto_msg, field);
                     redis_hash[field->name()] = std::to_string(enum_value);
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-                    const google::protobuf::Message& sub_message = reflection->GetMessage(msg, field);
+                    const google::protobuf::Message& sub_message = reflection->GetMessage(proto_msg, field);
                     redis_hash[field->name()] = sub_message.SerializeAsString();
                     break;
                 }
@@ -263,10 +265,14 @@ public:
                     throw std::runtime_error("Unsupported field type.");
                 }
                 }
+
+
             }
         }
         redis_->hmset(table.data(), redis_hash.begin(), redis_hash.end());
 
+        auto sender = msg->sender();
+        Send(sender, std::move(msg));
     }
 
 private:

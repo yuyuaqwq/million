@@ -2,12 +2,12 @@
 #include <queue>
 #include <any>
 
+#include <google/protobuf/descriptor.h>
+#include <google/protobuf/message.h>
+
 #include <million/imillion.h>
 #include <million/imsg.h>
 #include <million/proto_msg.h>
-
-#include <google/protobuf/descriptor.h>
-#include <google/protobuf/message.h>
 
 enum DbMsgType {
     kQuery,
@@ -33,7 +33,7 @@ public:
     }
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
-        MILLION_HANDLE_MSG_BEGIN(msg, DbMsgBase);
+        MILLION_HANDLE_MSG_BEGIN(std::move(msg), DbMsgBase);
 
         MILLION_HANDLE_MSG(msg, DbMsgQuery, {
             

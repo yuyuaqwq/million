@@ -2,15 +2,15 @@
 #include <queue>
 #include <any>
 
-#include <million/imillion.h>
-#include <million/imsg.h>
-#include <million/proto_msg.h>
-
 #include <soci/soci.h>
 #include <soci/mysql/soci-mysql.h>
 
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
+
+#include <million/imillion.h>
+#include <million/imsg.h>
+#include <million/proto_msg.h>
 
 #undef GetMessage
 

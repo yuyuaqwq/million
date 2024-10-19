@@ -4,14 +4,12 @@ project(million)
 set(LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(EXEC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
-set(MILLION_LIB million)
-
 set(MILLION_PROTO ${CMAKE_CURRENT_SOURCE_DIR}/proto)
-
 set(PROTOGEN_LIB protogen)
 set(PROTOGEN_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/protogen)
 
-set(MILLION_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/million/include ${CMAKE_CURRENT_SOURCE_DIR})
+set(META_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/meta/include)
+
 set(ASIO_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/asio/include)
 
 set(YAML_CPP_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include)
@@ -33,6 +31,9 @@ set(REDIS_PLUS_PLUS_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/redis-plus-pl
 set(REDIS_PLUS_PLUS_LIB redis++_static hiredis)
 
 set(SOCI_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/soci/include)
+
+set(MILLION_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/million/include ${CMAKE_CURRENT_SOURCE_DIR} ${META_HEADER})
+set(MILLION_LIB million)
 
 add_subdirectory(million/src)
 add_subdirectory(module)

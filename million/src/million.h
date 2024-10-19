@@ -30,7 +30,7 @@ public:
     virtual ServiceHandle AddService(std::unique_ptr<IService> iservice) override;
     using IMillion::NewService;
 
-    virtual SessionId Send(ServiceHandle target, MsgUnique msg) override;
+    virtual SessionId Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) override;
     using IMillion::Send;
 
     virtual asio::io_context& NextIoContext() override;

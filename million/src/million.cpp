@@ -81,9 +81,9 @@ ServiceHandle Million::AddService(std::unique_ptr<IService> iservice) {
     return service_mgr_->AddService(std::move(iservice));
 }
 
-SessionId Million::Send(ServiceHandle target, MsgUnique msg) {
+SessionId Million::Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) {
     msg->set_session_id(msg_mgr_->AllocSessionId());
-    return service_mgr_->Send(target, std::move(msg));
+    return service_mgr_->Send(sender, target, std::move(msg));
 }
 
 const YAML::Node& Million::config() const {

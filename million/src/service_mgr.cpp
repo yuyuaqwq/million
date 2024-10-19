@@ -59,7 +59,8 @@ Service& ServiceMgr::PopService() {
     return *service;
 }
 
-SessionId ServiceMgr::Send(ServiceHandle target, MsgUnique msg) {
+SessionId ServiceMgr::Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) {
+    msg->set_sender(sender);
     auto id = msg->session_id();
     auto& service = target.service();
     service.PushMsg(std::move(msg));

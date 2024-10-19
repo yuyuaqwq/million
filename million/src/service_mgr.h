@@ -25,7 +25,7 @@ public:
     void PushService(Service* service);
     Service& PopService();
 
-    SessionId Send(ServiceHandle target, MsgUnique msg);
+    SessionId Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg);
     
     Million* million() const { return million_; }
 

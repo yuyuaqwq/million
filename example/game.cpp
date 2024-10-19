@@ -9,24 +9,9 @@ enum Test {
     kTest2,
     kTest3,
 };
-
 using TestMsgBase = million::MsgBaseT<Test>;
-
-struct Test1Msg : million::MsgT<kTest1> {
-    Test1Msg(auto&& value1, auto&& value2)
-        : value1(value1), value2(value2) { }
-
-    int value1;
-    std::string value2;
-};
-
-struct Test2Msg : million::MsgT<kTest2> {
-    Test2Msg(auto&& value1, auto&& value2)
-        : value1(value1), value2(value2) {}
-
-    int value1;
-    std::string value2;
-};
+MILLION_MSG_DEFINE(Test1Msg, kTest1, (int) value1, (std::string) value2);
+MILLION_MSG_DEFINE(Test2Msg, kTest2, (int) value1, (std::string) value2);
 
 class TestService : public million::IService {
     using Base = million::IService;
@@ -63,11 +48,11 @@ class TestService : public million::IService {
     }
 
     million::Task On5() {
-        auto session_id = Send<Test1Msg>(service_handle(), 5, std::string_view("hjh"));
+        auto session_id = Send<Test1Msg>(service_handle(), 5, "hjh");
         auto res = co_await Recv<million::IMsg>(session_id);
         std::cout << res->session_id() << std::endl;
 
-        res = co_await Call<million::IMsg, Test1Msg>(service_handle(), 6, std::string_view("sbsb"));
+        res = co_await Call<million::IMsg, Test1Msg>(service_handle(), 6, "sbsb");
 
         co_return;
     }
@@ -77,19 +62,20 @@ class TestService : public million::IService {
 int main() {
     auto mili = million::NewMillion("game_config.yaml");
 
+
     auto service_handle = mili->NewService<TestService>();
 
-    mili->Send<Test1Msg>(service_handle, 666, std::string_view("sb"));
+    mili->Send<Test1Msg>(service_handle, service_handle, 666, "sb");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    mili->Send<Test1Msg>(service_handle, 2, "6");
+    mili->Send<Test1Msg>(service_handle, service_handle, 2, "6");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    mili->Send<Test1Msg>(service_handle, 3, "emm");
+    mili->Send<Test1Msg>(service_handle, service_handle, 3, "emm");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    mili->Send<Test1Msg>(service_handle, 4, "hhh");
+    mili->Send<Test1Msg>(service_handle, service_handle, 4, "hhh");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
