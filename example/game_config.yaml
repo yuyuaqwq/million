@@ -1,6 +1,8 @@
 # 0表示按cpu核数创建工作器
 worker_num: 0
 
+io_context_num: 1
+
 module_path: ./module
 modules:
     - pysvr

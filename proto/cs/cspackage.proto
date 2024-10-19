@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package Cs;
+
+import "google/protobuf/descriptor.proto";
+import "csmsgid.proto";
+
+extend google.protobuf.MessageOptions {
+    SubMsgIdPackage cs_sub_msg_id_package = 11002;
+}
+
+enum SubMsgIdPackage {
+    option (cs_msg_id) = MSG_ID_PACKAGE;
+    
+    SUB_MSG_ID_PACKAGE_INVALID = 0;
+    SUB_MSG_ID_PACKAGE_OPEN = 1;
+}
+
+message PackageOpenReq {
+    option (cs_sub_msg_id_package) = SUB_MSG_ID_PACKAGE_OPEN;
+    
+    int32 tab = 1;
+}

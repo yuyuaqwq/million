@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package Cs;
+
+import "google/protobuf/descriptor.proto";
+import "csmsgid.proto";
+
+enum SubMsgIdGuild {
+    option (cs_msg_id) = MSG_ID_GUILD;
+    
+    SUB_MSG_ID_GUILD_INVALID = 0;
+    SUB_MSG_ID_GUILD_CREATE = 1;
+}
+
+extend google.protobuf.MessageOptions {
+    SubMsgIdGuild cs_sub_msg_id_guild = 11001;
+}
+
+message GuildCreateReq {
+    option (cs_sub_msg_id_guild) = SUB_MSG_ID_GUILD_CREATE;
+    
+    string guild_name = 1;
+}

@@ -52,7 +52,7 @@ protected:
     switch (_MSG_2->type()) {
 
 #define MILLION_HANDLE_MSG(_MSG, _TYPE, _CODE_BLOCK) \
-    case _TYPE::TypeValue: { \
+    case _TYPE::kTypeValue: { \
         auto _MSG = _MSG_2->get<_TYPE>(); \
         _CODE_BLOCK \
         break; \

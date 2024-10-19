@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package Db;
+
+import "google/protobuf/descriptor.proto";
+
+// 通用数据库选项
+message FileOptionsDb {
+    string name = 1;      // 数据库名称
+    bool enabled = 2;     // 是否启用该数据库库
+}
+extend google.protobuf.FileOptions {
+    FileOptionsDb db_file = 20001;
+}
+
+message MessageOptionsDb {
+    int32 tick_second = 1;
+}
+
+// SQL 相关选项（MySQL）
+message ForeignKey {
+  string column = 1;             // 外键列
+  string referenced_table = 2;   // 被引用表名
+  string referenced_column = 3;  // 被引用列名
+  string on_delete = 4;          // 外键删除策略 (e.g., CASCADE, RESTRICT, etc.)
+  string on_update = 5;          // 外键更新策略 (e.g., CASCADE, RESTRICT, etc.)
+}
+
+message MessageOptionsSql {
+    string table_name = 1;           // MySQL 表名
+    string charset = 2;              // MySQL 字符集
+    string engine = 3;               // MySQL 存储引擎
+    repeated string composite_key = 4;   // 复合主键
+    repeated ForeignKey foreign_keys = 5; // 外键定义
+    bool auto_increment = 6;         // 是否自增
+}
+
+// Cache 相关选项（Redis）
+message MessageOptionsCache {
+    string key_pattern = 1;          // Redis 键模式
+    string data_type = 2;            // Redis 数据类型
+    int32 ttl = 3;                   // Redis 键的 TTL（过期时间，秒）
+}
+
+extend google.protobuf.MessageOptions {
+    MessageOptionsDb db_msg = 20001;
+    MessageOptionsSql sql_msg = 20002;
+    MessageOptionsCache cache_msg = 20003;
+}
+
+// SQL 相关字段选项（MySQL）
+message FieldOptionsSql {
+    bool primary_key = 1;            // 主键
+    bool index = 2;                  // 索引
+    bool unique = 3;                 // 唯一约束
+    bool auto_increment = 4;         // 自增
+    string default_value = 5;        // 默认值
+    string comment = 6;              // 字段注释
+    bool not_null = 7;               // 非空约束
+}
+
+// Cache 相关字段选项（Redis）
+message FieldOptionsCache {
+    bool index = 1;                  // Redis 字段是否作为索引
+}
+
+extend google.protobuf.FieldOptions {
+    FieldOptionsSql sql_field = 20002;
+    FieldOptionsCache cache_field = 20003;
+}

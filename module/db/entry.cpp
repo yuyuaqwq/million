@@ -2,8 +2,8 @@
 #include <queue>
 #include <any>
 
-#include "million/imillion.h"
-#include "million/imsg.h"
+#include <million/imillion.h>
+#include <million/imsg.h>
 
 #include <yaml-cpp/yaml.h>
 
@@ -11,62 +11,14 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/compiler/importer.h>
 
-#undef GetMessage
 
-// 通过RegisterDBMsg，来构建SQL映射
+#undef GetMessage
 
 #include "sql.h"
 #include "cache.h"
 #include "db.h"
 
 
-
-//void PrintField(const google::protobuf::Message& message, const google::protobuf::Reflection* reflection,
-//    const google::protobuf::FieldDescriptor* field, int index, int indent) {
-//    std::string indent_str(indent, ' ');  // 用于缩进嵌套消息的输出
-//
-//    if (field->type() == google::protobuf::FieldDescriptor::TYPE_INT32) {
-//        int32_t value = (field->is_repeated()) ? reflection->GetRepeatedInt32(message, field, index)
-//            : reflection->GetInt32(message, field);
-//        std::cout << indent_str << "Field: " << field->name() << " (int32): " << value << std::endl;
-//    }
-//    else if (field->type() == google::protobuf::FieldDescriptor::TYPE_STRING) {
-//        std::string value = (field->is_repeated()) ? reflection->GetRepeatedString(message, field, index)
-//            : reflection->GetString(message, field);
-//        std::cout << indent_str << "Field: " << field->name() << " (string): " << value << std::endl;
-//    }
-//    else if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
-//        const google::protobuf::Message& nested_message = (field->is_repeated()) ? reflection->GetRepeatedMessage(message, field, index)
-//            : reflection->GetMessage(message, field);
-//        std::cout << indent_str << "Nested Message: " << field->name() << std::endl;
-//        PrintMessageFields(nested_message, indent + 2);  // 递归调用处理嵌套消息
-//    }
-//}
-//
-//void PrintMessageFields(const google::protobuf::Message& message, int indent = 0) {
-//    // 获取消息的描述符和反射
-//    const google::protobuf::Descriptor* descriptor = message.GetDescriptor();
-//    const google::protobuf::Reflection* reflection = message.GetReflection();
-//    std::string indent_str(indent, ' ');  // 用于缩进嵌套消息的输出
-//
-//    for (int i = 0; i < descriptor->field_count(); ++i) {
-//        const google::protobuf::FieldDescriptor* field = descriptor->field(i);
-//
-//        if (field->is_repeated()) {
-//            int field_size = reflection->FieldSize(message, field);
-//            std::cout << indent_str << "Repeated Field: " << field->name() << " (size=" << field_size << ")" << std::endl;
-//
-//            for (int j = 0; j < field_size; ++j) {
-//                PrintField(message, reflection, field, j, indent + 2);  // 处理每个重复字段
-//            }
-//        }
-//        else {
-//            PrintField(message, reflection, field, -1, indent);  // 处理非重复字段
-//        }
-//    }
-//}
-
-//
 //class ErrorCollector : public google::protobuf::compiler::MultiFileErrorCollector {
 //public:
 //    void AddError(const std::string& filename, int line, int column, const std::string& message) override {
@@ -80,12 +32,11 @@
 //    google::protobuf::compiler::DiskSourceTree sourceTree;
 //    // 将当前路径映射为项目根目录 ， project_root 仅仅是个名字，你可以你想要的合法名字.
 //    // sourceTree.MapPath("data", ".");
-//    sourceTree.MapPath("", "C:/Users/yuyu/Desktop/projects/milinet/module/db/proto/");
+//    sourceTree.MapPath("", "C:/Users/yuyu/Desktop/projects/milinet/proto/cs/");
 //    // 配置动态编译器.
 //    google::protobuf::compiler::Importer importer(&sourceTree, new ErrorCollector());
 //    // 动态编译proto源文件。 源文件在./source/proto/test.proto .
 //    auto fileDescriptor = importer.Import("message.proto");
-//
 //
 //    std::cout << fileDescriptor->message_type_count() << std::endl;
 //    for (auto i = 0; i < fileDescriptor->message_type_count(); i++)
@@ -155,16 +106,13 @@
 //    return 0;
 //}
 
+
+
 MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
-    // 初始化 Protobuf 库
-    GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-    // 清理 Protobuf 资源
-    // google::protobuf::ShutdownProtobufLibrary();
-
+    
     auto& config = imillion->config();
-    auto cache_service_handle = imillion->NewService<CacheService>();
-    auto sql_service_handle = imillion->NewService<SqlService>();
+    //auto cache_service_handle = imillion->NewService<CacheService>();
+    //auto sql_service_handle = imillion->NewService<SqlService>();
 
     return true;
 }

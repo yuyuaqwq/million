@@ -6,7 +6,9 @@ set(EXEC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 set(MILLION_LIB million)
 
-set(MILLION_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/million/include)
+set(MILLION_PROTO ${CMAKE_CURRENT_SOURCE_DIR}/proto)
+
+set(MILLION_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/million/include ${CMAKE_CURRENT_SOURCE_DIR})
 set(ASIO_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/asio/include)
 
 set(YAML_CPP_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include)
@@ -30,7 +32,7 @@ set(REDIS_PLUS_PLUS_LIB redis++_static hiredis)
 set(SOCI_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/soci/include)
 
 
-add_subdirectory(million)
+add_subdirectory(million/src)
 add_subdirectory(module)
 add_subdirectory(example)
 

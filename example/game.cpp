@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "million/imillion.h"
-#include "million/iservice.h"
+#include <million/imillion.h>
+#include <million/iservice.h>
 
 
 enum Test {
@@ -36,11 +36,11 @@ class TestService : public million::IService {
 
         MILLION_HANDLE_MSG_BEGIN(msg, TestMsgBase);
 
-        MILLION_HANDLE_MSG(test1, Test1Msg, {
-            std::cout << test1->session_id() << test1->value1 << test1->value2 << std::endl;
+        MILLION_HANDLE_MSG(msg, Test1Msg, {
+            std::cout << msg->session_id() << msg->value1 << msg->value2 << std::endl;
         });
-        MILLION_HANDLE_MSG(test2, Test2Msg, {
-            std::cout << test2->session_id() << test2->value1 << test2->value2 << std::endl;
+        MILLION_HANDLE_MSG(msg, Test2Msg, {
+            std::cout << msg->session_id() << msg->value1 << msg->value2 << std::endl;
         });
 
         MILLION_HANDLE_MSG_END();

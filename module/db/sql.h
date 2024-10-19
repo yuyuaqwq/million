@@ -2,8 +2,9 @@
 #include <queue>
 #include <any>
 
-#include "million/imillion.h"
-#include "million/imsg.h"
+#include <million/imillion.h>
+#include <million/imsg.h>
+#include <million/proto_msg.h>
 
 #include <soci/soci.h>
 #include <soci/mysql/soci-mysql.h>
@@ -15,8 +16,6 @@
 
 class SqlService : public million::IService {
 public:
-    using ProtoMsgUnique = std::unique_ptr<google::protobuf::Message>;
-
     using Base = million::IService;
     using Base::Base;
 
@@ -40,7 +39,7 @@ public:
                         queue_cv_.wait(guard);
                     }
                     auto& msg = queue_.front();
-                    ParseFromSql(msg.get());
+                    // ParseFromSql(msg.get());
 
                     queue_.pop();
                 }
@@ -64,7 +63,7 @@ public:
         // Close();
     }
 
-    void PostParseFromSql(ProtoMsgUnique msg) {
+    void Post(million::MsgUnique msg) {
         auto guard = std::lock_guard(queue_mutex_);
         queue_.emplace(std::move(msg));
     }
@@ -319,7 +318,7 @@ private:
     soci::session sql_;
 
     std::optional<std::jthread> thread_;
-    std::queue<std::unique_ptr<google::protobuf::Message>> queue_;
+    std::queue<million::MsgUnique> queue_;
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;
 };

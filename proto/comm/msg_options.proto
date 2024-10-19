@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package Comm;
+
+import "google/protobuf/descriptor.proto";
+
+message FileOptionsMsg {
+    int32 id = 1;
+}
+
+extend google.protobuf.FileOptions {
+    FileOptionsMsg f_msg = 1001;
+}
+
+message MessageOptionsMsg {
+    int32 sub_id = 1;
+}
+extend google.protobuf.MessageOptions {
+    MessageOptionsMsg m_msg = 1001;
+}

@@ -2,7 +2,8 @@
 #include <queue>
 #include <any>
 
-#include "million/imillion.h"
+#include <million/imillion.h>
+#include <million/proto_msg.h>
 
 #include <sw/redis++/redis++.h>
 
@@ -11,27 +12,32 @@
 
 #undef GetMessage
 
-using ProtoMsgUnique = std::unique_ptr<google::protobuf::Message>;
 
 enum CacheMsgType {
     kParseFromCache,
     kSerializeToCache,
+    kGet,
+    kSet,
 };
 
 using CacheMsgBase = million::MsgBaseT<CacheMsgType>;
+
+struct GetMsg {
+
+};
 
 struct ParseFromCacheMsg : million::MsgT<kParseFromCache> {
     ParseFromCacheMsg(auto&& msg)
         : proto_msg(std::move(msg)) { }
 
-    ProtoMsgUnique proto_msg;
+    million::ProtoMsgUnique proto_msg;
 };
 
 struct SerializeToCacheMsg : million::MsgT<kSerializeToCache> {
     SerializeToCacheMsg(auto&& msg)
         : proto_msg(std::move(msg)) { }
 
-    ProtoMsgUnique proto_msg;
+    million::ProtoMsgUnique proto_msg;
 };
 
 // 缓存服务
@@ -96,6 +102,14 @@ public:
         queue_.emplace(std::move(msg));
     }
 
+    void Get() {
+
+    }
+
+    void Set() {
+
+    }
+
     void ParseFromCache(google::protobuf::Message* msg) {
         const google::protobuf::Descriptor* descriptor = msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = msg->GetReflection();
@@ -103,10 +117,7 @@ public:
 
         // 通过 Redis 哈希表存取 Protobuf 字段
         std::unordered_map<std::string, std::string> redis_hash;
-        std::vector<std::pair<std::string, std::string>> redis_data;
-
-        // 从 Redis 哈希表中获取数据
-        redis_->hgetall(table, std::back_inserter(redis_data));
+        redis_->hgetall(table, std::inserter(redis_hash, redis_hash.end()));
 
         // 遍历 Protobuf 字段并设置对应的值
         for (int i = 0; i < descriptor->field_count(); ++i) {

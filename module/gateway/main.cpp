@@ -9,77 +9,20 @@
 #include <sstream>
 #include <iomanip>
 
-#include "million/imillion.h"
-#include "million/imsg.h"
+#include <million/imillion.h>
+#include <million/imsg.h>
 
-#include "net/server.h"
+#include <proto/cs/csmsgid.pb.h>
+#include <proto/cs/cspackage.pb.h>
+#include <proto/cs/csguild.pb.h>
+
+#include <google/protobuf/descriptor.h>
+#include <google/protobuf/message.h>
+#include <google/protobuf/compiler/importer.h>
 
 #include <yaml-cpp/yaml.h>
 
-
-enum class NetMsgType {
-    kRegister,
-    kConnection,
-    kSend,
-    kRecv,
-};
-
-class NetMsg : public million::IMsg {
-public:
-    NetMsg(NetMsgType type)
-        : type_(type) {}
-
-    NetMsgType type() const { return type_; }
-
-private:
-    NetMsgType type_;
-};
-
-class RegisterMsg : public NetMsg {
-public:
-    RegisterMsg(million::ServiceHandle handle)
-        : NetMsg(NetMsgType::kRegister)
-        , handle_(handle) {}
-
-    million::ServiceHandle handle() const { return handle_; }
-
-private:
-    million::ServiceHandle handle_;
-};
-
-class ConnectionMsg : public NetMsg {
-public:
-    ConnectionMsg()
-        : NetMsg(NetMsgType::kConnection) {}
-
-private:
-
-};
-
-class SendMsg : public NetMsg {
-public:
-    SendMsg()
-        : NetMsg(NetMsgType::kSend) {}
-
-private:
-
-};
-
-class RecvMsg : public NetMsg {
-public:
-    RecvMsg()
-        : NetMsg(NetMsgType::kRecv) {}
-
-public:
-
-};
-
-
-//struct NetPacket {
-//
-//    std::vector<uint8_t> buff;
-//};
-
+#include "net/server.h"
 
 class TokenGenerator {
 public:
@@ -104,11 +47,83 @@ private:
     std::uniform_int_distribution<uint32_t> dis_;
 };
 
+class ProtoManager {
+public:
+    // 初始化消息ID
+    void Init() {
+        const google::protobuf::DescriptorPool* pool = google::protobuf::DescriptorPool::generated_pool();
+        google::protobuf::DescriptorDatabase* db = pool->internal_generated_database();
+        if (db == nullptr) {
+            return;
+        }
 
-class NetService : public million::IService {
+        std::vector<std::string> file_names;
+        db->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
+        for (const std::string& filename : file_names) {
+            const google::protobuf::FileDescriptor* file_descriptor = pool->FindFileByName(filename);
+            if (file_descriptor == nullptr) continue;
+
+            // 获取该文件中定义的 SubMsgId Enum
+            int enum_count = file_descriptor->enum_type_count();
+            const google::protobuf::EnumDescriptor* enum_descriptor = nullptr;
+            for (int i = 0; i < enum_count; i++) {
+                const google::protobuf::EnumDescriptor* descriptor = file_descriptor->enum_type(i);
+                if (!descriptor) continue;
+                const std::string& name = descriptor->full_name();
+                auto& opts = descriptor->options();
+                if (opts.HasExtension(Cs::cs_msg_id)) {
+                    Cs::MsgId msg_id = opts.GetExtension(Cs::cs_msg_id);
+
+                    // 建立这个文件与对应的msg_id的映射
+                    file_desc_map_.insert(std::make_pair(msg_id, file_descriptor));
+                    break;
+                }
+            }
+        }
+    }
+
+    // 注册子消息
+    template <typename ExtensionIdT>
+    bool RegistrySubMsgId(Cs::MsgId msg_id, const ExtensionIdT& id) {
+        auto iter = file_desc_map_.find(msg_id);
+        if (iter == file_desc_map_.end()) { return false; }
+        const google::protobuf::FileDescriptor* file_descriptor = iter->second;
+
+        int message_count = file_descriptor->message_type_count();
+        for (int i = 0; i < message_count; i++) {
+            const google::protobuf::Descriptor* descriptor = file_descriptor->message_type(i);
+            if (!descriptor) continue;
+            const std::string& name = descriptor->full_name();
+            auto& options = descriptor->options();
+            if (options.HasExtension(id)) {
+                auto sub_msg_id = options.GetExtension(id);
+                static_assert(sizeof(Cs::MsgId) == sizeof(sub_msg_id), "");
+                uint64_t key = (static_cast<uint64_t>(msg_id) << 32) | static_cast<uint32_t>(sub_msg_id);
+                msg_desc_map_.insert(std::make_pair(key, descriptor));
+            }
+        }
+    }
+
+    template <typename SubMsgId>
+    const google::protobuf::Descriptor* GetMsgDesc(Cs::MsgId msg_id, SubMsgId sub_msg_id) {
+        static_assert(sizeof(Cs::MsgId) == sizeof(sub_msg_id), "");
+        uint64_t key = (static_cast<uint64_t>(msg_id) << 32) | static_cast<uint32_t>(sub_msg_id);
+        auto iter = msg_desc_map_.find(key);
+        if (iter == msg_desc_map_.end()) return nullptr;
+        return iter->second;
+    }
+
+private:
+    static_assert(sizeof(Cs::MsgId) == sizeof(uint32_t), "");
+    std::unordered_map<Cs::MsgId, const google::protobuf::FileDescriptor*> file_desc_map_;
+    std::unordered_map<uint64_t, const google::protobuf::Descriptor*> msg_desc_map_;
+};
+
+
+class GateWayService : public million::IService {
 public:
     using Base = million::IService;
-    NetService(million::IMillion* imillion)
+    GateWayService(million::IMillion* imillion)
         : Base(imillion)
         , server_(imillion) { }
 
@@ -126,41 +141,35 @@ public:
     }
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
-        auto netmsg = static_cast<NetMsg*>(msg.get());
-        switch (netmsg->type()) {
-        case NetMsgType::kRegister: {
-            OnRegister(static_cast<RegisterMsg*>(netmsg));
-            break;
-        }
-        case NetMsgType::kSend: {
-            OnSend(static_cast<SendMsg*>(netmsg));
-            break;
-        }
-        }
+        
         co_return;
     }
 
-    void OnRegister(RegisterMsg* msg) {
-        std::lock_guard guard(register_service_mutex_);
-        register_service_.emplace_back(msg->handle());
-    }
-
-    void OnSend(SendMsg* msg) {
-
-    }
-
 private:
-    std::mutex register_service_mutex_;
-    std::vector<million::ServiceHandle> register_service_;
-
     million::net::Server server_;
 };
 
 
-MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
-    auto& config = imillion->config();
 
-    auto service_handle = imillion->NewService<NetService>();
+MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
+    // 初始化 Protobuf 库
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+    ProtoManager mgr;
+    mgr.Init();
+    mgr.RegistrySubMsgId(Cs::MSG_ID_GUILD, Cs::cs_sub_msg_id_guild);
+    mgr.RegistrySubMsgId(Cs::MSG_ID_PACKAGE, Cs::cs_sub_msg_id_package);
+
+    auto desc = mgr.GetMsgDesc(Cs::MSG_ID_PACKAGE, Cs::SUB_MSG_ID_PACKAGE_OPEN);
+
+    // 清理 Protobuf 资源
+    // google::protobuf::ShutdownProtobufLibrary();
+
+
+    auto& config = imillion->config();
+    auto handle = imillion->NewService<GateWayService>();
+
+
 
     return true;
 }
