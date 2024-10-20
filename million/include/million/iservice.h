@@ -49,14 +49,14 @@ protected:
     ServiceHandle service_handle_;
 };
 
-#define MILLION_HANDLE_MSG_BEGIN(_MSG, _MSG_TYPE) \
-    auto _MSG_UNIQUE = _MSG; \
-    auto _MSG_PTR = _MSG_UNIQUE->get<_MSG_TYPE>(); \
+#define MILLION_HANDLE_MSG_BEGIN(_MSG_UNIQUE, _MSG_BASE_TYPE) \
+    auto _SAVED_MSG_UNIQUE = _MSG_UNIQUE; \
+    auto _MSG_PTR = _SAVED_MSG_UNIQUE->get<_MSG_BASE_TYPE>(); \
     switch (_MSG_PTR->type()) {
 
-#define MILLION_HANDLE_MSG(_MSG, _TYPE, _CODE_BLOCK) \
-    case _TYPE::kTypeValue: { \
-        auto _MSG = std::unique_ptr<_TYPE>(static_cast<_TYPE*>(_MSG_UNIQUE.release())); \
+#define MILLION_HANDLE_MSG(_MSG_PTR_NAME, _MSG_TYPE, _CODE_BLOCK) \
+    case _MSG_TYPE::kTypeValue: { \
+        auto _MSG_PTR_NAME = std::unique_ptr<_MSG_TYPE>(static_cast<_MSG_TYPE*>(_SAVED_MSG_UNIQUE.release())); \
         _CODE_BLOCK \
         break; \
     }
