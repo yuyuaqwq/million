@@ -14,8 +14,10 @@
 #include <million/imsg.h>
 #include <million/proto_msg.h>
 
+#include <db/cache.h>
+
 #include "token_generator.h"
-#include "proto_manager.h"
+#include "proto_mgr.h"
 #include "net/tcp_server.h"
 
 namespace million {
@@ -40,8 +42,8 @@ public:
         , tcp_server_(imillion) { }
 
     virtual void OnInit() override {
-        proto_manager_.Init();
-        proto_manager_.Registry(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
+        proto_mgr_.Init();
+        proto_mgr_.Registry(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
 
         // io线程回调，发给work线程处理
         tcp_server_.set_on_connection([this](auto connection) {
@@ -76,7 +78,7 @@ public:
 
 private:
     million::net::TcpServer tcp_server_;
-    million::ProtoManager proto_manager_;
+    million::ProtoMgr proto_mgr_;
     million::TokenGenerator token_generator_;
 };
 

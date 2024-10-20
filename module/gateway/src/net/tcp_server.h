@@ -33,7 +33,7 @@ public:
 
     void Start(uint16_t port);
     void Stop();
-    void RemoveConnection(std::list<TcpConnectionShared>::iterator iter);
+    void RemoveConnection(million::list<std::shared_ptr<TcpConnection>>::iterator iter);
 
 private:
     TcpConnectionShared AddConnection(asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
@@ -43,7 +43,7 @@ private:
     IMillion* imillion_;
 
     std::mutex connections_mutex_;
-    std::list<TcpConnectionShared> connections_;
+    million::list<TcpConnectionShared> connections_;
 
     TcpConnectionFunc on_connection_;
     TcpMsgFunc on_msg_;

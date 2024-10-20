@@ -59,6 +59,20 @@ Service& ServiceMgr::PopService() {
     return *service;
 }
 
+void ServiceMgr::SetServiceCodeName(ServiceHandle handle, const ServiceCodeName& code_name) {
+    std::lock_guard guard(service_code_name_map_mutex_);
+    service_code_name_map_.insert(std::make_pair(code_name, handle));
+}
+
+ServiceHandle ServiceMgr::GetServiceByCodeNum(const ServiceCodeName& code_name) {
+    std::lock_guard guard(service_code_name_map_mutex_);
+    auto iter = service_code_name_map_.find(code_name);
+    if (iter == service_code_name_map_.end()) {
+        return ServiceHandle();
+    }
+    return iter->second;
+}
+
 SessionId ServiceMgr::Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) {
     msg->set_sender(sender);
     auto id = msg->session_id();

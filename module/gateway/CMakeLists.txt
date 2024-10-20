@@ -31,6 +31,9 @@ target_include_directories(${GATEWAY_LIB} PRIVATE ${GATEWAY_HEADER})
 target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_HEADER})
 target_include_directories(${GATEWAY_LIB} PRIVATE ${ASIO_HEADER})
 
+target_include_directories(${GATEWAY_LIB} PRIVATE ${DB_HEADER})
+target_link_libraries(${GATEWAY_LIB} PRIVATE ${DB_LIB})
+
 target_include_directories(${GATEWAY_LIB} PRIVATE ${PROTOGEN_HEADER})
 target_link_libraries(${GATEWAY_LIB} PRIVATE ${PROTOGEN_LIB})
 

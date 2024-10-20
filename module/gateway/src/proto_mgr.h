@@ -20,7 +20,7 @@ struct ProtoAdditionalHeader {
     uint64_t token;
 };
 
-class ProtoManager {
+class ProtoMgr {
 public:
     // 初始化消息ID
     void Init() {

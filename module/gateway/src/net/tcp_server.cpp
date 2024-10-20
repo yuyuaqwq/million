@@ -24,7 +24,7 @@ void TcpServer::Stop() {
     }
 }
 
-void TcpServer::RemoveConnection(std::list<std::shared_ptr<TcpConnection>>::iterator iter) {
+void TcpServer::RemoveConnection(million::list<std::shared_ptr<TcpConnection>>::iterator iter) {
     auto guard = std::lock_guard(connections_mutex_);
     connections_.erase(iter);
 }
