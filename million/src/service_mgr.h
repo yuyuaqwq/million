@@ -8,7 +8,6 @@
 #include <queue>
 
 #include <million/msg_def.h>
-#include <million/detail/list.hpp>
 
 #include "service.h"
 
@@ -27,7 +26,7 @@ public:
     Service& PopService();
 
     void SetServiceCodeName(ServiceHandle handle, const ServiceCodeName& code_name);
-    ServiceHandle GetServiceByCodeNum(const ServiceCodeName& code_name);
+    std::optional<ServiceHandle> GetServiceByCodeNum(const ServiceCodeName& code_name);
 
     SessionId Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg);
     
@@ -37,7 +36,7 @@ private:
     Million* million_;
 
     std::mutex services_mutex_;
-    million::list<std::unique_ptr<Service>> services_;
+    std::list<std::unique_ptr<Service>> services_;
     
     std::mutex service_code_name_map_mutex_;
     std::unordered_map<ServiceCodeName, ServiceHandle> service_code_name_map_;

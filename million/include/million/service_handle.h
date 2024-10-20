@@ -2,9 +2,8 @@
 
 #include <cstdint>
 
+#include <list>
 #include <memory>
-
-#include <million/detail/list.hpp>
 
 namespace million {
 
@@ -14,7 +13,7 @@ class Service;
 class ServiceHandle {
 public:
     ServiceHandle() = default;
-    explicit ServiceHandle(million::list<std::unique_ptr<Service>>::iterator iter)
+    explicit ServiceHandle(std::list<std::unique_ptr<Service>>::iterator iter)
         : iter_(iter) {}
     ~ServiceHandle() = default;
 
@@ -25,10 +24,9 @@ public:
 
     Service& service() const { return *iter_->get(); }
     auto iter() const { return iter_; }
-    bool is_value() const { return iter_.is_valid(); }
 
 private:
-    million::list<std::unique_ptr<Service>>::iterator iter_;
+    std::list<std::unique_ptr<Service>>::iterator iter_;
 };
 
 } // namespace million

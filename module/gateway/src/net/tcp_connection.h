@@ -1,11 +1,10 @@
 #pragma once
 
+#include <list>
 #include <queue>
 #include <mutex>
 
 #include <asio.hpp>
-
-#include <million/detail/list.hpp>
 
 #include "net/packet.h"
 
@@ -25,13 +24,13 @@ public:
     void Send(Packet&& packet);
 
     auto iter() const { return iter_; }
-    void set_iter(million::list<std::shared_ptr<TcpConnection>>::iterator iter) { iter_ = iter; }
+    void set_iter(std::list<std::shared_ptr<TcpConnection>>::iterator iter) { iter_ = iter; }
 
     asio::ip::tcp::socket& socket() { return socket_; }
 
 public:
     TcpServer* server_;
-    million::list<std::shared_ptr<TcpConnection>>::iterator iter_;
+    std::list<std::shared_ptr<TcpConnection>>::iterator iter_;
 
     std::mutex close_mutex_;
 

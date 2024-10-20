@@ -76,10 +76,6 @@ public:
         return node_ptr_ == other.node_ptr_;
     }
 
-    bool is_valid() const {
-        return node_ptr_ != nullptr;
-    }
-
 private:
     list_node<T>* node_ptr_;
 };
@@ -119,7 +115,7 @@ public:
     }
 
     void erase(iterator it) {
-        assert(it.is_valid());
+        assert(it.node_ptr_);
         list_node<T>* del_node = it.node_ptr_;
         
         del_node->prev->next = del_node->next;
