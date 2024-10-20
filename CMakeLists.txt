@@ -5,9 +5,13 @@ set(LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(EXEC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 # proto
-set(MILLION_PROTO ${CMAKE_CURRENT_SOURCE_DIR}/proto)
+# set(MILLION_PROTO ${CMAKE_CURRENT_SOURCE_DIR}/proto)
 set(PROTOGEN_LIB protogen)
 set(PROTOGEN_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/protogen)
+
+#desc
+set(DESCGEN_LIB descgen)
+set(DESCGEN_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/descgen)
 
 # module
 set(DB_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/module/db/include)
@@ -50,6 +54,7 @@ add_subdirectory(million)
 add_subdirectory(module)
 add_subdirectory(example)
 add_subdirectory(protogen)
+add_subdirectory(descgen)
 set(YAML_BUILD_SHARED_LIBS ON)
 add_subdirectory(third_party/yaml-cpp)
 add_subdirectory(third_party/nlohmann_json)

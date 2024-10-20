@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(module)
+project(${PROTOGEN_LIB})
 
 aux_source_directory(./comm/ SRC)
 aux_source_directory(./ss/ SRC)

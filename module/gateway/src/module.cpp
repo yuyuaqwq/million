@@ -134,6 +134,8 @@ public:
         });
         tcp_server_.set_on_msg([](auto& connection, auto&& packet) {
             std::cout << "on_msg" << std::endl;
+            
+            // 开始处理
         });
         tcp_server_.Start(8001);
     }
@@ -153,8 +155,6 @@ private:
 MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
     auto& config = imillion->config();
     auto handle = imillion->NewService<GatewayService>();
-
-
 
     return true;
 }

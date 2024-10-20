@@ -39,7 +39,8 @@ void TcpConnection::Process() {
                 }
                 total_packet_size = asio::detail::socket_ops::network_to_host_long(total_packet_size);
                 if (total_packet_size > kPacketMaxSize) {
-                    continue;
+                    // 不正确的数据，直接断开
+                    break;
                 }
 
                 // 避免恶意total_packet_size
@@ -75,9 +76,9 @@ void TcpConnection::Process() {
             }
         }
         catch (std::exception&) {
-            Close();
-            server_->RemoveConnection(iter_);
         }
+        Close();
+        server_->RemoveConnection(iter_);
     }, asio::detached);
 }
 
