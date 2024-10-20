@@ -64,27 +64,59 @@ public:
 // 生成一个逗号, 直到__VA_ARGS__末尾不生成
 #define MILLION_COMMON_IF_NOT_END(i, ...) META_NOT_IF(META_INDEX_IS_END(i, __VA_ARGS__), MILLION_COMMON_IF_TRUE)
 
-#define MILLION_FIELD_TO_REF_DECL_I(x) x&&
-#define MILLION_FIELD_TO_REF_DECL(x) MILLION_FIELD_TO_REF_DECL_I x
+// 从字段声明中提取名称(第二步)
+// 解析:
+// 这里x是([MAYBE] DEFAULT) NAME
+// META_IS_PAREN判断是不是括号, 如果有括号就去除括号, 如果没有直接返回
+#define MILLION_FIELD_EXTRACT_NAME_I(x) META_IF_ELSE(META_IS_PAREN(x), META_EMPTY x, x)
+
+// 从字段声明中提取默认值(第二步)
+// 解析:
+// 这里x是([MAYBE] DEFAULT) NAME
+// 如果有括号, 就通过META_EXTRACT_PAREN_UNPACK获取括号内容, 如果没有就返回{}
+#define MILLION_FIELD_EXTRACT_DEFAULT_I(x) META_IF_ELSE(META_IS_PAREN(x), META_EXTRACT_PAREN_UNPACK(x), {})
+
+// 从字段声明中提取名称
+// (TYPE)([MAYBE] DEFAULT) NAME -> NAME
+#define MILLION_FIELD_EXTRACT_NAME(field) MILLION_FIELD_EXTRACT_NAME_I(META_EMPTY field)
+// 从字段声明中提取默认值
+// (TYPE) NAME -> {}
+// (TYPE)(DEFAULT) NAME -> DEFAULT
+#define MILLION_FIELD_EXTRACT_DEFAULT(field) MILLION_FIELD_EXTRACT_DEFAULT_I(META_EMPTY field)
+// 从字段声明中提取类型
+// (TYPE)([MAYBE] DEFAULT) NAME -> TYPE
+#define MILLION_FIELD_EXTRACT_TYPE(field) META_EXTRACT_PAREN_UNPACK(field)
+
+// 将未加工过的字段声明, 转为字段声明
+// (TYPE)([MAYBE] DEFAULT) NAME -> TYPE NAME
+#define MILLION_FIELD_TO_DECL(field) MILLION_FIELD_EXTRACT_TYPE(field) MILLION_FIELD_EXTRACT_NAME(field)
+
+
+#define MILLION_FIELD_TO_CONST_REF_DECL_I(x) x&&
+// 假设这里x是(float) kk，所以后面展开就是 FIELD_TO_CONST_REF_DECL_I (float) kk
+// FIELD_TO_CONST_REF_DECL_I (float)会被识别成宏调用，把float作为参数传入
+// 于是就得到了const float&的结果
+// 然后在加上后面的kk，就组成了const float& kk
+#define MILLION_FIELD_TO_CONST_REF_DECL(x) MILLION_FIELD_TO_CONST_REF_DECL_I x
 
 // 生成构造函数的参数声明, 以及默认参数
 // 参数 i: 类似for的索引
-// 参数 __VA_ARGS__: (TYPE) NAME格式的字段声明列表
+// 参数 __VA_ARGS__: 未加工的字段声明列表
 // (CTOR_ARGS_DECL_WITH_DEFAULT的META_FOR循环代码)
 #define MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_IMPL(i, ...) \
-	MILLION_FIELD_TO_REF_DECL(META_INDEX(i, __VA_ARGS__)) = {} MILLION_COMMON_IF_NOT_END(i, __VA_ARGS__)
+	MILLION_FIELD_TO_CONST_REF_DECL(META_INDEX(i, __VA_ARGS__)) = {} MILLION_COMMON_IF_NOT_END(i, __VA_ARGS__)
 
 // 字段声明转构造函数字段初始化(第二步)
 // 参数 field_name: 字段名称
 #define MILLION_FIELD_TO_CTOR_INIT_I(field_name) field_name(std::move(field_name))
 // 字段声明转构造函数字段初始化(第一步)
-// 参数 field: (TYPE) NAME格式的字段
+// 参数 field: 未加工的字段
 // (由CTOR_INIT_LIST_IMPL调用)
 #define MILLION_FIELD_TO_CTOR_INIT(field) MILLION_FIELD_TO_CTOR_INIT_I(META_EMPTY_PACK(field))
 
 // 生成构造函数的初始化列表
 // 参数 i: 类似for的索引
-// 参数 __VA_ARGS__: (TYPE) NAME格式的字段声明列表
+// 参数 __VA_ARGS__: 未加工的字段声明列表
 // (CTOR_INIT_LIST的META_FOR循环代码)
 #define MILLION_CTOR_INIT_LIST_IMPL(i, ...) \
 	MILLION_FIELD_TO_CTOR_INIT(META_INDEX(i, __VA_ARGS__)) MILLION_COMMON_IF_NOT_END(i, __VA_ARGS__)
@@ -101,7 +133,7 @@ public:
 // 把数据加工一下后传给DEF_META_FIELD_DATA_IMPL_II
 // 参数 struct_name: 结构体名称
 // 参数 i: 类似for的索引
-// 参数 field: (TYPE) NAME格式的字段
+// 参数 field: 未加工的字段
 // (由DEF_META_FIELD_DATA_IMPL调用)
 #define MILLION_DEF_META_FIELD_DATA_IMPL_I(struct_name, i, field) MILLION_DEF_META_FIELD_DATA_IMPL_II(struct_name, i, META_EMPTY_PACK(field))
 
@@ -109,7 +141,7 @@ public:
 // META_INDEX(0, __VA_ARGS__)用于获取之前传入的结构体名称
 // META_INDEX(META_INC(i), __VA_ARGS__)获取索引对应的字段声明, 注意这里需要把索引+1, 因为第一个是结构体名称
 // 参数 i: 类似for的索引
-// 参数 __VA_ARGS__: 第一个参数是结构体名称, 余下的是(TYPE) NAME格式的字段声明列表
+// 参数 __VA_ARGS__: 第一个参数是结构体名称, 余下的是未加工的字段声明列表
 // (META_FIELD_DATAS的META_FOR循环代码)
 #define MILLION_DEF_META_FIELD_DATA_IMPL(i, ...) \
 	template<> struct MetaFieldData<i> { \
@@ -122,23 +154,23 @@ public:
 #define MILLION_FIELDS_TO_DECL(x) META_UNPACK(x);
 
 // 生成构造函数的初始化列表
-// 参数 __VA_ARGS__: (TYPE) NAME格式的字段声明列表
+// 参数 __VA_ARGS__: 未加工的字段声明列表
 #define MILLION_CTOR_INIT_LIST(...) META_FOR(MILLION_CTOR_INIT_LIST_IMPL, 0, META_COUNT(__VA_ARGS__), __VA_ARGS__)
 // 生成构造函数的参数声明和默认参数
-// 参数 __VA_ARGS__: (TYPE) NAME格式的字段声明列表
+// 参数 __VA_ARGS__: 未加工的字段声明列表
 #define MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(...) META_FOR(MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_IMPL, 0, META_COUNT(__VA_ARGS__), __VA_ARGS__)
 // 生成成员变量的声明
-// 参数 __VA_ARGS__: (TYPE) NAME格式的字段声明列表
+// 参数 __VA_ARGS__: 未加工的字段声明列表
 #define MILLION_FIELDS_DECL(...) META_FOR_EACH(MILLION_FIELDS_TO_DECL, __VA_ARGS__)
 // 生成字段(成员变量)元数据
 // 注意这里把name传入了META_FOR的参数列表
 // 参数 name: 结构体名称
-// 参数 __VA_ARGS__: (TYPE) NAME格式的字段声明列表
+// 参数 __VA_ARGS__: 未加工的字段声明列表
 #define MILLION_META_FIELD_DATAS(name, ...) META_FOR(MILLION_DEF_META_FIELD_DATA_IMPL, 0, META_COUNT(__VA_ARGS__), name, __VA_ARGS__)
 
 // 数据定义的主宏
-#define MILLION_MSG_DEFINE(name, kType, ...) \
-    struct name : public ::million::MsgT<kType> { \
+#define MILLION_MSG_DEFINE(name, type, ...) \
+    struct name : public ::million::MsgT<type> { \
 		name(MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
 			: MILLION_CTOR_INIT_LIST(__VA_ARGS__) {} \
 		MILLION_FIELDS_DECL(__VA_ARGS__) \
@@ -155,19 +187,5 @@ void ForeachMetaFieldData(T&& obj, Func&& cb) {
 		(cb(typename DecayT::template MetaFieldData<I>{}), ...);
 	}(std::make_index_sequence<DecayT::kMetaFieldCount>{});
 }
-
-//enum class PKK {
-//	kPPS
-//};
-
-//MILLION_MSG_DEFINE(SDD, PKK::kPPS, (float)sss, (int)kkp, (char)ssd)
-
-//int main()
-//{
-//	SDD sss{ 1.0f, 122 };
-//	ForeachMetaFieldData(sss, [&](auto field_data) {
-//		std::cout << "Name:" << field_data.name() << " - Value:" << field_data.value(sss) << std::endl;
-//		});
-//}
 
 } // namespace million
