@@ -12,12 +12,14 @@
 
 #include <million/proto_msg.h>
 
+#include "token.h"
+
 namespace million {
 
 namespace protobuf = google::protobuf;
 
 struct ProtoAdditionalHeader {
-    uint64_t token;
+    Token token;
 };
 
 class ProtoMgr {
@@ -65,37 +67,41 @@ public:
         if (!desc) return false;
         auto& options = desc->options();
         if (options.HasExtension(id)) {
-            auto sub_msg_id = options.GetExtension(id);
+            auto sub_msg_id_t = options.GetExtension(id);
+            auto sub_msg_id = static_cast<uint32_t>(sub_msg_id_t);
+            if (sub_msg_id > kSubMsgIdMax) {
+                throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", static_cast<uint32_t>(msg_id), static_cast<uint32_t>(sub_msg_id)));
+            }
             static_assert(sizeof(Cs::MsgId) == sizeof(sub_msg_id), "");
             auto key = CalcKey(msg_id, sub_msg_id);
-            msg_desc_map_.insert(std::make_pair(key, desc));
+            msg_desc_map_.insert({ key, desc });
+            msg_id_map_.insert({ desc, key });
         }
         return true;
     }
 
     // 编码消息
-    Buffer EncodeMessage(uint32_t msg_id, uint32_t sub_msg_id, const ProtoAdditionalHeader& additional, const protobuf::Message& message) {
-        if (msg_id > kMsgIdMax) {
-            throw std::runtime_error(std::format("EncodeMessage error: msg_id:{} > kMsgIdMax", msg_id));
+    std::optional<Buffer> EncodeMessage(const ProtoAdditionalHeader& header, const protobuf::Message& message) {
+        auto desc = message.GetDescriptor();
+        auto msg_key = GetMsgKey(desc);
+        if (!msg_key) {
+            return {};
         }
-        if (sub_msg_id > kMsgIdMax) {
-            throw std::runtime_error(std::format("EncodeMessage error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", msg_id, sub_msg_id));
-        }
+        auto [msg_id, sub_msg_id] = CalcMsgId(*msg_key);
 
         Buffer buffer;
-
         // 添加 msg_id 和 sub_msg_id
         uint16_t msg_id_net = asio::detail::socket_ops::host_to_network_short(static_cast<uint16_t>(msg_id));
         uint16_t sub_msg_id_net = asio::detail::socket_ops::host_to_network_short(static_cast<uint16_t>(sub_msg_id));
 
-        buffer.resize(sizeof(msg_id_net) + sizeof(sub_msg_id_net) + sizeof(additional) + message.ByteSize());
+        buffer.resize(sizeof(msg_id_net) + sizeof(sub_msg_id_net) + sizeof(header) + message.ByteSize());
         size_t i = 0;
         std::memcpy(buffer.data() + i, &msg_id_net, sizeof(msg_id_net));
         i += sizeof(msg_id_net);
         std::memcpy(buffer.data() + i, &sub_msg_id_net, sizeof(sub_msg_id_net));
         i += sizeof(sub_msg_id_net);
-        std::memcpy(buffer.data() + i, &additional, sizeof(additional));
-        i += sizeof(additional);
+        std::memcpy(buffer.data() + i, &header, sizeof(header));
+        i += sizeof(header);
 
         // 序列化消息到缓冲区
         message.SerializeToArray(buffer.data() + i, message.ByteSize());
@@ -103,32 +109,36 @@ public:
     }
 
     // 解码消息
-    million::ProtoMsgUnique DecodeMessage(const Buffer& buffer, ProtoAdditionalHeader* additional) {
+    std::optional<std::tuple<ProtoMsgUnique, Cs::MsgId, uint32_t>> DecodeMessage(const Buffer& buffer, ProtoAdditionalHeader* header) {
         // 读取 msg_id 和 sub_msg_id
         uint16_t msg_id_net, sub_msg_id_net;
-        if (buffer.size() < sizeof(msg_id_net) + sizeof(sub_msg_id_net)) return nullptr; // 确保缓冲区足够大
+        // 确保缓冲区足够大
+        if (buffer.size() < sizeof(msg_id_net) + sizeof(sub_msg_id_net) + sizeof(*header)) return std::nullopt;
 
         size_t i = 0;
         std::memcpy(&msg_id_net, buffer.data() + i, sizeof(msg_id_net));
         i += sizeof(msg_id_net);
         std::memcpy(&sub_msg_id_net, buffer.data() + i, sizeof(sub_msg_id_net));
         i += sizeof(sub_msg_id_net);
-        if (additional) { std::memcpy(additional, buffer.data() + i, sizeof(*additional)); }
-        i += sizeof(*additional);
+        if (header) { std::memcpy(header, buffer.data() + i, sizeof(*header)); }
+        i += sizeof(*header);
 
         Cs::MsgId msg_id = static_cast<Cs::MsgId>(asio::detail::socket_ops::network_to_host_short(msg_id_net));
         uint32_t sub_msg_id = static_cast<uint32_t>(asio::detail::socket_ops::network_to_host_short(sub_msg_id_net));
         if (static_cast<uint32_t>(msg_id) > kMsgIdMax) {
-            return nullptr;
+            return std::nullopt;
         }
         if (sub_msg_id > kMsgIdMax) {
-            return nullptr;
+            return std::nullopt;
         }
 
         auto proto_msg = NewMessage(msg_id, sub_msg_id);
         // 反序列化消息
         auto success = proto_msg->ParseFromArray(buffer.data() + i, buffer.size() - i);
-        return success ? std::move(proto_msg) : nullptr;
+        if (!success) {
+            return std::nullopt;
+        }
+        return std::make_tuple(std::move(proto_msg), msg_id, sub_msg_id);
     }
 
 private:
@@ -152,27 +162,33 @@ private:
         return iter->second;
     }
 
-    template <typename SubMsgId>
-    protobuf::Message* NewMessage(Cs::MsgId msg_id, SubMsgId sub_msg_id) {
-        return NewMessage(msg_id, static_cast<uint32_t>(sub_msg_id));
+    std::optional<uint32_t> GetMsgKey(const protobuf::Descriptor* desc) {
+        auto iter = msg_id_map_.find(desc);
+        if (iter == msg_id_map_.end()) return std::nullopt;
+        return iter->second;
     }
 
-    million::ProtoMsgUnique NewMessage(Cs::MsgId msg_id, uint32_t sub_msg_id) {
+    ProtoMsgUnique NewMessage(Cs::MsgId msg_id, uint32_t sub_msg_id) {
         auto desc = GetMsgDesc(msg_id, sub_msg_id);
         const protobuf::Message* proto_msg = protobuf::MessageFactory::generated_factory()->GetPrototype(desc);
         if (proto_msg != nullptr)
         {
-            return million::ProtoMsgUnique(proto_msg->New());
+            return ProtoMsgUnique(proto_msg->New());
         }
         return nullptr;
     }
 
-    template <typename SubMsgId>
-    uint32_t CalcKey(Cs::MsgId msg_id, SubMsgId sub_msg_id) {
+    uint32_t CalcKey(Cs::MsgId msg_id, uint32_t sub_msg_id) {
         static_assert(sizeof(Cs::MsgId) == sizeof(sub_msg_id), "");
         assert(static_cast<uint32_t>(msg_id) <= kMsgIdMax);
-        assert(static_cast<uint32_t>(sub_msg_id) <= kSubMsgIdMax);
+        assert(sub_msg_id <= kSubMsgIdMax);
         return uint32_t(static_cast<uint32_t>(msg_id) << 16) | static_cast<uint16_t>(sub_msg_id);
+    }
+
+    std::pair<Cs::MsgId, uint32_t> CalcMsgId(uint32_t key) {
+        auto msg_id = static_cast<Cs::MsgId>(key >> 16);
+        auto sub_msg_id = key & 0xffff;
+        return std::make_pair(msg_id, sub_msg_id);
     }
 
 private:
@@ -183,6 +199,7 @@ private:
 
     std::unordered_map<Cs::MsgId, const protobuf::FileDescriptor*> file_desc_map_;
     std::unordered_map<uint32_t, const protobuf::Descriptor*> msg_desc_map_;
+    std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
 
 } // namespace million

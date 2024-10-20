@@ -49,19 +49,27 @@ protected:
     ServiceHandle service_handle_;
 };
 
-#define MILLION_HANDLE_MSG_BEGIN(_MSG_UNIQUE, _MSG_BASE_TYPE) \
-    auto _SAVED_MSG_UNIQUE = _MSG_UNIQUE; \
-    auto _MSG_PTR = _SAVED_MSG_UNIQUE->get<_MSG_BASE_TYPE>(); \
-    switch (_MSG_PTR->type()) {
-
-#define MILLION_HANDLE_MSG(_MSG_PTR_NAME, _MSG_TYPE, _CODE_BLOCK) \
-    case _MSG_TYPE::kTypeValue: { \
-        auto _MSG_PTR_NAME = std::unique_ptr<_MSG_TYPE>(static_cast<_MSG_TYPE*>(_SAVED_MSG_UNIQUE.release())); \
-        _CODE_BLOCK \
-        break; \
+#define MILLION_MSG_DISPATCH(_MSG_BASE_TYPE, _MSG_UNIQUE) \
+    auto _MSG_PTR = _MSG_UNIQUE->get<_MSG_BASE_TYPE>(); \
+    auto iter = MSG_HANDLE_MAP_.find(_MSG_PTR->type()); \
+    if (iter != MSG_HANDLE_MAP_.end()) { \
+        iter->second(_MSG_UNIQUE); \
     }
 
-#define MILLION_HANDLE_MSG_END() \
-    }
+#define MILLION_MSG_HANDLE_INIT(_MSG_BASE_TYPE) \
+    ::std::unordered_map<_MSG_BASE_TYPE::MsgType, ::std::function<void(::million::MsgUnique)>> MSG_HANDLE_MAP_
+
+#define MILLION_MSG_HANDLE_BEGIN(_MSG_TYPE, _MSG_PTR_NAME) \
+    ::million::Task MILLION_HANDLE_##_MSG_TYPE(::std::unique_ptr<_MSG_TYPE> _MSG_PTR_NAME)
+
+#define MILLION_MSG_HANDLE_END(_MSG_TYPE) \
+    const bool MILLION_HANDLE_REGISTER_##_MSG_TYPE = [this] { \
+    MSG_HANDLE_MAP_.insert(::std::make_pair(_MSG_TYPE::kTypeValue, [this](::million::MsgUnique msg) { \
+            MILLION_HANDLE_##_MSG_TYPE(::std::move(::std::unique_ptr<_MSG_TYPE>(static_cast<_MSG_TYPE*>(msg.release())))); \
+        }) \
+    ); \
+    return true; \
+    }();
+
 
 } // namespace million

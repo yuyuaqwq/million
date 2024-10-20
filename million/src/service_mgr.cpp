@@ -68,7 +68,7 @@ std::optional<ServiceHandle> ServiceMgr::GetServiceByCodeNum(const ServiceCodeNa
     std::lock_guard guard(service_code_name_map_mutex_);
     auto iter = service_code_name_map_.find(code_name);
     if (iter == service_code_name_map_.end()) {
-        return {};
+        return std::nullopt;
     }
     return iter->second;
 }

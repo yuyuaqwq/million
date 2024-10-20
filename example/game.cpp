@@ -18,17 +18,7 @@ class TestService : public million::IService {
     using Base::Base;
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
-
-        MILLION_HANDLE_MSG_BEGIN(std::move(msg), TestMsgBase);
-
-        MILLION_HANDLE_MSG(msg, Test1Msg, {
-            std::cout << msg->session_id() << msg->value1 << msg->value2 << std::endl;
-        });
-        MILLION_HANDLE_MSG(msg, Test2Msg, {
-            std::cout << msg->session_id() << msg->value1 << msg->value2 << std::endl;
-        });
-
-        MILLION_HANDLE_MSG_END();
+        MILLION_MSG_DISPATCH(TestMsgBase, std::move(msg));
 
         auto res = co_await Recv<million::IMsg>(2);
         std::cout << res->session_id() << std::endl;
@@ -40,6 +30,22 @@ class TestService : public million::IService {
         co_await On5();
         co_return;
     }
+
+    MILLION_MSG_HANDLE_INIT(TestMsgBase);
+
+    MILLION_MSG_HANDLE_BEGIN(Test1Msg, msg) {
+        std::cout << "Test1Msg" << msg->value1 << msg->value2 << std::endl;
+        co_return;
+    }
+    MILLION_MSG_HANDLE_END(Test1Msg);
+
+
+    MILLION_MSG_HANDLE_BEGIN(Test2Msg, msg) {
+        std::cout << "Test2Msg" << msg->value1 << msg->value2 << std::endl;
+        co_return;
+    }
+    MILLION_MSG_HANDLE_END(Test2Msg);
+
 
     million::Task On4() {
         auto res = co_await Recv<million::IMsg>(4);

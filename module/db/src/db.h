@@ -35,13 +35,6 @@ public:
     }
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
-        MILLION_HANDLE_MSG_BEGIN(std::move(msg), DbMsgBase);
-
-        MILLION_HANDLE_MSG(msg, DbMsgQuery, {
-            
-        });
-
-        MILLION_HANDLE_MSG_END();
 
         co_return;
     }

@@ -14,7 +14,6 @@
 #include "net/packet.h"
 
 namespace million {
-
 namespace net {
 
 class TcpServer : noncopyable {

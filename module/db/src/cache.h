@@ -37,22 +37,22 @@ public:
                     }
                     auto msg = std::move(queue_.front());
 
-                    MILLION_HANDLE_MSG_BEGIN(std::move(msg), CacheMsgBase);
+                    //MILLION_HANDLE_MSG_BEGIN(std::move(msg), CacheMsgBase);
 
-                    MILLION_HANDLE_MSG(msg, ParseFromCacheMsg, {
-                        ParseFromCache(std::move(msg));
-                    });
-                    MILLION_HANDLE_MSG(msg, SerializeToCacheMsg, {
-                        SerializeToCache(std::move(msg));
-                    });
-                    MILLION_HANDLE_MSG(msg, CacheGetReqMsg, {
-                        Get(std::move(msg));
-                    });
-                    MILLION_HANDLE_MSG(msg, CacheSetReqMsg, {
-                        Set(std::move(msg));
-                    });
+                    //MILLION_HANDLE_MSG(msg, ParseFromCacheMsg, {
+                    //    ParseFromCache(std::move(msg));
+                    //});
+                    //MILLION_HANDLE_MSG(msg, SerializeToCacheMsg, {
+                    //    SerializeToCache(std::move(msg));
+                    //});
+                    //MILLION_HANDLE_MSG(msg, CacheGetReqMsg, {
+                    //    Get(std::move(msg));
+                    //});
+                    //MILLION_HANDLE_MSG(msg, CacheSetReqMsg, {
+                    //    Set(std::move(msg));
+                    //});
 
-                    MILLION_HANDLE_MSG_END();
+                    //MILLION_HANDLE_MSG_END();
 
                     queue_.pop();
                 }

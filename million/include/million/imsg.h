@@ -33,6 +33,8 @@ private:
 template<typename TypeT>
 class MsgBaseT : public IMsg {
 public:
+    using MsgType = TypeT;
+
     MsgBaseT(TypeT type) : type_(type) {}
     ~MsgBaseT() = default;
 
