@@ -66,48 +66,30 @@ public:
         proto_mgr_.Registry(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
 
         // io线程回调，发给work线程处理
-        //tcp_server_.set_on_connection([this](auto connection) {
-        //    Send<ConnectionMsg>(service_handle(), std::move(connection));
-        //});
+        tcp_server_.set_on_connection([this](auto connection) {
+            Send<ConnectionMsg>(service_handle(), std::move(connection));
+        });
         tcp_server_.set_on_msg([this](auto& connection, auto&& packet) {
             Send<RecvPacketMsg>(service_handle(), &connection, std::move(packet));
         });
         tcp_server_.Start(8001);
     }
 
-    virtual Task OnMsg(MsgUnique msg) override {
-        // 服务是单线程处理的
+    MILLION_MSG_DISPATCH(GatewayService, GatewayMsgBase);
 
-        MILLION_MSG_DISPATCH(GatewayMsgBase, std::move(msg));
-
+    MILLION_MSG_HANDLE(ConnectionMsg, msg) {
         co_return;
     }
 
-    MILLION_MSG_HANDLE_INIT(GatewayMsgBase);
-
-    MILLION_MSG_HANDLE_BEGIN(ConnectionMsg, msg) {
-        // 新连接来了，不过没必要处理
-        auto token = token_generator_.Generate();
-
-        // 还需要到redis中查询token状态
-        users_.emplace_back(&proto_mgr_, std::move(msg->connection), token);
-
-        co_return;
-    }
-    MILLION_MSG_HANDLE_END(ConnectionMsg);
-
-
-    MILLION_MSG_HANDLE_BEGIN(RecvPacketMsg, msg) {
+    MILLION_MSG_HANDLE(RecvPacketMsg, msg) {
         // 在登录后才创建
+        auto token = token_generator_.Generate();
         ProtoAdditionalHeader header;
         auto res = proto_mgr_.DecodeMessage(msg->packet, &header);
         if (!res) co_return;
         auto& [proto_msg, msg_id, sub_msg_id] = *res;
-
         co_return;
     }
-    MILLION_MSG_HANDLE_END(RecvPacketMsg);
-
 
 private:
     net::TcpServer tcp_server_;

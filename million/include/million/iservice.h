@@ -49,27 +49,32 @@ protected:
     ServiceHandle service_handle_;
 };
 
-#define MILLION_MSG_DISPATCH(_MSG_BASE_TYPE, _MSG_UNIQUE) \
-    auto _MSG_PTR = _MSG_UNIQUE->get<_MSG_BASE_TYPE>(); \
-    auto iter = MSG_HANDLE_MAP_.find(_MSG_PTR->type()); \
-    if (iter != MSG_HANDLE_MAP_.end()) { \
-        iter->second(_MSG_UNIQUE); \
-    }
+#define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_, MILLION_MSG_BASE_TYPE_) \
+    using MILLION_SERVICE_TYPE = MILLION_SERVICE_TYPE_; \
+    virtual Task OnMsg(::million::MsgUnique msg) override { \
+        auto msg_ptr = msg->get<##MILLION_MSG_BASE_TYPE_##>(); \
+        auto iter = MILLION_MSG_HANDLE_MAP_.find(msg_ptr->type()); \
+        if (iter != MILLION_MSG_HANDLE_MAP_.end()) { \
+            co_await(this->*iter->second)(std::move(msg)); \
+        } \
+        co_return; \
+    } \
+    ::std::unordered_map<##MILLION_MSG_BASE_TYPE_##::MsgType, ::million::Task(MILLION_SERVICE_TYPE::*)(::million::MsgUnique)> MILLION_MSG_HANDLE_MAP_ \
 
-#define MILLION_MSG_HANDLE_INIT(_MSG_BASE_TYPE) \
-    ::std::unordered_map<_MSG_BASE_TYPE::MsgType, ::std::function<void(::million::MsgUnique)>> MSG_HANDLE_MAP_
 
-#define MILLION_MSG_HANDLE_BEGIN(_MSG_TYPE, _MSG_PTR_NAME) \
-    ::million::Task MILLION_HANDLE_##_MSG_TYPE(::std::unique_ptr<_MSG_TYPE> _MSG_PTR_NAME)
-
-#define MILLION_MSG_HANDLE_END(_MSG_TYPE) \
-    const bool MILLION_HANDLE_REGISTER_##_MSG_TYPE = [this] { \
-    MSG_HANDLE_MAP_.insert(::std::make_pair(_MSG_TYPE::kTypeValue, [this](::million::MsgUnique msg) { \
-            MILLION_HANDLE_##_MSG_TYPE(::std::move(::std::unique_ptr<_MSG_TYPE>(static_cast<_MSG_TYPE*>(msg.release())))); \
-        }) \
-    ); \
-    return true; \
-    }();
-
+#define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
+    ::million::Task MILLION_HANDLE_##MSG_TYPE_##_I(::million::MsgUnique MILLION_MSG_) { \
+        auto msg = ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release())); \
+        co_await MILLION_HANDLE_##MSG_TYPE_##_II(std::move(msg)); \
+        co_return; \
+    } \
+    const bool MILLION_HANDLE_REGISTER_##MSG_TYPE_ =  \
+        [this] { \
+            MILLION_MSG_HANDLE_MAP_.insert(::std::make_pair(MSG_TYPE_::kTypeValue, \
+                &MILLION_SERVICE_TYPE::MILLION_HANDLE_##MSG_TYPE_##_I \
+            )); \
+            return true; \
+        }(); \
+    ::million::Task MILLION_HANDLE_##MSG_TYPE_##_II(::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
 
 } // namespace million
