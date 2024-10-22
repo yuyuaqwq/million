@@ -132,7 +132,6 @@ struct TaskPromise {
         return reinterpret_cast<Awaiter<IMsg>*>(awaiter_);
     }
 
-
 private:
     Awaiter<IMsg>* awaiter_;  // 最终需要唤醒的等待器
 };
@@ -151,13 +150,12 @@ std::unique_ptr<MsgT> Awaiter<MsgT>::await_resume() noexcept {
 
 inline void Task::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
     // 这里的参数是parent coroutine的handle
-    // 何时resume交给调度器，设计上的等待是必定挂起的
     // 向上设置awaiter，让service可以拿到正在等待的awaiter，选择是否调度当前协程
     parent_handle.promise().set_awaiter(handle.promise().get_awaiter());
 }
 
 inline void Task::await_resume() noexcept {
-    // 调度器恢复了当前Task的执行，继续向下唤醒，直到唤醒Awaiter
+    // 调度器恢复了co_await Task，继续向下唤醒，直到唤醒Awaiter
     handle.resume();
 }
 
