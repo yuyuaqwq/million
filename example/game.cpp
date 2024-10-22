@@ -18,44 +18,41 @@ class TestService : public million::IService {
     using Base::Base;
 
     virtual million::Task OnMsg(million::MsgUnique msg) override {
-        MILLION_MSG_DISPATCH(TestMsgBase, std::move(msg));
+        auto msg_ = static_cast<Test1Msg*>(msg.get());
+        std::cout << msg_->session_id() << std::endl;
+        std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
         auto res = co_await Recv<million::IMsg>(2);
-        std::cout << res->session_id() << std::endl;
+        msg_ = static_cast<Test1Msg*>(res.get());
+        std::cout << msg_->session_id() << std::endl;
+        std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
         res = co_await Recv<million::IMsg>(3);
-        std::cout << res->session_id() << std::endl;
+        msg_ = static_cast<Test1Msg*>(res.get());
+        std::cout << msg_->session_id() << std::endl;
+        std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
         co_await On4();
         co_await On5();
         co_return;
     }
 
-    MILLION_MSG_HANDLE_INIT(TestMsgBase);
-
-    MILLION_MSG_HANDLE_BEGIN(Test1Msg, msg) {
-        std::cout << "Test1Msg" << msg->value1 << msg->value2 << std::endl;
-        co_return;
-    }
-    MILLION_MSG_HANDLE_END(Test1Msg);
-
-
-    MILLION_MSG_HANDLE_BEGIN(Test2Msg, msg) {
-        std::cout << "Test2Msg" << msg->value1 << msg->value2 << std::endl;
-        co_return;
-    }
-    MILLION_MSG_HANDLE_END(Test2Msg);
 
 
     million::Task On4() {
         auto res = co_await Recv<million::IMsg>(4);
+        auto msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << res->session_id() << std::endl;
+        std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
+
         co_return;
     }
 
     million::Task On5() {
         auto session_id = Send<Test1Msg>(service_handle(), 5, "hjh");
         auto res = co_await Recv<million::IMsg>(session_id);
+
+        auto msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << res->session_id() << std::endl;
 
         res = co_await Call<million::IMsg, Test1Msg>(service_handle(), 6, "sbsb");

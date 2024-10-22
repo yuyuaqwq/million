@@ -39,7 +39,6 @@ public:
     ~MsgBaseT() = default;
 
     using IMsg::get;
-
     TypeT type() const { return type_; }
 
 private:
@@ -94,7 +93,7 @@ public:
 #define MILLION_FIELD_TO_DECL(field) MILLION_FIELD_EXTRACT_TYPE(field) MILLION_FIELD_EXTRACT_NAME(field)
 
 
-#define MILLION_FIELD_TO_CONST_REF_DECL_I(x) x&&
+#define MILLION_FIELD_TO_CONST_REF_DECL_I(x) auto&&//x&&
 // 假设这里x是(float) kk，所以后面展开就是 FIELD_TO_CONST_REF_DECL_I (float) kk
 // FIELD_TO_CONST_REF_DECL_I (float)会被识别成宏调用，把float作为参数传入
 // 于是就得到了const float&的结果
@@ -110,7 +109,7 @@ public:
 
 // 字段声明转构造函数字段初始化(第二步)
 // 参数 field_name: 字段名称
-#define MILLION_FIELD_TO_CTOR_INIT_I(field_name) field_name(std::move(field_name))
+#define MILLION_FIELD_TO_CTOR_INIT_I(field_name) field_name(std::forward<decltype(field_name)>(field_name))
 // 字段声明转构造函数字段初始化(第一步)
 // 参数 field: 未加工的字段
 // (由CTOR_INIT_LIST_IMPL调用)
@@ -184,7 +183,6 @@ public:
 template<class T, class Func>
 void ForeachMetaFieldData(T&& obj, Func&& cb) {
 	using DecayT = std::decay_t<T>;
-
 	[&] <size_t... I>(std::index_sequence<I...>) {
 		(cb(typename DecayT::template MetaFieldData<I>{}), ...);
 	}(std::make_index_sequence<DecayT::kMetaFieldCount>{});

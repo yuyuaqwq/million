@@ -14,19 +14,21 @@
 namespace million {
 
 struct Task;
+
 struct TaskPromise;
 
+// 消息等待器，等待一条消息
 template <typename MsgT>
 struct Awaiter {
-    explicit Awaiter(SessionId session_id)
-        : session_id_(session_id) {}
+    explicit Awaiter(SessionId waiting_session_id)
+        : waiting_session_id_(waiting_session_id) {}
 
     Awaiter(Awaiter&& rv) {
         operator=(std::move(rv));
     }
     void operator=(Awaiter&& rv) {
         parent_handle_ = std::move(rv.parent_handle_);
-        session_id_ = std::move(rv.session_id_);
+        waiting_session_id_ = std::move(rv.waiting_session_id_);
     }
 
     Awaiter(Awaiter&) = delete;
@@ -36,19 +38,33 @@ struct Awaiter {
         return false;
     }
 
+    void set_result(std::unique_ptr<MsgT> result) {
+        reslut_ = std::move(result);
+    }
+    SessionId get_waiting() {
+        return waiting_session_id_;
+    }
+    std::coroutine_handle<TaskPromise> get_parent_handle() {
+        return parent_handle_;
+    }
+
+    // 通过在协程中 co_await 当前类型的对象时调用
     void await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept;
 
+    // co_await等待在当前对象中的协程被恢复时调用
     std::unique_ptr<MsgT> await_resume() noexcept;
 
 private:
+    SessionId waiting_session_id_;
+    std::unique_ptr<MsgT> reslut_;
     std::coroutine_handle<TaskPromise> parent_handle_;
-    SessionId session_id_;
 };
 
+// 协程的返回值类，这里不做返回值支持
 struct Task {
     using promise_type = TaskPromise;
 
-    explicit Task(std::coroutine_handle<TaskPromise> handle) noexcept
+    explicit Task(std::coroutine_handle<promise_type> handle) noexcept
         : handle(handle) {}
 
     Task(Task&& co) noexcept
@@ -67,15 +83,17 @@ struct Task {
         return false;
     }
 
-    void await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept;
+    void await_suspend(std::coroutine_handle<promise_type> parent_handle) noexcept;
 
     void await_resume() noexcept;
 
-    std::coroutine_handle<TaskPromise> handle;
-    std::coroutine_handle<TaskPromise> parent_handle_;
+    std::coroutine_handle<promise_type> handle;
+    std::coroutine_handle<promise_type> parent_handle_;
 };
 
+// 管理协程运行、保存协程状态的类
 struct TaskPromise {
+
     // 协程立即执行
     std::suspend_never initial_suspend() {
         return {};
@@ -86,11 +104,12 @@ struct TaskPromise {
         return {};
     }
 
+    // 创建协程同时调用，提前创建返回值
     Task get_return_object() {
         return Task{ std::coroutine_handle<TaskPromise>::from_promise(*this) };
     }
 
-    // co_return;
+    // co_return时实际返回值
     void return_void() {
         
     }
@@ -99,30 +118,24 @@ struct TaskPromise {
 
     }
 
-    template <typename MsgT>
-    Awaiter<MsgT> await_transform(Awaiter<MsgT>&& awaiter) {
-        return Awaiter<MsgT>(std::move(awaiter));
+    // 该协程内，可通过co_await进行等待的类型支持
+    // 这里的T为了支持在协程里，可以等待不同类型的Awaiter
+    template <typename T>
+    Awaiter<T> await_transform(Awaiter<T>&& awaiter) {
+        return Awaiter<T>(std::move(awaiter));
     }
 
+    // 顺便支持一下等待Task
     Task await_transform(Task&& task) {
         return Task(std::move(task));
     }
 
-
-    void set_result(MsgUnique msg) {
-        result_ = std::move(msg);
+    void set_awaiter(Awaiter<IMsg>* awaiter) {
+        awaiter_ = reinterpret_cast<Awaiter<IMsg>*>(awaiter);
     }
 
-    MsgUnique get_result() {
-        return std::move(result_);
-    }
-
-    void set_waiting(SessionId session_id) {
-        waiting_session_id_ = session_id;
-    }
-
-    SessionId get_waiting() {
-        return waiting_session_id_;
+    Awaiter<IMsg>* get_awaiter() {
+        return reinterpret_cast<Awaiter<IMsg>*>(awaiter_);
     }
 
     void set_waiting_handle(std::coroutine_handle<TaskPromise> waiting_handle) {
@@ -134,38 +147,37 @@ struct TaskPromise {
     }
 
 private:
-    MsgUnique result_;
-    SessionId waiting_session_id_;
-    std::coroutine_handle<TaskPromise> waiting_handle_;
+    std::coroutine_handle<TaskPromise> waiting_handle_;  // 当前协程等在哪个协程上
+    Awaiter<IMsg>* awaiter_;  // 最终需要唤醒的等待器
 };
 
 template <typename MsgT>
 void Awaiter<MsgT>::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
-    // resume交给调度器，等待是必定挂起的
+    // 何时resume交给调度器，设计上的等待是必定挂起的
     parent_handle_ = parent_handle;
-    parent_handle_.promise().set_waiting(session_id_);
+    parent_handle_.promise().set_awaiter(this);
 }
 
 template <typename MsgT>
 std::unique_ptr<MsgT> Awaiter<MsgT>::await_resume() noexcept {
-    // 调度器恢复了当前Awaiter的执行，说明已经等到结果了
-    return std::unique_ptr<MsgT>(static_cast<MsgT*>(parent_handle_.promise().get_result().release()));
+    // 调度器恢复了当前awaiter的执行，说明已经等到结果了
+    return std::unique_ptr<MsgT>(static_cast<MsgT*>(reslut_.release()));
 }
 
 inline void Task::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
-    // 这里的handle是parent coroutine的handle
-    // resume交给调度器，等待是必定挂起的
+    // 这里的参数是parent coroutine的handle
+    // 何时resume交给调度器，设计上的等待是必定挂起的
+    // 向上设置awaiter，让service可以拿到正在等待的awaiter，选择是否调度当前协程
     parent_handle_ = parent_handle;
     parent_handle.promise().set_waiting_handle(handle);
-    parent_handle.promise().set_waiting(handle.promise().get_waiting());
+    parent_handle.promise().set_awaiter(handle.promise().get_awaiter());
 }
 
 inline void Task::await_resume() noexcept {
-    // 调度器恢复了当前Task的执行，传递msg，继续向下唤醒，直到传递给Awaiter
+    // 调度器恢复了当前Task的执行，继续向下唤醒，直到唤醒Awaiter
     auto waiting_handle = parent_handle_.promise().get_waiting_handle();
     assert(waiting_handle);
     assert(waiting_handle == handle);
-    waiting_handle.promise().set_result(parent_handle_.promise().get_result());
     waiting_handle.resume();
 }
 

@@ -46,7 +46,7 @@ bool Service::ProcessMsg() {
     }
     auto task = iservice_->OnMsg(std::move(msg));
     if (!task.handle.done()) {
-        excutor_.Push(task.handle.promise().get_waiting(), std::move(task));
+        excutor_.Push(task.handle.promise().get_awaiter()->get_waiting(), std::move(task));
     }
     return true;
 }
