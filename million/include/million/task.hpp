@@ -155,7 +155,7 @@ inline void Task::await_suspend(std::coroutine_handle<TaskPromise> parent_handle
 }
 
 inline void Task::await_resume() noexcept {
-    // 调度器恢复在co_await Task，继续向下唤醒，直到唤醒Awaiter
+    // parent_handle被调度器恢复，继续向下唤醒，直到唤醒Awaiter
     handle.resume();
 }
 
