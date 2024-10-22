@@ -27,7 +27,6 @@ struct Awaiter {
         operator=(std::move(rv));
     }
     void operator=(Awaiter&& rv) {
-        parent_handle_ = std::move(rv.parent_handle_);
         waiting_session_id_ = std::move(rv.waiting_session_id_);
     }
 
@@ -44,9 +43,6 @@ struct Awaiter {
     SessionId get_waiting() {
         return waiting_session_id_;
     }
-    std::coroutine_handle<TaskPromise> get_parent_handle() {
-        return parent_handle_;
-    }
 
     // 通过在协程中 co_await 当前类型的对象时调用
     void await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept;
@@ -57,7 +53,6 @@ struct Awaiter {
 private:
     SessionId waiting_session_id_;
     std::unique_ptr<MsgT> reslut_;
-    std::coroutine_handle<TaskPromise> parent_handle_;
 };
 
 // 协程的返回值类，这里不做返回值支持
@@ -88,7 +83,6 @@ struct Task {
     void await_resume() noexcept;
 
     std::coroutine_handle<promise_type> handle;
-    std::coroutine_handle<promise_type> parent_handle_;
 };
 
 // 管理协程运行、保存协程状态的类
@@ -138,24 +132,15 @@ struct TaskPromise {
         return reinterpret_cast<Awaiter<IMsg>*>(awaiter_);
     }
 
-    void set_waiting_handle(std::coroutine_handle<TaskPromise> waiting_handle) {
-        waiting_handle_ = waiting_handle;
-    }
-
-    std::coroutine_handle<TaskPromise> get_waiting_handle() {
-        return waiting_handle_;
-    }
 
 private:
-    std::coroutine_handle<TaskPromise> waiting_handle_;  // 当前协程等在哪个协程上
     Awaiter<IMsg>* awaiter_;  // 最终需要唤醒的等待器
 };
 
 template <typename MsgT>
 void Awaiter<MsgT>::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
     // 何时resume交给调度器，设计上的等待是必定挂起的
-    parent_handle_ = parent_handle;
-    parent_handle_.promise().set_awaiter(this);
+    parent_handle.promise().set_awaiter(this);
 }
 
 template <typename MsgT>
@@ -168,17 +153,12 @@ inline void Task::await_suspend(std::coroutine_handle<TaskPromise> parent_handle
     // 这里的参数是parent coroutine的handle
     // 何时resume交给调度器，设计上的等待是必定挂起的
     // 向上设置awaiter，让service可以拿到正在等待的awaiter，选择是否调度当前协程
-    parent_handle_ = parent_handle;
-    parent_handle.promise().set_waiting_handle(handle);
     parent_handle.promise().set_awaiter(handle.promise().get_awaiter());
 }
 
 inline void Task::await_resume() noexcept {
     // 调度器恢复了当前Task的执行，继续向下唤醒，直到唤醒Awaiter
-    auto waiting_handle = parent_handle_.promise().get_waiting_handle();
-    assert(waiting_handle);
-    assert(waiting_handle == handle);
-    waiting_handle.resume();
+    handle.resume();
 }
 
 } // namespace million
