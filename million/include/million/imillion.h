@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include <million/detail/dl_export.h>
+#include <million/detail/delay_task.h>
 #include <million/detail/noncopyable.h>
 #include <million/imsg.h>
 #include <million/iservice.h>
@@ -39,9 +40,11 @@ public:
         return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
-    virtual const YAML::Node& config() const = 0;
+    virtual void AddDelayTask(detail::DelayTask&& task) = 0;
 
     virtual asio::io_context& NextIoContext() = 0;
+
+    virtual const YAML::Node& YamlConfig() const = 0;
 };
 
 inline SessionId IService::Send(ServiceHandle target, MsgUnique msg) {

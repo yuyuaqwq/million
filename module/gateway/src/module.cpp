@@ -62,8 +62,15 @@ public:
         , tcp_server_(imillion) { }
 
     virtual void OnInit() override {
-        proto_mgr_.Init();
-        proto_mgr_.Registry(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
+        proto_mgr_.InitMsgMap();
+        proto_mgr_.RegistrySubMsg(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
+
+        /*Cs::UserLoginReq req;
+        req.set_user_name("666");
+        req.set_password("sbsb");
+        ProtoAdditionalHeader header;
+        auto buffer = proto_mgr_.EncodeMessage(header, req);
+        Send<RecvPacketMsg>(service_handle(), nullptr, std::move(*buffer));*/
 
         // io线程回调，发给work线程处理
         tcp_server_.set_on_connection([this](auto connection) {
@@ -82,12 +89,29 @@ public:
     }
 
     MILLION_MSG_HANDLE(RecvPacketMsg, msg) {
-        // 在登录后才创建
+        co_await OnProtoMsg(msg->packet);
+
+        // 在登录后才创建UserSession
         auto token = token_generator_.Generate();
-        ProtoAdditionalHeader header;
-        auto res = proto_mgr_.DecodeMessage(msg->packet, &header);
-        if (!res) co_return;
-        auto& [proto_msg, msg_id, sub_msg_id] = *res;
+
+        co_return;
+    }
+
+    MILLION_PROTO_MSG_DISPATCH();
+    
+    MILLION_PROTO_MSG_ID(MSG_ID_USER);
+
+    /*MILLION_PROTO_MSG_HANDLE(SubMsgIdUser::SUB_MSG_ID_USER_LOGIN, UserRegisterReq, req) {
+        std::cout << "login:" << req->user_name() << req->password() << std::endl;
+        co_return;
+    }*/
+    ::million::Task _MILLION_PROTO_MSG_HANDLE_UserRegisterReq_I(::million::ProtoMsgUnique MILLION_PROTO_MSG_) {
+        auto msg = ::std::unique_ptr<::Cs::UserRegisterReq>(static_cast<::Cs::UserRegisterReq*>(MILLION_PROTO_MSG_.release()));
+        co_await _MILLION_PROTO_MSG_HANDLE_UserRegisterReq_II(std::move(msg));
+        co_return;
+    } 
+    const bool MILLION_PROTO_MSG_HANDLE_REGISTER_UserRegisterReq = [this] { _MILLION_PROTO_MSG_HANDLE_MAP_.insert(::std::make_pair(::million::ProtoMgr::CalcKey(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_, Cs::SubMsgIdUser::SUB_MSG_ID_USER_LOGIN), &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_UserRegisterReq_I)); return true; }(); ::million::Task _MILLION_PROTO_MSG_HANDLE_UserRegisterReq_II(::std::unique_ptr<::Cs::UserRegisterReq> req) {
+        std::cout << "login:" << req->user_name() << req->password() << std::endl;
         co_return;
     }
 
@@ -99,7 +123,7 @@ private:
 };
 
 MILLION_FUNC_EXPORT bool MillionModuleInit(IMillion* imillion) {
-    auto& config = imillion->config();
+    auto& config = imillion->YamlConfig();
     auto handle = imillion->NewService<GatewayService>();
 
     return true;

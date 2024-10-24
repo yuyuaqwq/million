@@ -22,7 +22,6 @@ void IoContext::Start() {
 
 void IoContext::Stop() {
     work_ = std::nullopt;
-    thread_->join();
 }
 
 } // namespace million

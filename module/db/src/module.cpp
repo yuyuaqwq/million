@@ -11,7 +11,7 @@
 
 MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
     
-    auto& config = imillion->config();
+    auto& config = imillion->YamlConfig();
     auto cache_service_handle = imillion->NewService<CacheService>();
     auto sql_service_handle = imillion->NewService<SqlService>();
 

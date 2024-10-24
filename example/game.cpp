@@ -50,20 +50,35 @@ class TestService : public million::IService {
 
     million::Task On5() {
         auto session_id = Send<Test1Msg>(service_handle(), 5, "hjh");
-        auto res = co_await Recv<million::IMsg>(session_id);
-
+        auto res = co_await Recv<Test1Msg>(session_id);
         auto msg_ = static_cast<Test1Msg*>(res.get());
-        std::cout << res->session_id() << std::endl;
+        std::cout << msg_->session_id() << std::endl;
+        std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
-        res = co_await Call<million::IMsg, Test1Msg>(service_handle(), 6, "sbsb");
+        res = co_await Call<Test1Msg, Test1Msg>(service_handle(), 6, "sbsb");
+        msg_ = static_cast<Test1Msg*>(res.get());
+        std::cout << msg_->session_id() << std::endl;
+        std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
         co_return;
     }
 };
 
-
 int main() {
     auto mili = million::NewMillion("game_config.yaml");
+
+    auto start = std::chrono::high_resolution_clock::now();
+    int j = 0;
+    for (int i = 0; i < 1000000; i++) {
+        mili->AddDelayTask({ 1, [&j](const auto& task) {
+            ++j;
+            // std::cout << "666" << std::endl;
+            } });
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    auto duratioin = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Elapsed time: " << duratioin.count() << "ms:" << j << " seconds\n";
 
     auto service_handle = mili->NewService<TestService>();
 

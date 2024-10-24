@@ -33,6 +33,7 @@ struct Awaiter {
     Awaiter(Awaiter&) = delete;
     Awaiter& operator=(Awaiter&) = delete;
 
+    // 总是挂起
     constexpr bool await_ready() const noexcept {
         return false;
     }
@@ -71,12 +72,10 @@ struct Task {
         }
     }
 
-    Task(Task&) = delete;
-    Task& operator=(Task&) = delete;
+    Task(const Task&) = delete;
+    Task& operator=(const Task&) = delete;
     
-    constexpr bool await_ready() const noexcept {
-        return false;
-    }
+    bool await_ready() const noexcept;
 
     void await_suspend(std::coroutine_handle<promise_type> parent_handle) noexcept;
 
@@ -87,14 +86,19 @@ struct Task {
 
 // 管理协程运行、保存协程状态的类
 struct TaskPromise {
+    TaskPromise() = default;
+    ~TaskPromise() = default;
+
+    TaskPromise(const TaskPromise&) = delete;
+    TaskPromise& operator=(const TaskPromise&) = delete;
 
     // 协程立即执行
     std::suspend_never initial_suspend() {
         return {};
     };
 
-    // 执行结束后挂起
-    std::suspend_always final_suspend() noexcept {
+    // 执行结束时挂起
+    std::suspend_always  final_suspend() noexcept {
         return {};
     }
 
@@ -133,19 +137,28 @@ struct TaskPromise {
     }
 
 private:
-    Awaiter<IMsg>* awaiter_;  // 最终需要唤醒的等待器
+    Awaiter<IMsg>* awaiter_ = nullptr;  // 最终需要唤醒的等待器
 };
 
 template <typename MsgT>
 void Awaiter<MsgT>::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
     // 何时resume交给调度器，设计上的等待是必定挂起的
-    parent_handle.promise().set_awaiter(this);
+    parent_handle.promise().set_awaiter(reinterpret_cast<Awaiter<IMsg>*>(this));
 }
 
 template <typename MsgT>
 std::unique_ptr<MsgT> Awaiter<MsgT>::await_resume() noexcept {
     // 调度器恢复了当前awaiter的执行，说明已经等到结果了
     return std::unique_ptr<MsgT>(static_cast<MsgT*>(reslut_.release()));
+}
+
+inline bool Task::await_ready() const noexcept {
+    if (!handle.promise().get_awaiter()) {
+        // 没有等待，无需挂起，会直接调用await_resume，跳过await_suspend
+        return true;
+    }
+    // 需要等待，会调用await_suspend
+    return false;
 }
 
 inline void Task::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
@@ -155,8 +168,10 @@ inline void Task::await_suspend(std::coroutine_handle<TaskPromise> parent_handle
 }
 
 inline void Task::await_resume() noexcept {
-    // parent_handle被调度器恢复，继续向下唤醒，直到唤醒Awaiter
-    handle.resume();
+    if (handle.promise().get_awaiter()) {
+        // parent_handle被调度器恢复，继续向下唤醒，直到唤醒Awaiter
+        handle.resume();
+    }
 }
 
 } // namespace million

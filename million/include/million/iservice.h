@@ -50,31 +50,31 @@ protected:
 };
 
 #define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_, MILLION_MSG_BASE_TYPE_) \
-    using MILLION_SERVICE_TYPE = MILLION_SERVICE_TYPE_; \
+    using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
     virtual Task OnMsg(::million::MsgUnique msg) override { \
         auto msg_ptr = msg->get<##MILLION_MSG_BASE_TYPE_##>(); \
-        auto iter = MILLION_MSG_HANDLE_MAP_.find(msg_ptr->type()); \
-        if (iter != MILLION_MSG_HANDLE_MAP_.end()) { \
+        auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg_ptr->type()); \
+        if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
             co_await(this->*iter->second)(std::move(msg)); \
         } \
         co_return; \
     } \
-    ::std::unordered_map<##MILLION_MSG_BASE_TYPE_##::MsgType, ::million::Task(MILLION_SERVICE_TYPE::*)(::million::MsgUnique)> MILLION_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<##MILLION_MSG_BASE_TYPE_##::MsgType, ::million::Task(_MILLION_SERVICE_TYPE_::*)(::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
 
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task MILLION_HANDLE_##MSG_TYPE_##_I(::million::MsgUnique MILLION_MSG_) { \
+    ::million::Task _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(::million::MsgUnique MILLION_MSG_) { \
         auto msg = ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release())); \
-        co_await MILLION_HANDLE_##MSG_TYPE_##_II(std::move(msg)); \
+        co_await _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(std::move(msg)); \
         co_return; \
     } \
-    const bool MILLION_HANDLE_REGISTER_##MSG_TYPE_ =  \
+    const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            MILLION_MSG_HANDLE_MAP_.insert(::std::make_pair(MSG_TYPE_::kTypeValue, \
-                &MILLION_SERVICE_TYPE::MILLION_HANDLE_##MSG_TYPE_##_I \
+            _MILLION_MSG_HANDLE_MAP_.insert(::std::make_pair(MSG_TYPE_::kTypeValue, \
+                &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
             )); \
             return true; \
         }(); \
-    ::million::Task MILLION_HANDLE_##MSG_TYPE_##_II(::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
+    ::million::Task _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
 
 } // namespace million

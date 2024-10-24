@@ -8,35 +8,19 @@
 #include <vector>
 #include <mutex>
 
-#include <million/noncopyable.h>
-
-#include <million/detail/functional.hpp>
+#include <million/detail/noncopyable.h>
+#include <million/detail/delay_task.h>
 
 namespace million {
-
 namespace detail {
 
 class TimeWheel : noncopyable {
-public:
-    struct Task {
-        using Func = std::function<void(const Task&)>;
-
-        Task(size_t tick, const Func& func)
-            : tick(tick)
-            , func(func) {}
-        ~Task() = default;
-
-        Task(const Task&) = default;
-
-        size_t tick;
-        Func func;
-    };
-
-    using TaskVector = std::vector<Task>;
+private:
+    using TaskVector = std::vector<DelayTask>;
 
 public:
-    TimeWheel(size_t one_tick_ms)
-        : one_tick_ms_(one_tick_ms) {}
+    TimeWheel(uint32_t ms_per_tick)
+        : ms_per_tick_(ms_per_tick) {}
     ~TimeWheel() = default;
 
     void Init() {
@@ -55,28 +39,28 @@ public:
 
         auto now_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now_time - last_time_);
-        size_t tick_duration = duration.count() / one_tick_ms_;
-        // �����ϴ�Tick���񾭹���ʱ�䣬�ƽ�
+        size_t tick_duration = duration.count() / ms_per_tick_;
+        // 根据上次Tick至今经过的时间，推进
         for (size_t i = 0; i < tick_duration; i++) {
-            // �õ���0����ƽ���slot��ִ������
+            // 拿到第0层待推进的slot，执行任务
             auto& slot = slots_[indexs_[0]];
             if (!slot.empty()) {
                 for (auto& task : slot) {
-                    task.func(task);
+                    task.func(std::move(task));
                 }
                 slot.clear();
             }
 
-            // �����Ҫ���ϲ�ʱ�����ƽ������ϲ�ʱ���ֵĶ��������ɷ�
+            // 如果需要向上层时间轮推进，则将上层时间轮的队列向下派发
             size_t j = 0;
-            // ��0���ƽ�
+            // 第0层推进
             ++indexs_[0];
             do {
-                // ����Ѿ�����߽磬�ͻع�����ĳһ��������һȦ
+                // 如果已经到达边界，就回滚，即某一层走完了一圈
                 bool ge = indexs_[j] >= kSlotCount;
                 if (ge) indexs_[j] = 0;
                 if (j > 0) {
-                    // ���ĳ��������һȦ���ͱ�ʾ�ϲ�Ҳ��Ҫ�ƽ�һ��ͬʱ���ϲ���������²��ɷ�
+                    // 如果某层走完了一圈，就表示上层也需要推进一格，同时将上层的任务向下层派发
                     size_t index = j * kSlotCount + indexs_[j];
                     DispatchTasks(&slots_[index]);
                 }
@@ -84,22 +68,20 @@ public:
                 ++indexs_[j];
             } while (true);
         }
-        last_time_ += std::chrono::milliseconds(tick_duration * one_tick_ms_);
+        last_time_ += std::chrono::milliseconds(tick_duration * ms_per_tick_);
     }
 
-    void AddTaskWithGuard(size_t tick, const Task::Func& func) {
-        adds_.emplace_back(tick, func);
-    }
-
-    void AddTask(size_t tick, const Task::Func& func) {
+    void AddTask(DelayTask&& task) {
         {
             std::lock_guard guard(adds_mutex_);
-            AddTaskWithGuard(tick, func);
+            adds_.emplace_back(std::move(task));
         }
     }
 
+    uint32_t ms_per_tick() const { return ms_per_tick_; }
+
 private:
-    size_t GetLayer(size_t tick) {
+    size_t GetLayer(uint32_t tick) {
         for (size_t i = 0; i < kCircleCount; i++) {
             if ((tick & ~kCircleMask) == 0) {
                 return i;
@@ -113,12 +95,12 @@ private:
         for (auto& task : *tasks) {
             size_t tick = task.tick;
             
-            // ����ʱ�������Ӧ��Ĳ���
+            // 根据时长插入对应层的槽中
             size_t layer = GetLayer(tick);
             size_t index = tick & kCircleMask;
             index = layer * kSlotCount + ((index + indexs_[layer]) % kSlotCount);
 
-            // ����ڵ�ǰ���ʱ�������´������ɷ�ʱ���Բ��뵽�²�
+            // 清除在当前层的时长，在下次向下派发时可以插入到下层
             size_t mask = ~(std::numeric_limits<size_t>::max() << (layer * kSlotBit));
             task.tick &= mask;
 
@@ -133,17 +115,16 @@ private:
     static constexpr size_t kSlotCount = 1 << kSlotBit; // 64
     static constexpr size_t kCircleMask = 0x3f; // 0011 1111
 
-    size_t one_tick_ms_;
+    const uint32_t ms_per_tick_;
 
     std::chrono::high_resolution_clock::time_point last_time_;
 
-    std::array<TaskVector, kSlotCount * kCircleCount> slots_;  // ���ʱ����
-    std::array<uint8_t, kCircleCount> indexs_{ 0 };  // ÿһ�㵱ǰָ���slot
+    std::array<TaskVector, kSlotCount * kCircleCount> slots_;  // 多层时间轮
+    std::array<uint16_t, kCircleCount> indexs_{ 0 };  // 每一层当前指向的slot
 
     std::mutex adds_mutex_;
     TaskVector adds_;
 };
 
 } // namespace detail
-
 } // namespace million

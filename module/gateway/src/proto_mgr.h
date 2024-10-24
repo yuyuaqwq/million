@@ -24,8 +24,8 @@ struct ProtoAdditionalHeader {
 
 class ProtoMgr {
 public:
-    // 初始化消息ID
-    void Init() {
+    // 初始化消息映射
+    void InitMsgMap() {
         const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
         protobuf::DescriptorDatabase* db = pool->internal_generated_database();
         if (db == nullptr) {
@@ -59,23 +59,28 @@ public:
 
     // 注册子消息
     template <typename ExtensionIdT>
-    bool Registry(Cs::MsgId msg_id, const ExtensionIdT& id) {
+    bool RegistrySubMsg(Cs::MsgId msg_id, const ExtensionIdT& id) {
         if (static_cast<uint32_t>(msg_id) > kMsgIdMax) {
             throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{} > kMsgIdMax", static_cast<uint32_t>(msg_id)));
         }
-        auto desc = FindMsgDesc(msg_id);
-        if (!desc) return false;
-        auto& options = desc->options();
-        if (options.HasExtension(id)) {
-            auto sub_msg_id_t = options.GetExtension(id);
-            auto sub_msg_id = static_cast<uint32_t>(sub_msg_id_t);
-            if (sub_msg_id > kSubMsgIdMax) {
-                throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", static_cast<uint32_t>(msg_id), static_cast<uint32_t>(sub_msg_id)));
+        auto file_desc = FindFileDesc(msg_id);
+        if (!file_desc) return false;
+
+        int message_count = file_desc->message_type_count();
+        for (int i = 0; i < message_count; i++) {
+            const protobuf::Descriptor* desc = file_desc->message_type(i);
+            auto& options = desc->options();
+            if (options.HasExtension(id)) {
+                auto sub_msg_id_t = options.GetExtension(id);
+                auto sub_msg_id = static_cast<uint32_t>(sub_msg_id_t);
+                if (sub_msg_id > kSubMsgIdMax) {
+                    throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", static_cast<uint32_t>(msg_id), static_cast<uint32_t>(sub_msg_id)));
+                }
+                static_assert(sizeof(Cs::MsgId) == sizeof(sub_msg_id), "");
+                auto key = CalcKey(msg_id, sub_msg_id);
+                msg_desc_map_.insert({ key, desc });
+                msg_id_map_.insert({ desc, key });
             }
-            static_assert(sizeof(Cs::MsgId) == sizeof(sub_msg_id), "");
-            auto key = CalcKey(msg_id, sub_msg_id);
-            msg_desc_map_.insert({ key, desc });
-            msg_id_map_.insert({ desc, key });
         }
         return true;
     }
@@ -141,18 +146,25 @@ public:
         return std::make_tuple(std::move(proto_msg), msg_id, sub_msg_id);
     }
 
+    static uint32_t CalcKey(Cs::MsgId msg_id, uint32_t sub_msg_id) {
+        static_assert(sizeof(Cs::MsgId) == sizeof(sub_msg_id), "");
+        assert(static_cast<uint32_t>(msg_id) <= kMsgIdMax);
+        assert(sub_msg_id <= kSubMsgIdMax);
+        return uint32_t(static_cast<uint32_t>(msg_id) << 16) | static_cast<uint16_t>(sub_msg_id);
+    }
+
+    static std::pair<Cs::MsgId, uint32_t> CalcMsgId(uint32_t key) {
+        auto msg_id = static_cast<Cs::MsgId>(key >> 16);
+        auto sub_msg_id = key & 0xffff;
+        return std::make_pair(msg_id, sub_msg_id);
+    }
+
 private:
-    const protobuf::Descriptor* FindMsgDesc(Cs::MsgId msg_id) {
+    const protobuf::FileDescriptor* FindFileDesc(Cs::MsgId msg_id) {
         auto iter = file_desc_map_.find(msg_id);
         if (iter == file_desc_map_.end()) { return nullptr; }
         const protobuf::FileDescriptor* file_descriptor = iter->second;
-
-        int message_count = file_descriptor->message_type_count();
-        for (int i = 0; i < message_count; i++) {
-            const protobuf::Descriptor* desc = file_descriptor->message_type(i);
-            return desc;
-        }
-        return nullptr;
+        return file_descriptor;
     }
 
     const protobuf::Descriptor* GetMsgDesc(Cs::MsgId msg_id, uint32_t sub_msg_id) {
@@ -178,19 +190,6 @@ private:
         return nullptr;
     }
 
-    uint32_t CalcKey(Cs::MsgId msg_id, uint32_t sub_msg_id) {
-        static_assert(sizeof(Cs::MsgId) == sizeof(sub_msg_id), "");
-        assert(static_cast<uint32_t>(msg_id) <= kMsgIdMax);
-        assert(sub_msg_id <= kSubMsgIdMax);
-        return uint32_t(static_cast<uint32_t>(msg_id) << 16) | static_cast<uint16_t>(sub_msg_id);
-    }
-
-    std::pair<Cs::MsgId, uint32_t> CalcMsgId(uint32_t key) {
-        auto msg_id = static_cast<Cs::MsgId>(key >> 16);
-        auto sub_msg_id = key & 0xffff;
-        return std::make_pair(msg_id, sub_msg_id);
-    }
-
 private:
     static_assert(sizeof(Cs::MsgId) == sizeof(uint32_t), "sizeof(MsgId) error.");
 
@@ -201,5 +200,43 @@ private:
     std::unordered_map<uint32_t, const protobuf::Descriptor*> msg_desc_map_;
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
+
+
+#define MILLION_PROTO_MSG_DISPATCH() \
+    Task OnProtoMsg(const ::million::Buffer& buffer) { \
+        ProtoAdditionalHeader header; \
+        auto res = proto_mgr_.DecodeMessage(buffer, &header); \
+        if (!res) co_return; \
+        auto&& [proto_msg, msg_id, sub_msg_id] = *res; \
+        auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::ProtoMgr::CalcKey(msg_id, sub_msg_id)); \
+        if (iter != _MILLION_PROTO_MSG_HANDLE_MAP_.end()) { \
+            co_await (this->*iter->second)(std::move(proto_msg)); \
+        } \
+        co_return; \
+    } \
+    Cs::MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = Cs::MSG_ID_INVALID; \
+    ::std::unordered_map<uint32_t, ::million::Task(_MILLION_SERVICE_TYPE_::*)(::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
+
+#define MILLION_PROTO_MSG_ID(MSG_ID_) \
+    const bool _MILLION_PROTO_MSG_HANDLE_SET_MSG_ID_##MSG_ID_ = \
+        [this] { \
+            _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = ::Cs::MSG_ID_; \
+            return true; \
+        }() \
+
+#define MILLION_PROTO_MSG_HANDLE(SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
+    ::million::Task _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(::million::ProtoMsgUnique MILLION_PROTO_MSG_) { \
+        auto msg = ::std::unique_ptr<::Cs::MSG_TYPE_>(static_cast<::Cs::MSG_TYPE_*>(MILLION_PROTO_MSG_.release())); \
+        co_await _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(std::move(msg)); \
+        co_return; \
+    } \
+    const bool MILLION_PROTO_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
+        [this] { \
+            _MILLION_PROTO_MSG_HANDLE_MAP_.insert(::std::make_pair(::million::ProtoMgr::CalcKey(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_, Cs::SUB_MSG_ID_), \
+                &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I \
+            )); \
+            return true; \
+        }(); \
+    ::million::Task _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(::std::unique_ptr<::Cs::MSG_TYPE_> MSG_PTR_NAME_)
 
 } // namespace million

@@ -23,4 +23,10 @@ void WorkerMgr::Start() {
     }
 }
 
+void WorkerMgr::Stop() {
+    for (auto& worker : workers_) {
+        worker->Stop();
+    }
+}
+
 } // namespace million

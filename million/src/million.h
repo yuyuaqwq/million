@@ -19,6 +19,7 @@ class MsgMgr;
 class ModuleMgr;
 class WorkerMgr;
 class IoContextMgr;
+class Timer;
 class Million : public IMillion {
 public:
     Million(std::string_view config_path);
@@ -26,6 +27,7 @@ public:
 
     void Init();
     void Start();
+    void Stop();
 
     virtual ServiceHandle AddService(std::unique_ptr<IService> iservice) override;
     using IMillion::NewService;
@@ -35,7 +37,9 @@ public:
 
     virtual asio::io_context& NextIoContext() override;
 
-    virtual const YAML::Node& config() const override;
+    virtual void AddDelayTask(detail::DelayTask&& task) override;
+
+    virtual const YAML::Node& YamlConfig() const override;
 
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& msg_mgr() { assert(service_mgr_); return *msg_mgr_; }
@@ -51,6 +55,7 @@ private:
     std::unique_ptr<ModuleMgr> module_mgr_;
     std::unique_ptr<WorkerMgr> worker_mgr_;
     std::unique_ptr<IoContextMgr> io_context_mgr_;
+    std::unique_ptr<Timer> timer_;
 };
 
 } // namespace million

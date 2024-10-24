@@ -32,6 +32,7 @@ MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
     // use the Point class
     vm->exec("import test");
     vm->exec("a = test.Point(1, 2)");
+    vm->exec("print('pysvr:')");         // 1
     vm->exec("print(a.x)");         // 1
     vm->exec("print(a.y)");         // 2
 

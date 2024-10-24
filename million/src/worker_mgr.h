@@ -15,6 +15,7 @@ public:
     ~WorkerMgr();
 
     void Start();
+    void Stop();
 
 private:
     Million* million_;

@@ -1,26 +1,32 @@
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <thread>
 #include <optional>
 
 #include <million/detail/noncopyable.h>
 
+#include "detail/time_wheel.hpp"
+
 namespace million {
 
 class Million;
-class Worker : noncopyable {
+class Timer : noncopyable {
 public:
-    Worker(Million* million);
-    ~Worker();
+    Timer(Million* million, uint32_t ms_per_tick);
+    ~Timer();
 
     void Start();
     void Stop();
 
+    void AddTask(detail::DelayTask&& task);
+
 private:
     Million* million_;
     std::optional<std::jthread> thread_;
-    bool run_;
+    detail::TimeWheel time_wheel_;
+    std::atomic_bool run_ = false;
 };
 
 } // namespace million

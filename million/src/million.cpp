@@ -11,6 +11,7 @@
 #include "worker_mgr.h"
 #include "io_context.h"
 #include "io_context_mgr.h"
+#include "timer.h"
 
 namespace million {
 
@@ -40,29 +41,51 @@ Million::Million(std::string_view config_path) {
     service_mgr_ = std::make_unique<ServiceMgr>(this);
     msg_mgr_ = std::make_unique<MsgMgr>(this);
 
-    if (!config["worker_num"]) {
-        throw ConfigException("cannot find 'worker_num'.");
+    auto worker_mgr_config = config["worker_mgr"];
+    if (!worker_mgr_config) {
+        throw ConfigException("cannot find 'worker_mgr'.");
     }
-    auto worker_num = config["worker_num"].as<size_t>();
+    if (!worker_mgr_config["num"]) {
+        throw ConfigException("cannot find 'worker_mgr.num'.");
+    }
+    auto worker_num = worker_mgr_config["num"].as<size_t>();
     worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
 
-    if (!config["io_context_num"]) {
-        throw ConfigException("cannot find 'io_context_num'.");
+    auto io_context_mgr_config = config["io_context_mgr"];
+    if (!io_context_mgr_config) {
+        throw ConfigException("cannot find 'io_context_mgr'.");
     }
-    auto io_context_num = config["io_context_num"].as<size_t>();
+    if (!io_context_mgr_config["num"]) {
+        throw ConfigException("cannot find 'io_context_mgr.num'.");
+    }
+    auto io_context_num = io_context_mgr_config["num"].as<size_t>();
     io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
 
-    if (!config["module_path"]) {
-        throw ConfigException("cannot find 'module_path'.");
+    auto module_config = config["module"];
+    if (!module_config) {
+        throw ConfigException("cannot find 'module'.");
     }
-    auto module_dir_path = config["module_path"].as<std::string>();
-    module_mgr_ = std::make_unique<ModuleMgr>(this, module_dir_path);
-    if (config["modules"]) {
-        for (auto name_config : config["modules"]) {
+    if (!module_config["dir"]) {
+        throw ConfigException("cannot find 'module.dir'.");
+    }
+    auto module_dir = module_config["dir"].as<std::string>();
+    module_mgr_ = std::make_unique<ModuleMgr>(this, module_dir);
+    if (module_config["loads"]) {
+        for (auto name_config : module_config["loads"]) {
             auto name = name_config.as<std::string>();
             module_mgr_->Load(name);
         }
     }
+
+    auto timer_config = config["timer"];
+    if (!timer_config) {
+        throw ConfigException("cannot find 'timer'.");
+    }
+    if (!timer_config["ms_per_tick"]) {
+        throw ConfigException("cannot find 'timer.ms_per_tick'.");
+    }
+    auto ms_per_tick = timer_config["ms_per_tick"].as<uint32_t>();
+    timer_ = std::make_unique<Timer>(this, ms_per_tick);
 }
 
 Million::~Million() = default;
@@ -73,8 +96,15 @@ void Million::Init() {
 }
 
 void Million::Start() {
-    assert(worker_mgr_);
     worker_mgr_->Start();
+    io_context_mgr_->Start();
+    timer_->Start();
+}
+
+void Million::Stop() {
+    worker_mgr_->Stop();
+    io_context_mgr_->Stop();
+    timer_->Stop();
 }
 
 ServiceHandle Million::AddService(std::unique_ptr<IService> iservice) {
@@ -86,12 +116,18 @@ SessionId Million::Send(ServiceHandle sender, ServiceHandle target, MsgUnique ms
     return service_mgr_->Send(sender, target, std::move(msg));
 }
 
-const YAML::Node& Million::config() const {
-    return *config_;
-}
 
 asio::io_context& Million::NextIoContext() {
     return io_context_mgr_->NextIoContext().io_context();
 }
+
+void Million::AddDelayTask(detail::DelayTask&& task) {
+    timer_->AddTask(std::move(task));
+}
+
+const YAML::Node& Million::YamlConfig() const {
+    return *config_;
+}
+
 
 } //namespace million
