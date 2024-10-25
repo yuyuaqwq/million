@@ -18,7 +18,9 @@ if(WIN32)
 endif()
 file(GLOB SRC
     ./src/*.cpp
-    ./src/**/*.cpp)
+    ./src/**/*.cpp
+    ./src/*.cc
+    ./src/**/*.cc)
 
 # 只在 SRC 列表不为空时添加库
 if(SRC)

@@ -11,7 +11,9 @@ if(WIN32)
 endif()
 file(GLOB SRC
     ./*.cpp
-    ./**/*.cpp)
+    ./**/*.cpp
+    ./*.cc
+    ./**/*.cc)
 
 if(SRC)
     # 无法生成在windows下会动态导出类的pb.h，选择静态库
