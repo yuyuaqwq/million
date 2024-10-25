@@ -65,11 +65,12 @@ Million::Million(std::string_view config_path) {
     if (!module_config) {
         throw ConfigException("cannot find 'module'.");
     }
-    if (!module_config["dir"]) {
-        throw ConfigException("cannot find 'module.dir'.");
+    if (!module_config["dirs"]) {
+        throw ConfigException("cannot find 'module.dirs'.");
     }
-    auto module_dir = module_config["dir"].as<std::string>();
-    module_mgr_ = std::make_unique<ModuleMgr>(this, module_dir);
+
+    auto module_dirs = module_config["dirs"].as<std::vector<std::string>>();
+    module_mgr_ = std::make_unique<ModuleMgr>(this, module_dirs);
     if (module_config["loads"]) {
         for (auto name_config : module_config["loads"]) {
             auto name = name_config.as<std::string>();

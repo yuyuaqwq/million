@@ -6,48 +6,49 @@ set(EXEC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 # proto
 # set(MILLION_PROTO ${CMAKE_CURRENT_SOURCE_DIR}/proto)
-set(PROTOGEN_LIB protogen)
-set(PROTOGEN_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/protogen)
+set(PROTOGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protogen CACHE STRING "protogen header dir")
+set(PROTOGEN_LIB protogen CACHE STRING "protogen lib")
 
-#desc
-set(DESCGEN_LIB descgen)
-set(DESCGEN_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/descgen)
+# desc
+set(DESCGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/descgen CACHE STRING "descgen header dir")
+set(DESCGEN_LIB descgen CACHE STRING "descgen lib")
 
 # module
-set(DB_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/module/db/include)
-set(DB_LIB db)
+set(DB_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/module/db/include CACHE STRING "db header dir")
+set(DB_LIB db CACHE STRING "db lib")
 
-set(GATEWAY_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/module/gateway/include)
-set(GATEWAY_LIB gateway)
+set(GATEWAY_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/module/gateway/include CACHE STRING "gateway header dir")
+set(GATEWAY_LIB gateway CACHE STRING "gateway lib")
 
 # third_party
-set(META_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/meta/include)
+set(META_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/meta/include)
 
-set(ASIO_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/asio/include)
+set(ASIO_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/asio/include)
 
-set(YAML_CPP_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include)
+set(YAML_CPP_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include)
 set(YAML_CPP_LIB yaml-cpp)
 
-set(NLOHMANN_JSON_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann_json/include)
+set(NLOHMANN_JSON_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann_json/include)
 set(NLOHMANN_JSON_LIB nlohmann_json::nlohmann_json)
 
-set(SPDLOG_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog/include)
+set(SPDLOG_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog/include)
 set(SPDLOG_LIB spdlog::spdlog)
 
-set(POCKET_PY_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/pocketpy)
+set(POCKET_PY_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/pocketpy)
 set(POCKET_PY_LIB pocketpy)
 
-set(HIREDIS_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/hiredis)
+set(HIREDIS_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/hiredis)
+set(HIREDIS_HEADER ${HIREDIS_HEADER_DIR})
 set(HIREDIS_LIB hiredis)
 
-set(REDIS_PLUS_PLUS_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/redis-plus-plus/src)
+set(REDIS_PLUS_PLUS_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/redis-plus-plus/src)
 set(REDIS_PLUS_PLUS_LIB redis++_static hiredis)
 
-set(SOCI_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/third_party/soci/include)
+set(SOCI_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/soci/include)
 
 # million
-set(MILLION_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/million/include ${CMAKE_CURRENT_SOURCE_DIR} ${META_HEADER})
-set(MILLION_LIB million)
+set(MILLION_HEADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/million/include;${CMAKE_CURRENT_SOURCE_DIR};${META_HEADER_DIR}" CACHE STRING "million header dir")
+set(MILLION_LIB million CACHE STRING "million lib")
 
 # add
 add_subdirectory(million)

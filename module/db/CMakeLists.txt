@@ -26,22 +26,22 @@ file(GLOB SRC
 add_library(${DB_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
 target_include_directories(${DB_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${DB_LIB} PRIVATE ${DB_HEADER})
+target_include_directories(${DB_LIB} PRIVATE ${DB_HEADER_DIR})
 
-target_include_directories(${DB_LIB} PRIVATE ${MILLION_HEADER})
+target_include_directories(${DB_LIB} PRIVATE ${MILLION_HEADER_DIR})
 
-target_include_directories(${DB_LIB} PRIVATE ${PROTOGEN_HEADER})
+target_include_directories(${DB_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${PROTOGEN_LIB})
 
-target_include_directories(${DB_LIB} PRIVATE ${YAML_CPP_HEADER})
+target_include_directories(${DB_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${YAML_CPP_LIB})
 
-target_include_directories(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_HEADER})
+target_include_directories(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_LIB})
 
-target_include_directories(${DB_LIB} PRIVATE ${MYSQL_HEADER})
+target_include_directories(${DB_LIB} PRIVATE ${MYSQL_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${MYSQL_LIB})
-target_include_directories(${DB_LIB} PRIVATE ${SOCI_HEADER})
+target_include_directories(${DB_LIB} PRIVATE ${SOCI_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE soci_core_static soci_mysql_static)
 
 if (WIN32)

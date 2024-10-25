@@ -18,7 +18,7 @@ set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
 if(SRC)
     # 无法生成在windows下会动态导出类的pb.h，选择静态库
     add_library(${PROTOGEN_LIB} STATIC ${SRC})
-    target_include_directories(${PROTOGEN_LIB} PRIVATE ${PROTOGEN_HEADER})
+    target_include_directories(${PROTOGEN_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
     
     if (WIN32)
         message(STATUS "Compiling on Windows")

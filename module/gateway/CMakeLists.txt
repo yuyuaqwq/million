@@ -26,21 +26,21 @@ file(GLOB SRC
 add_library(${GATEWAY_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
 target_include_directories(${GATEWAY_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${GATEWAY_LIB} PRIVATE ${GATEWAY_HEADER})
+target_include_directories(${GATEWAY_LIB} PRIVATE ${GATEWAY_HEADER_DIR})
 
-target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_HEADER})
-target_include_directories(${GATEWAY_LIB} PRIVATE ${ASIO_HEADER})
+target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_HEADER_DIR})
+target_include_directories(${GATEWAY_LIB} PRIVATE ${ASIO_HEADER_DIR})
 
-target_include_directories(${GATEWAY_LIB} PRIVATE ${DB_HEADER})
+target_include_directories(${GATEWAY_LIB} PRIVATE ${DB_HEADER_DIR})
 target_link_libraries(${GATEWAY_LIB} PRIVATE ${DB_LIB})
 
-target_include_directories(${GATEWAY_LIB} PRIVATE ${PROTOGEN_HEADER})
+target_include_directories(${GATEWAY_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
 target_link_libraries(${GATEWAY_LIB} PRIVATE ${PROTOGEN_LIB})
 
 find_package(Threads)
 target_link_libraries(${GATEWAY_LIB} PRIVATE Threads::Threads)
 
-target_include_directories(${GATEWAY_LIB} PRIVATE ${YAML_CPP_HEADER})
+target_include_directories(${GATEWAY_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
 target_link_libraries(${GATEWAY_LIB} PRIVATE ${YAML_CPP_LIB})
 
 if (WIN32)

@@ -27,14 +27,14 @@ file(GLOB SRC
 add_library(${MILLION_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
 target_include_directories(${MILLION_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${MILLION_LIB} PRIVATE ${MILLION_HEADER})
+target_include_directories(${MILLION_LIB} PRIVATE ${MILLION_HEADER_DIR})
 
-target_include_directories(${MILLION_LIB} PRIVATE ${ASIO_HEADER})
+target_include_directories(${MILLION_LIB} PRIVATE ${ASIO_HEADER_DIR})
 
 find_package(Threads)
 target_link_libraries(${MILLION_LIB} PRIVATE Threads::Threads)
 
-target_include_directories(${MILLION_LIB} PRIVATE ${ASIO_HEADER})
+target_include_directories(${MILLION_LIB} PRIVATE ${ASIO_HEADER_DIR})
 
-target_include_directories(${MILLION_LIB} PRIVATE ${YAML_CPP_HEADER})
+target_include_directories(${MILLION_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
 target_link_libraries(${MILLION_LIB} PRIVATE ${YAML_CPP_LIB})

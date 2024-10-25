@@ -10,12 +10,12 @@ set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
 add_library(${DB_LIB} SHARED ${SRC})
 
 target_include_directories(${DB_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(${DB_LIB} PRIVATE ${MILLION_HEADER})
+target_include_directories(${DB_LIB} PRIVATE ${MILLION_HEADER_DIR})
 
-target_include_directories(${DB_LIB} PRIVATE ${YAML_CPP_HEADER})
+target_include_directories(${DB_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${YAML_CPP_LIB})
 
-target_include_directories(${DB_LIB} PRIVATE ${HIREDIS_HEADER})
+target_include_directories(${DB_LIB} PRIVATE ${HIREDIS_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${HIREDIS_LIB})
 
 if (WIN32)
