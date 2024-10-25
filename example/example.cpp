@@ -65,7 +65,7 @@ class TestService : public million::IService {
 };
 
 int main() {
-    auto mili = million::NewMillion("game_config.yaml");
+    auto mili = million::NewMillion("example_config.yaml");
 
     auto start = std::chrono::high_resolution_clock::now();
     int j = 0;
