@@ -5,8 +5,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 aux_source_directory(./ SRC)
 
-set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
-
 add_library(${DB_LIB} SHARED ${SRC})
 
 target_include_directories(${DB_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

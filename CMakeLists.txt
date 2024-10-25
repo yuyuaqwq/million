@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(million)
 
-set(LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-set(EXEC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 # proto
 # set(MILLION_PROTO ${CMAKE_CURRENT_SOURCE_DIR}/proto)
@@ -23,10 +23,10 @@ set(GATEWAY_LIB gateway CACHE STRING "gateway lib")
 # third_party
 set(META_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/meta/include)
 
-set(ASIO_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/asio/include)
+set(ASIO_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/asio/include CACHE STRING "asio header dir")
 
-set(YAML_CPP_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include)
-set(YAML_CPP_LIB yaml-cpp)
+set(YAML_CPP_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include CACHE STRING "yaml-cpp header dir")
+set(YAML_CPP_LIB yaml-cpp CACHE STRING "yaml-cpp lib")
 
 set(NLOHMANN_JSON_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann_json/include)
 set(NLOHMANN_JSON_LIB nlohmann_json::nlohmann_json)

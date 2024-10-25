@@ -20,8 +20,6 @@ file(GLOB SRC
     ./src/*.cpp
     ./src/**/*.cpp)
 
-set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
-
 # 只在 SRC 列表不为空时添加库
 if(SRC)
     add_library(${DESCGEN_LIB} STATIC ${SRC})

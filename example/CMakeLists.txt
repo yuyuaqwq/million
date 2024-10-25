@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 link_directories(${LIB_PATH})
 
-set(EXECUTABLE_OUTPUT_PATH ${EXEC_PATH})
 add_executable(game game.cpp)
 
 target_include_directories(game PRIVATE ${MILLION_HEADER_DIR})

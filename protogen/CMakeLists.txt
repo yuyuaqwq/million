@@ -13,8 +13,6 @@ file(GLOB SRC
     ./*.cpp
     ./**/*.cpp)
 
-set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
-
 if(SRC)
     # 无法生成在windows下会动态导出类的pb.h，选择静态库
     add_library(${PROTOGEN_LIB} STATIC ${SRC})

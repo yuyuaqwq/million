@@ -3,8 +3,6 @@ project(${MILLION_LIB})
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(LIBRARY_OUTPUT_PATH ${LIB_PATH})
-
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 
         ./src/*.h
