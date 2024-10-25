@@ -101,16 +101,7 @@ public:
     
     MILLION_PROTO_MSG_ID(MSG_ID_USER);
 
-    /*MILLION_PROTO_MSG_HANDLE(SubMsgIdUser::SUB_MSG_ID_USER_LOGIN, UserRegisterReq, req) {
-        std::cout << "login:" << req->user_name() << req->password() << std::endl;
-        co_return;
-    }*/
-    ::million::Task _MILLION_PROTO_MSG_HANDLE_UserRegisterReq_I(::million::ProtoMsgUnique MILLION_PROTO_MSG_) {
-        auto msg = ::std::unique_ptr<::Cs::UserRegisterReq>(static_cast<::Cs::UserRegisterReq*>(MILLION_PROTO_MSG_.release()));
-        co_await _MILLION_PROTO_MSG_HANDLE_UserRegisterReq_II(std::move(msg));
-        co_return;
-    } 
-    const bool MILLION_PROTO_MSG_HANDLE_REGISTER_UserRegisterReq = [this] { _MILLION_PROTO_MSG_HANDLE_MAP_.insert(::std::make_pair(::million::ProtoMgr::CalcKey(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_, Cs::SubMsgIdUser::SUB_MSG_ID_USER_LOGIN), &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_UserRegisterReq_I)); return true; }(); ::million::Task _MILLION_PROTO_MSG_HANDLE_UserRegisterReq_II(::std::unique_ptr<::Cs::UserRegisterReq> req) {
+    MILLION_PROTO_MSG_HANDLE(SubMsgIdUser::SUB_MSG_ID_USER_LOGIN, UserRegisterReq, req) {
         std::cout << "login:" << req->user_name() << req->password() << std::endl;
         co_return;
     }
