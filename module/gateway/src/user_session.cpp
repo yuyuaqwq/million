@@ -7,20 +7,20 @@ namespace million {
 namespace gateway {
 
 
-UserSession::UserSession(ProtoMgr* proto_mgr, net::TcpConnectionShared&& connection, const Token& token)
+UserSession::UserSession(ProtoMgr* proto_mgr, net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor)
     : proto_mgr_(proto_mgr)
-    , connection_(std::move(connection))
+    , TcpConnection(server, std::move(socket), executor)
 {
-    header_.token = token;
+    header_.token = kInvaildToken;
 }
 UserSession::~UserSession() = default;
 
 
-bool UserSession::Send(const protobuf::Message& message) {
+bool UserSession::Send(const google::protobuf::Message& message) {
     auto buffer = proto_mgr_->EncodeMessage(header_, message);
     assert(buffer);
     if (!buffer) return false;
-    connection_->Send(std::move(*buffer));
+    TcpConnection::Send(std::move(*buffer));
     return true;
 }
 

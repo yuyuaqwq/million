@@ -15,7 +15,7 @@ class TcpServer;
 class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
 public:
     TcpConnection(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
-    ~TcpConnection();
+    virtual ~TcpConnection();
 
     void Close();
 

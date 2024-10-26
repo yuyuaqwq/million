@@ -24,15 +24,15 @@ inline std::pair<Cs::MsgId, uint32_t> CalcMsgId(uint32_t key) {
 }
     
 #define MILLION_PROTO_MSG_DISPATCH() \
-    ::million::Task OnProtoMsg(Cs::MsgId msg_id, uint32_t sub_msg_id, ::million::ProtoMsgUnique&& proto_msg) { \
+    ::million::Task OnProtoMsg(::million::gateway::UserSessionHandle handle, Cs::MsgId msg_id, uint32_t sub_msg_id, ::million::ProtoMsgUnique&& proto_msg) { \
         auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::gateway::CalcKey(msg_id, sub_msg_id)); \
         if (iter != _MILLION_PROTO_MSG_HANDLE_MAP_.end()) { \
-            co_await (this->*iter->second)(std::move(proto_msg)); \
+            co_await (this->*iter->second)(handle, std::move(proto_msg)); \
         } \
         co_return; \
     } \
     Cs::MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = Cs::MSG_ID_INVALID; \
-    ::std::unordered_map<uint32_t, ::million::Task(_MILLION_SERVICE_TYPE_::*)(::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<uint32_t, ::million::Task(_MILLION_SERVICE_TYPE_::*)(::million::gateway::UserSessionHandle, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
 
 #define MILLION_PROTO_MSG_ID(MSG_ID_) \
     const bool _MILLION_PROTO_MSG_HANDLE_SET_MSG_ID_##MSG_ID_ = \
@@ -42,9 +42,9 @@ inline std::pair<Cs::MsgId, uint32_t> CalcMsgId(uint32_t key) {
         }() \
 
 #define MILLION_PROTO_MSG_HANDLE(SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(::million::ProtoMsgUnique MILLION_PROTO_MSG_) { \
+    ::million::Task _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(::million::gateway::UserSessionHandle handle, ::million::ProtoMsgUnique MILLION_PROTO_MSG_) { \
         auto msg = ::std::unique_ptr<::Cs::MSG_TYPE_>(static_cast<::Cs::MSG_TYPE_*>(MILLION_PROTO_MSG_.release())); \
-        co_await _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(std::move(msg)); \
+        co_await _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(handle, std::move(msg)); \
         co_return; \
     } \
     const bool MILLION_PROTO_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
@@ -54,7 +54,7 @@ inline std::pair<Cs::MsgId, uint32_t> CalcMsgId(uint32_t key) {
             )); \
             return true; \
         }(); \
-    ::million::Task _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(::std::unique_ptr<::Cs::MSG_TYPE_> MSG_PTR_NAME_)
+    ::million::Task _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(::million::gateway::UserSessionHandle handle, ::std::unique_ptr<::Cs::MSG_TYPE_> MSG_PTR_NAME_)
 
 } // namespace gateway
 } // namespace million

@@ -7,6 +7,8 @@ namespace million {
 
 using Token = uint64_t;
 
+static inline constexpr Token kInvaildToken = 0;
+
 class TokenGenerator {
 public:
     TokenGenerator()

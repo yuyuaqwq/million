@@ -24,21 +24,24 @@ void TcpServer::Stop() {
     }
 }
 
-void TcpServer::RemoveConnection(std::list<std::shared_ptr<TcpConnection>>::iterator iter) {
+void TcpServer::RemoveConnection(std::list<TcpConnectionShared>::iterator iter) {
     auto guard = std::lock_guard(connections_mutex_);
     connections_.erase(iter);
 }
 
+TcpConnectionShared TcpServer::MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) const {
+    return std::make_shared<TcpConnection>(server, std::move(socket), executor);
+}
+
 TcpConnectionShared TcpServer::AddConnection(asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) {
     decltype(connections_)::iterator iter;
-    auto connection = std::make_shared<TcpConnection>(this, std::move(socket), executor);
+    auto connection = MakeTcpConnectionShared(this, std::move(socket), executor);
     auto handle = TcpConnectionShared(connection);
     {
         auto guard = std::lock_guard(connections_mutex_);
         connections_.emplace_back(std::move(connection));
         iter = --connections_.end();
     }
-    handle.get();
     handle->set_iter(iter);
     return handle;
 }

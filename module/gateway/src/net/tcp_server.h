@@ -23,7 +23,7 @@ public:
 
 public:
     TcpServer(IMillion* imillion);
-    ~TcpServer();
+    virtual ~TcpServer();
 
     auto& on_connection() const { return on_connection_; }
     void set_on_connection(const TcpConnectionFunc& on_connection) { on_connection_ = on_connection; }
@@ -32,7 +32,9 @@ public:
 
     void Start(uint16_t port);
     void Stop();
-    void RemoveConnection(std::list<std::shared_ptr<TcpConnection>>::iterator iter);
+    void RemoveConnection(std::list<TcpConnectionShared>::iterator iter);
+
+    virtual TcpConnectionShared MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) const;
 
 private:
     TcpConnectionShared AddConnection(asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
