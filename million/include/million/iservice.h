@@ -18,7 +18,6 @@ public:
     virtual ~IService() = default;
 
     SessionId Send(ServiceHandle target, MsgUnique msg);
-
     template <typename MsgT, typename ...Args>
     SessionId Send(ServiceHandle target, Args&&... args) {
         return Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
@@ -42,6 +41,11 @@ public:
     Awaiter<RecvMsgT> Call(ServiceHandle target, Args&&... args) {
         auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
         return Recv<RecvMsgT>(session_id);
+    }
+    template <typename SendMsgT, typename ...Args>
+    Awaiter<IMsg> Call(ServiceHandle target, Args&&... args) {
+        auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
+        return Recv<IMsg>(session_id);
     }
 
     virtual void OnInit() {};
