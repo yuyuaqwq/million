@@ -43,7 +43,7 @@ public:
     }
 
     virtual Task OnMsg(MsgUnique msg) override {
-        co_await OnMsgDispatch(std::move(msg));
+        co_await MsgDispatch(std::move(msg));
         co_return;
     }
 

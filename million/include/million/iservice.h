@@ -65,7 +65,7 @@ protected:
 #define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_, MILLION_MSG_BASE_TYPE_) \
     static_assert(std::is_same<std::underlying_type_t<MILLION_MSG_BASE_TYPE_::MsgType>, uint32_t>::value, "type is not based on uint32_t.");; \
     using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
-    ::million::Task OnMsgDispatch(::million::MsgUnique msg) { \
+    ::million::Task MsgDispatch(::million::MsgUnique msg) { \
         auto msg_ptr = msg->get<##MILLION_MSG_BASE_TYPE_##>(); \
         auto iter = _MILLION_MSG_HANDLE_MAP_.find(static_cast<uint32_t>(msg_ptr->type())); \
         if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
