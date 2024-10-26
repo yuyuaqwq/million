@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package Db;
+
+import "google/protobuf/descriptor.proto";
+import "db/db_options.proto";
+
+message UserEx {
+}
+
+message User {
+    option (table) = {
+        name: "user"               // 表名
+        tick_second: 60            // Tick入库时间，单位秒
+        sql: {
+            charset: "utf8mb4"     // MySQL 字符集
+            engine: "InnoDB"       // MySQL 存储引擎
+            auto_increment: true    // 是否自增
+        }
+        cache: {
+            ttl: 3600               // 键的 TTL，单位秒
+        }
+    };
+
+    int64 id = 1 [(column) = {
+        sql: { primary_key: true, auto_increment: true, not_null: true, comment: "用户ID" }
+        cache: { index: true }
+    }];
+
+    string name = 2 [(column) = {
+        sql: { index: true, unique: true, not_null: true, comment: "用户名" }
+    }];
+
+    string email = 3 [(column) = {
+        sql: { unique: true, not_null: true, comment: "邮箱地址" }
+    }];
+    
+    string phone_number = 4 [(column) = {
+        sql: { index: true, comment: "电话号码" }
+    }];
+
+    repeated int32 role_ids = 5 [(column) = {
+        sql: { comment: "角色ID" }
+    }];
+
+    string password_hash = 6 [(column) = {
+        sql: { not_null: true, comment: "密码哈希值" }
+    }];
+
+    bool is_active = 7 [(column) = {
+        sql: { default_value: "1", not_null: true, comment: "是否活跃用户" }
+    }];
+
+    int64 created_at = 8 [(column) = {
+        sql: { not_null: true, comment: "创建时间" }
+    }];
+
+    int64 updated_at = 9 [(column) = {
+        sql: { not_null: true, comment: "更新时间" }
+    }];
+    
+    UserEx ex = 10 [(column) = {
+        sql: { comment: "扩展字段" }
+    }];
+}

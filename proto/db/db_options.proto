@@ -5,16 +5,17 @@ package Db;
 import "google/protobuf/descriptor.proto";
 
 // 通用数据库选项
-message FileOptionsDb {
-    string name = 1;      // 数据库名称
-    bool enabled = 2;     // 是否启用该数据库库
+message DbSqlOptions {
+    
 }
-extend google.protobuf.FileOptions {
-    FileOptionsDb db_file = 20001;
+message DbCacheOptions {
+    
 }
 
-message MessageOptionsDb {
-    int32 tick_second = 1;
+extend google.protobuf.FileOptions {
+    DbSqlOptions sql = 20001;
+    DbCacheOptions cache = 20002;
+    string name = 20003;      // 数据库名称
 }
 
 // SQL 相关选项（MySQL）
@@ -26,30 +27,32 @@ message ForeignKey {
   string on_update = 5;          // 外键更新策略 (e.g., CASCADE, RESTRICT, etc.)
 }
 
-message MessageOptionsSql {
-    string table_name = 1;           // MySQL 表名
-    string charset = 2;              // MySQL 字符集
-    string engine = 3;               // MySQL 存储引擎
-    repeated string composite_key = 4;   // 复合主键
-    repeated ForeignKey foreign_keys = 5; // 外键定义
-    bool auto_increment = 6;         // 是否自增
+message TableSqlOptions {
+    string charset = 1;              // 字符集
+    string engine = 2;               // 存储引擎
+    repeated string composite_key = 3;   // 复合主键
+    repeated ForeignKey foreign_keys = 4; // 外键定义
+    bool auto_increment = 5;         // 是否自增
 }
 
 // Cache 相关选项（Redis）
-message MessageOptionsCache {
-    string key_pattern = 1;          // Redis 键模式
-    string data_type = 2;            // Redis 数据类型
-    int32 ttl = 3;                   // Redis 键的 TTL（过期时间，秒）
+message TableCacheOptions {
+    int32 ttl = 1;                   // 键的 TTL（过期时间，秒）
+}
+
+message MessageOptionsTable {
+    TableSqlOptions sql = 1;
+    TableCacheOptions cache = 2;
+    string name = 3;  // 表名
+    int32 tick_second = 4;  // Tick入库时间
 }
 
 extend google.protobuf.MessageOptions {
-    MessageOptionsDb db_msg = 20001;
-    MessageOptionsSql sql_msg = 20002;
-    MessageOptionsCache cache_msg = 20003;
+    MessageOptionsTable table = 20001;
 }
 
 // SQL 相关字段选项（MySQL）
-message FieldOptionsSql {
+message ColumnSqlOptions {
     bool primary_key = 1;            // 主键
     bool index = 2;                  // 索引
     bool unique = 3;                 // 唯一约束
@@ -60,11 +63,15 @@ message FieldOptionsSql {
 }
 
 // Cache 相关字段选项（Redis）
-message FieldOptionsCache {
-    bool index = 1;                  // Redis 字段是否作为索引
+message ColumnCacheOptions {
+    bool index = 1;                  // 字段是否作为索引
+}
+
+message FieldOptionsColumn {
+    ColumnSqlOptions sql = 1;
+    ColumnCacheOptions cache = 2;
 }
 
 extend google.protobuf.FieldOptions {
-    FieldOptionsSql sql_field = 20002;
-    FieldOptionsCache cache_field = 20003;
+    FieldOptionsColumn column = 20001;
 }

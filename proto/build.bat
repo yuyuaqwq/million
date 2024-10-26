@@ -1,5 +1,5 @@
 :: @echo off
-set OUTPUT_DIR=..\million\protogen
+set OUTPUT_DIR=..\protogen
 
 :: 创建输出目录，如果已存在则跳过
 mkdir %OUTPUT_DIR% 2>nul

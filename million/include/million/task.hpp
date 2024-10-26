@@ -75,6 +75,9 @@ struct Task {
     Task(const Task&) = delete;
     Task& operator=(const Task&) = delete;
     
+    //bool has_exception() const { return handle.promise().exception_ != nullptr; }
+    //void rethrow_if_exception() const { if (has_exception()) std::rethrow_exception(handle.promise().exception_); }
+
     bool await_ready() const noexcept;
 
     void await_suspend(std::coroutine_handle<promise_type> parent_handle) noexcept;
@@ -113,7 +116,8 @@ struct TaskPromise {
     }
 
     void unhandled_exception() {
-
+        // 异常待处理
+        // std::exception_ptr exception_ = std::current_exception();  // 捕获异常并存储
     }
 
     // 该协程内，可通过co_await进行等待的类型支持

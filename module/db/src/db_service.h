@@ -8,22 +8,17 @@
 #include <google/protobuf/message.h>
 
 #include <million/imillion.h>
-#include <million/imsg.h>
 #include <million/proto_msg.h>
 
-enum DbMsgType {
-    kQuery,
-};
+namespace million {
+namespace db {
 
+enum class DbMsgType : uint32_t {
+    kDbQuery,
+};
 using DbMsgBase = million::MsgBaseT<DbMsgType>;
 
-struct DbMsgQuery : million::MsgT<kQuery> {
-    DbMsgQuery(auto&& msg)
-        : proto_msg(std::move(msg)) { }
-
-    million::ProtoMsgUnique proto_msg;
-};
-
+MILLION_MSG_DEFINE(DbQueryMsg, DbMsgType::kDbQuery, (million::ProtoMsgUnique) proto_msg);
 
 class DbService : public million::IService {
 public:
@@ -40,7 +35,7 @@ public:
     }
 
     virtual void OnExit() override {
-        // Close();
+        
     }
 
     // ·µ»ØÒ»¸öProtobuf msg
@@ -52,3 +47,6 @@ public:
 private:
 
 };
+
+} // namespace db
+} // namespace million
