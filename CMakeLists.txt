@@ -13,13 +13,6 @@ set(PROTOGEN_LIB protogen CACHE STRING "protogen lib")
 set(DESCGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/descgen CACHE STRING "descgen header dir")
 set(DESCGEN_LIB descgen CACHE STRING "descgen lib")
 
-# module
-set(DB_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/module/db/include CACHE STRING "db header dir")
-set(DB_LIB db CACHE STRING "db lib")
-
-set(GATEWAY_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/module/gateway/include CACHE STRING "gateway header dir")
-set(GATEWAY_LIB gateway CACHE STRING "gateway lib")
-
 # third_party
 set(META_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/meta/include)
 
