@@ -4,6 +4,8 @@
 
 #include <utility>
 
+#include <protogen/cs/cs_msgid.pb.h>
+
 namespace million {
 namespace gateway {
 
@@ -24,7 +26,7 @@ inline std::pair<Cs::MsgId, uint32_t> CalcMsgId(uint32_t key) {
 }
     
 #define MILLION_PROTO_MSG_DISPATCH() \
-    ::million::Task OnProtoMsg(::million::gateway::UserSessionHandle handle, Cs::MsgId msg_id, uint32_t sub_msg_id, ::million::ProtoMsgUnique&& proto_msg) { \
+    ::million::Task OnProtoMsgDispatch(::million::gateway::UserSessionHandle handle, Cs::MsgId msg_id, uint32_t sub_msg_id, ::million::ProtoMsgUnique&& proto_msg) { \
         auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::gateway::CalcKey(msg_id, sub_msg_id)); \
         if (iter != _MILLION_PROTO_MSG_HANDLE_MAP_.end()) { \
             co_await (this->*iter->second)(handle, std::move(proto_msg)); \

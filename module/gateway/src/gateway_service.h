@@ -2,14 +2,24 @@
 
 #include <gateway/getaway_msg.h>
 
+#include <million/iservice.h>
+
 #include "proto_mgr.h"
 #include "gateway_server.h"
 
 namespace million {
 namespace gateway {
 
-MILLION_MSG_DEFINE(ConnectionMsg, kConnection, (net::TcpConnectionShared) connection)
-MILLION_MSG_DEFINE(RecvPacketMsg, kRecvPacket, (net::TcpConnection*) connection, (net::Packet) packet)
+enum class GatewayMsgTypeEx_Tcp : uint32_t {
+    kMin = 1025,
+
+    kConnection = 1026,
+    kRecvPacket = 1027,
+
+    kMax = 2048,
+};
+MILLION_MSG_DEFINE(ConnectionMsg, GatewayMsgTypeEx_Tcp::kConnection, (net::TcpConnectionShared) connection)
+MILLION_MSG_DEFINE(RecvPacketMsg, GatewayMsgTypeEx_Tcp::kRecvPacket, (net::TcpConnection*) connection, (net::Packet) packet)
 
 class GatewayService : public IService {
 public:
@@ -30,6 +40,11 @@ public:
             Send<RecvPacketMsg>(service_handle(), &connection, std::move(packet));
         });
         server_.Start(8001);
+    }
+
+    virtual Task OnMsg(MsgUnique msg) override {
+        co_await OnMsgDispatch(std::move(msg));
+        co_return;
     }
 
     MILLION_MSG_DISPATCH(GatewayService, GatewayMsgBase);
