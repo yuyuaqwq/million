@@ -15,11 +15,11 @@ MsgUnique MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
     if (iter == executable_map_.end()) {
         return msg;
     }
-    iter->second.handle.promise().get_awaiter()->set_result(std::move(msg));
+    iter->second.handle.promise().awaiter()->set_result(std::move(msg));
     iter->second.handle.resume();
     if (!iter->second.handle.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        RePush(id, iter->second.handle.promise().get_awaiter()->get_waiting());
+        RePush(id, iter->second.handle.promise().awaiter()->get_waiting());
     }
     return nullptr;
 }

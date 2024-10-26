@@ -47,9 +47,9 @@ public:
                     if (!run_) return;
 
                     auto msg = std::move(queue_.front());
-                    // 在这里分发不能使用co_await
-                    MsgDispatch(std::move(msg));
                     queue_.pop();
+                    auto task = MsgDispatch(std::move(msg));
+                    task.rethrow_if_exception();
                 }
                 catch (const sw::redis::Error& e) {
                     std::cerr << "Redis error: " << e.what() << std::endl;

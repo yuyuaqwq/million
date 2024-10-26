@@ -53,8 +53,9 @@ public:
                     if (!run_) return;
 
                     auto& msg = queue_.front();
-                    // 在这里分发不能使用co_await
                     queue_.pop();
+
+
                 }
                 catch (const soci::mysql_soci_error& e)
                 {

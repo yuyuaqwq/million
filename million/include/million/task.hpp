@@ -75,8 +75,9 @@ struct Task {
     Task(const Task&) = delete;
     Task& operator=(const Task&) = delete;
     
-    //bool has_exception() const { return handle.promise().exception_ != nullptr; }
-    //void rethrow_if_exception() const { if (has_exception()) std::rethrow_exception(handle.promise().exception_); }
+    bool has_exception() const;
+
+    void rethrow_if_exception() const;
 
     bool await_ready() const noexcept;
 
@@ -116,8 +117,7 @@ struct TaskPromise {
     }
 
     void unhandled_exception() {
-        // 异常待处理
-        // std::exception_ptr exception_ = std::current_exception();  // 捕获异常并存储
+        exception_ = std::current_exception();  // 捕获异常并存储
     }
 
     // 该协程内，可通过co_await进行等待的类型支持
@@ -136,13 +136,19 @@ struct TaskPromise {
         awaiter_ = reinterpret_cast<Awaiter<IMsg>*>(awaiter);
     }
 
-    Awaiter<IMsg>* get_awaiter() {
+    Awaiter<IMsg>* awaiter() const {
         return reinterpret_cast<Awaiter<IMsg>*>(awaiter_);
     }
 
+    std::exception_ptr exception() const {
+        return exception_;
+    }
+
 private:
+    std::exception_ptr exception_ = nullptr;
     Awaiter<IMsg>* awaiter_ = nullptr;  // 最终需要唤醒的等待器
 };
+
 
 template <typename MsgT>
 void Awaiter<MsgT>::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
@@ -156,8 +162,16 @@ std::unique_ptr<MsgT> Awaiter<MsgT>::await_resume() noexcept {
     return std::unique_ptr<MsgT>(static_cast<MsgT*>(reslut_.release()));
 }
 
+inline bool Task::has_exception() const {
+    return handle.promise().exception() != nullptr;
+}
+
+inline void Task::rethrow_if_exception() const {
+    if (has_exception()) std::rethrow_exception(handle.promise().exception());
+}
+
 inline bool Task::await_ready() const noexcept {
-    if (!handle.promise().get_awaiter()) {
+    if (!handle.promise().awaiter()) {
         // 没有等待，无需挂起，会直接调用await_resume，跳过await_suspend
         return true;
     }
@@ -168,11 +182,11 @@ inline bool Task::await_ready() const noexcept {
 inline void Task::await_suspend(std::coroutine_handle<TaskPromise> parent_handle) noexcept {
     // 这里的参数是parent coroutine的handle
     // 向上设置awaiter，让service可以拿到正在等待的awaiter，选择是否调度当前协程
-    parent_handle.promise().set_awaiter(handle.promise().get_awaiter());
+    parent_handle.promise().set_awaiter(handle.promise().awaiter());
 }
 
 inline void Task::await_resume() noexcept {
-    if (handle.promise().get_awaiter()) {
+    if (handle.promise().awaiter()) {
         // parent_handle被调度器恢复，继续向下唤醒，直到唤醒Awaiter
         handle.resume();
     }
