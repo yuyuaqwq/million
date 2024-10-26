@@ -56,8 +56,8 @@ inline void IService::Reply(MsgUnique msg) {
     Send(target, std::move(msg));
 }
 
-inline void IService::Reply(SessionId session_id) {
-    Reply<IMsg>(session_id);
+inline void IService::Reply(ServiceHandle target, SessionId session_id) {
+    Reply<IMsg>(target, session_id);
 }
 
 MILLION_FUNC_EXPORT void InitMillion();
