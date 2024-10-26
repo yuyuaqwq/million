@@ -10,19 +10,19 @@
 
 #include <protogen/cs/cs_msgid.pb.h>
 
+#include <million/detail/noncopyable.h>
 #include <million/proto_msg.h>
 
-#include "token.h"
+#include <gateway/proto_msg.h>
+
+#include "user_session.h"
 
 namespace million {
+namespace gateway {
 
 namespace protobuf = google::protobuf;
 
-struct ProtoAdditionalHeader {
-    Token token;
-};
-
-class ProtoMgr {
+class ProtoMgr : noncopyable {
 public:
     // 初始化消息映射
     void InitMsgMap() {
@@ -86,7 +86,7 @@ public:
     }
 
     // 编码消息
-    std::optional<Buffer> EncodeMessage(const ProtoAdditionalHeader& header, const protobuf::Message& message) {
+    std::optional<Buffer> EncodeMessage(const UserHeader& header, const protobuf::Message& message) {
         auto desc = message.GetDescriptor();
         auto msg_key = GetMsgKey(desc);
         if (!msg_key) {
@@ -114,7 +114,7 @@ public:
     }
 
     // 解码消息
-    std::optional<std::tuple<ProtoMsgUnique, Cs::MsgId, uint32_t>> DecodeMessage(const Buffer& buffer, ProtoAdditionalHeader* header) {
+    std::optional<std::tuple<ProtoMsgUnique, Cs::MsgId, uint32_t>> DecodeMessage(const Buffer& buffer, UserHeader* header) {
         // 读取 msg_id 和 sub_msg_id
         uint16_t msg_id_net, sub_msg_id_net;
         // 确保缓冲区足够大
@@ -146,18 +146,6 @@ public:
         return std::make_tuple(std::move(proto_msg), msg_id, sub_msg_id);
     }
 
-    static uint32_t CalcKey(Cs::MsgId msg_id, uint32_t sub_msg_id) {
-        static_assert(sizeof(Cs::MsgId) == sizeof(sub_msg_id), "");
-        assert(static_cast<uint32_t>(msg_id) <= kMsgIdMax);
-        assert(sub_msg_id <= kSubMsgIdMax);
-        return uint32_t(static_cast<uint32_t>(msg_id) << 16) | static_cast<uint16_t>(sub_msg_id);
-    }
-
-    static std::pair<Cs::MsgId, uint32_t> CalcMsgId(uint32_t key) {
-        auto msg_id = static_cast<Cs::MsgId>(key >> 16);
-        auto sub_msg_id = key & 0xffff;
-        return std::make_pair(msg_id, sub_msg_id);
-    }
 
 private:
     const protobuf::FileDescriptor* FindFileDesc(Cs::MsgId msg_id) {
@@ -193,50 +181,10 @@ private:
 private:
     static_assert(sizeof(Cs::MsgId) == sizeof(uint32_t), "sizeof(MsgId) error.");
 
-    constexpr static inline uint32_t kMsgIdMax = std::numeric_limits<uint16_t>::max();
-    constexpr static inline uint32_t kSubMsgIdMax = std::numeric_limits<uint16_t>::max();
-
     std::unordered_map<Cs::MsgId, const protobuf::FileDescriptor*> file_desc_map_;
     std::unordered_map<uint32_t, const protobuf::Descriptor*> msg_desc_map_;
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
 
-
-#define MILLION_PROTO_MSG_DISPATCH() \
-    Task OnProtoMsg(const ::million::Buffer& buffer) { \
-        ProtoAdditionalHeader header; \
-        auto res = proto_mgr_.DecodeMessage(buffer, &header); \
-        if (!res) co_return; \
-        auto&& [proto_msg, msg_id, sub_msg_id] = *res; \
-        auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::ProtoMgr::CalcKey(msg_id, sub_msg_id)); \
-        if (iter != _MILLION_PROTO_MSG_HANDLE_MAP_.end()) { \
-            co_await (this->*iter->second)(std::move(proto_msg)); \
-        } \
-        co_return; \
-    } \
-    Cs::MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = Cs::MSG_ID_INVALID; \
-    ::std::unordered_map<uint32_t, ::million::Task(_MILLION_SERVICE_TYPE_::*)(::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
-
-#define MILLION_PROTO_MSG_ID(MSG_ID_) \
-    const bool _MILLION_PROTO_MSG_HANDLE_SET_MSG_ID_##MSG_ID_ = \
-        [this] { \
-            _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = ::Cs::MSG_ID_; \
-            return true; \
-        }() \
-
-#define MILLION_PROTO_MSG_HANDLE(SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(::million::ProtoMsgUnique MILLION_PROTO_MSG_) { \
-        auto msg = ::std::unique_ptr<::Cs::MSG_TYPE_>(static_cast<::Cs::MSG_TYPE_*>(MILLION_PROTO_MSG_.release())); \
-        co_await _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(std::move(msg)); \
-        co_return; \
-    } \
-    const bool MILLION_PROTO_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
-        [this] { \
-            _MILLION_PROTO_MSG_HANDLE_MAP_.insert(::std::make_pair(::million::ProtoMgr::CalcKey(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_, Cs::SUB_MSG_ID_), \
-                &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I \
-            )); \
-            return true; \
-        }(); \
-    ::million::Task _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(::std::unique_ptr<::Cs::MSG_TYPE_> MSG_PTR_NAME_)
-
+} // namespace gateway
 } // namespace million

@@ -56,6 +56,10 @@ inline void IService::Reply(MsgUnique msg) {
     Send(target, std::move(msg));
 }
 
+inline void IService::Reply(SessionId session_id) {
+    Reply<IMsg>(session_id);
+}
+
 MILLION_FUNC_EXPORT void InitMillion();
 MILLION_FUNC_EXPORT IMillion* NewMillion(std::string_view config_path);
 MILLION_FUNC_EXPORT void DeleteMillion(IMillion* million);

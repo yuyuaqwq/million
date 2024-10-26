@@ -30,6 +30,13 @@ public:
     }
 
     void Reply(MsgUnique msg);
+    void Reply(SessionId session_id);
+    template <typename MsgT, typename ...Args>
+    void Reply(SessionId session_id, Args&&... args) {
+        auto msg = std::make_unique<MsgT>(std::forward<Args>(args)...);
+        msg->set_session_id(session_id);
+        Reply(std::move(msg));
+    }
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
     Awaiter<RecvMsgT> Call(ServiceHandle target, Args&&... args) {
