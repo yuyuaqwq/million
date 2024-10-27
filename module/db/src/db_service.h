@@ -122,26 +122,31 @@ public:
         }
         auto& rows = rows_iter->second;
 
-        auto row_iter = rows.find(msg->key);
-        if (row_iter == rows.end()) {
+        do {
+            auto row_iter = rows.find(msg->key);
+            if (row_iter != rows.end()) {
+                msg->proto_msg = row_iter->second.first.get();
+                break;
+            }
             auto proto_msg_opt = proto_mgr_.NewMessage(*desc);
             if (!proto_msg_opt) {
                 co_return;
             }
+
             auto row = Row(std::move(*proto_msg_opt), std::vector<bool>(desc->field_count()));
             auto res_msg = co_await Call<ParseFromCacheMsg>(cache_service_, row.first.get(), &row.second, false);
             if (!res_msg->success) {
-                // 需要回个包
-                msg->proto_msg = nullptr;
-                Reply(std::move(msg));
-                co_return;
+                // 不成功还要走一次SQL，还不成功就回包
+
+                if (!res_msg->success) {
+                    msg->proto_msg = nullptr;
+                    break;
+                }
             }
             auto res = rows.emplace(std::move(msg->key), std::move(row));
             assert(res.second);
             row_iter = res.first;
-        }
-        
-        msg->proto_msg = row_iter->second.first.get();
+        } while (false);
         Reply(std::move(msg));
         co_return;
     }
