@@ -43,7 +43,6 @@ void MsgExecutor::AddTask(Task&& task) {
     }
 }
 
-// 加入待调度队列等待调度
 void MsgExecutor::Push(SessionId id, Task&& task) {
     tasks_.emplace(std::make_pair(id, std::move(task)));
 }
