@@ -12,10 +12,10 @@ message User {
     option (table) = {
         name: "user"               // 表名
         tick_second: 60            // Tick入库时间，单位秒
+        primary_key: 1
         sql: {
             charset: "utf8mb4"     // MySQL 字符集
             engine: "InnoDB"       // MySQL 存储引擎
-            auto_increment: true    // 是否自增
         }
         cache: {
             ttl: 3600               // 键的 TTL，单位秒
@@ -23,7 +23,7 @@ message User {
     };
 
     int64 id = 1 [(column) = {
-        sql: { primary_key: true, auto_increment: true, not_null: true, comment: "用户ID" }
+        sql: { auto_increment: true, not_null: true, comment: "用户ID" }
         cache: { index: true }
     }];
 

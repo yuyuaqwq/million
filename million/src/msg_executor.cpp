@@ -10,7 +10,7 @@ MsgExecutor::MsgExecutor() = default;
 MsgExecutor::~MsgExecutor() = default;
 
 // 尝试调度
-MsgUnique MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
+std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
     auto iter = tasks_.find(id);
     if (iter == tasks_.end()) {
         return msg;
@@ -29,7 +29,7 @@ MsgUnique MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
     else {
         tasks_.erase(iter);
     }
-    return nullptr;
+    return std::nullopt;
 }
 
 void MsgExecutor::AddTask(Task&& task) {

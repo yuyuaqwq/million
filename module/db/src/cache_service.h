@@ -84,9 +84,14 @@ public:
     MILLION_MSG_DISPATCH(CacheService, CacheMsgBase);
 
     MILLION_MSG_HANDLE(ParseFromCacheMsg, msg) {
-        auto proto_msg = msg->proto_msg.get();
+        auto proto_msg = msg->proto_msg;
         const google::protobuf::Descriptor* descriptor = proto_msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
+        const Db::MessageOptionsTable& options = descriptor->options().GetExtension(Db::table);
+        if (options.has_cache()) {
+            const Db::TableCacheOptions& cache_options = options.cache();
+        }
+
         auto& table = descriptor->name();
 
         // 通过 Redis 哈希表存取 Protobuf 字段
@@ -104,6 +109,7 @@ public:
                     continue; // 字段在 Redis 中未找到，跳过
                 }
                 SetField(proto_msg, field, reflection, iter->second);
+                msg->dirty_bits->operator[](i) = false;
             }
             msg->success = true;
         }
@@ -116,14 +122,19 @@ public:
         auto& proto_msg = *msg->proto_msg;
         const google::protobuf::Descriptor* descriptor = proto_msg.GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg.GetReflection();
-
         const Db::MessageOptionsTable& options = descriptor->options().GetExtension(Db::table);
+        const auto& table_name = options.name();
+        if (table_name.empty()) {
+            std::cerr << "table_name is empty." << std::endl;
+            co_return;
+        }
+
         int32_t ttl = 0;
         if (options.has_cache()) {
             const Db::TableCacheOptions& cache_options = options.cache();
             ttl = cache_options.ttl();
         }
-        options.tick_second();
+        // options.tick_second();
 
         std::string_view key;
         // 使用 std::unordered_map 来存储要更新到 Redis 的字段和值
@@ -131,13 +142,18 @@ public:
 
         // 遍历 Protobuf 的所有字段，将字段和值存入 redis_hash 中
         for (int i = 0; i < descriptor->field_count(); ++i) {
+            if (!msg->dirty_bits->operator[](i)) {
+                continue;
+            }
+
             const google::protobuf::FieldDescriptor* field = descriptor->field(i);
             const Db::FieldOptionsColumn& options = field->options().GetExtension(Db::column);
 
             redis_hash[field->name()] = GetField(proto_msg, field, reflection);
 
             if (options.has_cache()) {
-                if (options.cache().index()) {
+                const auto& cache_options = options.cache();
+                if (cache_options.index()) {
                     if (!key.empty()) {
                         std::cerr << "there can only be one index:" << field->name() << std::endl;
                     }
@@ -151,8 +167,8 @@ public:
             }
         }
 
-        if (options.name().empty() || key.empty()) {
-            std::cerr << "name is empty or index is empty:" << options.name() << "," << key << std::endl;
+        if (key.empty()) {
+            std::cerr << "index is empty:" << key << std::endl;
             co_return;
         }
         auto table = std::format("db:{}:{}", options.name(), key);
@@ -242,7 +258,7 @@ public:
                 break;
             }
             default: {
-                throw std::runtime_error("Unsupported field type.");
+                std::cerr << "unsupported field type:" << field->type() << std::endl;
             }
             }
         }
@@ -318,7 +334,7 @@ private:
     std::optional<std::jthread> thread_;
     bool run_;
 
-    std::queue<million::MsgUnique> queue_;
+    std::queue<MsgUnique> queue_;
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;
 };

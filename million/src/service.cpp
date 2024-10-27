@@ -18,10 +18,10 @@ void Service::PushMsg(MsgUnique msg) {
     msgs_.emplace(std::move(msg));
 }
 
-MsgUnique Service::PopMsg() {
+std::optional<MsgUnique> Service::PopMsg() {
     std::lock_guard guard(msgs_mutex_);
     if (msgs_.empty()) {
-        return nullptr;
+        return std::nullopt;
     }
     auto msg = std::move(msgs_.front());
     msgs_.pop();
@@ -35,16 +35,17 @@ bool Service::MsgQueueEmpty() {
 }
 
 bool Service::ProcessMsg() {
-    auto msg = PopMsg();
-    if (!msg) {
+    auto msg_opt = PopMsg();
+    if (!msg_opt) {
         return false;
     }
+    auto msg = std::move(*msg_opt);
     auto session_id = msg->session_id();
-    msg = excutor_.TrySchedule(session_id, std::move(msg));
-    if (!msg) {
+    auto msg_opt = excutor_.TrySchedule(session_id, std::move(msg));
+    if (!msg_opt) {
         return true;
     }
-    auto task = iservice_->OnMsg(std::move(msg));
+    auto task = iservice_->OnMsg(std::move(*msg_opt));
     excutor_.AddTask(std::move(task));
     return true;
 }

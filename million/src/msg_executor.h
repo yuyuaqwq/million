@@ -20,7 +20,7 @@ public:
     ~MsgExecutor();
 
     // 尝试调度
-    MsgUnique TrySchedule(SessionId id, MsgUnique msg);
+    std::optional<MsgUnique> TrySchedule(SessionId id, MsgUnique msg);
 
     // 将任务添加到调度器
     void AddTask(Task&& task);

@@ -4,18 +4,21 @@ package Db;
 
 import "google/protobuf/descriptor.proto";
 
-// 通用数据库选项
 message DbSqlOptions {
-    
 }
+
 message DbCacheOptions {
-    
+}
+
+// 通用数据库选项
+message FileOptionsDb {
+    DbSqlOptions sql = 1;
+    DbCacheOptions cache = 2;
+    string name = 3;      // 数据库名称
 }
 
 extend google.protobuf.FileOptions {
-    DbSqlOptions sql = 20001;
-    DbCacheOptions cache = 20002;
-    string name = 20003;      // 数据库名称
+    FileOptionsDb db = 20001;
 }
 
 // SQL 相关选项（MySQL）
@@ -30,9 +33,8 @@ message ForeignKey {
 message TableSqlOptions {
     string charset = 1;              // 字符集
     string engine = 2;               // 存储引擎
-    repeated string composite_key = 3;   // 复合主键
-    repeated ForeignKey foreign_keys = 4; // 外键定义
-    bool auto_increment = 5;         // 是否自增
+    // repeated int32 composite_key = 3;   // 复合主键 field_number
+    // repeated ForeignKey foreign_keys = 4; // 外键定义
 }
 
 // Cache 相关选项（Redis）
@@ -45,6 +47,7 @@ message MessageOptionsTable {
     TableCacheOptions cache = 2;
     string name = 3;  // 表名
     int32 tick_second = 4;  // Tick入库时间
+    int32 primary_key = 5;  // 主键 field_number
 }
 
 extend google.protobuf.MessageOptions {
@@ -53,13 +56,12 @@ extend google.protobuf.MessageOptions {
 
 // SQL 相关字段选项（MySQL）
 message ColumnSqlOptions {
-    bool primary_key = 1;            // 主键
-    bool index = 2;                  // 索引
-    bool unique = 3;                 // 唯一约束
-    bool auto_increment = 4;         // 自增
-    string default_value = 5;        // 默认值
-    string comment = 6;              // 字段注释
-    bool not_null = 7;               // 非空约束
+    bool index = 1;                  // 索引
+    bool unique = 2;                 // 唯一约束
+    bool auto_increment = 3;         // 自增
+    string default_value = 4;        // 默认值
+    string comment = 5;              // 字段注释
+    bool not_null = 6;               // 非空约束
 }
 
 // Cache 相关字段选项（Redis）

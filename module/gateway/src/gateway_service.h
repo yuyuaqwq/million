@@ -4,7 +4,7 @@
 
 #include <million/iservice.h>
 
-#include "proto_mgr.h"
+#include "cs_proto_mgr.h"
 #include "gateway_server.h"
 
 namespace million {
@@ -118,7 +118,7 @@ public:
     }
 
 private:
-    ProtoMgr proto_mgr_;
+    CsProtoMgr proto_mgr_;
     GatewayServer server_;
     TokenGenerator token_generator_;
     std::unordered_map<Cs::MsgId, std::vector<ServiceHandle>> register_services_;

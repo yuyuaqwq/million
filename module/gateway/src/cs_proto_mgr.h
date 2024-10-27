@@ -22,7 +22,7 @@ namespace gateway {
 
 namespace protobuf = google::protobuf;
 
-class ProtoMgr : noncopyable {
+class CsProtoMgr : noncopyable {
 public:
     // 初始化消息映射
     void InitMsgMap() {
@@ -137,7 +137,10 @@ public:
             return std::nullopt;
         }
 
-        auto proto_msg = NewMessage(msg_id, sub_msg_id);
+        auto proto_msg_opt = NewMessage(msg_id, sub_msg_id);
+        if (!proto_msg_opt) return {};
+        auto& proto_msg = *proto_msg_opt;
+
         // 反序列化消息
         auto success = proto_msg->ParseFromArray(buffer.data() + i, buffer.size() - i);
         if (!success) {
@@ -168,14 +171,13 @@ private:
         return iter->second;
     }
 
-    ProtoMsgUnique NewMessage(Cs::MsgId msg_id, uint32_t sub_msg_id) {
+    std::optional<ProtoMsgUnique> NewMessage(Cs::MsgId msg_id, uint32_t sub_msg_id) {
         auto desc = GetMsgDesc(msg_id, sub_msg_id);
         const protobuf::Message* proto_msg = protobuf::MessageFactory::generated_factory()->GetPrototype(desc);
-        if (proto_msg != nullptr)
-        {
+        if (proto_msg != nullptr) {
             return ProtoMsgUnique(proto_msg->New());
         }
-        return nullptr;
+        return std::nullopt;
     }
 
 private:

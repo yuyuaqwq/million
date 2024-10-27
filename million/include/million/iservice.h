@@ -44,10 +44,10 @@ public:
         auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
         return Recv<RecvMsgT>(session_id);
     }
-    template <typename SendMsgT, typename ...Args>
-    Awaiter<IMsg> Call(ServiceHandle target, Args&&... args) {
-        auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
-        return Recv<IMsg>(session_id);
+    template <typename MsgT, typename ...Args>
+    Awaiter<MsgT> Call(ServiceHandle target, Args&&... args) {
+        auto session_id = Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
+        return Recv<MsgT>(session_id);
     }
 
     virtual void OnInit() {};

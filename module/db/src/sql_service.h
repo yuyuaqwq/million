@@ -20,9 +20,9 @@
 namespace million {
 namespace db {
 
-class SqlService : public million::IService {
+class SqlService : public IService {
 public:
-    using Base = million::IService;
+    using Base = IService;
     using Base::Base;
 
     static inline const std::string_view db = "pokemon_server";
@@ -57,7 +57,7 @@ public:
 
 
                 }
-                catch (const soci::mysql_soci_error& e)
+                catch (const soci::soci_error& e)
                 {
                     std::cerr << "MySQL error: " << e.what() << std::endl;
                 }
@@ -69,7 +69,7 @@ public:
         });
     }
 
-    virtual million::Task OnMsg(MsgUnique msg) override {
+    virtual Task OnMsg(MsgUnique msg) override {
         auto guard = std::lock_guard(queue_mutex_);
         queue_.emplace(std::move(msg));
         co_return;
@@ -82,11 +82,123 @@ public:
         sql_.close();
     }
 
+    void CreateTableFromSql(const google::protobuf::Message* msg) {
+        const google::protobuf::Descriptor* descriptor = msg->GetDescriptor();
+        const Db::MessageOptionsTable& options = descriptor->options().GetExtension(Db::table);
+        auto& table_name = options.name();
+
+        std::string sql = "CREATE TABLE " + table_name + " (\n";
+
+        for (int i = 0; i < descriptor->field_count(); ++i) {
+            const google::protobuf::FieldDescriptor* field = descriptor->field(i);
+            std::string field_name = field->name();
+            std::string field_type;
+
+            if (field->is_repeated()) {
+                field_type = "TEXT";
+            }
+            else {
+                switch (field->type()) {
+                case google::protobuf::FieldDescriptor::TYPE_DOUBLE:
+                    field_type = "DOUBLE";
+                    break;
+                case google::protobuf::FieldDescriptor::TYPE_FLOAT:
+                    field_type = "FLOAT";
+                    break;
+                case google::protobuf::FieldDescriptor::TYPE_INT32:
+                case google::protobuf::FieldDescriptor::TYPE_SINT32:
+                case google::protobuf::FieldDescriptor::TYPE_FIXED32:
+                    field_type = "INTEGER";
+                    break;
+                case google::protobuf::FieldDescriptor::TYPE_INT64:
+                case google::protobuf::FieldDescriptor::TYPE_SINT64:
+                case google::protobuf::FieldDescriptor::TYPE_FIXED64:
+                    field_type = "BIGINT";
+                    break;
+                case google::protobuf::FieldDescriptor::TYPE_BOOL:
+                    field_type = "BOOLEAN";
+                    break;
+                case google::protobuf::FieldDescriptor::TYPE_STRING:
+                case google::protobuf::FieldDescriptor::TYPE_BYTES:
+                    field_type = "TEXT";
+                    break;
+                case google::protobuf::FieldDescriptor::TYPE_MESSAGE:
+                    field_type = "TEXT"; // Using TEXT for simplicity
+                    break;
+                case google::protobuf::FieldDescriptor::TYPE_ENUM:
+                    field_type = "INTEGER"; // Enum can be stored as INTEGER
+                    break;
+                default:
+                    std::cerr << "unsupported field type:" << field->type() << std::endl;
+                    continue; // Skip unsupported field types
+                }
+            }
+
+            // 处理字段选项
+            if (field->options().HasExtension(Db::column)) {
+                const Db::FieldOptionsColumn& field_options = field->options().GetExtension(Db::column);
+                if (field_options.has_sql()) {
+                    const Db::ColumnSqlOptions& sql_options = field_options.sql();
+                    //if (sql_options.primary_key()) {
+                    //    field_type += " PRIMARY KEY";
+                    //}
+                    if (sql_options.auto_increment()) {
+                        field_type += " AUTO_INCREMENT";
+                    }
+                    if (sql_options.not_null()) {
+                        field_type += " NOT NULL";
+                    }
+                    if (sql_options.unique()) {
+                        field_type += " UNIQUE";
+                    }
+                    if (!sql_options.default_value().empty()) {
+                        field_type += " DEFAULT " + sql_options.default_value();
+                    }
+                    if (sql_options.index()) {
+                        sql += "    INDEX (" + field_name + "),\n"; // 添加索引
+                    }
+                    if (!sql_options.comment().empty()) {
+                        field_type += " COMMENT '" + sql_options.comment() + "'"; // 添加注释
+                    }
+                }
+            }
+
+            sql += "    " + field_name + " " + field_type;
+
+            sql += ",\n"; // 注意换行符以便于可读性
+        }
+
+        if (sql.back() == ',') {
+            sql.pop_back(); // Remove the last comma
+            sql.pop_back(); // Remove the last newline
+        }
+
+        sql += "\n);";
+
+        // 添加字符集和引擎选项
+        if (options.has_sql()) {
+            const Db::TableSqlOptions& sql_options = options.sql();
+            if (!sql_options.charset().empty()) {
+                sql += " DEFAULT CHARSET " + sql_options.charset();
+            }
+            if (!sql_options.engine().empty()) {
+                sql += " ENGINE=" + sql_options.engine();
+            }
+        }
+
+        sql_ << sql;
+        return;
+    }
 
     void ParseFromSql(google::protobuf::Message* msg) {
         const google::protobuf::Descriptor* descriptor = msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = msg->GetReflection();
-        auto& table = descriptor->name();
+
+        const Db::MessageOptionsTable& options = descriptor->options().GetExtension(Db::table);
+        if (options.has_sql()) {
+            const Db::TableSqlOptions& sql_options = options.sql();
+        }
+        auto& table_name = options.name();
 
         std::string sql = "SELECT";
         for (int i = 0; i < descriptor->field_count(); ++i) {
@@ -98,7 +210,7 @@ public:
         }
 
         sql += "FROM ";
-        sql += table;
+        sql += table_name;
         sql += ";";
 
         // 查询数据
@@ -165,7 +277,7 @@ public:
                     break;
                 }
                 default:
-                    throw std::runtime_error("Unsupported field type.");
+                    std::cerr << "unsupported field type:" << field->type() << std::endl;
                 }
             }
         }
@@ -204,7 +316,7 @@ public:
         BindValuesToStatement(msg, &values, stmt);  // 绑定值
         stmt.define_and_bind();
         stmt.execute(true);
-    }
+    } 
 
     void SerializeToSqlForInsert(const google::protobuf::Message& msg) {
         const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
@@ -333,7 +445,7 @@ private:
     std::optional<std::jthread> thread_;
     bool run_;
 
-    std::queue<million::MsgUnique> queue_;
+    std::queue<MsgUnique> queue_;
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;
 };

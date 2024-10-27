@@ -8,9 +8,8 @@
 
 namespace million {
 
-Worker::Worker(Million* million) : million_(million) {
-
-}
+Worker::Worker(Million* million)
+    : million_(million) {}
 
 Worker::~Worker() = default;
 

@@ -22,7 +22,7 @@ public:
     ~Service();
 
     void PushMsg(MsgUnique msg);
-    MsgUnique PopMsg();
+    std::optional<MsgUnique> PopMsg();
     bool MsgQueueEmpty();
 
     bool ProcessMsg();
