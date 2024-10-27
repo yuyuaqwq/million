@@ -3,30 +3,28 @@ project(${DB_LIB})
 
 set(CMAKE_CXX_STANDARD 20)
 
-aux_source_directory(./ SRC)
-
-add_library(${DB_LIB} SHARED ${SRC})
-
-target_include_directories(${DB_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(${DB_LIB} PRIVATE ${MILLION_HEADER_DIR})
-
-target_include_directories(${DB_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
-target_link_libraries(${DB_LIB} PRIVATE ${YAML_CPP_LIB})
-
-target_include_directories(${DB_LIB} PRIVATE ${HIREDIS_HEADER_DIR})
-target_link_libraries(${DB_LIB} PRIVATE ${HIREDIS_LIB})
-
-if (WIN32)
-    message(STATUS "Compiling on Windows")
+if(WIN32)
+    file(GLOB_RECURSE PRIVATE_HEADERS 
+        ./src/*.h
+        ./src/*.hpp
+        ./src/**/*.h
+        ./src/**/*.hpp)
+    source_group("Private Header Files" FILES ${PRIVATE_HEADERS})
     
-    # cmake -DCMAKE_TOOLCHAIN_FILE=<vcpkg_path>/scripts/buildsystems/vcpkg.cmake -Dprotobuf_DIR=<vcpkg_path>/installed/x64-windows/share/protobuf ..
-    find_package(protobuf CONFIG REQUIRED)
-    target_link_libraries(${DB_LIB} PRIVATE protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
-
-elseif(UNIX)
-    message(STATUS "Compiling on Linux")
-
-    find_package(Protobuf REQUIRED)
-    target_include_directories(${DB_LIB} PRIVATE ${Protobuf_INCLUDE_DIRS})
-    target_link_libraries(${DB_LIB} PRIVATE ${Protobuf_LIBRARIES})
+    file(GLOB_RECURSE PUBLIC_HEADERS 
+        ./include/*.h
+        ./include/*.hpp
+        ./include/**/*.h
+        ./include/**/*.hpp)
+    source_group("Public Header Files" FILES ${PUBLIC_HEADERS})
 endif()
+file(GLOB SRC
+    ./src/*.cpp
+    ./src/**/*.cpp)
+add_library(${LOGGER_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
+
+target_include_directories(${LOGGER_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${LOGGER_LIB} PRIVATE ${LOGGER_HEADER_DIR})
+
+target_include_directories(${LOGGER_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
+target_link_libraries(${LOGGER_LIB} PRIVATE ${YAML_CPP_LIB})

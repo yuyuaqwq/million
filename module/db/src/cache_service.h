@@ -20,9 +20,9 @@ namespace million {
 namespace db {
 
 // 缓存服务
-class CacheService : public million::IService {
+class CacheService : public IService {
 public:
-    using Base = million::IService;
+    using Base = IService;
     using Base::Base;
 
     static inline const std::string_view host = "127.0.0.1";
@@ -48,8 +48,13 @@ public:
 
                     auto msg = std::move(queue_.front());
                     queue_.pop();
+
+                    // 自行分发消息，因为没有调度器，不能使用co_await
                     auto task = MsgDispatch(std::move(msg));
                     task.rethrow_if_exception();
+                    if (!task.handle.done()) {
+                        std::cerr << "Message processing is waiting." << std::endl;
+                    }
                 }
                 catch (const sw::redis::Error& e) {
                     std::cerr << "Redis error: " << e.what() << std::endl;
@@ -62,7 +67,7 @@ public:
         });
     }
 
-    virtual million::Task OnMsg(million::MsgUnique msg) override {
+    virtual Task OnMsg(MsgUnique msg) override {
         // 交给redis线程去读写，避免阻塞work线程
         auto guard = std::lock_guard(queue_mutex_);
         queue_.emplace(std::move(msg));
@@ -177,6 +182,7 @@ public:
         Reply(std::move(msg));
         co_return;
     }
+
 
     void SetField(google::protobuf::Message* proto_msg, const google::protobuf::FieldDescriptor* field, const google::protobuf::Reflection* reflection, const std::string& value) {
         if (field->is_repeated()) {

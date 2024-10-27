@@ -3,7 +3,6 @@
 #include <yaml-cpp/yaml.h>
 
 #include <million/imillion.h>
-#include <million/imsg.h>
 
 #include "sql_service.h"
 #include "cache_service.h"
@@ -12,7 +11,7 @@
 namespace million {
 namespace db {
 
-MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
+MILLION_FUNC_EXPORT bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
 
     auto db_service_handle = imillion->NewService<DbService>();

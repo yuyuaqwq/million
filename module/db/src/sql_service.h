@@ -69,7 +69,7 @@ public:
         });
     }
 
-    virtual million::Task OnMsg(million::MsgUnique msg) override {
+    virtual million::Task OnMsg(MsgUnique msg) override {
         auto guard = std::lock_guard(queue_mutex_);
         queue_.emplace(std::move(msg));
         co_return;

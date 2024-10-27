@@ -20,7 +20,7 @@ public:
 private:
     Million* million_;
     std::optional<std::jthread> thread_;
-    bool run_;
+    bool run_ = false;
 };
 
 } // namespace million

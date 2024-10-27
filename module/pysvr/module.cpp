@@ -1,16 +1,18 @@
 #include "iostream"
 
 #include <million/imillion.h>
-#include <million/imsg.h>
 
 #include <pocketpy/pocketpy.h>
+
+namespace million {
+namespace pysvr {
 
 struct Point {
     int x;
     int y;
 };
 
-MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
+MILLION_FUNC_EXPORT bool MillionModuleInit(IMillion* imillion) {
     auto vm = std::make_unique<pkpy::VM>();
     auto mod = vm->new_module("test");
     vm->register_user_class<Point>(mod, "Point",
@@ -38,3 +40,6 @@ MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
 
     return true;
 }
+
+} // namespace pysvr
+} // namespace million
