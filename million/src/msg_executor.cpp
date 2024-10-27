@@ -21,13 +21,15 @@ MsgUnique MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
         // 记录异常
         // iter->second.handle.promise().exception();
     }
-    else if (!iter->second.handle.done()) {
+    if (!iter->second.handle.done()) {
         assert(iter->second.handle.promise().awaiter());
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
         RePush(id, iter->second.handle.promise().awaiter()->get_waiting());
         return nullptr;
     }
-    tasks_.erase(iter);
+    else {
+        tasks_.erase(iter);
+    }
     return nullptr;
 }
 
@@ -36,7 +38,7 @@ void MsgExecutor::AddTask(Task&& task) {
         // 记录异常
         // task.handle.promise().exception();
     }
-    else if (!task.handle.done()) {
+    if (!task.handle.done()) {
         assert(task.handle.promise().awaiter());
         Push(task.handle.promise().awaiter()->get_waiting(), std::move(task));
     }
