@@ -54,7 +54,7 @@ public:
                 }
                 const auto& table_options = msg_options.GetExtension(Db::table);
                 const auto& table_name = table_options.name();
-                table_map_.insert({ table_name, descriptor });
+                table_map_.emplace(table_name, descriptor);
             }
         }
     }
@@ -109,38 +109,41 @@ public:
     MILLION_MSG_DISPATCH(DbService, DbMsgBase);
 
     MILLION_MSG_HANDLE(DbQueryMsg, msg) {
-        //const protobuf::Descriptor* desc = proto_mgr_.GetMsgDesc(msg->table_name);
-        //if (!desc) {
-        //    co_return;
-        //}
+        const protobuf::Descriptor* desc = proto_mgr_.GetMsgDesc(msg->table_name);
+        if (!desc) {
+            co_return;
+        }
 
-        //auto rows_iter = tables_.find(desc);
-        //if (rows_iter == tables_.end()) {
-        //    auto res = tables_.insert({ desc, {} });
-        //    rows_iter = res.first;
-        //}
-        //auto& rows = rows_iter->second;
+        auto rows_iter = tables_.find(desc);
+        if (rows_iter == tables_.end()) {
+            auto res = tables_.emplace(desc, Rows());
+            assert(res.second);
+            rows_iter = res.first;
+        }
+        auto& rows = rows_iter->second;
 
-        //auto row_iter = rows.find(msg->key);
-        //if (row_iter == rows.end()) {
-        //    auto proto_msg_opt = proto_mgr_.NewMessage(*desc);
-        //    if (!proto_msg_opt) {
-        //        co_return;
-        //    }
-        //    auto proto_msg = std::move(*proto_msg_opt);
-        //    // auto dirty_bits = std::vector<bool>(desc->field_count());
-        //    // Row row{ std::move(proto_msg), std::vector<bool>(desc->field_count()) };
-        //    //rows.emplace(std::move(msg->key), std::vector<bool>());
-
-        //    // msg->proto_msg = ;
-        //}
-
+        auto row_iter = rows.find(msg->key);
+        if (row_iter == rows.end()) {
+            auto proto_msg_opt = proto_mgr_.NewMessage(*desc);
+            if (!proto_msg_opt) {
+                co_return;
+            }
+            auto row = Row(std::move(*proto_msg_opt), std::vector<bool>(desc->field_count()));
+            auto res_msg = co_await Call<ParseFromCacheMsg>(cache_service_, row.first.get(), &row.second, false);
+            if (!res_msg->success) {
+                // 需要回个包
+                msg->proto_msg = nullptr;
+                Reply(std::move(msg));
+                co_return;
+            }
+            auto res = rows.emplace(std::move(msg->key), std::move(row));
+            assert(res.second);
+            row_iter = res.first;
+        }
         
-            
-        
-        // auto res_msg = co_await Call<ParseFromCacheMsg>(cache_service_, std::move(proto_msg), &dirty_bits, false);
-
-        
+        msg->proto_msg = row_iter->second.first.get();
+        Reply(std::move(msg));
+        co_return;
     }
 
     //void Query(std::string table_name, std::string key) {
