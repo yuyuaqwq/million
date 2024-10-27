@@ -25,7 +25,6 @@ MsgUnique MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
         assert(iter->second.handle.promise().awaiter());
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
         RePush(id, iter->second.handle.promise().awaiter()->get_waiting());
-        return nullptr;
     }
     else {
         tasks_.erase(iter);
