@@ -8,6 +8,7 @@
 #include <million/detail/noncopyable.h>
 
 #include "detail/time_wheel.hpp"
+#include "detail/heap_timer.hpp"
 
 namespace million {
 
@@ -25,7 +26,7 @@ public:
 private:
     Million* million_;
     std::optional<std::jthread> thread_;
-    detail::TimeWheel time_wheel_;
+    detail::HeapTimer tasks_;
     std::atomic_bool run_ = false;
 };
 

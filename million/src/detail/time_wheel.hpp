@@ -3,12 +3,10 @@
 #include <cstdint>
 
 #include <chrono>
-#include <functional>
 #include <array>
 #include <vector>
 #include <mutex>
 
-#include <million/detail/noncopyable.h>
 #include <million/imillion.h>
 
 namespace million {
@@ -87,10 +85,8 @@ public:
     }
 
     void AddTask(ServiceHandle service, uint32_t tick, MsgUnique msg) {
-        {
-            std::lock_guard guard(adds_mutex_);
-            adds_.emplace_back(service, tick, std::move(msg));
-        }
+        auto guard =std::lock_guard(adds_mutex_);
+        adds_.emplace_back(service, tick, std::move(msg));
     }
 
     uint32_t ms_per_tick() const { return ms_per_tick_; }
@@ -131,7 +127,6 @@ private:
     static constexpr size_t kCircleMask = 0x3f; // 0011 1111
 
     IMillion* imillion_;
-
     const uint32_t ms_per_tick_;
 
     std::chrono::high_resolution_clock::time_point last_time_;
