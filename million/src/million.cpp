@@ -116,14 +116,14 @@ SessionId Million::Send(ServiceHandle sender, ServiceHandle target, MsgUnique ms
     return service_mgr_->Send(sender, target, std::move(msg));
 }
 
+void Million::TimeOut(ServiceHandle service, uint32_t tick, MsgUnique msg) {
+    timer_->AddTask(service, tick, std::move(msg));
+}
 
 asio::io_context& Million::NextIoContext() {
     return io_context_mgr_->NextIoContext().io_context();
 }
 
-void Million::AddDelayTask(detail::DelayTask&& task) {
-    timer_->AddTask(std::move(task));
-}
 
 const YAML::Node& Million::YamlConfig() const {
     return *config_;

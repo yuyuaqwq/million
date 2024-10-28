@@ -63,14 +63,14 @@ struct Task {
     explicit Task(std::coroutine_handle<promise_type> handle) noexcept
         : handle(handle) {}
 
-    Task(Task&& co) noexcept
-        : handle(std::exchange(co.handle, {})) {}
-
     ~Task() {
         if (handle) {
             handle.destroy();
         }
     }
+
+    Task(Task&& co) noexcept
+        : handle(std::exchange(co.handle, {})) {}
 
     Task(const Task&) = delete;
     Task& operator=(const Task&) = delete;

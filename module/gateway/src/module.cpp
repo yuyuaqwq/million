@@ -14,7 +14,7 @@
 #include <million/imsg.h>
 #include <million/proto_msg.h>
 
-#include <db/cache.h>
+#include <db/cache_msg.h>
 
 #include <gateway/user_session_handle.h>
 

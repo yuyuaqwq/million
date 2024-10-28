@@ -9,18 +9,33 @@
 #include <mutex>
 
 #include <million/detail/noncopyable.h>
-#include <million/detail/delay_task.h>
+#include <million/imillion.h>
 
 namespace million {
 namespace detail {
 
 class TimeWheel : noncopyable {
 private:
+    struct DelayTask {
+        DelayTask(ServiceHandle service, uint32_t tick, MsgUnique msg)
+            : tick(tick)
+            , service(service)
+            , msg(std::move(msg)) {}
+        ~DelayTask() = default;
+
+        DelayTask(const DelayTask&) = delete;
+        DelayTask(DelayTask&&) = default;
+
+        ServiceHandle service;
+        uint32_t tick;
+        MsgUnique msg;
+    };
     using TaskVector = std::vector<DelayTask>;
 
 public:
-    TimeWheel(uint32_t ms_per_tick)
-        : ms_per_tick_(ms_per_tick) {}
+    TimeWheel(IMillion* imillion, uint32_t ms_per_tick)
+        : imillion_(imillion)
+        , ms_per_tick_(ms_per_tick) {}
     ~TimeWheel() = default;
 
     void Init() {
@@ -46,7 +61,7 @@ public:
             auto& slot = slots_[indexs_[0]];
             if (!slot.empty()) {
                 for (auto& task : slot) {
-                    task.func(std::move(task));
+                    imillion_->Send(task.service, task.service, std::move(task.msg));
                 }
                 slot.clear();
             }
@@ -71,22 +86,23 @@ public:
         last_time_ += std::chrono::milliseconds(tick_duration * ms_per_tick_);
     }
 
-    void AddTask(DelayTask&& task) {
+    void AddTask(ServiceHandle service, uint32_t tick, MsgUnique msg) {
         {
             std::lock_guard guard(adds_mutex_);
-            adds_.emplace_back(std::move(task));
+            adds_.emplace_back(service, tick, std::move(msg));
         }
     }
 
     uint32_t ms_per_tick() const { return ms_per_tick_; }
 
 private:
-    size_t GetLayer(uint32_t tick) {
+    // std::pair<layer, index>
+    std::pair<size_t, size_t> GetLayer(uint32_t tick) {
         for (size_t i = 0; i < kCircleCount; i++) {
             if ((tick & ~kCircleMask) == 0) {
-                return i;
+                return { i, tick };
             }
-            tick >>= 6;
+            tick >>= kSlotBit;
         }
         throw std::invalid_argument("tick too large.");
     }
@@ -96,15 +112,14 @@ private:
             size_t tick = task.tick;
             
             // 根据时长插入对应层的槽中
-            size_t layer = GetLayer(tick);
-            size_t index = tick & kCircleMask;
+            auto&& [layer, index] = GetLayer(tick);
             index = layer * kSlotCount + ((index + indexs_[layer]) % kSlotCount);
 
             // 清除在当前层的时长，在下次向下派发时可以插入到下层
             size_t mask = ~(std::numeric_limits<size_t>::max() << (layer * kSlotBit));
             task.tick &= mask;
 
-            slots_[index].emplace_back(task);
+            slots_[index].emplace_back(std::move(task));
         }
         tasks->clear();
     }
@@ -114,6 +129,8 @@ private:
     static constexpr size_t kSlotBit = 6;
     static constexpr size_t kSlotCount = 1 << kSlotBit; // 64
     static constexpr size_t kCircleMask = 0x3f; // 0011 1111
+
+    IMillion* imillion_;
 
     const uint32_t ms_per_tick_;
 

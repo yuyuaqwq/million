@@ -35,9 +35,9 @@ public:
     virtual SessionId Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) override;
     using IMillion::Send;
 
-    virtual asio::io_context& NextIoContext() override;
+    virtual void TimeOut(ServiceHandle service, uint32_t tick, MsgUnique msg) override;
 
-    virtual void AddDelayTask(detail::DelayTask&& task) override;
+    virtual asio::io_context& NextIoContext() override;
 
     virtual const YAML::Node& YamlConfig() const override;
 

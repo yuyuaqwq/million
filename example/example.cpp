@@ -17,8 +17,20 @@ class TestService : public million::IService {
     using Base = million::IService;
     using Base::Base;
 
+    virtual void OnInit() override {
+        auto start = std::chrono::high_resolution_clock::now();
+        int j = 0;
+        for (int i = 0; i < 100; i++) {
+            TimeOut<Test1Msg>(i * 100, 1, "emmm");
+        }
+        auto end = std::chrono::high_resolution_clock::now();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        auto duratioin = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        std::cout << "Elapsed time: " << duratioin.count() << "ms:" << j << " seconds\n";
+    }
+
     virtual million::Task OnMsg(million::MsgUnique msg) override {
-        auto msg_ = static_cast<Test1Msg*>(msg.get());
+        auto msg_ = static_cast<Test1Msg*> (msg.get());
         std::cout << msg_->session_id() << std::endl;
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
@@ -67,18 +79,6 @@ class TestService : public million::IService {
 int main() {
     auto mili = million::NewMillion("example_config.yaml");
 
-    auto start = std::chrono::high_resolution_clock::now();
-    int j = 0;
-    for (int i = 0; i < 1000000; i++) {
-        mili->AddDelayTask({ 1, [&j](const auto& task) {
-            ++j;
-            // std::cout << "666" << std::endl;
-            } });
-    }
-    auto end = std::chrono::high_resolution_clock::now();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    auto duratioin = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Elapsed time: " << duratioin.count() << "ms:" << j << " seconds\n";
 
     auto service_handle = mili->NewService<TestService>();
 

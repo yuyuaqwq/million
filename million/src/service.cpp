@@ -41,7 +41,7 @@ bool Service::ProcessMsg() {
     }
     auto msg = std::move(*msg_opt);
     auto session_id = msg->session_id();
-    auto msg_opt = excutor_.TrySchedule(session_id, std::move(msg));
+    msg_opt = excutor_.TrySchedule(session_id, std::move(msg));
     if (!msg_opt) {
         return true;
     }

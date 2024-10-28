@@ -20,7 +20,7 @@ public:
     void Start();
     void Stop();
 
-    void AddTask(detail::DelayTask&& task);
+    void AddTask(ServiceHandle service, uint32_t tick, MsgUnique msg);
 
 private:
     Million* million_;

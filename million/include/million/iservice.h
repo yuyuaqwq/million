@@ -50,6 +50,12 @@ public:
         return Recv<MsgT>(session_id);
     }
 
+    void TimeOut(uint32_t tick, MsgUnique msg);
+    template <typename MsgT, typename ...Args>
+    void TimeOut(uint32_t tick, Args&&... args) {
+        TimeOut(tick, std::make_unique<MsgT>(std::forward<Args>(args)...));
+    }
+
     virtual void OnInit() {};
     virtual Task OnMsg(MsgUnique msg) = 0;
     virtual void OnExit() {};

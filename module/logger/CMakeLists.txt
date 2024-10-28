@@ -26,5 +26,7 @@ add_library(${LOGGER_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 target_include_directories(${LOGGER_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(${LOGGER_LIB} PRIVATE ${LOGGER_HEADER_DIR})
 
+target_include_directories(${LOGGER_LIB} PRIVATE ${MILLION_HEADER_DIR})
+
 target_include_directories(${LOGGER_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
 target_link_libraries(${LOGGER_LIB} PRIVATE ${YAML_CPP_LIB})

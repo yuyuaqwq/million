@@ -15,6 +15,7 @@ Worker::~Worker() = default;
 
 void Worker::Start() {
     thread_.emplace([this]() {
+        run_ = true;
         auto& service_mgr = million_->service_mgr();
         while (run_) {
             auto& service = service_mgr.PopService();

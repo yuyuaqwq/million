@@ -3,7 +3,6 @@
 #include <string_view>
 
 #include <million/detail/dl_export.h>
-#include <million/detail/delay_task.h>
 #include <million/detail/noncopyable.h>
 #include <million/imsg.h>
 #include <million/iservice.h>
@@ -40,7 +39,7 @@ public:
         return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
-    virtual void AddDelayTask(detail::DelayTask&& task) = 0;
+    virtual void TimeOut(ServiceHandle service, uint32_t tick, MsgUnique msg) = 0;
 
     virtual asio::io_context& NextIoContext() = 0;
 
@@ -58,6 +57,10 @@ inline void IService::Reply(MsgUnique msg) {
 
 inline void IService::Reply(ServiceHandle target, SessionId session_id) {
     Reply<IMsg>(target, session_id);
+}
+
+inline void IService::TimeOut(uint32_t tick, MsgUnique msg) {
+    imillion_->TimeOut(service_handle(), tick, std::move(msg));
 }
 
 MILLION_FUNC_EXPORT void InitMillion();
