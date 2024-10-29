@@ -12,7 +12,7 @@
 namespace million {
 namespace detail {
 
-class TimeWheel : noncopyable {
+class WheelTimer : noncopyable {
 private:
     struct DelayTask {
         DelayTask(ServiceHandle service, uint32_t tick, MsgUnique msg)
@@ -31,23 +31,22 @@ private:
     using TaskVector = std::vector<DelayTask>;
 
 public:
-    TimeWheel(IMillion* imillion, uint32_t ms_per_tick)
+    WheelTimer(IMillion* imillion, uint32_t ms_per_tick)
         : imillion_(imillion)
         , ms_per_tick_(ms_per_tick) {}
-    ~TimeWheel() = default;
+    ~WheelTimer() = default;
 
     void Init() {
         last_time_ = std::chrono::high_resolution_clock::now();
     }
 
     void Tick() {
-        TaskVector tmp_queue;
         {
             std::lock_guard guard(adds_mutex_);
-            std::swap(tmp_queue, adds_);
+            std::swap(backup_adds_, adds_);
         }
-        if (!tmp_queue.empty()) {
-            DispatchTasks(&tmp_queue);
+        if (!backup_adds_.empty()) {
+            DispatchTasks(&backup_adds_);
         }
 
         auto now_time = std::chrono::high_resolution_clock::now();
@@ -136,6 +135,7 @@ private:
 
     std::mutex adds_mutex_;
     TaskVector adds_;
+    TaskVector backup_adds_;
 };
 
 } // namespace detail

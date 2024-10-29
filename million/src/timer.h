@@ -7,7 +7,7 @@
 
 #include <million/detail/noncopyable.h>
 
-#include "detail/time_wheel.hpp"
+#include "detail/wheel_timer.hpp"
 #include "detail/heap_timer.hpp"
 
 namespace million {

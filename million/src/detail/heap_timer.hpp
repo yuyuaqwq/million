@@ -43,19 +43,16 @@ public:
     }
 
     void Tick() {
-        // 将等待队列中的任务批量加入到优先级队列
-        TempTaskVector tmp_queue;
         {
-            std::lock_guard guard(adds_mutex_);
-            std::swap(tmp_queue, adds_);
+            auto lock = std::lock_guard(adds_mutex_);
+            std::swap(backup_adds_, adds_);
         }
-        for (auto& task : tmp_queue) {
-            tasks_.push(std::move(task));
+        for (auto& task : backup_adds_) {
+            tasks_.emplace(std::move(task));
         }
 
         auto now_time = std::chrono::high_resolution_clock::now();
 
-        // 执行到期的任务
         while (!tasks_.empty() && tasks_.top().expire_time <= now_time) {
             auto task = std::move(const_cast<DelayTask&>(tasks_.top()));
             imillion_->Send(task.service, task.service, std::move(task.msg));
@@ -65,30 +62,24 @@ public:
         std::unique_lock<std::mutex> lock(min_expire_mutex_);
         if (!tasks_.empty()) {
             min_expire_time_ = tasks_.top().expire_time;
+            auto wait_duration = min_expire_time_ - now_time;
+            cv_.wait_for(lock, wait_duration);
         }
         else {
             min_expire_time_ = std::chrono::high_resolution_clock::time_point::max();
-        }
-        if (min_expire_time_ == std::chrono::high_resolution_clock::time_point::max()) {
-            cv_.wait(lock);  // 没有任务时，等待直到新任务添加
-        }
-        else {
-            auto wait_duration = min_expire_time_ - now_time;
-            if (cv_.wait_for(lock, wait_duration, [this] {
-                return std::chrono::high_resolution_clock::now() >= min_expire_time_;
-            })) { }
+            cv_.wait(lock);
         }
     }
 
     void AddTask(ServiceHandle service, uint32_t tick, MsgUnique msg) {
         auto expire_time = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(tick * ms_per_tick_);
         {
-            auto guard = std::lock_guard(adds_mutex_);
+            auto lock = std::lock_guard(adds_mutex_);
             adds_.emplace_back(service, expire_time, std::move(msg));
         }
         bool need_notify = false;
         {
-            std::unique_lock<std::mutex> lock(min_expire_mutex_);
+            auto lock = std::unique_lock<std::mutex>(min_expire_mutex_);
             if (expire_time < min_expire_time_) {
                 min_expire_time_ = expire_time;
                 need_notify = true;
@@ -107,6 +98,7 @@ private:
 
     std::mutex adds_mutex_;
     TempTaskVector adds_;
+    TempTaskVector backup_adds_;
     
     std::mutex min_expire_mutex_;
     std::chrono::high_resolution_clock::time_point min_expire_time_;
