@@ -82,14 +82,14 @@ public:
             } while (true);
         }
         last_time_ += std::chrono::milliseconds(tick_duration * ms_per_tick_);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(ms_per_tick_));
     }
 
     void AddTask(ServiceHandle service, uint32_t tick, MsgUnique msg) {
         auto guard =std::lock_guard(adds_mutex_);
         adds_.emplace_back(service, tick, std::move(msg));
     }
-
-    uint32_t ms_per_tick() const { return ms_per_tick_; }
 
 private:
     // std::pair<layer, index>

@@ -21,7 +21,6 @@ void Timer::Start() {
         tasks_.Init();
         while (run_) {
             tasks_.Tick();
-            std::this_thread::sleep_for(std::chrono::milliseconds(tasks_.ms_per_tick()));
         }
     });
 }
