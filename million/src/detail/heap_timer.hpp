@@ -50,6 +50,7 @@ public:
         for (auto& task : backup_adds_) {
             tasks_.emplace(std::move(task));
         }
+        backup_adds_.clear();
 
         auto now_time = std::chrono::high_resolution_clock::now();
 
