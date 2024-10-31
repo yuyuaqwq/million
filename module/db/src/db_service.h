@@ -13,8 +13,10 @@
 #include <million/proto_msg.h>
 
 #include <db/cache_msg.h>
+#include <db/sql_msg.h>
 
 #include <protogen/db/db_options.pb.h>
+#include <protogen/db/db_user.pb.h>
 
 namespace million {
 namespace db {
@@ -29,6 +31,8 @@ public:
         if (db == nullptr) {
             return;
         }
+
+        Db::User user;
 
         std::vector<std::string> file_names;
         db->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
@@ -75,6 +79,7 @@ public:
         return std::nullopt;
     }
 
+    const auto& table_map() const { return table_map_; }
 
 
 private:
@@ -82,15 +87,22 @@ private:
 };
 
 enum class DbMsgType : uint32_t {
-    kDbQuery,
+    kDbSqlInit,
+    kDbCacheInit,
+    kDbRowQuery,
+    kDbRowExist,
+    kDbRowUpdate,
+    kDbRowDelete,
 };
 using DbMsgBase = MsgBaseT<DbMsgType>;
-struct DbRow {
-    ProtoMsgUnique msg;
-    std::vector<bool> dirty_bits;
-    uint64_t batch_id = 0;
-};
-MILLION_MSG_DEFINE(DbQueryMsg, DbMsgType::kDbQuery, (std::string) table_name, (std::string) key, (const DbRow*) db_row);
+
+
+MILLION_MSG_DEFINE_EMPTY(DbSqlInitMsg, DbMsgType::kDbSqlInit, (ServiceHandle) sql_handle);
+MILLION_MSG_DEFINE(DbRowQueryMsg, DbMsgType::kDbRowQuery, (std::string) table_name, (std::string) primary_key, (const google::protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE(DbRowExistMsg, DbMsgType::kDbRowExist, (std::string) table_name, (std::string) primary_key, (bool) exist);
+MILLION_MSG_DEFINE(DbRowUpdateMsg, DbMsgType::kDbRowUpdate, (std::string) table_name, (std::string) primary_key, (google::protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE(DbRowDeleteMsg, DbMsgType::kDbRowDelete, (std::string) table_name, (std::string) primary_key, (google::protobuf::Message*) proto_msg);
+
 
 class DbService : public IService {
 public:
@@ -103,7 +115,7 @@ public:
     }
 
     virtual Task OnMsg(MsgUnique msg) override {
-
+        MsgDispatch(std::move(msg));
         co_return;
     }
 
@@ -113,7 +125,15 @@ public:
 
     MILLION_MSG_DISPATCH(DbService, DbMsgBase);
 
-    MILLION_MSG_HANDLE(DbQueryMsg, msg) {
+    MILLION_MSG_HANDLE(DbSqlInitMsg, msg) {
+        sql_service_ = msg->sender();
+        for (const auto& table_info : proto_mgr_.table_map()) {
+            co_await Call<SqlCreateTableMsg>(sql_service_, table_info.second);
+        }
+        co_return;
+    }
+
+    MILLION_MSG_HANDLE(DbRowQueryMsg, msg) {
         const protobuf::Descriptor* desc = proto_mgr_.GetMsgDesc(msg->table_name);
         if (!desc) {
             co_return;
@@ -127,45 +147,45 @@ public:
         }
         auto& rows = rows_iter->second;
 
+        auto row_iter = rows.find(msg->primary_key);
         do {
-            auto row_iter = rows.find(msg->key);
             if (row_iter != rows.end()) {
-                msg->db_row = &row_iter->second;
                 break;
             }
+
             auto proto_msg_opt = proto_mgr_.NewMessage(*desc);
             if (!proto_msg_opt) {
                 co_return;
             }
 
             auto row = DbRow(std::move(*proto_msg_opt), std::vector<bool>(desc->field_count()));
-            auto res_msg = co_await Call<ParseFromCacheMsg>(cache_service_, row.msg.get(), &row.dirty_bits, false);
+            auto res_msg = co_await Call<ParseFromCacheMsg>(cache_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
             if (!res_msg->success) {
-                // 不成功还要走一次SQL，还不成功就回复失败
-
-                if (!res_msg->success) {
-                    msg->db_row = nullptr;
-                    break;
-                }
+                auto res_msg = co_await Call<ParseFromSqlMsg>(sql_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
             }
-            auto res = rows.emplace(std::move(msg->key), std::move(row));
+
+            auto res = rows.emplace(std::move(msg->primary_key), std::move(row));
             assert(res.second);
             row_iter = res.first;
         } while (false);
+        msg->proto_msg = row_iter->second.proto_msg.get();
         Reply(std::move(msg));
         co_return;
     }
 
-    //void Update(std::string table_name, std::string key) {
-    //    
-    //}
 
 private:
     DbProtoMgr proto_mgr_;
+    struct DbRow {
+        ProtoMsgUnique proto_msg;
+        std::vector<bool> dirty_bits;
+        // DbRowMeta meta;
+    };
     using DbRows = std::unordered_map<std::string, DbRow>;
     std::unordered_map<const protobuf::Descriptor*, DbRows> tables_;
 
     ServiceHandle cache_service_;
+    ServiceHandle sql_service_;
 };
 
 } // namespace db

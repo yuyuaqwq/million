@@ -14,7 +14,6 @@ message DbCacheOptions {
 message FileOptionsDb {
     DbSqlOptions sql = 1;
     DbCacheOptions cache = 2;
-    string name = 3;      // 数据库名称
 }
 
 extend google.protobuf.FileOptions {
@@ -42,6 +41,7 @@ message TableCacheOptions {
     int32 ttl = 1;                   // 键的 TTL（过期时间，秒）
 }
 
+
 message MessageOptionsTable {
     TableSqlOptions sql = 1;
     TableCacheOptions cache = 2;
@@ -54,14 +54,24 @@ extend google.protobuf.MessageOptions {
     MessageOptionsTable table = 20001;
 }
 
+enum ColumnSqlOptionsIndex {
+    NONE = 0;
+    PRIMARY_KEY = 1;
+    INDEX = 2;
+    UNIQUE = 3;
+    FULLTEXT = 4;
+    MULTI_COLUMN = 5;
+}
+
 // SQL 相关字段选项（MySQL）
 message ColumnSqlOptions {
-    bool index = 1;                  // 索引
-    bool unique = 2;                 // 唯一约束
+    ColumnSqlOptionsIndex index = 1; // 索引类型
+    string multi_column_name = 2;    // 组合索引名称
     bool auto_increment = 3;         // 自增
     string default_value = 4;        // 默认值
     string comment = 5;              // 字段注释
     bool not_null = 6;               // 非空约束
+    int32 str_len = 7;               // 负数约束为char长度，正数约束为varchar长度
 }
 
 // Cache 相关字段选项（Redis）
@@ -77,3 +87,9 @@ message FieldOptionsColumn {
 extend google.protobuf.FieldOptions {
     FieldOptionsColumn column = 20001;
 }
+
+message DbRowMeta {
+    uint64 db_version = 1;
+    uint64 batch_id = 2;
+}
+

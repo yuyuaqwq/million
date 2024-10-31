@@ -20,9 +20,9 @@ class TestService : public million::IService {
     virtual void OnInit() override {
         auto start = std::chrono::high_resolution_clock::now();
         int j = 0;
-        for (int i = 0; i < 100; i++) {
-            TimeOut<Test1Msg>(i * 100, 1, "emmm");
-        }
+        //for (int i = 0; i < 100; i++) {
+        //    TimeOut<Test1Msg>(i * 100, 1, "emmm");
+        //}
         auto end = std::chrono::high_resolution_clock::now();
         std::this_thread::sleep_for(std::chrono::seconds(1));
         auto duratioin = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

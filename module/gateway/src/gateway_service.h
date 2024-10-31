@@ -4,6 +4,8 @@
 
 #include <million/iservice.h>
 
+#include <protogen/cs/cs_user.pb.h>
+
 #include "cs_proto_mgr.h"
 #include "gateway_server.h"
 

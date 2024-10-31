@@ -14,9 +14,11 @@ namespace db {
 MILLION_FUNC_EXPORT bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
 
-    auto db_service_handle = imillion->NewService<DbService>();
     auto cache_service_handle = imillion->NewService<CacheService>();
     auto sql_service_handle = imillion->NewService<SqlService>();
+    auto db_service_handle = imillion->NewService<DbService>();
+
+    imillion->Send<DbSqlInitMsg>(sql_service_handle, db_service_handle);
     return true;
 }
 

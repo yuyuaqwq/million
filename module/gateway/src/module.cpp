@@ -1,22 +1,6 @@
-#include <atomic>
-#include <optional>
-#include <mutex>
-#include <queue>
-#include <sstream>
-#include <format>
-#include <iomanip>
-
 #include <yaml-cpp/yaml.h>
 
-#include <protogen/cs/cs_user.pb.h>
-
 #include <million/imillion.h>
-#include <million/imsg.h>
-#include <million/proto_msg.h>
-
-#include <db/cache_msg.h>
-
-#include <gateway/user_session_handle.h>
 
 #include "gateway_service.h"
 

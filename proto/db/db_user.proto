@@ -5,6 +5,9 @@ package Db;
 import "google/protobuf/descriptor.proto";
 import "db/db_options.proto";
 
+option (db) = {
+};
+
 message UserEx {
 }
 
@@ -23,43 +26,43 @@ message User {
     };
 
     int64 id = 1 [(column) = {
-        sql: { auto_increment: true, not_null: true, comment: "用户ID" }
-        cache: { index: true }
+        sql: { index: PRIMARY_KEY, auto_increment: true, not_null: true }
+        cache: { }
     }];
 
     string name = 2 [(column) = {
-        sql: { index: true, unique: true, not_null: true, comment: "用户名" }
+        sql: { index: UNIQUE, str_len: 32 }
     }];
 
     string email = 3 [(column) = {
-        sql: { unique: true, not_null: true, comment: "邮箱地址" }
+        sql: { index: UNIQUE, str_len: 256, not_null: true }
     }];
     
     string phone_number = 4 [(column) = {
-        sql: { index: true, comment: "电话号码" }
+        sql: { index: INDEX, str_len: 256 }
     }];
 
     repeated int32 role_ids = 5 [(column) = {
-        sql: { comment: "角色ID" }
+        sql: { }
     }];
 
     string password_hash = 6 [(column) = {
-        sql: { not_null: true, comment: "密码哈希值" }
+        sql: { index: MULTI_COLUMN, multi_column_name: "fake", not_null: true, str_len: -32 }
     }];
 
     bool is_active = 7 [(column) = {
-        sql: { default_value: "1", not_null: true, comment: "是否活跃用户" }
+        sql: { default_value: "1", not_null: true, comment: "Is it an active user" }
     }];
 
     int64 created_at = 8 [(column) = {
-        sql: { not_null: true, comment: "创建时间" }
+        sql: { not_null: true, comment: "create time" }
     }];
 
     int64 updated_at = 9 [(column) = {
-        sql: { not_null: true, comment: "更新时间" }
+        sql: { index: PRIMARY_KEY, not_null: true, comment: "update time" }
     }];
     
-    UserEx ex = 10 [(column) = {
-        sql: { comment: "扩展字段" }
+    UserEx user_ex = 10 [(column) = {
+        sql: { comment: "extended fields" }
     }];
 }

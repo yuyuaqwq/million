@@ -7,6 +7,9 @@
 #include <protogen/cs/cs_msgid.pb.h>
 
 #include <million/imsg.h>
+#include <million/proto_msg.h>
+
+#include <gateway/user_session_handle.h>
 
 namespace million {
 namespace gateway {

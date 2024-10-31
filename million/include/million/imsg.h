@@ -180,6 +180,10 @@ public:
 		_MILLION_META_FIELD_DATAS(name, __VA_ARGS__) \
 	};
 
+#define MILLION_MSG_DEFINE_EMPTY(name, type) \
+    struct name : public ::million::MsgT<type> { \
+	};
+
 template<class T, class Func>
 void ForeachMetaFieldData(T&& obj, Func&& cb) {
 	using DecayT = std::decay_t<T>;

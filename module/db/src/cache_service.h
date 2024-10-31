@@ -85,28 +85,30 @@ public:
 
     MILLION_MSG_HANDLE(ParseFromCacheMsg, msg) {
         auto proto_msg = msg->proto_msg;
-        const google::protobuf::Descriptor* descriptor = proto_msg->GetDescriptor();
+        const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
-        const Db::MessageOptionsTable& options = descriptor->options().GetExtension(Db::table);
-        if (options.has_cache()) {
-            const Db::TableCacheOptions& cache_options = options.cache();
+        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        const auto& table_name = options.name();
+        if (table_name.empty()) {
+            std::cerr << "table_name is empty." << std::endl;
+            co_return;
         }
 
-        auto& table = descriptor->name();
 
         // 通过 Redis 哈希表存取 Protobuf 字段
         std::unordered_map<std::string, std::string> redis_hash;
-        redis_->hgetall(table, std::inserter(redis_hash, redis_hash.end()));
+        auto redis_key = std::format("million_db:{}:{}", table_name, msg->primary_key);
+        redis_->hgetall(redis_key, std::inserter(redis_hash, redis_hash.end()));
         if (redis_hash.empty()) {
             msg->success = false;
         }
         else {
             // 遍历 Protobuf 字段并设置对应的值
-            for (int i = 0; i < descriptor->field_count(); ++i) {
-                const google::protobuf::FieldDescriptor* field = descriptor->field(i);
+            for (int i = 0; i < desc->field_count(); ++i) {
+                const google::protobuf::FieldDescriptor* field = desc->field(i);
                 auto iter = redis_hash.find(field->name());
                 if (iter == redis_hash.end()) {
-                    continue; // 字段在 Redis 中未找到，跳过
+                    continue;
                 }
                 SetField(proto_msg, field, reflection, iter->second);
                 msg->dirty_bits->operator[](i) = false;
@@ -171,12 +173,12 @@ public:
             std::cerr << "index is empty:" << key << std::endl;
             co_return;
         }
-        auto table = std::format("db:{}:{}", options.name(), key);
+        auto redis_key = std::format("million_db:{}:{}", table_name, key);
 
-        redis_->hmset(table.data(), redis_hash.begin(), redis_hash.end());
+        redis_->hmset(redis_key, redis_hash.begin(), redis_hash.end());
 
         if (ttl > 0) {
-            redis_->expire(table.data(), ttl);
+            redis_->expire(redis_key.data(), ttl);
         }
 
         Reply(std::move(msg));
@@ -184,7 +186,7 @@ public:
     }
 
     MILLION_MSG_HANDLE(CacheGetMsg, msg) {
-        auto value =  redis_->get("cache:" + msg->key_value);
+        auto value =  redis_->get("million_db:" + msg->key_value);
         if (!value) {
             co_return;
         }
@@ -194,7 +196,7 @@ public:
     }
 
     MILLION_MSG_HANDLE(CacheSetMsg, msg) {
-        msg->success = redis_->set("cache:" + msg->key, msg->value);
+        msg->success = redis_->set("million_db:" + msg->key, msg->value);
         Reply(std::move(msg));
         co_return;
     }
