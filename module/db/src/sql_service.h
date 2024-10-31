@@ -101,7 +101,7 @@ public:
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
 
-        std::unordered_map<std::string, std::vector<const std::string*>> multi_column_map_;
+
         std::vector<const std::string*> primary_keys;
         for (int i = 0; i < desc->field_count(); ++i) {
             const google::protobuf::FieldDescriptor* field = desc->field(i);
@@ -166,30 +166,21 @@ public:
                         field_type += ")";
                     }
                     
-                    if (sql_options.index() != Db::ColumnSqlOptionsIndex::NONE) {
-                        if (sql_options.index() == Db::ColumnSqlOptionsIndex::PRIMARY_KEY) {
-                            primary_keys.emplace_back(&field_name);
-                        }
-                        else if (sql_options.index() == Db::ColumnSqlOptionsIndex::UNIQUE) {
-                            sql += "    UNIQUE (" + field_name + "),\n";
-                        }
-                        else if (sql_options.index() == Db::ColumnSqlOptionsIndex::INDEX) {
-                            sql += "    INDEX (" + field_name + "),\n";
-                        }
-                        else if (sql_options.index() == Db::ColumnSqlOptionsIndex::FULLTEXT) {
-                            sql += "    FULLTEXT (" + field_name + "),\n";
-                        }
-                        else if (sql_options.index() == Db::ColumnSqlOptionsIndex::MULTI_COLUMN && !sql_options.multi_column_name().empty()) {
-                            auto iter = multi_column_map_.find(sql_options.multi_column_name());
-                            if (iter == multi_column_map_.end()) {
-                                multi_column_map_[sql_options.multi_column_name()] = { &field_name };
-                            }
-                            else {
-                                iter->second.emplace_back(&field_name);
-                            }
-                        }
+
+                    if (sql_options.index() == Db::ColumnSqlOptionsIndex::PRIMARY_KEY) {
+                        primary_keys.emplace_back(&field_name);
                     }
-                    
+                    else if (sql_options.index() == Db::ColumnSqlOptionsIndex::UNIQUE) {
+                        sql += "    UNIQUE (" + field_name + "),\n";
+                    }
+                    else if (sql_options.index() == Db::ColumnSqlOptionsIndex::INDEX) {
+                        sql += "    INDEX (" + field_name + "),\n";
+                    }
+                    else if (sql_options.index() == Db::ColumnSqlOptionsIndex::FULLTEXT) {
+                        sql += "    FULLTEXT (" + field_name + "),\n";
+                    }
+
+
                     if (sql_options.auto_increment()) {
                         field_type += " AUTO_INCREMENT";
                     }
@@ -212,13 +203,31 @@ public:
             sql += ",\n"; // 注意换行符以便于可读性
         }
 
-        for (const auto& multi_column_info : multi_column_map_) {
-            sql += "    INDEX " + multi_column_info.first +" (";
-            for (const auto& field_name : multi_column_info.second) {
-                sql += *field_name + ",";
+        if (options.has_sql()) {
+            const Db::TableSqlOptions& sql_options = options.sql();
+            if (sql_options.multi_indexs_size() > 0) {
+                for (int i = 0; i < sql_options.multi_indexs_size(); ++i) {
+                    const auto& multi_index = sql_options.multi_indexs(i);
+                    if (multi_index.index() == Db::ColumnSqlOptionsIndex::INDEX) {
+                        sql += "    INDEX " + multi_index.index_name() + " (";
+                    }
+                    else if (multi_index.index() == Db::ColumnSqlOptionsIndex::UNIQUE) {
+                        sql += "    UNIQUE INDEX " + multi_index.index_name() + " (";
+                    }
+                    else if (multi_index.index() == Db::ColumnSqlOptionsIndex::FULLTEXT) {
+                        sql += "    FULLTEXT INDEX " + multi_index.index_name() + " (";
+                    }
+                    else {
+                        continue;
+                    }
+                    for (int i = 0; i < multi_index.field_numbers_size(); ++i) {
+                        const google::protobuf::FieldDescriptor* field = desc->FindFieldByNumber(multi_index.field_numbers(i));
+                        sql += field->name() + ",";
+                    }
+                    sql.pop_back();
+                    sql += "),\n";
+                }
             }
-            sql.pop_back();
-            sql += "),\n";
         }
 
         if (!primary_keys.empty()) {

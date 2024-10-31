@@ -21,7 +21,7 @@ extend google.protobuf.FileOptions {
 }
 
 // SQL 相关选项（MySQL）
-message ForeignKey {
+message TableSqlOptionsForeignKey {
   string column = 1;             // 外键列
   string referenced_table = 2;   // 被引用表名
   string referenced_column = 3;  // 被引用列名
@@ -29,10 +29,16 @@ message ForeignKey {
   string on_update = 5;          // 外键更新策略 (e.g., CASCADE, RESTRICT, etc.)
 }
 
+message TableSqlOptionsMultiIndex {
+    ColumnSqlOptionsIndex index = 1;
+    string index_name = 2;
+    repeated int32 field_numbers = 3;
+}
+
 message TableSqlOptions {
     string charset = 1;              // 字符集
     string engine = 2;               // 存储引擎
-    // repeated int32 composite_key = 3;   // 复合主键 field_number
+    repeated TableSqlOptionsMultiIndex multi_indexs = 3;   // 组合索引
     // repeated ForeignKey foreign_keys = 4; // 外键定义
 }
 
@@ -60,18 +66,16 @@ enum ColumnSqlOptionsIndex {
     INDEX = 2;
     UNIQUE = 3;
     FULLTEXT = 4;
-    MULTI_COLUMN = 5;
 }
 
 // SQL 相关字段选项（MySQL）
 message ColumnSqlOptions {
-    ColumnSqlOptionsIndex index = 1; // 索引类型
-    string multi_column_name = 2;    // 组合索引名称
-    bool auto_increment = 3;         // 自增
-    string default_value = 4;        // 默认值
-    string comment = 5;              // 字段注释
-    bool not_null = 6;               // 非空约束
-    int32 str_len = 7;               // 负数约束为char长度，正数约束为varchar长度
+    ColumnSqlOptionsIndex index = 1;                     // 索引类型
+    bool auto_increment = 2;                             // 自增
+    string default_value = 3;                            // 默认值
+    string comment = 4;                                  // 字段注释
+    bool not_null = 5;                                   // 非空约束
+    int32 str_len = 6;                                   // 负数约束为char长度，正数约束为varchar长度
 }
 
 // Cache 相关字段选项（Redis）
@@ -92,4 +96,3 @@ message DbRowMeta {
     uint64 db_version = 1;
     uint64 batch_id = 2;
 }
-

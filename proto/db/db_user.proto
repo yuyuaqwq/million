@@ -19,6 +19,16 @@ message User {
         sql: {
             charset: "utf8mb4"     // MySQL 字符集
             engine: "InnoDB"       // MySQL 存储引擎
+            multi_indexs: {
+                index: PRIMARY_KEY,
+                index_name: "idx_password_hash"
+                field_numbers : [ 8, 9 ]
+            },
+            multi_indexs: {
+                index: UNIQUE,
+                index_name: "idx_another_field"
+                field_numbers : [ 8, 9 ]
+            }
         }
         cache: {
             ttl: 3600               // 键的 TTL，单位秒
@@ -47,7 +57,7 @@ message User {
     }];
 
     string password_hash = 6 [(column) = {
-        sql: { index: MULTI_COLUMN, multi_column_name: "fake", not_null: true, str_len: -32 }
+        sql: { not_null: true, str_len: -32 }
     }];
 
     bool is_active = 7 [(column) = {
