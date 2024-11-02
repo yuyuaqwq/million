@@ -129,7 +129,7 @@ public:
 
         co_await Call<SqlInsertMsg>(sql_service_, &user);
 
-        std::vector<bool> dirty_bits;
+        std::vector<bool> dirty_bits(user.GetDescriptor()->field_count());
         auto res = co_await Call<SqlQueryMsg>(sql_service_, "1", &user, &dirty_bits, false);
 
         co_return;

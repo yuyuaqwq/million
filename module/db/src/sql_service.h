@@ -109,9 +109,8 @@ public:
             const std::string& field_name = field->name();
             std::string field_type;
 
-
             if (field->is_repeated()) {
-                field_type = "LONGBLOB";
+                throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
             }
             else {
                 switch (field->type()) {
@@ -138,10 +137,10 @@ public:
                     field_type = "LONGTEXT";
                     break;
                 case google::protobuf::FieldDescriptor::TYPE_BYTES:
-                    field_type = "LONGBLOB";
+                    field_type = "LONGTEXT";
                     break;
                 case google::protobuf::FieldDescriptor::TYPE_MESSAGE:
-                    field_type = "LONGBLOB"; // Using TEXT for simplicity
+                    field_type = "LONGTEXT"; // Using TEXT for simplicity
                     break;
                 case google::protobuf::FieldDescriptor::TYPE_ENUM:
                     field_type = "INTEGER"; // Enum can be stored as INTEGER
@@ -296,25 +295,21 @@ public:
         if (!field_desc) {
             co_return;
         }
+
         sql += " WHERE ";
-        sql += field_desc->name() + " = ";
-        sql += msg->primary_key;
+        sql += field_desc->name() + " = :" + field_desc->name() + ";";
 
-        sql += ";";
+        // Prepare SQL statement and bind primary key value
+        soci::rowset<soci::row> rs = (sql_.prepare << sql, soci::use(msg->primary_key, field_desc->name()));
 
-        // ²éÑ¯Êý¾Ý
-        soci::rowset<soci::row> rs = (sql_.prepare << sql);
-        if (rs.begin() == rs.end()) {
+        auto it = rs.begin();
+        if (it == rs.end()) {
             msg->success = false;
             Reply(std::move(msg));
             co_return;
         }
-
-        const auto& row = *rs.begin();
-
-        int i = -1;
+        const auto& row = *it;
         for (int i = 0; i < desc->field_count(); ++i) {
-            ++i;
             const google::protobuf::FieldDescriptor* const field = desc->field(i);
             if (field->is_repeated()) {
                 throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
