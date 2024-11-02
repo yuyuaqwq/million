@@ -81,7 +81,7 @@ public:
         redis_ = std::nullopt;
     }
 
-    MILLION_MSG_DISPATCH(CacheService, CacheMsgBase);
+    MILLION_MSG_DISPATCH(CacheService);
 
     MILLION_MSG_HANDLE(ParseFromCacheMsg, msg) {
         auto proto_msg = msg->proto_msg;

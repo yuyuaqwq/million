@@ -4,14 +4,9 @@
 #include <million/iservice.h>
 
 
-enum Test {
-    kTest1,
-    kTest2,
-    kTest3,
-};
-using TestMsgBase = million::MsgBaseT<Test>;
-MILLION_MSG_DEFINE(Test1Msg, kTest1, (int) value1, (std::string) value2);
-MILLION_MSG_DEFINE(Test2Msg, kTest2, (int) value1, (std::string) value2);
+
+MILLION_MSG_DEFINE(Test1Msg, (int) value1, (std::string) value2);
+MILLION_MSG_DEFINE(Test2Msg, (int) value1, (std::string) value2);
 
 class TestService : public million::IService {
     using Base = million::IService;
@@ -48,8 +43,6 @@ class TestService : public million::IService {
         co_await On5();
         co_return;
     }
-
-
 
     million::Task On4() {
         auto res = co_await Recv<million::IMsg>(4);

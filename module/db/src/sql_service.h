@@ -72,6 +72,8 @@ public:
                 {
                     std::cerr << "Error: " << e.what() << std::endl;
                 }
+
+
             }
         });
     }
@@ -92,7 +94,7 @@ public:
         sql_.close();
     }
 
-    MILLION_MSG_DISPATCH(SqlService, SqlMsgBase);
+    MILLION_MSG_DISPATCH(SqlService);
 
     MILLION_MSG_HANDLE(SqlCreateTableMsg, msg) {
         const google::protobuf::Descriptor* desc = msg->desc;
@@ -100,7 +102,6 @@ public:
         auto& table_name = options.name();
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
-
 
         std::vector<const std::string*> primary_keys;
         for (int i = 0; i < desc->field_count(); ++i) {
@@ -148,8 +149,6 @@ public:
                 }
             }
 
-
-
             // 处理字段选项
             if (field->options().HasExtension(Db::column)) {
                 const Db::FieldOptionsColumn& field_options = field->options().GetExtension(Db::column);
@@ -166,7 +165,6 @@ public:
                         field_type += ")";
                     }
                     
-
                     if (sql_options.index() == Db::ColumnSqlOptionsIndex::PRIMARY_KEY) {
                         primary_keys.emplace_back(&field_name);
                     }
@@ -193,14 +191,14 @@ public:
                     }
                     
                     if (!sql_options.comment().empty()) {
-                        field_type += " COMMENT '" + sql_options.comment() + "'"; // 添加注释
+                        field_type += " COMMENT '" + sql_options.comment() + "'";
                     }
                 }
             }
 
             sql += "    " + field_name + " " + field_type;
 
-            sql += ",\n"; // 注意换行符以便于可读性
+            sql += ",\n"; 
         }
 
         if (options.has_sql()) {
@@ -262,20 +260,16 @@ public:
         try {
             sql_ << sql;
         }
-        catch (const soci::soci_error& e)
+        catch (...)
         {
-            std::cerr << "MySQL error: " << e.what() << std::endl;
+            Reply(std::move(msg));
+            throw;
         }
-        catch (const std::exception& e)
-        {
-            std::cerr << "Error: " << e.what() << std::endl;
-        }
-
         Reply(std::move(msg));
         co_return;
     }
 
-    MILLION_MSG_HANDLE(ParseFromSqlMsg, msg) {
+    MILLION_MSG_HANDLE(SqlLoadMsg, msg) {
         google::protobuf::Message* proto_msg = msg->proto_msg;
         const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
@@ -424,9 +418,11 @@ public:
         stmt.execute(true);
     } 
 
-    void SerializeToSqlForInsert(const google::protobuf::Message& msg) {
-        const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
-        const google::protobuf::Reflection* reflection = msg.GetReflection();
+    MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
+        google::protobuf::Message* proto_msg = msg->proto_msg;
+
+        const google::protobuf::Descriptor* descriptor = proto_msg->GetDescriptor();
+        const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
         auto& table = descriptor->name();
 
         std::string sql = "INSERT INTO ";
@@ -457,9 +453,11 @@ public:
         stmt.alloc();
         stmt.prepare(sql);
         std::vector<std::any> values;
-        BindValuesToStatement(msg, &values, stmt);  // 绑定值
+        BindValuesToStatement(*proto_msg, &values, stmt);  // 绑定值
         stmt.define_and_bind();
         stmt.execute(true);
+
+        co_return;
     }
 
     void BindValuesToStatement(const google::protobuf::Message& msg, std::vector<std::any>* values, soci::statement& stmt) {

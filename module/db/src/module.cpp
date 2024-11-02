@@ -19,6 +19,7 @@ MILLION_FUNC_EXPORT bool MillionModuleInit(IMillion* imillion) {
     auto db_service_handle = imillion->NewService<DbService>();
 
     imillion->Send<DbSqlInitMsg>(sql_service_handle, db_service_handle);
+
     return true;
 }
 

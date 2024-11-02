@@ -12,16 +12,9 @@
 namespace million {
 namespace gateway {
 
-enum class GatewayMsgTypeEx_Tcp : uint32_t {
-    kMin = 1025,
 
-    kConnection = 1026,
-    kRecvPacket = 1027,
-
-    kMax = 2048,
-};
-MILLION_MSG_DEFINE(ConnectionMsg, GatewayMsgTypeEx_Tcp::kConnection, (net::TcpConnectionShared) connection)
-MILLION_MSG_DEFINE(RecvPacketMsg, GatewayMsgTypeEx_Tcp::kRecvPacket, (net::TcpConnection*) connection, (net::Packet) packet)
+MILLION_MSG_DEFINE(ConnectionMsg, (net::TcpConnectionShared) connection)
+MILLION_MSG_DEFINE(RecvPacketMsg, (net::TcpConnection*) connection, (net::Packet) packet)
 
 class GatewayService : public IService {
 public:
@@ -49,7 +42,7 @@ public:
         co_return;
     }
 
-    MILLION_MSG_DISPATCH(GatewayService, GatewayMsgBase);
+    MILLION_MSG_DISPATCH(GatewayService);
 
     MILLION_MSG_HANDLE(ConnectionMsg, msg) {
         co_return;

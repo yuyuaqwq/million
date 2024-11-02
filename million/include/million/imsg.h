@@ -13,7 +13,7 @@ namespace million {
 
 class MILLION_CLASS_EXPORT IMsg : noncopyable {
 public:
-    IMsg() = default;
+	IMsg() = default;
     virtual ~IMsg() = default;
 
     SessionId session_id() const { return session_id_; }
@@ -21,6 +21,8 @@ public:
 
     ServiceHandle sender() const { return sender_; }
     void set_sender(ServiceHandle sender) { sender_ = sender; }
+
+	virtual const char* type() const { return "IMsg"; };
 
     template<typename MsgT>
     MsgT* get() { return static_cast<MsgT*>(this); }
@@ -30,158 +32,135 @@ private:
     SessionId session_id_{ kSessionIdInvalid };
 };
 
-template<typename TypeT>
-class MsgBaseT : public IMsg {
-public:
-    using MsgType = TypeT;
 
-    MsgBaseT(TypeT type) : type_(type) {}
-    ~MsgBaseT() = default;
-
-    using IMsg::get;
-    TypeT type() const { return type_; }
-
-private:
-    const TypeT type_;
-};
-
-template<auto kType>
-class MsgT : public MsgBaseT<decltype(kType)> {
-public:
-    using TypeT = decltype(kType);
-    static inline constexpr TypeT kTypeValue = kType;
-
-    using Base = MsgBaseT<TypeT>;
-
-    MsgT() : Base(kType) {};
-    ~MsgT() = default;
-};
-
-
-// Éú³ÉÒ»¸ö¶ººÅ
-// (ÓÉCOMMON_IF_NOT_ENDµ÷ÓÃ)
+// ç”Ÿæˆä¸€ä¸ªé€—å·
+// (ç”±COMMON_IF_NOT_ENDè°ƒç”¨)
 #define _MILLION_COMMON_IF_TRUE ,
 
-// Éú³ÉÒ»¸ö¶ººÅ, Ö±µ½__VA_ARGS__Ä©Î²²»Éú³É
+// ç”Ÿæˆä¸€ä¸ªé€—å·, ç›´åˆ°__VA_ARGS__æœ«å°¾ä¸ç”Ÿæˆ
 #define _MILLION_COMMON_IF_NOT_END(i, ...) META_NOT_IF(META_INDEX_IS_END(i, __VA_ARGS__), _MILLION_COMMON_IF_TRUE)
 
-// ´Ó×Ö¶ÎÉùÃ÷ÖĞÌáÈ¡Ãû³Æ(µÚ¶ş²½)
-// ½âÎö:
-// ÕâÀïxÊÇ([MAYBE] DEFAULT) NAME
-// META_IS_PARENÅĞ¶ÏÊÇ²»ÊÇÀ¨ºÅ, Èç¹ûÓĞÀ¨ºÅ¾ÍÈ¥³ıÀ¨ºÅ, Èç¹ûÃ»ÓĞÖ±½Ó·µ»Ø
+// ä»å­—æ®µå£°æ˜ä¸­æå–åç§°(ç¬¬äºŒæ­¥)
+// è§£æ:
+// è¿™é‡Œxæ˜¯([MAYBE] DEFAULT) NAME
+// META_IS_PARENåˆ¤æ–­æ˜¯ä¸æ˜¯æ‹¬å·, å¦‚æœæœ‰æ‹¬å·å°±å»é™¤æ‹¬å·, å¦‚æœæ²¡æœ‰ç›´æ¥è¿”å›
 #define _MILLION_FIELD_EXTRACT_NAME_I(x) META_IF_ELSE(META_IS_PAREN(x), META_EMPTY x, x)
 
-// ´Ó×Ö¶ÎÉùÃ÷ÖĞÌáÈ¡Ä¬ÈÏÖµ(µÚ¶ş²½)
-// ½âÎö:
-// ÕâÀïxÊÇ([MAYBE] DEFAULT) NAME
-// Èç¹ûÓĞÀ¨ºÅ, ¾ÍÍ¨¹ıMETA_EXTRACT_PAREN_UNPACK»ñÈ¡À¨ºÅÄÚÈİ, Èç¹ûÃ»ÓĞ¾Í·µ»Ø{}
+// ä»å­—æ®µå£°æ˜ä¸­æå–é»˜è®¤å€¼(ç¬¬äºŒæ­¥)
+// è§£æ:
+// è¿™é‡Œxæ˜¯([MAYBE] DEFAULT) NAME
+// å¦‚æœæœ‰æ‹¬å·, å°±é€šè¿‡META_EXTRACT_PAREN_UNPACKè·å–æ‹¬å·å†…å®¹, å¦‚æœæ²¡æœ‰å°±è¿”å›{}
 #define _MILLION_FIELD_EXTRACT_DEFAULT_I(x) META_IF_ELSE(META_IS_PAREN(x), META_EXTRACT_PAREN_UNPACK(x), {})
 
-// ´Ó×Ö¶ÎÉùÃ÷ÖĞÌáÈ¡Ãû³Æ
+// ä»å­—æ®µå£°æ˜ä¸­æå–åç§°
 // (TYPE)([MAYBE] DEFAULT) NAME -> NAME
 #define _MILLION_FIELD_EXTRACT_NAME(field) _MILLION_FIELD_EXTRACT_NAME_I(META_EMPTY field)
-// ´Ó×Ö¶ÎÉùÃ÷ÖĞÌáÈ¡Ä¬ÈÏÖµ
+// ä»å­—æ®µå£°æ˜ä¸­æå–é»˜è®¤å€¼
 // (TYPE) NAME -> {}
 // (TYPE)(DEFAULT) NAME -> DEFAULT
 #define _MILLION_FIELD_EXTRACT_DEFAULT(field) _MILLION_FIELD_EXTRACT_DEFAULT_I(META_EMPTY field)
-// ´Ó×Ö¶ÎÉùÃ÷ÖĞÌáÈ¡ÀàĞÍ
+// ä»å­—æ®µå£°æ˜ä¸­æå–ç±»å‹
 // (TYPE)([MAYBE] DEFAULT) NAME -> TYPE
 #define _MILLION_FIELD_EXTRACT_TYPE(field) META_EXTRACT_PAREN_UNPACK(field)
 
-// ½«Î´¼Ó¹¤¹ıµÄ×Ö¶ÎÉùÃ÷, ×ªÎª×Ö¶ÎÉùÃ÷
+// å°†æœªåŠ å·¥è¿‡çš„å­—æ®µå£°æ˜, è½¬ä¸ºå­—æ®µå£°æ˜
 // (TYPE)([MAYBE] DEFAULT) NAME -> TYPE NAME
 #define _MILLION_FIELD_TO_DECL(field) _MILLION_FIELD_EXTRACT_TYPE(field) _MILLION_FIELD_EXTRACT_NAME(field)
 
 
 #define _MILLION_FIELD_TO_CONST_REF_DECL_I(x) auto&&//x&&
-// ¼ÙÉèÕâÀïxÊÇ(float) kk£¬ËùÒÔºóÃæÕ¹¿ª¾ÍÊÇ FIELD_TO_CONST_REF_DECL_I (float) kk
-// FIELD_TO_CONST_REF_DECL_I (float)»á±»Ê¶±ğ³Éºêµ÷ÓÃ£¬°Ñfloat×÷Îª²ÎÊı´«Èë
-// ÓÚÊÇ¾ÍµÃµ½ÁËconst float&µÄ½á¹û
-// È»ºóÔÚ¼ÓÉÏºóÃæµÄkk£¬¾Í×é³ÉÁËconst float& kk
+// å‡è®¾è¿™é‡Œxæ˜¯(float) kkï¼Œæ‰€ä»¥åé¢å±•å¼€å°±æ˜¯ FIELD_TO_CONST_REF_DECL_I (float) kk
+// FIELD_TO_CONST_REF_DECL_I (float)ä¼šè¢«è¯†åˆ«æˆå®è°ƒç”¨ï¼ŒæŠŠfloatä½œä¸ºå‚æ•°ä¼ å…¥
+// äºæ˜¯å°±å¾—åˆ°äº†const float&çš„ç»“æœ
+// ç„¶ååœ¨åŠ ä¸Šåé¢çš„kkï¼Œå°±ç»„æˆäº†const float& kk
 #define _MILLION_FIELD_TO_CONST_REF_DECL(x) _MILLION_FIELD_TO_CONST_REF_DECL_I x
 
-// Éú³É¹¹Ôìº¯ÊıµÄ²ÎÊıÉùÃ÷, ÒÔ¼°Ä¬ÈÏ²ÎÊı
-// ²ÎÊı i: ÀàËÆforµÄË÷Òı
-// ²ÎÊı __VA_ARGS__: Î´¼Ó¹¤µÄ×Ö¶ÎÉùÃ÷ÁĞ±í
-// (CTOR_ARGS_DECL_WITH_DEFAULTµÄMETA_FORÑ­»·´úÂë)
+// ç”Ÿæˆæ„é€ å‡½æ•°çš„å‚æ•°å£°æ˜, ä»¥åŠé»˜è®¤å‚æ•°
+// å‚æ•° i: ç±»ä¼¼forçš„ç´¢å¼•
+// å‚æ•° __VA_ARGS__: æœªåŠ å·¥çš„å­—æ®µå£°æ˜åˆ—è¡¨
+// (CTOR_ARGS_DECL_WITH_DEFAULTçš„META_FORå¾ªç¯ä»£ç )
 #define _MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_IMPL(i, ...) \
 	_MILLION_FIELD_TO_CONST_REF_DECL(META_INDEX(i, __VA_ARGS__)) = {} _MILLION_COMMON_IF_NOT_END(i, __VA_ARGS__)
 
-// ×Ö¶ÎÉùÃ÷×ª¹¹Ôìº¯Êı×Ö¶Î³õÊ¼»¯(µÚ¶ş²½)
-// ²ÎÊı field_name: ×Ö¶ÎÃû³Æ
+// å­—æ®µå£°æ˜è½¬æ„é€ å‡½æ•°å­—æ®µåˆå§‹åŒ–(ç¬¬äºŒæ­¥)
+// å‚æ•° field_name: å­—æ®µåç§°
 #define _MILLION_FIELD_TO_CTOR_INIT_I(field_name) field_name(std::forward<decltype(field_name)>(field_name))
-// ×Ö¶ÎÉùÃ÷×ª¹¹Ôìº¯Êı×Ö¶Î³õÊ¼»¯(µÚÒ»²½)
-// ²ÎÊı field: Î´¼Ó¹¤µÄ×Ö¶Î
-// (ÓÉCTOR_INIT_LIST_IMPLµ÷ÓÃ)
+// å­—æ®µå£°æ˜è½¬æ„é€ å‡½æ•°å­—æ®µåˆå§‹åŒ–(ç¬¬ä¸€æ­¥)
+// å‚æ•° field: æœªåŠ å·¥çš„å­—æ®µ
+// (ç”±CTOR_INIT_LIST_IMPLè°ƒç”¨)
 #define _MILLION_FIELD_TO_CTOR_INIT(field) _MILLION_FIELD_TO_CTOR_INIT_I(META_EMPTY_PACK(field))
 
-// Éú³É¹¹Ôìº¯ÊıµÄ³õÊ¼»¯ÁĞ±í
-// ²ÎÊı i: ÀàËÆforµÄË÷Òı
-// ²ÎÊı __VA_ARGS__: Î´¼Ó¹¤µÄ×Ö¶ÎÉùÃ÷ÁĞ±í
-// (CTOR_INIT_LISTµÄMETA_FORÑ­»·´úÂë)
+// ç”Ÿæˆæ„é€ å‡½æ•°çš„åˆå§‹åŒ–åˆ—è¡¨
+// å‚æ•° i: ç±»ä¼¼forçš„ç´¢å¼•
+// å‚æ•° __VA_ARGS__: æœªåŠ å·¥çš„å­—æ®µå£°æ˜åˆ—è¡¨
+// (CTOR_INIT_LISTçš„META_FORå¾ªç¯ä»£ç )
 #define _MILLION_CTOR_INIT_LIST_IMPL(i, ...) \
 	_MILLION_FIELD_TO_CTOR_INIT(META_INDEX(i, __VA_ARGS__)) _MILLION_COMMON_IF_NOT_END(i, __VA_ARGS__)
 
-// Éú³ÉÔªÊı¾İ½á¹¹ÌåÄÚµÄ×Ö¶Î(µÚ¶ş²½)
-// ²ÎÊı struct_name: ½á¹¹ÌåÃû³Æ
-// ²ÎÊı i: ÀàËÆforµÄË÷Òı
-// ²ÎÊı field_name: ×Ö¶ÎÃû³Æ
+// ç”Ÿæˆå…ƒæ•°æ®ç»“æ„ä½“å†…çš„å­—æ®µ(ç¬¬äºŒæ­¥)
+// å‚æ•° struct_name: ç»“æ„ä½“åç§°
+// å‚æ•° i: ç±»ä¼¼forçš„ç´¢å¼•
+// å‚æ•° field_name: å­—æ®µåç§°
 #define _MILLION_DEF_META_FIELD_DATA_IMPL_II(struct_name, i, field_name) \
 	static auto value(struct_name& obj) -> decltype(auto) { return (obj.field_name); } \
 	constexpr static const char* name() { return META_TO_STR(field_name); }
 
-// Éú³ÉÔªÊı¾İ½á¹¹ÌåÄÚµÄ×Ö¶Î(µÚÒ»²½)
-// °ÑÊı¾İ¼Ó¹¤Ò»ÏÂºó´«¸øDEF_META_FIELD_DATA_IMPL_II
-// ²ÎÊı struct_name: ½á¹¹ÌåÃû³Æ
-// ²ÎÊı i: ÀàËÆforµÄË÷Òı
-// ²ÎÊı field: Î´¼Ó¹¤µÄ×Ö¶Î
-// (ÓÉDEF_META_FIELD_DATA_IMPLµ÷ÓÃ)
+// ç”Ÿæˆå…ƒæ•°æ®ç»“æ„ä½“å†…çš„å­—æ®µ(ç¬¬ä¸€æ­¥)
+// æŠŠæ•°æ®åŠ å·¥ä¸€ä¸‹åä¼ ç»™DEF_META_FIELD_DATA_IMPL_II
+// å‚æ•° struct_name: ç»“æ„ä½“åç§°
+// å‚æ•° i: ç±»ä¼¼forçš„ç´¢å¼•
+// å‚æ•° field: æœªåŠ å·¥çš„å­—æ®µ
+// (ç”±DEF_META_FIELD_DATA_IMPLè°ƒç”¨)
 #define _MILLION_DEF_META_FIELD_DATA_IMPL_I(struct_name, i, field) _MILLION_DEF_META_FIELD_DATA_IMPL_II(struct_name, i, META_EMPTY_PACK(field))
 
-// Éú³Éµ¥¸ö×Ö¶ÎµÄÔªÊı¾İ½á¹¹Ìå
-// META_INDEX(0, __VA_ARGS__)ÓÃÓÚ»ñÈ¡Ö®Ç°´«ÈëµÄ½á¹¹ÌåÃû³Æ
-// META_INDEX(META_INC(i), __VA_ARGS__)»ñÈ¡Ë÷Òı¶ÔÓ¦µÄ×Ö¶ÎÉùÃ÷, ×¢ÒâÕâÀïĞèÒª°ÑË÷Òı+1, ÒòÎªµÚÒ»¸öÊÇ½á¹¹ÌåÃû³Æ
-// ²ÎÊı i: ÀàËÆforµÄË÷Òı
-// ²ÎÊı __VA_ARGS__: µÚÒ»¸ö²ÎÊıÊÇ½á¹¹ÌåÃû³Æ, ÓàÏÂµÄÊÇÎ´¼Ó¹¤µÄ×Ö¶ÎÉùÃ÷ÁĞ±í
-// (META_FIELD_DATASµÄMETA_FORÑ­»·´úÂë)
+// ç”Ÿæˆå•ä¸ªå­—æ®µçš„å…ƒæ•°æ®ç»“æ„ä½“
+// META_INDEX(0, __VA_ARGS__)ç”¨äºè·å–ä¹‹å‰ä¼ å…¥çš„ç»“æ„ä½“åç§°
+// META_INDEX(META_INC(i), __VA_ARGS__)è·å–ç´¢å¼•å¯¹åº”çš„å­—æ®µå£°æ˜, æ³¨æ„è¿™é‡Œéœ€è¦æŠŠç´¢å¼•+1, å› ä¸ºç¬¬ä¸€ä¸ªæ˜¯ç»“æ„ä½“åç§°
+// å‚æ•° i: ç±»ä¼¼forçš„ç´¢å¼•
+// å‚æ•° __VA_ARGS__: ç¬¬ä¸€ä¸ªå‚æ•°æ˜¯ç»“æ„ä½“åç§°, ä½™ä¸‹çš„æ˜¯æœªåŠ å·¥çš„å­—æ®µå£°æ˜åˆ—è¡¨
+// (META_FIELD_DATASçš„META_FORå¾ªç¯ä»£ç )
 #define _MILLION_DEF_META_FIELD_DATA_IMPL(i, ...) \
 	template<> struct MetaFieldData<i> { \
 		_MILLION_DEF_META_FIELD_DATA_IMPL_I(META_INDEX(0, __VA_ARGS__), i, META_INDEX(META_INC(i), __VA_ARGS__)) \
 	};
 
-// ×Ö¶ÎÉùÃ÷×ª×Ö¶Î¶¨Òå
+// å­—æ®µå£°æ˜è½¬å­—æ®µå®šä¹‰
 // (TYPE) NAME -> TYPE NAME;
-// (FIELDS_DECLµÄMETA_FOR_EACHÑ­»·´úÂë)
+// (FIELDS_DECLçš„META_FOR_EACHå¾ªç¯ä»£ç )
 #define _MILLION_FIELDS_TO_DECL(x) META_UNPACK(x);
 
-// Éú³É¹¹Ôìº¯ÊıµÄ³õÊ¼»¯ÁĞ±í
-// ²ÎÊı __VA_ARGS__: Î´¼Ó¹¤µÄ×Ö¶ÎÉùÃ÷ÁĞ±í
+// ç”Ÿæˆæ„é€ å‡½æ•°çš„åˆå§‹åŒ–åˆ—è¡¨
+// å‚æ•° __VA_ARGS__: æœªåŠ å·¥çš„å­—æ®µå£°æ˜åˆ—è¡¨
 #define _MILLION_CTOR_INIT_LIST(...) META_FOR(_MILLION_CTOR_INIT_LIST_IMPL, 0, META_COUNT(__VA_ARGS__), __VA_ARGS__)
-// Éú³É¹¹Ôìº¯ÊıµÄ²ÎÊıÉùÃ÷ºÍÄ¬ÈÏ²ÎÊı
-// ²ÎÊı __VA_ARGS__: Î´¼Ó¹¤µÄ×Ö¶ÎÉùÃ÷ÁĞ±í
+// ç”Ÿæˆæ„é€ å‡½æ•°çš„å‚æ•°å£°æ˜å’Œé»˜è®¤å‚æ•°
+// å‚æ•° __VA_ARGS__: æœªåŠ å·¥çš„å­—æ®µå£°æ˜åˆ—è¡¨
 #define _MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(...) META_FOR(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_IMPL, 0, META_COUNT(__VA_ARGS__), __VA_ARGS__)
-// Éú³É³ÉÔ±±äÁ¿µÄÉùÃ÷
-// ²ÎÊı __VA_ARGS__: Î´¼Ó¹¤µÄ×Ö¶ÎÉùÃ÷ÁĞ±í
+// ç”Ÿæˆæˆå‘˜å˜é‡çš„å£°æ˜
+// å‚æ•° __VA_ARGS__: æœªåŠ å·¥çš„å­—æ®µå£°æ˜åˆ—è¡¨
 #define _MILLION_FIELDS_DECL(...) META_FOR_EACH(_MILLION_FIELDS_TO_DECL, __VA_ARGS__)
-// Éú³É×Ö¶Î(³ÉÔ±±äÁ¿)ÔªÊı¾İ
-// ×¢ÒâÕâÀï°Ñname´«ÈëÁËMETA_FORµÄ²ÎÊıÁĞ±í
-// ²ÎÊı name: ½á¹¹ÌåÃû³Æ
-// ²ÎÊı __VA_ARGS__: Î´¼Ó¹¤µÄ×Ö¶ÎÉùÃ÷ÁĞ±í
+// ç”Ÿæˆå­—æ®µ(æˆå‘˜å˜é‡)å…ƒæ•°æ®
+// æ³¨æ„è¿™é‡ŒæŠŠnameä¼ å…¥äº†META_FORçš„å‚æ•°åˆ—è¡¨
+// å‚æ•° name: ç»“æ„ä½“åç§°
+// å‚æ•° __VA_ARGS__: æœªåŠ å·¥çš„å­—æ®µå£°æ˜åˆ—è¡¨
 #define _MILLION_META_FIELD_DATAS(name, ...) META_FOR(_MILLION_DEF_META_FIELD_DATA_IMPL, 0, META_COUNT(__VA_ARGS__), name, __VA_ARGS__)
 
-// Êı¾İ¶¨ÒåµÄÖ÷ºê
-#define MILLION_MSG_DEFINE(name, type, ...) \
-    struct name : public ::million::MsgT<type> { \
+// æ•°æ®å®šä¹‰çš„ä¸»å®
+#define MILLION_MSG_DEFINE(name, ...) \
+    struct name : public ::million::IMsg { \
 		name(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
 			: _MILLION_CTOR_INIT_LIST(__VA_ARGS__) {} \
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
+        constexpr static inline const char* kType = #name; \
+		virtual const char* type() const override { return kType; } \
 		template<size_t index> struct MetaFieldData; \
 		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
 		_MILLION_META_FIELD_DATAS(name, __VA_ARGS__) \
 	};
 
-#define MILLION_MSG_DEFINE_EMPTY(name, type) \
-    struct name : public ::million::MsgT<type> { \
+#define MILLION_MSG_DEFINE_EMPTY(name) \
+    struct name : public ::million::IMsg { \
+        constexpr static inline const char* kType = #name; \
+		virtual const char* type() const override { return kType; } \
 	};
 
 template<class T, class Func>

@@ -36,7 +36,8 @@ public:
     void Reply(ServiceHandle target, SessionId session_id, Args&&... args) {
         auto msg = std::make_unique<MsgT>(std::forward<Args>(args)...);
         msg->set_session_id(session_id);
-        Send(target, std::move(msg));
+        msg->set_sender(target);
+        Reply(std::move(msg));
     }
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
@@ -68,29 +69,31 @@ protected:
     ServiceHandle service_handle_;
 };
 
-#define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_, MILLION_MSG_BASE_TYPE_) \
-    static_assert(std::is_same<std::underlying_type_t<MILLION_MSG_BASE_TYPE_::MsgType>, uint32_t>::value, "type is not based on uint32_t.");; \
+#define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_) \
     using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
     ::million::Task MsgDispatch(::million::MsgUnique msg) { \
-        auto msg_ptr = msg->get<##MILLION_MSG_BASE_TYPE_##>(); \
-        auto iter = _MILLION_MSG_HANDLE_MAP_.find(static_cast<uint32_t>(msg_ptr->type())); \
+        auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg->type()); \
         if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
-            co_await(this->*iter->second)(std::move(msg)); \
+            auto task = (this->*iter->second)(std::move(msg)); \
+            task.rethrow_if_exception(); \
+            co_await std::move(task); \
         } \
         co_return; \
     } \
-    ::std::unordered_map<uint32_t, ::million::Task(_MILLION_SERVICE_TYPE_::*)(::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<const char*, ::million::Task(_MILLION_SERVICE_TYPE_::*)(::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
 
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
     ::million::Task _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(::million::MsgUnique MILLION_MSG_) { \
         auto msg = ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release())); \
-        co_await _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(std::move(msg)); \
+        auto task = _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(std::move(msg)); \
+        task.rethrow_if_exception(); \
+        co_await std::move(task); \
         co_return; \
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            auto res = _MILLION_MSG_HANDLE_MAP_.insert(::std::make_pair(static_cast<uint32_t>(MSG_TYPE_::kTypeValue), \
+            auto res = _MILLION_MSG_HANDLE_MAP_.insert(::std::make_pair(MSG_TYPE_::kType, \
                 &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
             )); \
             assert(res.second); \

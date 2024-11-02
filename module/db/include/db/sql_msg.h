@@ -8,15 +8,9 @@
 namespace million {
 namespace db {
 
-enum class SqlMsgType : uint32_t {
-    kSqlCreateTable,
-    kParseFromSql,
-    kSerializeToSql,
-};
-using SqlMsgBase = MsgBaseT<SqlMsgType>;
-MILLION_MSG_DEFINE(SqlCreateTableMsg, SqlMsgType::kSqlCreateTable, (const google::protobuf::Descriptor*) desc)
-MILLION_MSG_DEFINE(ParseFromSqlMsg, SqlMsgType::kParseFromSql, (std::string_view) primary_key, (google::protobuf::Message*) proto_msg, (std::vector<bool>*) dirty_bits, (bool) success)
-//MILLION_MSG_DEFINE(SerializeToSqlMsg, SqlMsgType::kSerializeToSql, (std::string) key_value)
+MILLION_MSG_DEFINE(SqlCreateTableMsg, (const google::protobuf::Descriptor*) desc)
+MILLION_MSG_DEFINE(SqlLoadMsg, (std::string_view) primary_key, (google::protobuf::Message*) proto_msg, (std::vector<bool>*) dirty_bits, (bool) success)
+MILLION_MSG_DEFINE(SqlInsertMsg, (google::protobuf::Message*) proto_msg)
 
 } // namespace db
 } // namespace million

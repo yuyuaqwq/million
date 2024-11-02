@@ -111,9 +111,13 @@ ServiceHandle Million::AddService(std::unique_ptr<IService> iservice) {
     return service_mgr_->AddService(std::move(iservice));
 }
 
-SessionId Million::Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) {
-    msg->set_session_id(msg_mgr_->AllocSessionId());
+SessionId Million::Send(SessionId session_id, ServiceHandle sender, ServiceHandle target, MsgUnique msg) {
+    msg->set_session_id(session_id);
     return service_mgr_->Send(sender, target, std::move(msg));
+}
+
+SessionId Million::Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) {
+    return Send(msg_mgr_->AllocSessionId(), sender, target, std::move(msg));
 }
 
 void Million::TimeOut(ServiceHandle service, uint32_t tick, MsgUnique msg) {

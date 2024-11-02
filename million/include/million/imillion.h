@@ -34,6 +34,7 @@ public:
     }
 
     virtual SessionId Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) = 0;
+    virtual SessionId Send(SessionId session_id, ServiceHandle sender, ServiceHandle target, MsgUnique msg) = 0;
     template <typename MsgT, typename ...Args>
     SessionId Send(ServiceHandle sender, ServiceHandle target, Args&&... args) {
         return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
@@ -52,7 +53,8 @@ inline SessionId IService::Send(ServiceHandle target, MsgUnique msg) {
 
 inline void IService::Reply(MsgUnique msg) {
     auto target = msg->sender();
-    Send(target, std::move(msg));
+    auto session_id = msg->session_id();
+    imillion_->Send(session_id, service_handle_, target, std::move(msg));
 }
 
 inline void IService::Reply(ServiceHandle target, SessionId session_id) {

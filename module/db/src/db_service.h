@@ -86,22 +86,12 @@ private:
     std::unordered_map<std::string, const protobuf::Descriptor*> table_map_;
 };
 
-enum class DbMsgType : uint32_t {
-    kDbSqlInit,
-    kDbCacheInit,
-    kDbRowQuery,
-    kDbRowExist,
-    kDbRowUpdate,
-    kDbRowDelete,
-};
-using DbMsgBase = MsgBaseT<DbMsgType>;
 
-
-MILLION_MSG_DEFINE_EMPTY(DbSqlInitMsg, DbMsgType::kDbSqlInit, (ServiceHandle) sql_handle);
-MILLION_MSG_DEFINE(DbRowQueryMsg, DbMsgType::kDbRowQuery, (std::string) table_name, (std::string) primary_key, (const google::protobuf::Message*) proto_msg);
-MILLION_MSG_DEFINE(DbRowExistMsg, DbMsgType::kDbRowExist, (std::string) table_name, (std::string) primary_key, (bool) exist);
-MILLION_MSG_DEFINE(DbRowUpdateMsg, DbMsgType::kDbRowUpdate, (std::string) table_name, (std::string) primary_key, (google::protobuf::Message*) proto_msg);
-MILLION_MSG_DEFINE(DbRowDeleteMsg, DbMsgType::kDbRowDelete, (std::string) table_name, (std::string) primary_key, (google::protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE_EMPTY(DbSqlInitMsg);
+MILLION_MSG_DEFINE(DbRowQueryMsg, (std::string) table_name, (std::string) primary_key, (const google::protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE(DbRowExistMsg, (std::string) table_name, (std::string) primary_key, (bool) exist);
+MILLION_MSG_DEFINE(DbRowUpdateMsg, (std::string) table_name, (std::string) primary_key, (google::protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE(DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (google::protobuf::Message*) proto_msg);
 
 
 class DbService : public IService {
@@ -123,13 +113,21 @@ public:
         
     }
 
-    MILLION_MSG_DISPATCH(DbService, DbMsgBase);
+    MILLION_MSG_DISPATCH(DbService);
 
     MILLION_MSG_HANDLE(DbSqlInitMsg, msg) {
         sql_service_ = msg->sender();
         for (const auto& table_info : proto_mgr_.table_map()) {
             co_await Call<SqlCreateTableMsg>(sql_service_, table_info.second);
         }
+
+        Db::User user;
+        user.set_name("sb");
+        user.set_email("fake@qq.com");
+        user.set_phone_number("1234567890");
+        user.set_password_hash("AWDaoDWHGOAUGH");
+        co_await Call<SqlInsertMsg>(sql_service_, &user);
+
         co_return;
     }
 
@@ -161,7 +159,7 @@ public:
             auto row = DbRow(std::move(*proto_msg_opt), std::vector<bool>(desc->field_count()));
             auto res_msg = co_await Call<ParseFromCacheMsg>(cache_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
             if (!res_msg->success) {
-                auto res_msg = co_await Call<ParseFromSqlMsg>(sql_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
+                auto res_msg = co_await Call<SqlLoadMsg>(sql_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
             }
 
             auto res = rows.emplace(std::move(msg->primary_key), std::move(row));
