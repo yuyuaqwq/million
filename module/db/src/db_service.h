@@ -161,7 +161,7 @@ public:
             }
 
             auto row = DbRow(std::move(*proto_msg_opt), std::vector<bool>(desc->field_count()));
-            auto res_msg = co_await Call<ParseFromCacheMsg>(cache_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
+            auto res_msg = co_await Call<CacheQueryMsg>(cache_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
             if (!res_msg->success) {
                 auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
             }

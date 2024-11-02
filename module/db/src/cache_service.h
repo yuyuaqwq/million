@@ -83,7 +83,7 @@ public:
 
     MILLION_MSG_DISPATCH(CacheService);
 
-    MILLION_MSG_HANDLE(ParseFromCacheMsg, msg) {
+    MILLION_MSG_HANDLE(CacheQueryMsg, msg) {
         auto proto_msg = msg->proto_msg;
         const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
@@ -93,7 +93,6 @@ public:
             std::cerr << "table_name is empty." << std::endl;
             co_return;
         }
-
 
         // 通过 Redis 哈希表存取 Protobuf 字段
         std::unordered_map<std::string, std::string> redis_hash;
@@ -120,7 +119,7 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(SerializeToCacheMsg, msg) {
+    MILLION_MSG_HANDLE(CacheUpdateMsg, msg) {
         auto& proto_msg = *msg->proto_msg;
         const google::protobuf::Descriptor* descriptor = proto_msg.GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg.GetReflection();
@@ -203,9 +202,12 @@ public:
 
 
     void SetField(google::protobuf::Message* proto_msg, const google::protobuf::FieldDescriptor* field, const google::protobuf::Reflection* reflection, const std::string& value) {
+        const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
+        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        const auto& table_name = options.name();
+
         if (field->is_repeated()) {
-            google::protobuf::Message* sub_message = reflection->MutableMessage(proto_msg, field);
-            sub_message->ParseFromString(value);
+            throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
         }
         else {
             switch (field->type()) {
@@ -267,10 +269,13 @@ public:
     }
 
     std::string GetField(const google::protobuf::Message& proto_msg, const google::protobuf::FieldDescriptor* field, const google::protobuf::Reflection* reflection) {
+        const google::protobuf::Descriptor* desc = proto_msg.GetDescriptor();
+        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        const auto& table_name = options.name();
+
         std::string value;
         if (field->is_repeated()) {
-            const google::protobuf::Message& sub_message = reflection->GetMessage(proto_msg, field);
-            value = sub_message.SerializeAsString();
+            throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
         }
         else {
             switch (field->type()) {
