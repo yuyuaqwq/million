@@ -105,7 +105,7 @@ public:
     }
 
     virtual Task OnMsg(MsgUnique msg) override {
-        MsgDispatch(std::move(msg));
+        co_await MsgDispatch(std::move(msg));
         co_return;
     }
 
@@ -126,7 +126,11 @@ public:
         user.set_email("fake@qq.com");
         user.set_phone_number("1234567890");
         user.set_password_hash("AWDaoDWHGOAUGH");
-        co_await Call<SqlInsertMsg>(sql_service_, &user);
+        google::protobuf::Message* proto_msg = &user;
+
+        co_await Call<SqlInsertMsg>(sql_service_, proto_msg);
+
+        
 
         co_return;
     }

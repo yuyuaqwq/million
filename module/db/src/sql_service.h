@@ -421,6 +421,9 @@ public:
     MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
         google::protobuf::Message* proto_msg = msg->proto_msg;
 
+        Reply(std::move(msg));
+        co_return;
+
         const google::protobuf::Descriptor* descriptor = proto_msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
         auto& table = descriptor->name();

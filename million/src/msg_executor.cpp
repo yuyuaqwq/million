@@ -15,16 +15,17 @@ std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
     if (iter == tasks_.end()) {
         return msg;
     }
-    iter->second.handle.promise().awaiter()->set_result(std::move(msg));
-    iter->second.handle.resume();
+    auto awaiter = iter->second.coroutine.promise().awaiter();
+    awaiter->set_result(std::move(msg));
+    auto waiting_coroutine = awaiter->waiting_coroutine();
+    waiting_coroutine.resume();
     if (iter->second.has_exception()) {
         // 记录异常
         // iter->second.handle.promise().exception();
     }
-    if (!iter->second.handle.done()) {
-        assert(iter->second.handle.promise().awaiter());
+    if (!iter->second.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        RePush(id, iter->second.handle.promise().awaiter()->get_waiting());
+        RePush(id, iter->second.coroutine.promise().awaiter()->waiting_session());
     }
     else {
         tasks_.erase(iter);
@@ -35,11 +36,11 @@ std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
 void MsgExecutor::AddTask(Task&& task) {
     if (task.has_exception()) {
         // 记录异常
-        // task.handle.promise().exception();
+        // task.coroutine.promise().exception();
     }
-    if (!task.handle.done()) {
-        assert(task.handle.promise().awaiter());
-        Push(task.handle.promise().awaiter()->get_waiting(), std::move(task));
+    if (!task.coroutine.done()) {
+        assert(task.coroutine.promise().awaiter());
+        Push(task.coroutine.promise().awaiter()->waiting_session(), std::move(task));
     }
 }
 
