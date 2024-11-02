@@ -49,10 +49,10 @@ public:
                     auto msg = std::move(queue_.front());
                     queue_.pop();
 
-                    // 自行分发消息，因为没有调度器，不能使用co_await
+                    // 自行分发消息，因为没有调度器，不能使用co_await等待消息
                     auto task = MsgDispatch(std::move(msg));
                     task.rethrow_if_exception();
-                    if (!task.handle.done()) {
+                    if (!task.coroutine.done()) {
                         std::cerr << "Message processing is waiting." << std::endl;
                     }
                 }

@@ -60,7 +60,7 @@ public:
                     // 自行分发消息，因为没有调度器，不能使用co_await
                     auto task = MsgDispatch(std::move(msg));
                     task.rethrow_if_exception();
-                    if (!task.handle.done()) {
+                    if (!task.coroutine.done()) {
                         std::cerr << "Message processing is waiting." << std::endl;
                     }
                 }
@@ -269,7 +269,7 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(SqlLoadMsg, msg) {
+    MILLION_MSG_HANDLE(SqlQueryMsg, msg) {
         google::protobuf::Message* proto_msg = msg->proto_msg;
         const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
@@ -289,14 +289,14 @@ public:
             sql.pop_back();
         }
 
-        sql += "FROM ";
+        sql += " FROM ";
         sql += table_name;
 
         const google::protobuf::FieldDescriptor* field_desc = desc->FindFieldByNumber(options.primary_key());
         if (!field_desc) {
             co_return;
         }
-        sql += "WHERE ";
+        sql += " WHERE ";
         sql += field_desc->name() + " = ";
         sql += msg->primary_key;
 
@@ -310,13 +310,14 @@ public:
             co_return;
         }
 
+        const auto& row = *rs.begin();
+
         int i = -1;
-        for (const soci::row& row : rs) {
+        for (int i = 0; i < desc->field_count(); ++i) {
             ++i;
             const google::protobuf::FieldDescriptor* const field = desc->field(i);
             if (field->is_repeated()) {
-                google::protobuf::Message* sub_message = reflection->MutableMessage(proto_msg, field);
-                sub_message->ParseFromString(row.get<std::string>(i));
+                throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
             }
             else {
                 auto type = field->type();
@@ -383,61 +384,27 @@ public:
         co_return;
     }
 
-    void SerializeToSqlForUpdate(const google::protobuf::Message& msg, std::string_view condition) {
-        const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
-        const google::protobuf::Reflection* reflection = msg.GetReflection();
-        auto& table = descriptor->name();
-
-        std::string sql = "UPDATE ";
-        sql += table;
-        sql += " SET ";
-
-        soci::statement stmt(sql_);
-
-        // 构造 SQL 语句
-        for (int i = 0; i < descriptor->field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* field = descriptor->field(i);
-            sql += field->name() + " = :" + field->name() + ",";
-        }
-
-        if (sql.back() == ',') {
-            sql.pop_back();
-        }
-
-        if (!condition.empty()) {
-            sql += " WHERE ";
-            sql += condition;
-        }
-        sql += ";";
-
-        stmt.alloc();
-        stmt.prepare(sql);
-        std::vector<std::any> values;
-        BindValuesToStatement(msg, &values, stmt);  // 绑定值
-        stmt.define_and_bind();
-        stmt.execute(true);
-    } 
-
     MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
         google::protobuf::Message* proto_msg = msg->proto_msg;
 
-        Reply(std::move(msg));
-        co_return;
-
-        const google::protobuf::Descriptor* descriptor = proto_msg->GetDescriptor();
+        const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
-        auto& table = descriptor->name();
+        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        if (options.has_sql()) {
+            const Db::TableSqlOptions& sql_options = options.sql();
+        }
+        auto& table_name = options.name();
 
         std::string sql = "INSERT INTO ";
-        sql += table;
+        sql += table_name;
         sql += " (";
         std::string values_placeholder = " VALUES (";
 
         soci::statement stmt(sql_);
 
         // 构造 SQL 语句
-        for (int i = 0; i < descriptor->field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* field = descriptor->field(i);
+        for (int i = 0; i < desc->field_count(); ++i) {
+            const google::protobuf::FieldDescriptor* field = desc->field(i);
             sql += field->name() + ",";
             values_placeholder += ":" + field->name() + ",";
         }
@@ -458,25 +425,86 @@ public:
         std::vector<std::any> values;
         BindValuesToStatement(*proto_msg, &values, stmt);  // 绑定值
         stmt.define_and_bind();
-        stmt.execute(true);
 
+        try {
+            stmt.execute(true);
+        }
+        catch (...)
+        {
+            Reply(std::move(msg));
+            throw;
+        }
+        Reply(std::move(msg));
+        co_return;
+    }
+
+    MILLION_MSG_HANDLE(SqlUpdateMsg, msg) {
+        google::protobuf::Message* proto_msg = msg->proto_msg;
+
+        const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
+        const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
+        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        if (options.has_sql()) {
+            const Db::TableSqlOptions& sql_options = options.sql();
+        }
+        auto& table_name = options.name();
+
+        std::string sql = "UPDATE ";
+        sql += table_name;
+        sql += " SET ";
+
+        soci::statement stmt(sql_);
+
+        for (int i = 0; i < desc->field_count(); ++i) {
+            const google::protobuf::FieldDescriptor* field = desc->field(i);
+            sql += field->name() + " = :" + field->name() + ",";
+        }
+
+        if (sql.back() == ',') {
+            sql.pop_back();
+        }
+
+        // 这里自动根据主键来设置条件进行Update
+        //if (!condition.empty()) {
+        //    sql += " WHERE ";
+        //    sql += condition;
+        //}
+        sql += ";";
+
+        stmt.alloc();
+        stmt.prepare(sql);
+        std::vector<std::any> values;
+        BindValuesToStatement(*proto_msg, &values, stmt);  // 绑定值
+        stmt.define_and_bind();
+
+        try {
+            stmt.execute(true);
+        }
+        catch (...)
+        {
+            Reply(std::move(msg));
+            throw;
+        }
+        Reply(std::move(msg));
         co_return;
     }
 
     void BindValuesToStatement(const google::protobuf::Message& msg, std::vector<std::any>* values, soci::statement& stmt) {
-        const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
+        const google::protobuf::Descriptor* desc = msg.GetDescriptor();
         const google::protobuf::Reflection* reflection = msg.GetReflection();
-        auto& table = descriptor->name();
+        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        if (options.has_sql()) {
+            const Db::TableSqlOptions& sql_options = options.sql();
+        }
+        auto& table_name = options.name();
 
-        values->reserve(descriptor->field_count());
+        values->reserve(desc->field_count());
 
-        for (int i = 0; i < descriptor->field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* field = descriptor->field(i);
+        for (int i = 0; i < desc->field_count(); ++i) {
+            const google::protobuf::FieldDescriptor* field = desc->field(i);
 
             if (field->is_repeated()) {
-                const google::protobuf::Message& sub_message = reflection->GetMessage(msg, field);
-                values->push_back(sub_message.SerializeAsString());
-                stmt.exchange(soci::use(std::any_cast<const std::string&>(values->back()), field->name()));
+                throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
             }
             else {
                 switch (field->type()) {

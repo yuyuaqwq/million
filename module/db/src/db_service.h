@@ -126,11 +126,11 @@ public:
         user.set_email("fake@qq.com");
         user.set_phone_number("1234567890");
         user.set_password_hash("AWDaoDWHGOAUGH");
-        google::protobuf::Message* proto_msg = &user;
 
-        co_await Call<SqlInsertMsg>(sql_service_, proto_msg);
+        co_await Call<SqlInsertMsg>(sql_service_, &user);
 
-        
+        std::vector<bool> dirty_bits;
+        auto res = co_await Call<SqlQueryMsg>(sql_service_, "1", &user, &dirty_bits, false);
 
         co_return;
     }
@@ -163,7 +163,7 @@ public:
             auto row = DbRow(std::move(*proto_msg_opt), std::vector<bool>(desc->field_count()));
             auto res_msg = co_await Call<ParseFromCacheMsg>(cache_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
             if (!res_msg->success) {
-                auto res_msg = co_await Call<SqlLoadMsg>(sql_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
+                auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
             }
 
             auto res = rows.emplace(std::move(msg->primary_key), std::move(row));

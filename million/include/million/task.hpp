@@ -196,7 +196,7 @@ inline void Task::rethrow_if_exception() const {
 
 inline bool Task::await_ready() const noexcept {
     if (!coroutine.promise().awaiter()) {
-        // 没有等待，无需挂起，会直接调用await_resume，跳过await_suspend
+        // 没有等待中的session，无需挂起，会直接调用await_resume，跳过await_suspend
         return true;
     }
     // 需要等待，会调用await_suspend

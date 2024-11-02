@@ -34,10 +34,10 @@ std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
 }
 
 void MsgExecutor::AddTask(Task&& task) {
-    if (task.has_exception()) {
-        // 记录异常
-        // task.coroutine.promise().exception();
-    }
+    //if (task.has_exception()) {
+    //    // 记录异常
+    //    // task.coroutine.promise().exception();
+    //}
     if (!task.coroutine.done()) {
         assert(task.coroutine.promise().awaiter());
         Push(task.coroutine.promise().awaiter()->waiting_session(), std::move(task));
