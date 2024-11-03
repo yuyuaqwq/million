@@ -6,7 +6,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "service_mgr.h"
-#include "msg_mgr.h"
+#include "session_mgr.h"
 #include "module_mgr.h"
 #include "worker_mgr.h"
 #include "io_context.h"
@@ -39,7 +39,7 @@ Million::Million(std::string_view config_path) {
     auto config = *config_;
 
     service_mgr_ = std::make_unique<ServiceMgr>(this);
-    msg_mgr_ = std::make_unique<MsgMgr>(this);
+    session_mgr_ = std::make_unique<SessionMgr>(this);
 
     auto worker_mgr_config = config["worker_mgr"];
     if (!worker_mgr_config) {
@@ -117,11 +117,11 @@ SessionId Million::Send(SessionId session_id, ServiceHandle sender, ServiceHandl
 }
 
 SessionId Million::Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) {
-    return Send(msg_mgr_->AllocSessionId(), sender, target, std::move(msg));
+    return Send(session_mgr_->AllocSessionId(), sender, target, std::move(msg));
 }
 
-void Million::TimeOut(ServiceHandle service, uint32_t tick, MsgUnique msg) {
-    timer_->AddTask(service, tick, std::move(msg));
+void Million::TimeOut(uint32_t tick, ServiceHandle service, MsgUnique msg) {
+    timer_->AddTask(tick, service, std::move(msg));
 }
 
 asio::io_context& Million::NextIoContext() {

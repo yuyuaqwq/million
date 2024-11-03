@@ -8,16 +8,18 @@
 namespace million {
 
 class Million;
-class MsgMgr : noncopyable {
+class SessionMgr : noncopyable {
 public:
-    MsgMgr(Million* million);
-    ~MsgMgr();
+    SessionMgr(Million* million);
+    ~SessionMgr();
 
     SessionId AllocSessionId();
 
 private:
     Million* million_;
     std::atomic<SessionId> session_id_ = 0;
+
+    // session_monitor
 };
 
 } // namespace million

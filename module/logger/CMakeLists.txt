@@ -28,5 +28,8 @@ target_include_directories(${LOGGER_LIB} PRIVATE ${LOGGER_HEADER_DIR})
 
 target_include_directories(${LOGGER_LIB} PRIVATE ${MILLION_HEADER_DIR})
 
+target_include_directories(${LOGGER_LIB} PRIVATE ${SPDLOG_HEADER_DIR})
+target_link_libraries(${LOGGER_LIB} PRIVATE ${SPDLOG_LIB})
+
 target_include_directories(${LOGGER_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
 target_link_libraries(${LOGGER_LIB} PRIVATE ${YAML_CPP_LIB})

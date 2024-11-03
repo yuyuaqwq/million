@@ -2,45 +2,38 @@
 
 #include <cstdint>
 
+#include <functional>
 #include <chrono>
 #include <array>
 #include <vector>
 #include <mutex>
 
-#include <million/imillion.h>
-
 namespace million {
 namespace detail {
 
+template <typename T>
 class WheelTimer : noncopyable {
 private:
     struct DelayTask {
-        DelayTask(ServiceHandle service, uint32_t tick, MsgUnique msg)
+        DelayTask(uint32_t tick, T&& data)
             : tick(tick)
-            , service(service)
-            , msg(std::move(msg)) {}
-        ~DelayTask() = default;
+            , data(std::forward<T>(data)) {}
 
-        DelayTask(const DelayTask&) = delete;
-        DelayTask(DelayTask&&) = default;
-
-        ServiceHandle service;
         uint32_t tick;
-        MsgUnique msg;
+        T data;
     };
     using TaskVector = std::vector<DelayTask>;
 
 public:
-    WheelTimer(IMillion* imillion, uint32_t ms_per_tick)
-        : imillion_(imillion)
-        , ms_per_tick_(ms_per_tick) {}
+    WheelTimer(uint32_t ms_per_tick)
+        : ms_per_tick_(ms_per_tick) {}
     ~WheelTimer() = default;
 
     void Init() {
         last_time_ = std::chrono::high_resolution_clock::now();
     }
 
-    void Tick() {
+    void Tick(const std::function<void(DelayTask&&)>& callback) {
         {
             std::lock_guard guard(adds_mutex_);
             std::swap(backup_adds_, adds_);
@@ -57,8 +50,8 @@ public:
             // 拿到第0层待推进的slot，执行任务
             auto& slot = slots_[indexs_[0]];
             if (!slot.empty()) {
-                for (auto& task : slot) {
-                    imillion_->Send(task.service, task.service, std::move(task.msg));
+                for (auto&& task : slot) {
+                    callback(std::move(task));
                 }
                 slot.clear();
             }
@@ -85,9 +78,9 @@ public:
         std::this_thread::sleep_for(std::chrono::milliseconds(ms_per_tick_));
     }
 
-    void AddTask(ServiceHandle service, uint32_t tick, MsgUnique msg) {
+    void AddTask(uint32_t tick, T&& data) {
         auto guard =std::lock_guard(adds_mutex_);
-        adds_.emplace_back(service, tick, std::move(msg));
+        adds_.emplace_back(tick, std::forward<T>(data));
     }
 
 private:
@@ -125,7 +118,6 @@ private:
     static constexpr size_t kSlotCount = 1 << kSlotBit; // 64
     static constexpr size_t kCircleMask = 0x3f; // 0011 1111
 
-    IMillion* imillion_;
     const uint32_t ms_per_tick_;
 
     std::chrono::high_resolution_clock::time_point last_time_;

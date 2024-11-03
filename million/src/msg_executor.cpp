@@ -45,7 +45,8 @@ void MsgExecutor::AddTask(Task&& task) {
 }
 
 void MsgExecutor::Push(SessionId id, Task&& task) {
-    tasks_.emplace(std::make_pair(id, std::move(task)));
+
+    tasks_.emplace(id, std::move(task));
 }
 
 void MsgExecutor::RePush(SessionId old_id, SessionId new_id) {
@@ -55,7 +56,7 @@ void MsgExecutor::RePush(SessionId old_id, SessionId new_id) {
     }
     auto task = std::move(iter->second);
     tasks_.erase(iter);
-    tasks_.emplace(std::make_pair(new_id, std::move(task)));
+    Push(new_id, std::move(task));
 }
 
 } //namespace million

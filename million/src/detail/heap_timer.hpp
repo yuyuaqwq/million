@@ -1,40 +1,38 @@
 #pragma once
 
 #include <cstdint>
+
+#include <functional>
 #include <chrono>
 #include <queue>
 #include <vector>
 #include <mutex>
 
-#include <million/imillion.h>
-
 namespace million {
 namespace detail {
 
+template <typename T>
 class HeapTimer : noncopyable {
 private:
     struct DelayTask {
-        DelayTask(ServiceHandle service, std::chrono::high_resolution_clock::time_point expire_time, MsgUnique msg)
+        DelayTask(std::chrono::high_resolution_clock::time_point expire_time, T&& data)
             : expire_time(expire_time)
-            , service(service)
-            , msg(std::move(msg)) {}
-
-        ServiceHandle service;
-        std::chrono::high_resolution_clock::time_point expire_time;
-        MsgUnique msg;
+            , data(std::forward<T>(data)) {}
 
         bool operator>(const DelayTask& other) const {
             return expire_time > other.expire_time;
         }
+
+        std::chrono::high_resolution_clock::time_point expire_time;
+        T data;
     };
 
     using TaskQueue = std::priority_queue<DelayTask, std::vector<DelayTask>, std::greater<>>;
     using TempTaskVector = std::vector<DelayTask>;
 
 public:
-    HeapTimer(IMillion* imillion, uint32_t ms_per_tick)
-        : imillion_(imillion)
-        , ms_per_tick_(ms_per_tick) {}
+    HeapTimer(uint32_t ms_per_tick)
+        : ms_per_tick_(ms_per_tick) {}
 
     ~HeapTimer() = default;
 
@@ -42,7 +40,7 @@ public:
         
     }
 
-    void Tick() {
+    void Tick(const std::function<void(DelayTask&&)>& callback) {
         {
             auto lock = std::lock_guard(adds_mutex_);
             std::swap(backup_adds_, adds_);
@@ -55,8 +53,7 @@ public:
         auto now_time = std::chrono::high_resolution_clock::now();
 
         while (!tasks_.empty() && tasks_.top().expire_time <= now_time) {
-            auto task = std::move(const_cast<DelayTask&>(tasks_.top()));
-            imillion_->Send(task.service, task.service, std::move(task.msg));
+            callback(std::move(const_cast<DelayTask&>(tasks_.top())));
             tasks_.pop();
         }
 
@@ -72,11 +69,11 @@ public:
         }
     }
 
-    void AddTask(ServiceHandle service, uint32_t tick, MsgUnique msg) {
+    void AddTask(uint32_t tick, T&& data) {
         auto expire_time = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(tick * ms_per_tick_);
         {
             auto lock = std::lock_guard(adds_mutex_);
-            adds_.emplace_back(service, expire_time, std::move(msg));
+            adds_.emplace_back(expire_time, std::forward<T>(data));
         }
         bool need_notify = false;
         {
@@ -92,7 +89,6 @@ public:
     }
 
 private:
-    IMillion* imillion_;
     const uint32_t ms_per_tick_;
 
     TaskQueue tasks_;

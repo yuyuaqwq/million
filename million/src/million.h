@@ -15,7 +15,7 @@ public:
 };
 
 class ServiceMgr;
-class MsgMgr;
+class SessionMgr;
 class ModuleMgr;
 class WorkerMgr;
 class IoContextMgr;
@@ -36,14 +36,14 @@ public:
     virtual SessionId Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) override;
     using IMillion::Send;
 
-    virtual void TimeOut(ServiceHandle service, uint32_t tick, MsgUnique msg) override;
+    virtual void TimeOut(uint32_t tick, ServiceHandle service, MsgUnique msg) override;
 
     virtual asio::io_context& NextIoContext() override;
 
     virtual const YAML::Node& YamlConfig() const override;
 
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
-    auto& msg_mgr() { assert(service_mgr_); return *msg_mgr_; }
+    auto& session_mgr() { assert(session_mgr_); return *session_mgr_; }
     auto& module_mgr() { assert(module_mgr_); return *module_mgr_; }
     auto& worker_mgr() { assert(worker_mgr_); return *worker_mgr_; }
     auto& io_context_mgr() { assert(io_context_mgr_); return *io_context_mgr_; }
@@ -52,7 +52,7 @@ private:
     std::unique_ptr<YAML::Node> config_;
 
     std::unique_ptr<ServiceMgr> service_mgr_;
-    std::unique_ptr<MsgMgr> msg_mgr_;
+    std::unique_ptr<SessionMgr> session_mgr_;
     std::unique_ptr<ModuleMgr> module_mgr_;
     std::unique_ptr<WorkerMgr> worker_mgr_;
     std::unique_ptr<IoContextMgr> io_context_mgr_;

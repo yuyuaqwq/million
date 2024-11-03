@@ -16,6 +16,10 @@ module:
 timer:
     ms_per_tick: 10
     
+session_monitor:
+    timeout_s: 10
+    tick_s: 1
+    
 gateway:
     services:
         - port:10086

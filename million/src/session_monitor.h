@@ -9,30 +9,22 @@
 
 #include "detail/wheel_timer.hpp"
 #include "detail/heap_timer.hpp"
-#include "million.h"
 
 namespace million {
 
 class Million;
-class Timer : noncopyable {
+class SessionMonitor : noncopyable {
 public:
-    Timer(Million* million, uint32_t ms_per_tick);
-    ~Timer();
+    SessionMonitor(Million* million, uint32_t ms_per_tick);
+    ~SessionMonitor();
 
     void Start();
     void Stop();
 
-    void AddTask(uint32_t tick, ServiceHandle service, MsgUnique msg);
-
 private:
     Million* million_;
     std::optional<std::jthread> thread_;
-    struct TimedMsg {
-        ServiceHandle service;
-        MsgUnique msg;
-    };
-    detail::HeapTimer<TimedMsg> tasks_;
-    // detail::WheelTimer<TimedMsg> tasks_;
+    detail::HeapTimer tasks_;
     std::atomic_bool run_ = false;
 };
 

@@ -1,4 +1,4 @@
-#include "msg_mgr.h"
+#include "session_mgr.h"
 
 #include <cassert>
 
@@ -6,12 +6,12 @@
 
 namespace million {
 
-MsgMgr::MsgMgr(Million* million)
-    : million_(million) {}
+SessionMgr::SessionMgr(Million* million)
+: million_(million) {}
 
-MsgMgr::~MsgMgr() = default;
+SessionMgr::~SessionMgr() = default;
 
-SessionId MsgMgr::AllocSessionId() {
+SessionId SessionMgr::AllocSessionId() {
     auto id = ++session_id_;
     if (id == 0) {
         throw std::runtime_error("session id rolled back.");
