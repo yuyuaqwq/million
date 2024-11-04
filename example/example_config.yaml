@@ -9,6 +9,7 @@ module:
     dirs: 
         - ../../lib/Debug
     loads:
+        - logger
         - db
         - pysvr
         - gateway
@@ -17,8 +18,8 @@ timer:
     ms_per_tick: 10
     
 session_monitor:
-    timeout_s: 10
-    tick_s: 1
+    timeout_tick: 10
+    s_per_tick: 1
     
 gateway:
     services:

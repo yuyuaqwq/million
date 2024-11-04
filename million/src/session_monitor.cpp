@@ -10,10 +10,10 @@
 
 namespace million {
 
-SessionMonitor::SessionMonitor(Million* million, uint32_t tick_s, uint32_t timeout_s)
+SessionMonitor::SessionMonitor(Million* million, uint32_t s_per_tick, uint32_t timeout_tick)
     : million_(million)
-    , timeout_s_(timeout_s)
-    , tasks_(tick_s * 1000) {}
+    , timeout_tick_(timeout_tick)
+    , tasks_(s_per_tick * 1000) {}
 
 SessionMonitor::~SessionMonitor() = default;
 
@@ -36,7 +36,7 @@ void SessionMonitor::Stop() {
 }
 
 void SessionMonitor::AddSession(ServiceHandle service, SessionId session_id) {
-    tasks_.AddTask(timeout_s_, { service, session_id });
+    tasks_.AddTask(timeout_tick_, { service, session_id });
 }
 
 

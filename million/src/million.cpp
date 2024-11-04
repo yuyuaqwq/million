@@ -82,14 +82,14 @@ Million::Million(std::string_view config_path) {
     if (!session_monitor_config) {
         throw ConfigException("cannot find 'session_monitor_config'.");
     }
-    if (!session_monitor_config["tick_s"]) {
-        throw ConfigException("cannot find 'session_monitor_config.tick_s'.");
+    if (!session_monitor_config["s_per_tick"]) {
+        throw ConfigException("cannot find 'session_monitor_config.s_per_tick'.");
     }
-    auto tick_s = session_monitor_config["tick_s"].as<uint32_t>();
-    if (!session_monitor_config["timeout_s"]) {
-        throw ConfigException("cannot find 'session_monitor_config.timeout_s'.");
+    auto tick_s = session_monitor_config["s_per_tick"].as<uint32_t>();
+    if (!session_monitor_config["timeout_tick"]) {
+        throw ConfigException("cannot find 'session_monitor_config.timeout_tick'.");
     }
-    auto timeout_s = session_monitor_config["timeout_s"].as<uint32_t>();
+    auto timeout_s = session_monitor_config["timeout_tick"].as<uint32_t>();
     session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
 
 

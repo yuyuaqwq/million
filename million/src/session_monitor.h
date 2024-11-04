@@ -16,7 +16,7 @@ namespace million {
 class Million;
 class SessionMonitor : noncopyable {
 public:
-    SessionMonitor(Million* million, uint32_t tick_s, uint32_t timeout_s);
+    SessionMonitor(Million* million, uint32_t s_per_tick, uint32_t timeout_tick);
     ~SessionMonitor();
 
     void Start();
@@ -25,7 +25,7 @@ public:
     void AddSession(ServiceHandle service, SessionId session_id);
 private:
     Million* million_;
-    uint32_t timeout_s_;
+    uint32_t timeout_tick_;
 
     std::optional<std::jthread> thread_;
     struct TimedMsg {
