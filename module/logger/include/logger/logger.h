@@ -1,5 +1,7 @@
 #pragma once
 
+#include <format>
+
 #include <million/imsg.h>
 
 namespace million {
@@ -20,11 +22,11 @@ MILLION_MSG_DEFINE(LoggerSetLevelMsg, (std::string) level);
 
 extern MILLION_OBJECT_IMPORT ServiceHandle logger_handle;
 
-#define MILLION_LOGGER_CALL(million, sender, level, fmt, ...) \
-        million->Send<::million::logger::LoggerLogMsg>(::million::logger::logger_handle, level, __FILE__, __LINE__, __func__,  std::format(fmt, __VA_ARGS__))
+#define MILLION_LOGGER_CALL(MILLION_, SENDER_, LEVEL_, FMT_, ...) \
+        MILLION_->Send<::million::logger::LoggerLogMsg>(SENDER_, ::million::logger::logger_handle, LEVEL_, __FILE__, __LINE__, __func__,  ::std::format(FMT_, __VA_ARGS__))
 
-#define MILLION_SERVICE_LOGGER_CALL(level, fmt, ...) \
-        Send<::million::logger::LoggerLogMsg>(::million::logger::logger_handle, level, __FILE__, __LINE__, __func__,  std::format(fmt, __VA_ARGS__))
+#define MILLION_SERVICE_LOGGER_CALL(LEVEL_, FMT_, ...) \
+        Send<::million::logger::LoggerLogMsg>(::million::logger::logger_handle, LEVEL_, __FILE__, __LINE__, __func__,  ::std::format(FMT_, __VA_ARGS__))
 
 #define LOG_TRACE(...) MILLION_SERVICE_LOGGER_CALL(::million::logger::LogLevel::kTrace, __VA_ARGS__)
 #define LOG_DEBUG(...) MILLION_SERVICE_LOGGER_CALL(::million::logger::LogLevel::kDebug, __VA_ARGS__)

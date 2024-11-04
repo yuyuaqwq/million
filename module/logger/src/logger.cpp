@@ -53,9 +53,19 @@ public:
             pattern = "[%Y-%m-%d %H:%M:%S.%e] [thread %t] [%^%l%$] [%s:%#] [%!] %v";
         }
 
+        int flush_every;
+        if (logger_config["flush_every_s"]) {
+            flush_every = logger_config["flush_every_s"].as<int>();
+        }
+        else {
+            flush_every = 1;
+        }
+
         logger_ = spdlog::hourly_logger_mt("million_logger", log_file, 0, 0);
         logger_->set_level(level);
         logger_->set_pattern(pattern);
+
+        spdlog::flush_every(std::chrono::seconds(flush_every));
     }
 
     virtual void OnExit() override  {

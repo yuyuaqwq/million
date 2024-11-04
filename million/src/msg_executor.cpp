@@ -6,6 +6,8 @@
 
 #include <million/imsg.h>
 
+#include <logger/logger.h>
+
 #include "service.h"
 #include "service_mgr.h"
 #include "session_monitor.h"
@@ -45,7 +47,15 @@ std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
 void MsgExecutor::AddTask(Task&& task) {
     if (task.has_exception()) {
         // 记录异常
-        // task.coroutine.promise().exception();
+        try {
+            task.rethrow_if_exception();
+        }
+        catch (const std::exception& e) {
+            MILLION_LOGGER_CALL(service_->service_mgr()->million(), service_->service_handle(), logger::kErr, "[million] session exception: {}.", e.what());
+        }
+        catch (...) {
+            MILLION_LOGGER_CALL(service_->service_mgr()->million(), service_->service_handle(), logger::kErr, "[million] session exception: {}.", "unknown exception");
+        }
     }
     if (!task.coroutine.done()) {
         assert(task.coroutine.promise().awaiter());
@@ -59,7 +69,7 @@ void MsgExecutor::TimeoutCleanup(SessionId id) {
         return;
     }
     // 超时，写出日志告警
-    std::cerr << "[session timeout]" << iter->second.coroutine.promise().awaiter()->waiting_session() << std::endl;
+    MILLION_LOGGER_CALL(service_->service_mgr()->million(), service_->service_handle(), logger::kErr, "[million] session timeout {}.", iter->second.coroutine.promise().awaiter()->waiting_session());
     tasks_.erase(iter);
 }
 
