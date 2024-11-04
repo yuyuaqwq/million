@@ -16,6 +16,7 @@ public:
 
 class ServiceMgr;
 class SessionMgr;
+class SessionMonitor;
 class ModuleMgr;
 class WorkerMgr;
 class IoContextMgr;
@@ -36,7 +37,7 @@ public:
     virtual SessionId Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) override;
     using IMillion::Send;
 
-    virtual void TimeOut(uint32_t tick, ServiceHandle service, MsgUnique msg) override;
+    virtual void Timeout(uint32_t tick, ServiceHandle service, MsgUnique msg) override;
 
     virtual asio::io_context& NextIoContext() override;
 
@@ -44,6 +45,7 @@ public:
 
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& session_mgr() { assert(session_mgr_); return *session_mgr_; }
+    auto& session_monitor() { assert(session_monitor_); return *session_monitor_; }
     auto& module_mgr() { assert(module_mgr_); return *module_mgr_; }
     auto& worker_mgr() { assert(worker_mgr_); return *worker_mgr_; }
     auto& io_context_mgr() { assert(io_context_mgr_); return *io_context_mgr_; }
@@ -53,6 +55,7 @@ private:
 
     std::unique_ptr<ServiceMgr> service_mgr_;
     std::unique_ptr<SessionMgr> session_mgr_;
+    std::unique_ptr<SessionMonitor> session_monitor_;
     std::unique_ptr<ModuleMgr> module_mgr_;
     std::unique_ptr<WorkerMgr> worker_mgr_;
     std::unique_ptr<IoContextMgr> io_context_mgr_;

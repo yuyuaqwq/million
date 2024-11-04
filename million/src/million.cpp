@@ -7,6 +7,7 @@
 
 #include "service_mgr.h"
 #include "session_mgr.h"
+#include "session_monitor.h"
 #include "module_mgr.h"
 #include "worker_mgr.h"
 #include "io_context.h"
@@ -77,6 +78,21 @@ Million::Million(std::string_view config_path) {
         }
     }
 
+    auto session_monitor_config = config["session_monitor"];
+    if (!session_monitor_config) {
+        throw ConfigException("cannot find 'session_monitor_config'.");
+    }
+    if (!session_monitor_config["tick_s"]) {
+        throw ConfigException("cannot find 'session_monitor_config.tick_s'.");
+    }
+    auto tick_s = session_monitor_config["tick_s"].as<uint32_t>();
+    if (!session_monitor_config["timeout_s"]) {
+        throw ConfigException("cannot find 'session_monitor_config.timeout_s'.");
+    }
+    auto timeout_s = session_monitor_config["timeout_s"].as<uint32_t>();
+    session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
+
+
     auto timer_config = config["timer"];
     if (!timer_config) {
         throw ConfigException("cannot find 'timer'.");
@@ -98,6 +114,7 @@ void Million::Init() {
 void Million::Start() {
     worker_mgr_->Start();
     io_context_mgr_->Start();
+    session_monitor_->Start();
     timer_->Start();
 }
 
@@ -120,7 +137,7 @@ SessionId Million::Send(ServiceHandle sender, ServiceHandle target, MsgUnique ms
     return Send(session_mgr_->AllocSessionId(), sender, target, std::move(msg));
 }
 
-void Million::TimeOut(uint32_t tick, ServiceHandle service, MsgUnique msg) {
+void Million::Timeout(uint32_t tick, ServiceHandle service, MsgUnique msg) {
     timer_->AddTask(tick, service, std::move(msg));
 }
 

@@ -11,7 +11,7 @@ ServiceMgr::~ServiceMgr() = default;
 
 ServiceHandle ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
     decltype(services_)::iterator iter;
-    auto service = std::make_unique<Service>(std::move(iservice));
+    auto service = std::make_unique<Service>(this, std::move(iservice));
     {
         std::lock_guard guard(services_mutex_);
         services_.emplace_back(std::move(service));

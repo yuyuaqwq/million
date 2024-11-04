@@ -40,7 +40,7 @@ public:
         return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
-    virtual void TimeOut(uint32_t tick, ServiceHandle service, MsgUnique msg) = 0;
+    virtual void Timeout(uint32_t tick, ServiceHandle service, MsgUnique msg) = 0;
 
     virtual asio::io_context& NextIoContext() = 0;
 
@@ -61,8 +61,8 @@ inline void IService::Reply(ServiceHandle target, SessionId session_id) {
     Reply<IMsg>(target, session_id);
 }
 
-inline void IService::TimeOut(uint32_t tick, MsgUnique msg) {
-    imillion_->TimeOut(tick, service_handle(), std::move(msg));
+inline void IService::Timeout(uint32_t tick, MsgUnique msg) {
+    imillion_->Timeout(tick, service_handle(), std::move(msg));
 }
 
 MILLION_FUNC_EXPORT void InitMillion();

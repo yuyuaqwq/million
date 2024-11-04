@@ -5,11 +5,14 @@
 #include <million/imsg.h>
 
 #include "service_mgr.h"
+#include "million_msg.h"
 
 namespace million {
 
-Service::Service(std::unique_ptr<IService> iservice)
-    : iservice_(std::move(iservice)){}
+Service::Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
+    : service_mgr_(service_mgr)
+    , iservice_(std::move(iservice))
+    , excutor_(this) {}
 
 Service::~Service() = default;
 
@@ -40,6 +43,12 @@ bool Service::ProcessMsg() {
         return false;
     }
     auto msg = std::move(*msg_opt);
+    if (msg->type() == MillionSessionTimeoutMsg::kType) {
+        auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
+        excutor_.TimeoutCleanup(msg_ptr->timeout_id);
+        return true;
+    }
+
     auto session_id = msg->session_id();
     msg_opt = excutor_.TrySchedule(session_id, std::move(msg));
     if (!msg_opt) {

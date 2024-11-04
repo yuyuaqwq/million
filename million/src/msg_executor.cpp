@@ -2,11 +2,20 @@
 
 #include <cassert>
 
+#include <iostream>
+
 #include <million/imsg.h>
+
+#include "service.h"
+#include "service_mgr.h"
+#include "session_monitor.h"
+#include "million.h"
 
 namespace million {
 
-MsgExecutor::MsgExecutor() = default;
+MsgExecutor::MsgExecutor(Service* service)
+    : service_(service) {}
+
 MsgExecutor::~MsgExecutor() = default;
 
 // 尝试调度
@@ -34,18 +43,28 @@ std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
 }
 
 void MsgExecutor::AddTask(Task&& task) {
-    //if (task.has_exception()) {
-    //    // 记录异常
-    //    // task.coroutine.promise().exception();
-    //}
+    if (task.has_exception()) {
+        // 记录异常
+        // task.coroutine.promise().exception();
+    }
     if (!task.coroutine.done()) {
         assert(task.coroutine.promise().awaiter());
         Push(task.coroutine.promise().awaiter()->waiting_session(), std::move(task));
     }
 }
 
-void MsgExecutor::Push(SessionId id, Task&& task) {
+void MsgExecutor::TimeoutCleanup(SessionId id) {
+    auto iter = tasks_.find(id);
+    if (iter == tasks_.end()) {
+        return;
+    }
+    // 超时，写出日志告警
+    std::cerr << "[session timeout]" << iter->second.coroutine.promise().awaiter()->waiting_session() << std::endl;
+    tasks_.erase(iter);
+}
 
+void MsgExecutor::Push(SessionId id, Task&& task) {
+    service_->service_mgr()->million()->session_monitor().AddSession(service_->service_handle(), id);
     tasks_.emplace(id, std::move(task));
 }
 

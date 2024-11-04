@@ -51,10 +51,10 @@ public:
         return Recv<MsgT>(session_id);
     }
 
-    void TimeOut(uint32_t tick, MsgUnique msg);
+    void Timeout(uint32_t tick, MsgUnique msg);
     template <typename MsgT, typename ...Args>
-    void TimeOut(uint32_t tick, Args&&... args) {
-        TimeOut(tick, std::make_unique<MsgT>(std::forward<Args>(args)...));
+    void Timeout(uint32_t tick, Args&&... args) {
+        Timeout(tick, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
     virtual void OnInit() {};

@@ -18,7 +18,7 @@ namespace million {
 class ServiceMgr;
 class Service : noncopyable {
 public:
-    Service(std::unique_ptr<IService> iservice);
+    Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
     ~Service();
 
     void PushMsg(MsgUnique msg);
@@ -34,7 +34,11 @@ public:
     IService& iservice() const { assert(iservice_); return *iservice_; }
     ServiceHandle service_handle() const { return iservice_->service_handle(); }
 
+    ServiceMgr* service_mgr() const { return service_mgr_; }
+
 private:
+    ServiceMgr* service_mgr_;
+
     std::mutex msgs_mutex_;
     std::queue<MsgUnique> msgs_;
 

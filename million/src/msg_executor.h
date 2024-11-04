@@ -14,9 +14,10 @@
 
 namespace million {
 
+class Service;
 class MsgExecutor {
 public:
-    MsgExecutor();
+    MsgExecutor(Service* service);
     ~MsgExecutor();
 
     // 尝试调度
@@ -24,6 +25,8 @@ public:
 
     // 将任务添加到调度器
     void AddTask(Task&& task);
+
+    void TimeoutCleanup(SessionId id);
 
 private:
     // 加入待调度队列等待调度
@@ -33,6 +36,7 @@ private:
     void RePush(SessionId old_id, SessionId new_id);
 
 private:
+    Service* service_;
     std::unordered_map<SessionId, Task> tasks_;
 };
 

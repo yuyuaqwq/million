@@ -5,6 +5,7 @@
 #include <functional>
 #include <chrono>
 #include <array>
+#include <list>
 #include <vector>
 #include <mutex>
 
@@ -13,7 +14,7 @@ namespace detail {
 
 template <typename T>
 class WheelTimer : noncopyable {
-private:
+protected:
     struct DelayTask {
         DelayTask(uint32_t tick, T&& data)
             : tick(tick)
@@ -22,7 +23,7 @@ private:
         uint32_t tick;
         T data;
     };
-    using TaskVector = std::vector<DelayTask>;
+    using TaskQueue = std::vector<DelayTask>;
 
 public:
     WheelTimer(uint32_t ms_per_tick)
@@ -83,7 +84,7 @@ public:
         adds_.emplace_back(tick, std::forward<T>(data));
     }
 
-private:
+protected:
     // std::pair<layer, index>
     std::pair<size_t, size_t> GetLayer(uint32_t tick) {
         for (size_t i = 0; i < kCircleCount; i++) {
@@ -95,7 +96,7 @@ private:
         throw std::invalid_argument("tick too large.");
     }
 
-    void DispatchTasks(TaskVector* tasks) {
+    void DispatchTasks(TaskQueue* tasks) {
         for (auto& task : *tasks) {
             size_t tick = task.tick;
             
@@ -112,7 +113,7 @@ private:
         tasks->clear();
     }
 
-private:
+protected:
     static constexpr size_t kCircleCount = 5;
     static constexpr size_t kSlotBit = 6;
     static constexpr size_t kSlotCount = 1 << kSlotBit; // 64
@@ -122,12 +123,12 @@ private:
 
     std::chrono::high_resolution_clock::time_point last_time_;
 
-    std::array<TaskVector, kSlotCount * kCircleCount> slots_;  // 多层时间轮
+    std::array<TaskQueue, kSlotCount * kCircleCount> slots_;  // 多层时间轮
     std::array<uint16_t, kCircleCount> indexs_{ 0 };  // 每一层当前指向的slot
 
     std::mutex adds_mutex_;
-    TaskVector adds_;
-    TaskVector backup_adds_;
+    TaskQueue adds_;
+    TaskQueue backup_adds_;
 };
 
 } // namespace detail
