@@ -18,6 +18,8 @@
 #include <protogen/db/db_options.pb.h>
 #include <protogen/db/db_user.pb.h>
 
+#include <logger/logger.h>
+
 namespace million {
 namespace db {
 
@@ -101,6 +103,8 @@ public:
     using Base::Base;
 
     virtual void OnInit() override {
+        LOG_DEBUG("DbService Init");
+
         proto_mgr_.InitMsgMap();
     }
 

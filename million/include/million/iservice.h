@@ -80,7 +80,7 @@ protected:
         } \
         co_return; \
     } \
-    ::std::unordered_map<const char*, ::million::Task(_MILLION_SERVICE_TYPE_::*)(::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<std::string, ::million::Task(_MILLION_SERVICE_TYPE_::*)(::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
 
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \

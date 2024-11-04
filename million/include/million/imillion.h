@@ -21,6 +21,12 @@ class io_context;
 
 namespace million {
 
+class MILLION_CLASS_EXPORT ConfigException : public std::runtime_error {
+public:
+    explicit ConfigException(const std::string& message)
+        : std::runtime_error("config error: " + message) {}
+};
+
 class MILLION_CLASS_EXPORT IMillion : noncopyable {
 public:
     virtual ~IMillion() = default;

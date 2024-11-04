@@ -5,12 +5,14 @@
 #include <list>
 #include <memory>
 
+#include <million/detail/dl_export.h>
+
 namespace million {
 
 using ServiceCodeName = std::string;
 
 class Service;
-class ServiceHandle {
+class MILLION_CLASS_EXPORT ServiceHandle {
 public:
     ServiceHandle() = default;
     explicit ServiceHandle(std::list<std::unique_ptr<Service>>::iterator iter)

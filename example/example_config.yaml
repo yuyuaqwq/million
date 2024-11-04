@@ -24,3 +24,7 @@ session_monitor:
 gateway:
     services:
         - port:10086
+        
+logger:
+    log_file: .\logs\log.txt
+    level: debug

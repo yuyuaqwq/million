@@ -1,8 +1,10 @@
 #pragma once
 
+#include <million/detail/dl_export.h>
+
 namespace million {
 
-class noncopyable {
+class MILLION_CLASS_EXPORT noncopyable {
 public:
     noncopyable(const noncopyable&) = delete;
     noncopyable& operator=(const noncopyable&) = delete;

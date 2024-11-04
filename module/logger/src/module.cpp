@@ -4,14 +4,24 @@
 
 #include <yaml-cpp/yaml.h>
 
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #include <spdlog/spdlog.h>
-// #include <spdlog/sinks/daily_file_sink.h>
 #include <spdlog/sinks/hourly_file_sink.h>
+
+#include <logger/logger.h>
 
 namespace million {
 namespace logger {
 
-MILLION_MSG_DEFINE(LoggerLogMsg, (std::string) info);
+MILLION_OBJECT_EXPORT ServiceHandle logger_handle;
+
+static_assert(LogLevel::kTrace == spdlog::level::level_enum::trace);
+static_assert(LogLevel::kDebug == spdlog::level::level_enum::debug);
+static_assert(LogLevel::kInfo == spdlog::level::level_enum::info);
+static_assert(LogLevel::kWarn == spdlog::level::level_enum::warn);
+static_assert(LogLevel::kErr == spdlog::level::level_enum::err);
+static_assert(LogLevel::kCritical == spdlog::level::level_enum::critical);
+static_assert(LogLevel::kOff == spdlog::level::level_enum::off);
 
 class LoggerService : public IService {
 public:
@@ -19,36 +29,65 @@ public:
     using Base::Base;
 
     virtual void OnInit() override {
-        auto logger = spdlog::hourly_logger_mt("million_logger", "logs/log.txt", 0, 0);
-        logger->set_level(spdlog::level::info);
-        logger->set_pattern("[%Y-%m-%d %H:%M:%S] [%l] %v");
-        for (int i = 0; i < 1000; ++i) {
-            logger->info("This is log message number {}", i);
+        auto& config = imillion_->YamlConfig();
+        auto logger_config = config["logger"];
+        if (!logger_config) {
+            throw ConfigException("cannot find 'logger'.");
+        }
+        if (!logger_config["log_file"]) {
+            throw ConfigException("cannot find 'logger.log_file'.");
+        }
+        auto log_file = logger_config["log_file"].as<std::string>();
+
+        if (!logger_config["level"]) {
+            throw ConfigException("cannot find 'logger.level'.");
+        }
+        auto level_str = logger_config["level"].as<std::string>();
+        auto level = spdlog::level::from_str(level_str);
+        
+        std::string pattern;
+        if (logger_config["pattern"]) {
+            pattern = logger_config["pattern"].as<std::string>();
+        }
+        else {
+            pattern = "[%Y-%m-%d %H:%M:%S.%e] [thread %t] [%^%l%$] [%s:%#] [%!] %v";
         }
 
-        // 确保日志刷新到文件
-        logger->flush();
+        logger_ = spdlog::hourly_logger_mt("million_logger", log_file, 0, 0);
+        logger_->set_level(level);
+        logger_->set_pattern(pattern);
+    }
 
+    virtual void OnExit() override  {
+        logger_->flush();
     }
 
     virtual Task OnMsg(MsgUnique msg) override {
+        co_await MsgDispatch(std::move(msg));
         co_return;
     }
 
     MILLION_MSG_DISPATCH(LoggerService);
 
     MILLION_MSG_HANDLE(LoggerLogMsg, msg) {
+        auto level = static_cast<spdlog::level::level_enum>(msg->level);
+        logger_->log(spdlog::source_loc{ msg->file, msg->line, msg->function }, level, msg->info);
+        co_return;
+    }
+
+    MILLION_MSG_HANDLE(LoggerSetLevelMsg, msg) {
+        auto level = spdlog::level::from_str(msg->level);
+        logger_->set_level(level);
         co_return;
     }
 
 private:
+    std::shared_ptr<spdlog::logger> logger_;
 };
 
 
 MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
-    auto& config = imillion->YamlConfig();
-    auto handle = imillion->NewService<LoggerService>();
-
+    logger_handle = imillion->NewService<LoggerService>();
     return true;
 }
 
