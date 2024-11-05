@@ -8,7 +8,7 @@
 #include <million/noncopyable.h>
 #include <million/service_handle.h>
 #include <million/imsg.h>
-#include <million/task.hpp>
+#include <million/task.h>
 
 namespace million {
 
