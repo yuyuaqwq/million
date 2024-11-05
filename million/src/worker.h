@@ -4,7 +4,7 @@
 #include <thread>
 #include <optional>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 
 namespace million {
 

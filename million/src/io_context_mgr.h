@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 
 namespace million {
 

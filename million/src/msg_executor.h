@@ -8,7 +8,7 @@
 #include <queue>
 #include <unordered_map>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 #include <million/msg_def.h>
 #include <million/task.hpp>
 

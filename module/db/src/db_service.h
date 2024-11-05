@@ -18,7 +18,9 @@
 #include <protogen/db/db_options.pb.h>
 #include <protogen/db/db_user.pb.h>
 
-#include <logger/logger.h>
+#include <million/logger/logger.h>
+
+#include <db/api.h>
 
 namespace million {
 namespace db {
@@ -89,11 +91,11 @@ private:
 };
 
 
-MILLION_MSG_DEFINE_EMPTY(DbSqlInitMsg);
-MILLION_MSG_DEFINE(DbRowQueryMsg, (std::string) table_name, (std::string) primary_key, (const google::protobuf::Message*) proto_msg);
-MILLION_MSG_DEFINE(DbRowExistMsg, (std::string) table_name, (std::string) primary_key, (bool) exist);
-MILLION_MSG_DEFINE(DbRowUpdateMsg, (std::string) table_name, (std::string) primary_key, (google::protobuf::Message*) proto_msg);
-MILLION_MSG_DEFINE(DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (google::protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE_EMPTY(DB_CLASS_API, DbSqlInitMsg);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowQueryMsg, (std::string) table_name, (std::string) primary_key, (const google::protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (std::string) table_name, (std::string) primary_key, (bool) exist);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowUpdateMsg, (std::string) table_name, (std::string) primary_key, (google::protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (google::protobuf::Message*) proto_msg);
 
 
 class DbService : public IService {

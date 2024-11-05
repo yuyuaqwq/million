@@ -10,7 +10,7 @@
 
 #include <protogen/cs/cs_msgid.pb.h>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 #include <million/proto_msg.h>
 
 #include <gateway/proto_msg.h>
@@ -24,7 +24,7 @@ namespace protobuf = google::protobuf;
 
 class CsProtoMgr : noncopyable {
 public:
-    // ³õÊ¼»¯ÏûÏ¢Ó³Éä
+    // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ï¢Ó³ï¿½ï¿½
     void InitMsgMap() {
         const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
         protobuf::DescriptorDatabase* db = pool->internal_generated_database();
@@ -33,12 +33,12 @@ public:
         }
 
         std::vector<std::string> file_names;
-        db->FindAllFileNames(&file_names);   // ±éÀúµÃµ½ËùÓÐprotoÎÄ¼þÃû
+        db->FindAllFileNames(&file_names);   // ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½protoï¿½Ä¼ï¿½ï¿½ï¿½
         for (const std::string& filename : file_names) {
             const protobuf::FileDescriptor* file_descriptor = pool->FindFileByName(filename);
             if (file_descriptor == nullptr) continue;
 
-            // »ñÈ¡¸ÃÎÄ¼þÖÐ¶¨ÒåµÄ SubMsgId Enum
+            // ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ SubMsgId Enum
             int enum_count = file_descriptor->enum_type_count();
             const protobuf::EnumDescriptor* enum_descriptor = nullptr;
             for (int i = 0; i < enum_count; i++) {
@@ -49,7 +49,7 @@ public:
                 if (opts.HasExtension(Cs::cs_msg_id)) {
                     Cs::MsgId msg_id = opts.GetExtension(Cs::cs_msg_id);
 
-                    // ½¨Á¢Õâ¸öÎÄ¼þÓë¶ÔÓ¦µÄmsg_idµÄÓ³Éä
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½msg_idï¿½ï¿½Ó³ï¿½ï¿½
                     file_desc_map_.insert(std::make_pair(msg_id, file_descriptor));
                     break;
                 }
@@ -57,7 +57,7 @@ public:
         }
     }
 
-    // ×¢²á×ÓÏûÏ¢
+    // ×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
     template <typename ExtensionIdT>
     bool RegistrySubMsg(Cs::MsgId msg_id, const ExtensionIdT& id) {
         if (static_cast<uint32_t>(msg_id) > kMsgIdMax) {
@@ -85,7 +85,7 @@ public:
         return true;
     }
 
-    // ±àÂëÏûÏ¢
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
     std::optional<Buffer> EncodeMessage(const UserHeader& header, const protobuf::Message& message) {
         auto desc = message.GetDescriptor();
         auto msg_key = GetMsgKey(desc);
@@ -95,7 +95,7 @@ public:
         auto [msg_id, sub_msg_id] = CalcMsgId(*msg_key);
 
         Buffer buffer;
-        // Ìí¼Ó msg_id ºÍ sub_msg_id
+        // ï¿½ï¿½ï¿½ï¿½ msg_id ï¿½ï¿½ sub_msg_id
         uint16_t msg_id_net = asio::detail::socket_ops::host_to_network_short(static_cast<uint16_t>(msg_id));
         uint16_t sub_msg_id_net = asio::detail::socket_ops::host_to_network_short(static_cast<uint16_t>(sub_msg_id));
 
@@ -108,16 +108,16 @@ public:
         std::memcpy(buffer.data() + i, &header, sizeof(header));
         i += sizeof(header);
 
-        // ÐòÁÐ»¯ÏûÏ¢µ½»º³åÇø
+        // ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         message.SerializeToArray(buffer.data() + i, message.ByteSize());
         return buffer;
     }
 
-    // ½âÂëÏûÏ¢
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
     std::optional<std::tuple<ProtoMsgUnique, Cs::MsgId, uint32_t>> DecodeMessage(const Buffer& buffer, UserHeader* header) {
-        // ¶ÁÈ¡ msg_id ºÍ sub_msg_id
+        // ï¿½ï¿½È¡ msg_id ï¿½ï¿½ sub_msg_id
         uint16_t msg_id_net, sub_msg_id_net;
-        // È·±£»º³åÇø×ã¹»´ó
+        // È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã¹»ï¿½ï¿½
         if (buffer.size() < sizeof(msg_id_net) + sizeof(sub_msg_id_net) + sizeof(*header)) return std::nullopt;
 
         size_t i = 0;
@@ -141,7 +141,7 @@ public:
         if (!proto_msg_opt) return {};
         auto& proto_msg = *proto_msg_opt;
 
-        // ·´ÐòÁÐ»¯ÏûÏ¢
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½Ï¢
         auto success = proto_msg->ParseFromArray(buffer.data() + i, buffer.size() - i);
         if (!success) {
             return std::nullopt;

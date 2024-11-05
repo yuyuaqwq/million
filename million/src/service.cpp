@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-#include <million/imsg.h>
+#include <million/iservice.h>
 
 #include "service_mgr.h"
 #include "million_msg.h"

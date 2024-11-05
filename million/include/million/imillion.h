@@ -2,8 +2,8 @@
 
 #include <string_view>
 
-#include <million/detail/dl_export.h>
-#include <million/detail/noncopyable.h>
+#include <million/api.h>
+#include <million/noncopyable.h>
 #include <million/imsg.h>
 #include <million/iservice.h>
 
@@ -21,13 +21,13 @@ class io_context;
 
 namespace million {
 
-class MILLION_CLASS_EXPORT ConfigException : public std::runtime_error {
+class ConfigException : public std::runtime_error {
 public:
     explicit ConfigException(const std::string& message)
         : std::runtime_error("config error: " + message) {}
 };
 
-class MILLION_CLASS_EXPORT IMillion : noncopyable {
+class MILLION_CLASS_API IMillion : noncopyable {
 public:
     virtual ~IMillion() = default;
 
@@ -71,8 +71,8 @@ inline void IService::Timeout(uint32_t tick, MsgUnique msg) {
     imillion_->Timeout(tick, service_handle(), std::move(msg));
 }
 
-MILLION_FUNC_EXPORT void InitMillion();
-MILLION_FUNC_EXPORT IMillion* NewMillion(std::string_view config_path);
-MILLION_FUNC_EXPORT void DeleteMillion(IMillion* million);
+MILLION_FUNC_API void InitMillion();
+MILLION_FUNC_API IMillion* NewMillion(std::string_view config_path);
+MILLION_FUNC_API void DeleteMillion(IMillion* million);
 
 } // namespace million

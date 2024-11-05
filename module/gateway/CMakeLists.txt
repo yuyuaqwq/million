@@ -27,6 +27,8 @@ target_include_directories(${GATEWAY_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/sr
 target_include_directories(${GATEWAY_LIB} PRIVATE ${GATEWAY_HEADER_DIR})
 
 target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_HEADER_DIR})
+target_link_libraries(${GATEWAY_LIB} PRIVATE ${MILLION_LIB})
+
 target_include_directories(${GATEWAY_LIB} PRIVATE ${ASIO_HEADER_DIR})
 
 target_include_directories(${GATEWAY_LIB} PRIVATE ${DB_HEADER_DIR})

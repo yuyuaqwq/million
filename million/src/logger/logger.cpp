@@ -8,12 +8,15 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/hourly_file_sink.h>
 
-#include <logger/logger.h>
+#include <million/logger/logger.h>
+#include <million/imillion.h>
+
+#include "logger.h"
 
 namespace million {
 namespace logger {
 
-MILLION_OBJECT_EXPORT ServiceHandle logger_handle;
+MILLION_OBJECT_API ServiceHandle logger_handle;
 
 static_assert(LogLevel::kTrace == spdlog::level::level_enum::trace);
 static_assert(LogLevel::kDebug == spdlog::level::level_enum::debug);
@@ -95,8 +98,7 @@ private:
     std::shared_ptr<spdlog::logger> logger_;
 };
 
-
-MILLION_FUNC_EXPORT bool MillionModuleInit(million::IMillion* imillion) {
+bool LoggerInit(million::IMillion* imillion) {
     logger_handle = imillion->NewService<LoggerService>();
     return true;
 }

@@ -27,8 +27,8 @@ add_library(${MILLION_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 target_include_directories(${MILLION_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(${MILLION_LIB} PRIVATE ${MILLION_HEADER_DIR})
 
-target_include_directories(${MILLION_LIB} PRIVATE ${LOGGER_HEADER_DIR})
-target_link_libraries(${MILLION_LIB} PRIVATE ${LOGGER_LIB})
+target_include_directories(${MILLION_LIB} PRIVATE ${SPDLOG_HEADER_DIR})
+target_link_libraries(${MILLION_LIB} PRIVATE ${SPDLOG_LIB})
 
 target_include_directories(${MILLION_LIB} PRIVATE ${ASIO_HEADER_DIR})
 

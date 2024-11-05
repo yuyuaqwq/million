@@ -7,7 +7,7 @@
 namespace million {
 namespace gateway {
 
-MILLION_FUNC_EXPORT bool MillionModuleInit(IMillion* imillion) {
+MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
     auto handle = imillion->NewService<GatewayService>();
     return true;

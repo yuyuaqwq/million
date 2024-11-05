@@ -4,23 +4,23 @@
 
 #include <meta/macro.hpp>
 
-#include <million/detail/dl_export.h>
+#include <million/api.h>
 #include <million/service_handle.h>
 #include <million/msg_def.h>
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 
 namespace million {
-
-class MILLION_CLASS_EXPORT IMsg : noncopyable {
+	 
+class MILLION_CLASS_API IMsg : noncopyable {
 public:
 	IMsg() = default;
     virtual ~IMsg() = default;
 
-    SessionId session_id() const { return session_id_; }
-    void set_session_id(SessionId session_id) { session_id_ = session_id; }
+	SessionId session_id() const { return session_id_; }
+	void set_session_id(SessionId session_id) { session_id_ = session_id; }
 
-    ServiceHandle sender() const { return sender_; }
-    void set_sender(ServiceHandle sender) { sender_ = sender; }
+	ServiceHandle sender() const { return sender_; }
+	void set_sender(ServiceHandle sender) { sender_ = sender; }
 
 	virtual const char* type() const { return "IMsg"; };
 
@@ -80,7 +80,7 @@ private:
 // 参数 __VA_ARGS__: 未加工的字段声明列表
 // (CTOR_ARGS_DECL_WITH_DEFAULT的META_FOR循环代码)
 #define _MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_IMPL(i, ...) \
-	_MILLION_FIELD_TO_CONST_REF_DECL(META_INDEX(i, __VA_ARGS__)) = {} _MILLION_COMMON_IF_NOT_END(i, __VA_ARGS__)
+	_MILLION_FIELD_TO_CONST_REF_DECL(META_INDEX(i, __VA_ARGS__)) _MILLION_COMMON_IF_NOT_END(i, __VA_ARGS__)
 
 // 字段声明转构造函数字段初始化(第二步)
 // 参数 field_name: 字段名称
@@ -145,8 +145,10 @@ private:
 #define _MILLION_META_FIELD_DATAS(name, ...) META_FOR(_MILLION_DEF_META_FIELD_DATA_IMPL, 0, META_COUNT(__VA_ARGS__), name, __VA_ARGS__)
 
 // 数据定义的主宏
-#define MILLION_MSG_DEFINE(name, ...) \
-    struct name : public ::million::IMsg { \
+#define MILLION_MSG_DEFINE(CLASS_API_, name, ...) \
+    class CLASS_API_ name : public ::million::IMsg { \
+	public: \
+        name() = delete; \
 		name(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
 			: _MILLION_CTOR_INIT_LIST(__VA_ARGS__) {} \
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
@@ -157,8 +159,9 @@ private:
 		_MILLION_META_FIELD_DATAS(name, __VA_ARGS__) \
 	};
 
-#define MILLION_MSG_DEFINE_EMPTY(name) \
-    struct name : public ::million::IMsg { \
+#define MILLION_MSG_DEFINE_EMPTY(CLASS_API_, name) \
+    class CLASS_API_ name : public ::million::IMsg { \
+	public: \
         constexpr static inline const char* kType = #name; \
 		virtual const char* type() const override { return kType; } \
 	};

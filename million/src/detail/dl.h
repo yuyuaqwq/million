@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string_view>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 
 namespace million {
 

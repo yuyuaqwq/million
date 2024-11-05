@@ -7,7 +7,7 @@
 
 #include <asio.hpp>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 #include <million/imillion.h>
 
 #include "net/tcp_connection_handle.h"

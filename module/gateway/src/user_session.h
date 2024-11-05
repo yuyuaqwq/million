@@ -2,7 +2,7 @@
 
 #include <google/protobuf/message.h>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 
 #include "token.h"
 #include "net/tcp_connection.h"

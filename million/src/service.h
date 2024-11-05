@@ -6,7 +6,7 @@
 #include <mutex>
 #include <queue>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 #include <million/iservice.h>
 #include <million/service_handle.h>
 #include <million/imsg.h>

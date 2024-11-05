@@ -4,8 +4,8 @@
 
 #include <memory>
 
-#include <million/detail/dl_export.h>
-#include <million/detail/noncopyable.h>
+#include <million/api.h>
+#include <million/noncopyable.h>
 #include <million/service_handle.h>
 #include <million/imsg.h>
 #include <million/task.hpp>
@@ -13,7 +13,7 @@
 namespace million {
 
 class IMillion;
-class MILLION_CLASS_EXPORT IService : noncopyable {
+class MILLION_CLASS_API IService : noncopyable {
 public:
     IService(IMillion* imillion)
         : imillion_(imillion) {}

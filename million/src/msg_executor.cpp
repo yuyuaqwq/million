@@ -6,7 +6,7 @@
 
 #include <million/imsg.h>
 
-#include <logger/logger.h>
+#include <million/logger/logger.h>
 
 #include "service.h"
 #include "service_mgr.h"

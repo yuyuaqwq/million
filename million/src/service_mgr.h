@@ -7,8 +7,6 @@
 #include <list>
 #include <queue>
 
-#include <million/msg_def.h>
-
 #include "service.h"
 
 namespace million {

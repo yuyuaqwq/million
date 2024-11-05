@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 #include <million/msg_def.h>
 
 namespace million {

@@ -6,14 +6,14 @@
 #include <list>
 #include <memory>
 
-#include <million/detail/dl_export.h>
+#include <million/api.h>
 
 namespace million {
 
 using ServiceCodeName = std::string;
 
 class Service;
-class MILLION_CLASS_EXPORT ServiceHandle {
+class MILLION_CLASS_API ServiceHandle {
 public:
     ServiceHandle() = default;
     explicit ServiceHandle(std::list<std::unique_ptr<Service>>::iterator iter)

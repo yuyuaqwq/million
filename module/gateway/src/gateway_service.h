@@ -6,15 +6,16 @@
 
 #include <protogen/cs/cs_user.pb.h>
 
+#include <gateway/api.h>
+
 #include "cs_proto_mgr.h"
 #include "gateway_server.h"
 
 namespace million {
 namespace gateway {
 
-
-MILLION_MSG_DEFINE(ConnectionMsg, (net::TcpConnectionShared) connection)
-MILLION_MSG_DEFINE(RecvPacketMsg, (net::TcpConnection*) connection, (net::Packet) packet)
+MILLION_MSG_DEFINE(, ConnectionMsg, (net::TcpConnectionShared) connection)
+MILLION_MSG_DEFINE(, RecvPacketMsg, (net::TcpConnection*) connection, (net::Packet) packet)
 
 class GatewayService : public IService {
 public:

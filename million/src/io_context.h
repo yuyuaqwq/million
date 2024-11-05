@@ -6,7 +6,7 @@
 
 #include <asio.hpp>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 
 namespace million {
 

@@ -1,10 +1,12 @@
 #pragma once
 
+#include <gateway/api.h>
+
 namespace million {
 namespace gateway {
 
 class UserSession;
-class UserSessionHandle {
+class GATEWAY_CLASS_API UserSessionHandle {
 public:
     UserSessionHandle() = default;
     explicit UserSessionHandle(UserSession* user_session)

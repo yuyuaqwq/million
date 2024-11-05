@@ -6,6 +6,7 @@
 
 namespace million {
 
-MILLION_MSG_DEFINE(MillionSessionTimeoutMsg, (SessionId) timeout_id)
+MILLION_MSG_DEFINE_EMPTY(MILLION_CLASS_API, MillionServiceExitMsg)
+MILLION_MSG_DEFINE(MILLION_CLASS_API, MillionSessionTimeoutMsg, (SessionId) timeout_id)
 
 } // namespace million

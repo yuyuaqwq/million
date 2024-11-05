@@ -4,7 +4,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 
 #include "module.h"
 

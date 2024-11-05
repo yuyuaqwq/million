@@ -17,10 +17,10 @@ enum LogLevel : int {
     kOff = 6,       // off
 };
 
-MILLION_MSG_DEFINE(LoggerLogMsg, (LogLevel) level, (const char*) file, (int) line, (const char*) function, (std::string) info);
-MILLION_MSG_DEFINE(LoggerSetLevelMsg, (std::string) level);
+MILLION_MSG_DEFINE(MILLION_CLASS_API, LoggerLogMsg, (LogLevel) level, (const char*) file, (int) line, (const char*) function, (std::string) info);
+MILLION_MSG_DEFINE(MILLION_CLASS_API, LoggerSetLevelMsg, (std::string) level);
 
-extern MILLION_OBJECT_IMPORT ServiceHandle logger_handle;
+extern MILLION_OBJECT_API ServiceHandle logger_handle;
 
 #define MILLION_LOGGER_CALL(MILLION_, SENDER_, LEVEL_, FMT_, ...) \
         MILLION_->Send<::million::logger::LoggerLogMsg>(SENDER_, ::million::logger::logger_handle, LEVEL_, __FILE__, __LINE__, __func__,  ::std::format(FMT_, __VA_ARGS__))
@@ -35,5 +35,5 @@ extern MILLION_OBJECT_IMPORT ServiceHandle logger_handle;
 #define LOG_ERR(...) MILLION_SERVICE_LOGGER_CALL(::million::logger::LogLevel::kErr, __VA_ARGS__)
 #define LOG_CRITICAL(...) MILLION_SERVICE_LOGGER_CALL(::million::logger::LogLevel::kCritical, __VA_ARGS__)
 
-} // namespace gateway
+} // namespace logger
 } // namespace million

@@ -11,6 +11,8 @@
 #include <condition_variable>
 #include <utility>
 
+#include <million/api.h>
+
 namespace million {
 
 struct Task;
@@ -61,7 +63,7 @@ private:
 };
 
 // 协程的返回值类，这里不做返回值支持
-struct Task {
+struct MILLION_CLASS_API Task {
     using promise_type = TaskPromise;
 
     explicit Task(std::coroutine_handle<promise_type> coroutine) noexcept
@@ -93,7 +95,7 @@ struct Task {
 };
 
 // 管理协程运行、保存协程状态的类
-struct TaskPromise {
+struct MILLION_CLASS_API TaskPromise {
     TaskPromise() = default;
     ~TaskPromise() = default;
 

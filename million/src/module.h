@@ -4,7 +4,7 @@
 
 #include "detail/dl.h"
 
-#include <million/detail/noncopyable.h>
+#include <million/noncopyable.h>
 
 namespace million {
 

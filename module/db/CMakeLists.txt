@@ -27,9 +27,7 @@ target_include_directories(${DB_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(${DB_LIB} PRIVATE ${DB_HEADER_DIR})
 
 target_include_directories(${DB_LIB} PRIVATE ${MILLION_HEADER_DIR})
-
-target_include_directories(${DB_LIB} PRIVATE ${LOGGER_HEADER_DIR})
-target_link_libraries(${DB_LIB} PRIVATE ${LOGGER_LIB})
+target_link_libraries(${DB_LIB} PRIVATE ${MILLION_LIB})
 
 target_include_directories(${DB_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${PROTOGEN_LIB})
