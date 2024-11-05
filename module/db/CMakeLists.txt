@@ -40,10 +40,10 @@ target_link_libraries(${DB_LIB} PRIVATE ${YAML_CPP_LIB})
 target_include_directories(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_LIB})
 
-target_include_directories(${DB_LIB} PRIVATE ${MYSQL_HEADER_DIR})
-target_link_libraries(${DB_LIB} PRIVATE ${MYSQL_LIB})
+#target_include_directories(${DB_LIB} PRIVATE ${MYSQL_HEADER_DIR})
+#target_link_libraries(${DB_LIB} PRIVATE ${MYSQL_LIB})
 target_include_directories(${DB_LIB} PRIVATE ${SOCI_HEADER_DIR})
-target_link_libraries(${DB_LIB} PRIVATE soci_core_static soci_mysql_static)
+target_link_libraries(${DB_LIB} PRIVATE ${SOCI_LIB})
 
 if (WIN32)
     message(STATUS "Compiling on Windows")

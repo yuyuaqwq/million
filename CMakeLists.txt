@@ -37,7 +37,8 @@ set(HIREDIS_LIB hiredis)
 set(REDIS_PLUS_PLUS_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/redis-plus-plus/src)
 set(REDIS_PLUS_PLUS_LIB redis++_static hiredis)
 
-set(SOCI_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/soci/include)
+set(SOCI_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/soci/include ${MYSQL_HEADER_DIR})
+set(SOCI_LIB soci_core_static soci_mysql_static)
 
 # million
 set(MILLION_HEADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/million/include;${CMAKE_CURRENT_SOURCE_DIR};${META_HEADER_DIR}" CACHE STRING "million header dir")
@@ -60,4 +61,5 @@ set(REDIS_PLUS_PLUS_BUILD_TEST OFF CACHE BOOL "Disable redis-plus-plus test" FOR
 set(REDIS_PLUS_PLUS_BUILD_STATIC ON CACHE BOOL "Build redis-plus-plus static library" FORCE)
 add_subdirectory(third_party/redis-plus-plus)
 set(MYSQL_INCLUDE_DIR "${MYSQL_HEADER_DIR}")
+set(MYSQL_LIBRARIES "${MYSQL_LIB}")
 add_subdirectory(third_party/soci)
