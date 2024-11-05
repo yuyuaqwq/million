@@ -13,6 +13,7 @@
 #include "io_context.h"
 #include "io_context_mgr.h"
 #include "timer.h"
+#include "logger/logger.h"
 
 namespace million {
 
@@ -24,8 +25,11 @@ MILLION_FUNC_API void InitMillion() {
 
 MILLION_FUNC_API IMillion* NewMillion(std::string_view config_path) {
     auto mili = new Million(config_path);
+    logger::LoggerInit(mili);
+
     mili->Init();
     mili->Start();
+
     return mili;
 }
 
