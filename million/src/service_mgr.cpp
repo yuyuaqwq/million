@@ -45,8 +45,8 @@ void ServiceMgr::PushService(Service* service) {
         std::lock_guard guard(service_queue_mutex_);
         if (!service->in_queue()) {
             service_queue_.emplace(service);
-            // setΪfalse��ʱ������ProcessMsg��ɺ�����
-            // ���⵱ǰServiceͬʱ�����Work�̳߳��в�ProcessMsg
+            // set为false的时机，在ProcessMsg完成后设置
+            // 避免当前Service同时被多个Work线程持有并ProcessMsg
             service->set_in_queue(true);
             has_push = true;
         }
@@ -90,7 +90,7 @@ SessionId ServiceMgr::Send(const ServiceHandle& sender, const ServiceHandle& tar
         return kSessionIdInvalid;
     }
     service->PushMsg(std::move(msg));
-    PushService(service.get());
+    PushService(service);
     return id;
 }
 

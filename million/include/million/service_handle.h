@@ -16,7 +16,7 @@ class Service;
 class MILLION_CLASS_API ServiceHandle {
 public:
     ServiceHandle() = default;
-    explicit ServiceHandle(std::weak_ptr<Service> ptr)
+    explicit ServiceHandle(std::shared_ptr<Service> ptr)
         : ptr_(ptr) {}
     ~ServiceHandle() = default;
 
@@ -25,10 +25,10 @@ public:
         ptr_ = v.ptr_;
     }
 
-    std::shared_ptr<Service> service() const { return ptr_.lock(); }
+    Service* service() const { return ptr_.get(); }
 
 private:
-    std::weak_ptr<Service> ptr_;
+    std::shared_ptr<Service> ptr_;
 };
 
 } // namespace million
