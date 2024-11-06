@@ -49,35 +49,34 @@ std::optional<MsgUnique> Service::PopMsg() {
     return PopMsgWithLock();
 }
 
-bool Service::MsgQueueEmpty() {
+bool Service::MsgQueueIsEmpty() {
     std::lock_guard guard(msgs_mutex_);
     return msgs_.empty();
 }
 
-bool Service::ProcessMsg(MsgUnique msg) {
+void Service::ProcessMsg(MsgUnique msg) {
     if (msg->type() == MillionServiceInitMsg::kType) {
         iservice_->OnInit();
         state_ = ServiceState::kRunning;
-        return true;
+        return;
     }
     else if (msg->type() == MillionServiceExitMsg::kType) {
         state_ = ServiceState::kStopping;
-        return true;
+        return;
     }
     else if (msg->type() == MillionSessionTimeoutMsg::kType) {
         auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
         excutor_.TimeoutCleanup(msg_ptr->timeout_id);
-        return true;
+        return;
     }
 
     auto session_id = msg->session_id();
     auto msg_opt = excutor_.TrySchedule(session_id, std::move(msg));
     if (!msg_opt) {
-        return true;
+        return;
     }
     auto task = iservice_->OnMsg(std::move(*msg_opt));
     excutor_.AddTask(std::move(task));
-    return true;
 }
 
 void Service::ProcessMsgs(size_t count) {
@@ -86,9 +85,7 @@ void Service::ProcessMsgs(size_t count) {
         if (!msg_opt) {
             break;
         }
-        if (!ProcessMsg(std::move(*msg_opt))) {
-            break;
-        }
+        ProcessMsg(std::move(*msg_opt));
     }
 }
 
@@ -111,12 +108,10 @@ void Service::SeparateThreadHandle() {
         while (auto msg = PopMsg()) {
             ProcessMsg(std::move(*msg));
         }
-        if (MsgQueueEmpty()) {
-            if (IsStoping()) {
-                // 停止并销毁服务
-                Close();
-                break;
-            }
+        if (IsStoping()) {
+            // 停止并销毁服务
+            Close();
+            break;
         }
     }
 }

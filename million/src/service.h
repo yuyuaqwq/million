@@ -33,9 +33,9 @@ public:
 
     void PushMsg(MsgUnique msg);
     std::optional<MsgUnique> PopMsg();
-    bool MsgQueueEmpty();
+    bool MsgQueueIsEmpty();
 
-    bool ProcessMsg(MsgUnique msg);
+    void ProcessMsg(MsgUnique msg);
     void ProcessMsgs(size_t count);
 
     void EnableSeparateWorker();

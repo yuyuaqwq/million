@@ -23,14 +23,14 @@ void Worker::Start() {
             service.ProcessMsgs(1);
             // 可以将service放到队列了
             service.set_in_queue(false);
-            if (service.MsgQueueEmpty()) {
-                if (service.IsStoping()) {
-                    // 停止并销毁服务
-                    service.Close();
-                }
+            if (!service.MsgQueueIsEmpty()) {
+                service_mgr.PushService(&service);
                 continue;
             }
-            service_mgr.PushService(&service);
+            if (service.IsStoping()) {
+                // 停止并销毁服务
+                service.Close();
+            }
         }
     });
 }
