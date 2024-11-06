@@ -13,7 +13,7 @@
 #include "io_context.h"
 #include "io_context_mgr.h"
 #include "timer.h"
-#include "logger/logger.h"
+#include "logger.h"
 
 namespace million {
 
@@ -25,8 +25,6 @@ MILLION_FUNC_API void InitMillion() {
 
 MILLION_FUNC_API IMillion* NewMillion(std::string_view config_path) {
     auto mili = new Million(config_path);
-    logger::LoggerInit(mili);
-
     mili->Init();
     mili->Start();
 
@@ -43,6 +41,7 @@ Million::Million(std::string_view config_path) {
 
     service_mgr_ = std::make_unique<ServiceMgr>(this);
     session_mgr_ = std::make_unique<SessionMgr>(this);
+    logger_ = std::make_unique<Logger>(this);
 
     auto worker_mgr_config = config["worker_mgr"];
     if (!worker_mgr_config) {
@@ -94,7 +93,6 @@ Million::Million(std::string_view config_path) {
     auto timeout_s = session_monitor_config["timeout_tick"].as<uint32_t>();
     session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
 
-
     auto timer_config = config["timer"];
     if (!timer_config) {
         throw ConfigException("cannot find 'timer'.");
@@ -104,12 +102,14 @@ Million::Million(std::string_view config_path) {
     }
     auto ms_per_tick = timer_config["ms_per_tick"].as<uint32_t>();
     timer_ = std::make_unique<Timer>(this, ms_per_tick);
+
 }
 
 Million::~Million() = default;
 
 void Million::Init() {
     assert(module_mgr_);
+    logger_->Init();
     module_mgr_->Init();
 }
 
@@ -139,6 +139,10 @@ SessionId Million::Send(ServiceHandle sender, ServiceHandle target, MsgUnique ms
     return Send(session_mgr_->AllocSessionId(), sender, target, std::move(msg));
 }
 
+const YAML::Node& Million::YamlConfig() const {
+    return *config_;
+}
+
 void Million::Timeout(uint32_t tick, ServiceHandle service, MsgUnique msg) {
     timer_->AddTask(tick, service, std::move(msg));
 }
@@ -147,9 +151,8 @@ asio::io_context& Million::NextIoContext() {
     return io_context_mgr_->NextIoContext().io_context();
 }
 
-
-const YAML::Node& Million::YamlConfig() const {
-    return *config_;
+void Million::Log(ServiceHandle sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) {
+    logger_->Log(sender, level, file, line, function, str);
 }
 
 

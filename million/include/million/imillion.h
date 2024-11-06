@@ -6,6 +6,7 @@
 #include <million/noncopyable.h>
 #include <million/imsg.h>
 #include <million/iservice.h>
+#include <million/logger/logger.h>
 
 namespace YAML {
 
@@ -46,11 +47,10 @@ public:
         return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
-    virtual void Timeout(uint32_t tick, ServiceHandle service, MsgUnique msg) = 0;
-
-    virtual asio::io_context& NextIoContext() = 0;
-
     virtual const YAML::Node& YamlConfig() const = 0;
+    virtual void Timeout(uint32_t tick, ServiceHandle service, MsgUnique msg) = 0;
+    virtual asio::io_context& NextIoContext() = 0;
+    virtual void Log(ServiceHandle sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) = 0;
 };
 
 inline SessionId IService::Send(ServiceHandle target, MsgUnique msg) {

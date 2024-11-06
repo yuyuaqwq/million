@@ -9,22 +9,22 @@
 #include <spdlog/sinks/hourly_file_sink.h>
 
 #include <million/logger/logger.h>
-#include <million/imillion.h>
 
+#include "million.h"
 #include "logger.h"
 
 namespace million {
-namespace logger {
 
-MILLION_OBJECT_API ServiceHandle logger_handle;
+MILLION_MSG_DEFINE(, LoggerLogMsg, (logger::LogLevel) level, (const char*) file, (int) line, (const char*) function, (std::string) info);
+MILLION_MSG_DEFINE(, LoggerSetLevelMsg, (std::string) level);
 
-static_assert(LogLevel::kTrace == spdlog::level::level_enum::trace);
-static_assert(LogLevel::kDebug == spdlog::level::level_enum::debug);
-static_assert(LogLevel::kInfo == spdlog::level::level_enum::info);
-static_assert(LogLevel::kWarn == spdlog::level::level_enum::warn);
-static_assert(LogLevel::kErr == spdlog::level::level_enum::err);
-static_assert(LogLevel::kCritical == spdlog::level::level_enum::critical);
-static_assert(LogLevel::kOff == spdlog::level::level_enum::off);
+static_assert(logger::LogLevel::kTrace == spdlog::level::level_enum::trace);
+static_assert(logger::LogLevel::kDebug == spdlog::level::level_enum::debug);
+static_assert(logger::LogLevel::kInfo == spdlog::level::level_enum::info);
+static_assert(logger::LogLevel::kWarn == spdlog::level::level_enum::warn);
+static_assert(logger::LogLevel::kErr == spdlog::level::level_enum::err);
+static_assert(logger::LogLevel::kCritical == spdlog::level::level_enum::critical);
+static_assert(logger::LogLevel::kOff == spdlog::level::level_enum::off);
 
 class LoggerService : public IService {
 public:
@@ -98,11 +98,21 @@ private:
     std::shared_ptr<spdlog::logger> logger_;
 };
 
-bool LoggerInit(million::IMillion* imillion) {
-    logger_handle = imillion->NewService<LoggerService>();
-    return true;
+Logger::Logger(Million* million) : million_(million) {}
+Logger::~Logger() {
+
 }
 
+void Logger::Init() {
+    logger_handle_ = million_->NewService<LoggerService>();
+}
 
-} // namespace logger
+void Logger::Log(ServiceHandle sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) {
+    million_->Send<LoggerLogMsg>(sender, logger_handle_, level, file, line, function, str);
+}
+
+void Logger::SetLevel(ServiceHandle sender, std::string_view level) {
+    million_->Send<LoggerSetLevelMsg>(sender, logger_handle_, level);
+}
+
 } // namespace million

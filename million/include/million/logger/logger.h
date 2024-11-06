@@ -17,16 +17,11 @@ enum LogLevel : int {
     kOff = 6,       // off
 };
 
-MILLION_MSG_DEFINE(MILLION_CLASS_API, LoggerLogMsg, (LogLevel) level, (const char*) file, (int) line, (const char*) function, (std::string) info);
-MILLION_MSG_DEFINE(MILLION_CLASS_API, LoggerSetLevelMsg, (std::string) level);
-
-extern MILLION_OBJECT_API ServiceHandle logger_handle;
-
-#define MILLION_LOGGER_CALL(MILLION_, SENDER_, LEVEL_, FMT_, ...) \
-        MILLION_->Send<::million::logger::LoggerLogMsg>(SENDER_, ::million::logger::logger_handle, LEVEL_, __FILE__, __LINE__, __func__,  ::std::format(FMT_, __VA_ARGS__))
+#define MILLION_LOGGER_CALL(MILLION_, SENDER, LEVEL_, FMT_, ...) \
+        MILLION_->Log(SENDER, LEVEL_, __FILE__, __LINE__, __func__,  ::std::format(FMT_, __VA_ARGS__))
 
 #define MILLION_SERVICE_LOGGER_CALL(LEVEL_, FMT_, ...) \
-        Send<::million::logger::LoggerLogMsg>(::million::logger::logger_handle, LEVEL_, __FILE__, __LINE__, __func__,  ::std::format(FMT_, __VA_ARGS__))
+        imillion_->Log(service_handle(), LEVEL_, __FILE__, __LINE__, __func__,  ::std::format(FMT_, __VA_ARGS__))
 
 #define LOG_TRACE(...) MILLION_SERVICE_LOGGER_CALL(::million::logger::LogLevel::kTrace, __VA_ARGS__)
 #define LOG_DEBUG(...) MILLION_SERVICE_LOGGER_CALL(::million::logger::LogLevel::kDebug, __VA_ARGS__)
