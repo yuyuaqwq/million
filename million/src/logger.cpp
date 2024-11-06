@@ -107,11 +107,11 @@ void Logger::Init() {
     logger_handle_ = million_->NewService<LoggerService>();
 }
 
-void Logger::Log(ServiceHandle sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) {
+void Logger::Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) {
     million_->Send<LoggerLogMsg>(sender, logger_handle_, level, file, line, function, str);
 }
 
-void Logger::SetLevel(ServiceHandle sender, std::string_view level) {
+void Logger::SetLevel(const ServiceHandle& sender, std::string_view level) {
     million_->Send<LoggerSetLevelMsg>(sender, logger_handle_, level);
 }
 

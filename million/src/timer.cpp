@@ -32,7 +32,7 @@ void Timer::Stop() {
     run_ = false;
 }
 
-void Timer::AddTask(uint32_t tick, ServiceHandle service, MsgUnique msg) {
+void Timer::AddTask(uint32_t tick, const ServiceHandle& service, MsgUnique msg) {
     tasks_.AddTask(tick, { service, std::move(msg) });
 }
 

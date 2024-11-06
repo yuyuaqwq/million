@@ -19,9 +19,9 @@ public:
         : imillion_(imillion) {}
     virtual ~IService() = default;
 
-    SessionId Send(ServiceHandle target, MsgUnique msg);
+    SessionId Send(const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
-    SessionId Send(ServiceHandle target, Args&&... args) {
+    SessionId Send(const ServiceHandle& target, Args&&... args) {
         return Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
@@ -31,9 +31,9 @@ public:
     }
 
     void Reply(MsgUnique msg);
-    void Reply(ServiceHandle target, SessionId session_id);
+    void Reply(const ServiceHandle& target, SessionId session_id);
     template <typename MsgT, typename ...Args>
-    void Reply(ServiceHandle target, SessionId session_id, Args&&... args) {
+    void Reply(const ServiceHandle& target, SessionId session_id, Args&&... args) {
         auto msg = std::make_unique<MsgT>(std::forward<Args>(args)...);
         msg->set_session_id(session_id);
         msg->set_sender(target);
@@ -41,12 +41,12 @@ public:
     }
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
-    Awaiter<RecvMsgT> Call(ServiceHandle target, Args&&... args) {
+    Awaiter<RecvMsgT> Call(const ServiceHandle& target, Args&&... args) {
         auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
         return Recv<RecvMsgT>(session_id);
     }
     template <typename MsgT, typename ...Args>
-    Awaiter<MsgT> Call(ServiceHandle target, Args&&... args) {
+    Awaiter<MsgT> Call(const ServiceHandle& target, Args&&... args) {
         auto session_id = Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
         return Recv<MsgT>(session_id);
     }
@@ -61,8 +61,8 @@ public:
     virtual Task OnMsg(MsgUnique msg) = 0;
     virtual void OnExit() {};
 
-    ServiceHandle service_handle() const { return service_handle_; }
-    void set_service_handle(ServiceHandle handle) { service_handle_ = handle; }
+    const ServiceHandle& service_handle() const { return service_handle_; }
+    void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
 
 protected:
     IMillion* imillion_;

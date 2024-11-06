@@ -16,8 +16,28 @@ Service::Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
 
 Service::~Service() = default;
 
+bool Service::IsStoping() const {
+    return state_ == ServiceState::kStopping;
+}
+
+void Service::Stop() {
+    {
+        auto lock = std::lock_guard(msgs_mutex_);
+        if (state_ == ServiceState::kStop) {
+            return;
+        }
+        state_ = ServiceState::kStop;
+    }
+    iservice().OnExit();
+    service_mgr_->DeleteService(this);
+}
+
 void Service::PushMsg(MsgUnique msg) {
     std::lock_guard guard(msgs_mutex_);
+    if (state_ == ServiceState::kStopping || state_ == ServiceState::kStop) {
+        // 关闭，不再接收消息
+        return;
+    }
     msgs_.emplace(std::move(msg));
 }
 
@@ -43,7 +63,16 @@ bool Service::ProcessMsg() {
         return false;
     }
     auto msg = std::move(*msg_opt);
-    if (msg->type() == MillionSessionTimeoutMsg::kType) {
+    if (msg->type() == MillionServiceInitMsg::kType) {
+        iservice_->OnInit();
+        state_ = ServiceState::kRunning;
+        return true;
+    }
+    else if (msg->type() == MillionServiceExitMsg::kType) {
+        state_ = ServiceState::kStopping;
+        return true;
+    }
+    else if (msg->type() == MillionSessionTimeoutMsg::kType) {
         auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
         excutor_.TimeoutCleanup(msg_ptr->timeout_id);
         return true;

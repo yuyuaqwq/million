@@ -28,14 +28,16 @@ public:
     virtual ServiceHandle AddService(std::unique_ptr<IService> iservice) override;
     using IMillion::NewService;
 
-    virtual SessionId Send(SessionId session_id, ServiceHandle sender, ServiceHandle target, MsgUnique msg);
-    virtual SessionId Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) override;
+    virtual void DeleteService(const ServiceHandle& service_handle) override;
+
+    virtual SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
+    virtual SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) override;
     using IMillion::Send;
 
     virtual const YAML::Node& YamlConfig() const override;
-    virtual void Timeout(uint32_t tick, ServiceHandle service, MsgUnique msg) override;
+    virtual void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) override;
     virtual asio::io_context& NextIoContext() override;
-    virtual void Log(ServiceHandle sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) override;
+    virtual void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) override;
 
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& session_mgr() { assert(session_mgr_); return *session_mgr_; }

@@ -16,20 +16,19 @@ class Service;
 class MILLION_CLASS_API ServiceHandle {
 public:
     ServiceHandle() = default;
-    explicit ServiceHandle(std::list<std::unique_ptr<Service>>::iterator iter)
-        : iter_(iter) {}
+    explicit ServiceHandle(std::weak_ptr<Service> ptr)
+        : ptr_(ptr) {}
     ~ServiceHandle() = default;
 
     ServiceHandle(const ServiceHandle&) = default;
     void operator=(const ServiceHandle& v) {
-        iter_ = v.iter_;
+        ptr_ = v.ptr_;
     }
 
-    Service& service() const { return *iter_->get(); }
-    auto iter() const { return iter_; }
+    std::shared_ptr<Service> service() const { return ptr_.lock(); }
 
 private:
-    std::list<std::unique_ptr<Service>>::iterator iter_;
+    std::weak_ptr<Service> ptr_;
 };
 
 } // namespace million

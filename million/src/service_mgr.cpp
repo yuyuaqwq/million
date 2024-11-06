@@ -1,6 +1,8 @@
 #include "service_mgr.h"
 
+#include "million.h"
 #include "service.h"
+#include "million_msg.h"
 
 namespace million {
 
@@ -11,24 +13,31 @@ ServiceMgr::~ServiceMgr() = default;
 
 ServiceHandle ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
     decltype(services_)::iterator iter;
-    auto service = std::make_unique<Service>(this, std::move(iservice));
+    auto service_shared = std::make_shared<Service>(this, std::move(iservice));
+    auto handle = ServiceHandle(service_shared);
+    service_shared->iservice().set_service_handle(handle);
+    auto service_ptr = service_shared.get();
     {
-        std::lock_guard guard(services_mutex_);
-        services_.emplace_back(std::move(service));
+        auto lock = std::lock_guard(services_mutex_);
+        services_.emplace_back(std::move(service_shared));
         iter = --services_.end();
     }
-    auto handle = ServiceHandle(iter);
-    handle.service().iservice().set_service_handle(handle);
-    handle.service().iservice().OnInit();
+    service_ptr->set_iter(iter);
+    million_->Send<MillionServiceInitMsg>(handle, handle);
     return handle;
 }
 
-void ServiceMgr::RemoveService(ServiceHandle handle) {
+void ServiceMgr::DeleteService(const ServiceHandle& handle) {
+    million_->Send<MillionServiceExitMsg>(handle, handle);
+}
+
+void ServiceMgr::DeleteService(Service* service) {
     {
-        std::lock_guard guard(services_mutex_);
-        services_.erase(handle.iter());
+        auto lock = std::lock_guard(services_mutex_);
+        services_.erase(service->iter());
     }
 }
+
 
 void ServiceMgr::PushService(Service* service) {
     bool has_push = false;
@@ -36,8 +45,8 @@ void ServiceMgr::PushService(Service* service) {
         std::lock_guard guard(service_queue_mutex_);
         if (!service->in_queue()) {
             service_queue_.emplace(service);
-            // setÎªfalseµÄÊ±»ú£¬ÔÚProcessMsgÍê³ÉºóÉèÖÃ
-            // ±ÜÃâµ±Ç°ServiceÍ¬Ê±±»¶à¸öWorkÏß³Ì³ÖÓÐ²¢ProcessMsg
+            // setÎªfalseï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ProcessMsgï¿½ï¿½Éºï¿½ï¿½ï¿½ï¿½ï¿½
+            // ï¿½ï¿½ï¿½âµ±Ç°ServiceÍ¬Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Workï¿½ß³Ì³ï¿½ï¿½Ð²ï¿½ProcessMsg
             service->set_in_queue(true);
             has_push = true;
         }
@@ -59,7 +68,7 @@ Service& ServiceMgr::PopService() {
     return *service;
 }
 
-void ServiceMgr::SetServiceCodeName(ServiceHandle handle, const ServiceCodeName& code_name) {
+void ServiceMgr::SetServiceCodeName(const ServiceHandle& handle, const ServiceCodeName& code_name) {
     std::lock_guard guard(service_code_name_map_mutex_);
     service_code_name_map_.insert(std::make_pair(code_name, handle));
 }
@@ -73,12 +82,15 @@ std::optional<ServiceHandle> ServiceMgr::GetServiceByCodeNum(const ServiceCodeNa
     return iter->second;
 }
 
-SessionId ServiceMgr::Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) {
+SessionId ServiceMgr::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
     msg->set_sender(sender);
     auto id = msg->session_id();
-    auto& service = target.service();
-    service.PushMsg(std::move(msg));
-    PushService(&service);
+    auto service = target.service();
+    if (!service) {
+        return kSessionIdInvalid;
+    }
+    service->PushMsg(std::move(msg));
+    PushService(service.get());
     return id;
 }
 

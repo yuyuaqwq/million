@@ -22,7 +22,7 @@ public:
     void Start();
     void Stop();
 
-    void AddSession(ServiceHandle service, SessionId session_id);
+    void AddSession(const ServiceHandle& service, SessionId session_id);
 private:
     Million* million_;
     uint32_t timeout_tick_;

@@ -12,8 +12,8 @@ public:
 	~Logger();
 
 	void Init();
-	void Log(ServiceHandle sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str);
-	void SetLevel(ServiceHandle sender, std::string_view level);
+	void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str);
+	void SetLevel(const ServiceHandle& sender, std::string_view level);
 
 private:
 	Million* million_;

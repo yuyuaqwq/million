@@ -23,7 +23,7 @@ public:
     void Start();
     void Stop();
 
-    void AddTask(uint32_t tick, ServiceHandle service, MsgUnique msg);
+    void AddTask(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
 
 private:
     Million* million_;

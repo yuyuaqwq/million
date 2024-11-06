@@ -20,12 +20,17 @@ void Worker::Start() {
         while (run_) {
             auto& service = service_mgr.PopService();
             // std::cout << "workid:" <<  std::this_thread::get_id() << std::endl;
-            service.ProcessMsg();
+            service.ProcessMsgs(1);
             // 可以将service放到队列了
             service.set_in_queue(false);
-            if (!service.MsgQueueEmpty()) {
-                service_mgr.PushService(&service);
+            if (service.MsgQueueEmpty()) {
+                if (service.IsStoping()) {
+                    // 关闭并销毁服务
+                    service.Stop();
+                }
+                continue;
             }
+            service_mgr.PushService(&service);
         }
     });
 }

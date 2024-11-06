@@ -40,20 +40,22 @@ public:
         return AddService(std::move(iservice));
     }
 
-    virtual SessionId Send(ServiceHandle sender, ServiceHandle target, MsgUnique msg) = 0;
-    virtual SessionId Send(SessionId session_id, ServiceHandle sender, ServiceHandle target, MsgUnique msg) = 0;
+    virtual void DeleteService(const ServiceHandle& service_handle) = 0;
+
+    virtual SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) = 0;
+    virtual SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) = 0;
     template <typename MsgT, typename ...Args>
-    SessionId Send(ServiceHandle sender, ServiceHandle target, Args&&... args) {
+    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
         return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
     virtual const YAML::Node& YamlConfig() const = 0;
-    virtual void Timeout(uint32_t tick, ServiceHandle service, MsgUnique msg) = 0;
+    virtual void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) = 0;
     virtual asio::io_context& NextIoContext() = 0;
-    virtual void Log(ServiceHandle sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) = 0;
+    virtual void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) = 0;
 };
 
-inline SessionId IService::Send(ServiceHandle target, MsgUnique msg) {
+inline SessionId IService::Send(const ServiceHandle& target, MsgUnique msg) {
     return imillion_->Send(service_handle_, target, std::move(msg));
 }
 
@@ -63,7 +65,7 @@ inline void IService::Reply(MsgUnique msg) {
     imillion_->Send(session_id, service_handle_, target, std::move(msg));
 }
 
-inline void IService::Reply(ServiceHandle target, SessionId session_id) {
+inline void IService::Reply(const ServiceHandle& target, SessionId session_id) {
     Reply<IMsg>(target, session_id);
 }
 

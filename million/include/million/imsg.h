@@ -19,8 +19,8 @@ public:
 	SessionId session_id() const { return session_id_; }
 	void set_session_id(SessionId session_id) { session_id_ = session_id; }
 
-	ServiceHandle sender() const { return sender_; }
-	void set_sender(ServiceHandle sender) { sender_ = sender; }
+	const ServiceHandle& sender() const { return sender_; }
+	void set_sender(const ServiceHandle& sender) { sender_ = sender; }
 
 	virtual const char* type() const { return "IMsg"; };
 

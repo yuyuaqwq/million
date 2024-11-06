@@ -22,7 +22,7 @@ void SessionMonitor::Start() {
     thread_.emplace([this]() {
         tasks_.Init();
         auto timeout = [this](auto&& task) {
-            // ·¢ËÍÒ»ÌõÏûÏ¢¸ø¸Ã·þÎñ£¬ÈÃ·þÎñ×Ô¼ºÈ¥È·¶¨¸Ã»á»°ÊÇ·ñÒÑ¾­Íê³ÉÁË£¬Ã»Íê³ÉÔòÒÆ³ý²¢³¬Ê±¸æ¾¯
+            // ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½Ã·ï¿½ï¿½ï¿½ï¿½Ã·ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½È¥È·ï¿½ï¿½ï¿½Ã»á»°ï¿½Ç·ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½Ë£ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ³ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½æ¾¯
             million_->Send<MillionSessionTimeoutMsg>(task.data.service, task.data.service, task.data.session_id);
         };
         while (run_) {
@@ -35,7 +35,7 @@ void SessionMonitor::Stop() {
     run_ = false;
 }
 
-void SessionMonitor::AddSession(ServiceHandle service, SessionId session_id) {
+void SessionMonitor::AddSession(const ServiceHandle& service, SessionId session_id) {
     tasks_.AddTask(timeout_tick_, { service, session_id });
 }
 
