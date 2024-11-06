@@ -99,15 +99,18 @@ bool Service::HasSeparateWorker() const {
 
 void Service::SeparateThreadHandle() {
     while (true) {
+        // 后续可以使用队列交换优化
+        std::optional<MsgUnique> msg;
         {
             auto lock = std::unique_lock(msgs_mutex_);
             while (msgs_.empty()) {
                 separate_worker_->cv.wait(lock);
             }
+            msg = PopMsgWithLock();
         }
-        while (auto msg = PopMsg()) {
+        do {
             ProcessMsg(std::move(*msg));
-        }
+        } while (msg = PopMsg());
         if (IsStoping()) {
             // 停止并销毁服务
             Close();
