@@ -9,7 +9,6 @@ module:
     dirs: 
         - ../../lib/Debug
     loads:
-        - logger
         - db
         - pysvr
         - gateway
