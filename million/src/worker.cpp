@@ -25,8 +25,8 @@ void Worker::Start() {
             service.set_in_queue(false);
             if (service.MsgQueueEmpty()) {
                 if (service.IsStoping()) {
-                    // 关闭并销毁服务
-                    service.Stop();
+                    // 停止并销毁服务
+                    service.Close();
                 }
                 continue;
             }

@@ -28,7 +28,7 @@ public:
     ~Service();
 
     bool IsStoping() const;
-    void Stop();
+    void Close();
 
     void PushMsg(MsgUnique msg);
     std::optional<MsgUnique> PopMsg();

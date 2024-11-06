@@ -20,7 +20,7 @@ bool Service::IsStoping() const {
     return state_ == ServiceState::kStopping;
 }
 
-void Service::Stop() {
+void Service::Close() {
     {
         auto lock = std::lock_guard(msgs_mutex_);
         if (state_ == ServiceState::kStop) {
