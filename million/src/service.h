@@ -41,14 +41,19 @@ public:
     void EnableSeparateWorker();
     bool HasSeparateWorker() const;
 
-    ServiceState state() { return state_; }
-    bool in_queue() const { return in_queue_; }
-    void set_in_queue(bool in_queue) { in_queue_ = in_queue; }
-    IService& iservice() const { assert(iservice_); return *iservice_; }
-    const ServiceHandle& service_handle() const { return iservice_->service_handle(); }
+    ServiceMgr* service_mgr() const { return service_mgr_; }
+    
     auto iter() const { return iter_; }
     void set_iter(std::list<std::shared_ptr<Service>>::iterator iter) { iter_ = iter; }
-    ServiceMgr* service_mgr() const { return service_mgr_; }
+
+    ServiceState state() { return state_; }
+
+    bool in_queue() const { return in_queue_; }
+    void set_in_queue(bool in_queue) { in_queue_ = in_queue; }
+
+    IService& iservice() const { assert(iservice_); return *iservice_; }
+
+    const ServiceHandle& service_handle() const { return iservice_->service_handle(); }
 
 private:
     void SeparateThreadHandle();
@@ -72,7 +77,6 @@ private:
     struct SeparateWorker {
         std::thread thread;
         std::condition_variable cv;
-
         SeparateWorker(const std::function<void()>& func) : thread(func) { thread.detach(); }
     };
     std::unique_ptr<SeparateWorker> separate_worker_;

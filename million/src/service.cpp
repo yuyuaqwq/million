@@ -35,7 +35,7 @@ void Service::Close() {
 void Service::PushMsg(MsgUnique msg) {
     auto lock = std::lock_guard(msgs_mutex_);
     if (state_ == ServiceState::kStopping || state_ == ServiceState::kStop) {
-        // 关闭，不再接收消息
+        // 服务关闭，不再接收消息
         return;
     }
     msgs_.emplace(std::move(msg));
