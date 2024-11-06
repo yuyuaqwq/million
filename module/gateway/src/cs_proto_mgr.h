@@ -24,7 +24,7 @@ namespace protobuf = google::protobuf;
 
 class CsProtoMgr : noncopyable {
 public:
-    // ��ʼ����Ϣӳ��
+    // 初始化消息映射
     void InitMsgMap() {
         const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
         protobuf::DescriptorDatabase* db = pool->internal_generated_database();
@@ -33,12 +33,11 @@ public:
         }
 
         std::vector<std::string> file_names;
-        db->FindAllFileNames(&file_names);   // �����õ�����proto�ļ���
+        db->FindAllFileNames(&file_names);
         for (const std::string& filename : file_names) {
             const protobuf::FileDescriptor* file_descriptor = pool->FindFileByName(filename);
             if (file_descriptor == nullptr) continue;
 
-            // ��ȡ���ļ��ж���� SubMsgId Enum
             int enum_count = file_descriptor->enum_type_count();
             const protobuf::EnumDescriptor* enum_descriptor = nullptr;
             for (int i = 0; i < enum_count; i++) {
@@ -49,7 +48,6 @@ public:
                 if (opts.HasExtension(Cs::cs_msg_id)) {
                     Cs::MsgId msg_id = opts.GetExtension(Cs::cs_msg_id);
 
-                    // ��������ļ����Ӧ��msg_id��ӳ��
                     file_desc_map_.insert(std::make_pair(msg_id, file_descriptor));
                     break;
                 }
@@ -57,7 +55,7 @@ public:
         }
     }
 
-    // ע������Ϣ
+    // 注册子消息
     template <typename ExtensionIdT>
     bool RegistrySubMsg(Cs::MsgId msg_id, const ExtensionIdT& id) {
         if (static_cast<uint32_t>(msg_id) > kMsgIdMax) {
@@ -85,7 +83,7 @@ public:
         return true;
     }
 
-    // ������Ϣ
+    // 编码消息
     std::optional<Buffer> EncodeMessage(const UserHeader& header, const protobuf::Message& message) {
         auto desc = message.GetDescriptor();
         auto msg_key = GetMsgKey(desc);
@@ -95,7 +93,6 @@ public:
         auto [msg_id, sub_msg_id] = CalcMsgId(*msg_key);
 
         Buffer buffer;
-        // ���� msg_id �� sub_msg_id
         uint16_t msg_id_net = asio::detail::socket_ops::host_to_network_short(static_cast<uint16_t>(msg_id));
         uint16_t sub_msg_id_net = asio::detail::socket_ops::host_to_network_short(static_cast<uint16_t>(sub_msg_id));
 
@@ -108,16 +105,13 @@ public:
         std::memcpy(buffer.data() + i, &header, sizeof(header));
         i += sizeof(header);
 
-        // ���л���Ϣ��������
         message.SerializeToArray(buffer.data() + i, message.ByteSize());
         return buffer;
     }
 
-    // ������Ϣ
+    // 解码消息
     std::optional<std::tuple<ProtoMsgUnique, Cs::MsgId, uint32_t>> DecodeMessage(const Buffer& buffer, UserHeader* header) {
-        // ��ȡ msg_id �� sub_msg_id
         uint16_t msg_id_net, sub_msg_id_net;
-        // ȷ���������㹻��
         if (buffer.size() < sizeof(msg_id_net) + sizeof(sub_msg_id_net) + sizeof(*header)) return std::nullopt;
 
         size_t i = 0;
@@ -141,7 +135,6 @@ public:
         if (!proto_msg_opt) return {};
         auto& proto_msg = *proto_msg_opt;
 
-        // �����л���Ϣ
         auto success = proto_msg->ParseFromArray(buffer.data() + i, buffer.size() - i);
         if (!success) {
             return std::nullopt;

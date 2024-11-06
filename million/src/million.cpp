@@ -130,8 +130,8 @@ ServiceHandle Million::AddService(std::unique_ptr<IService> iservice) {
     return service_mgr_->AddService(std::move(iservice));
 }
 
-void Million::DeleteService(const ServiceHandle& service_handle) {
-    service_mgr_->DeleteService(service_handle);
+void Million::DeleteService(ServiceHandle&& service_handle) {
+    service_mgr_->DeleteService(std::move(service_handle));
 }
 
 SessionId Million::Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
@@ -159,5 +159,8 @@ void Million::Log(const ServiceHandle& sender, logger::LogLevel level, const cha
     logger_->Log(sender, level, file, line, function, str);
 }
 
+void Million::EnableSeparateWorker(const ServiceHandle& service) {
+    service.service()->EnableSeparateWorker();
+}
 
 } //namespace million

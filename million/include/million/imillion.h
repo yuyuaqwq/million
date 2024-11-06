@@ -40,7 +40,7 @@ public:
         return AddService(std::move(iservice));
     }
 
-    virtual void DeleteService(const ServiceHandle& service_handle) = 0;
+    virtual void DeleteService(ServiceHandle&& service_handle) = 0;
 
     virtual SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) = 0;
     virtual SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) = 0;
@@ -53,6 +53,7 @@ public:
     virtual void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) = 0;
     virtual asio::io_context& NextIoContext() = 0;
     virtual void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) = 0;
+    virtual void EnableSeparateWorker(const ServiceHandle& service) = 0;
 };
 
 inline SessionId IService::Send(const ServiceHandle& target, MsgUnique msg) {
@@ -71,6 +72,10 @@ inline void IService::Reply(const ServiceHandle& target, SessionId session_id) {
 
 inline void IService::Timeout(uint32_t tick, MsgUnique msg) {
     imillion_->Timeout(tick, service_handle(), std::move(msg));
+}
+
+inline void IService::EnableSeparateWorker() {
+    imillion_->EnableSeparateWorker(service_handle());
 }
 
 MILLION_FUNC_API void InitMillion();

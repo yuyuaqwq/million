@@ -40,6 +40,9 @@ void ServiceMgr::DeleteService(Service* service) {
 
 
 void ServiceMgr::PushService(Service* service) {
+    if (service->HasSeparateWorker()) {
+        return;
+    }
     bool has_push = false;
     {
         std::lock_guard guard(service_queue_mutex_);

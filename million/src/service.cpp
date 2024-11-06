@@ -33,23 +33,20 @@ void Service::Close() {
 }
 
 void Service::PushMsg(MsgUnique msg) {
-    std::lock_guard guard(msgs_mutex_);
+    auto lock = std::lock_guard(msgs_mutex_);
     if (state_ == ServiceState::kStopping || state_ == ServiceState::kStop) {
         // 关闭，不再接收消息
         return;
     }
     msgs_.emplace(std::move(msg));
+    if (separate_worker_) {
+        separate_worker_->cv.notify_one();
+    }
 }
 
 std::optional<MsgUnique> Service::PopMsg() {
-    std::lock_guard guard(msgs_mutex_);
-    if (msgs_.empty()) {
-        return std::nullopt;
-    }
-    auto msg = std::move(msgs_.front());
-    msgs_.pop();
-    assert(msg);
-    return msg;
+    auto lock = std::lock_guard(msgs_mutex_);
+    return PopMsgWithLock();
 }
 
 bool Service::MsgQueueEmpty() {
@@ -57,12 +54,7 @@ bool Service::MsgQueueEmpty() {
     return msgs_.empty();
 }
 
-bool Service::ProcessMsg() {
-    auto msg_opt = PopMsg();
-    if (!msg_opt) {
-        return false;
-    }
-    auto msg = std::move(*msg_opt);
+bool Service::ProcessMsg(MsgUnique msg) {
     if (msg->type() == MillionServiceInitMsg::kType) {
         iservice_->OnInit();
         state_ = ServiceState::kRunning;
@@ -79,7 +71,7 @@ bool Service::ProcessMsg() {
     }
 
     auto session_id = msg->session_id();
-    msg_opt = excutor_.TrySchedule(session_id, std::move(msg));
+    auto msg_opt = excutor_.TrySchedule(session_id, std::move(msg));
     if (!msg_opt) {
         return true;
     }
@@ -90,10 +82,53 @@ bool Service::ProcessMsg() {
 
 void Service::ProcessMsgs(size_t count) {
     for (size_t i = 0; i < count; ++i) {
-        if (!ProcessMsg()) {
+        auto msg_opt = PopMsg();
+        if (!msg_opt) {
+            break;
+        }
+        if (!ProcessMsg(std::move(*msg_opt))) {
             break;
         }
     }
+}
+
+void Service::EnableSeparateWorker() {
+    separate_worker_ = std::make_unique<SeparateWorker>([this] { SeparateThreadHandle(); });
+}
+
+bool Service::HasSeparateWorker() const {
+    return separate_worker_.operator bool();
+}
+
+void Service::SeparateThreadHandle() {
+    while (true) {
+        {
+            auto lock = std::unique_lock(msgs_mutex_);
+            while (msgs_.empty()) {
+                separate_worker_->cv.wait(lock);
+            }
+        }
+        while (auto msg = PopMsg()) {
+            ProcessMsg(std::move(*msg));
+        }
+        if (MsgQueueEmpty()) {
+            if (IsStoping()) {
+                // 停止并销毁服务
+                Close();
+                break;
+            }
+        }
+    }
+}
+
+std::optional<MsgUnique> Service::PopMsgWithLock() {
+    if (msgs_.empty()) {
+        return std::nullopt;
+    }
+    auto msg = std::move(msgs_.front());
+    msgs_.pop();
+    assert(msg);
+    return msg;
 }
 
 } // namespace million

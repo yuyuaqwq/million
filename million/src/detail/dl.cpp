@@ -7,7 +7,6 @@
 #endif
 
 namespace million {
-
 namespace detail {
 
 Dll::Dll() = default;
@@ -62,5 +61,4 @@ void* Dll::GetFuncAddr(std::string_view func_name) const {
 }
 
 } // namespace detail
-
 } // namespace million

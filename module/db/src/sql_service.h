@@ -44,53 +44,10 @@ public:
             std::cerr << "Error: " << e.what() << std::endl;
         }
 
-        run_ = true;
-        thread_.emplace([this]() {
-            while (run_) {
-                try {
-                    std::unique_lock guard(queue_mutex_);
-                    while (run_ && queue_.empty()) {
-                        queue_cv_.wait(guard);
-                    }
-                    if (!run_) return;
-
-                    auto msg = std::move(queue_.front());
-                    queue_.pop();
-
-                    // 自行分发消息，因为没有调度器，不能使用co_await
-                    auto task = MsgDispatch(std::move(msg));
-                    task.rethrow_if_exception();
-                    if (!task.coroutine.done()) {
-                        std::cerr << "Message processing is waiting." << std::endl;
-                    }
-                }
-                catch (const soci::soci_error& e)
-                {
-                    std::cerr << "MySQL error: " << e.what() << std::endl;
-                }
-                catch (const std::exception& e)
-                {
-                    std::cerr << "Error: " << e.what() << std::endl;
-                }
-
-
-            }
-        });
-    }
-
-    virtual Task OnMsg(MsgUnique msg) override {
-        {
-            auto guard = std::lock_guard(queue_mutex_);
-            queue_.emplace(std::move(msg));
-        }
-        queue_cv_.notify_one();
-        co_return;
+        EnableSeparateWorker();
     }
 
     virtual void OnExit() override {
-        queue_cv_.notify_one();
-        run_ = false;
-        thread_->join();
         sql_.close();
     }
 
@@ -256,14 +213,8 @@ public:
 
         sql += ";";
 
-        try {
-            sql_ << sql;
-        }
-        catch (...)
-        {
-            Reply(std::move(msg));
-            throw;
-        }
+        sql_ << sql;
+        
         Reply(std::move(msg));
         co_return;
     }
@@ -421,14 +372,8 @@ public:
         BindValuesToStatement(*proto_msg, &values, stmt);  // 绑定值
         stmt.define_and_bind();
 
-        try {
-            stmt.execute(true);
-        }
-        catch (...)
-        {
-            Reply(std::move(msg));
-            throw;
-        }
+        stmt.execute(true);
+
         Reply(std::move(msg));
         co_return;
     }
@@ -572,12 +517,6 @@ public:
 
 private:
     soci::session sql_;
-    std::optional<std::jthread> thread_;
-    bool run_;
-
-    std::queue<MsgUnique> queue_;
-    std::mutex queue_mutex_;
-    std::condition_variable queue_cv_;
 };
 
 } // namespace db

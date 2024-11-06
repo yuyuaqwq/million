@@ -28,7 +28,7 @@ public:
         proto_mgr_.InitMsgMap();
         proto_mgr_.RegistrySubMsg(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
 
-        // ioÏß³Ì»Øµ÷£¬·¢¸øworkÏß³Ì´¦Àí
+        // ioçº¿ç¨‹å›è°ƒï¼Œå‘ç»™workçº¿ç¨‹å¤„ç†
         server_.set_on_connection([this](auto connection) {
             Send<ConnectionMsg>(service_handle(), std::move(connection));
         });
@@ -59,13 +59,13 @@ public:
         auto handle = UserSessionHandle(session);
 
         if (session->header().token == kInvaildToken) {
-            // Á¬½ÓÃ»token£¬µ«ÊÇ·¢À´ÁËtoken£¬µ±³É¶ÏÏßÖØÁ¬´¦Àí
+            // è¿æ¥æ²¡tokenï¼Œä½†æ˜¯å‘æ¥äº†tokenï¼Œå½“æˆæ–­çº¿é‡è¿å¤„ç†
             session->header().token = header.token;
 
-            // todo: ĞèÒª¶Ï¿ªÔ­ÏÈtokenÖ¸ÏòµÄÁ¬½Ó
+            // todo: éœ€è¦æ–­å¼€åŸå…ˆtokenæŒ‡å‘çš„è¿æ¥
         }
 
-        // Ã»µÇÂ¼£¬Ö»ÄÜ·Ö·¢¸øUserMsg
+        // æ²¡ç™»å½•ï¼Œåªèƒ½åˆ†å‘ç»™UserMsg
         if (session->header().token == kInvaildToken && msg_id != Cs::MSG_ID_USER) {
             co_return;
         }

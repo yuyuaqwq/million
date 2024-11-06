@@ -21,11 +21,11 @@ void Worker::Start() {
             auto& service = service_mgr.PopService();
             // std::cout << "workid:" <<  std::this_thread::get_id() << std::endl;
             service.ProcessMsgs(1);
-            // ¿ÉÒÔ½«service·Åµ½¶ÓÁÐÁË
+            // å¯ä»¥å°†serviceæ”¾åˆ°é˜Ÿåˆ—äº†
             service.set_in_queue(false);
             if (service.MsgQueueEmpty()) {
                 if (service.IsStoping()) {
-                    // Í£Ö¹²¢Ïú»Ù·þÎñ
+                    // åœæ­¢å¹¶é”€æ¯æœåŠ¡
                     service.Close();
                 }
                 continue;

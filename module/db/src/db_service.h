@@ -110,11 +110,6 @@ public:
         proto_mgr_.InitMsgMap();
     }
 
-    virtual Task OnMsg(MsgUnique msg) override {
-        co_await MsgDispatch(std::move(msg));
-        co_return;
-    }
-
     virtual void OnExit() override {
         
     }

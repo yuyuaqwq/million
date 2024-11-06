@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -34,8 +35,11 @@ public:
     std::optional<MsgUnique> PopMsg();
     bool MsgQueueEmpty();
 
-    bool ProcessMsg();
+    bool ProcessMsg(MsgUnique msg);
     void ProcessMsgs(size_t count);
+
+    void EnableSeparateWorker();
+    bool HasSeparateWorker() const;
 
     ServiceState state() { return state_; }
     bool in_queue() const { return in_queue_; }
@@ -47,18 +51,31 @@ public:
     ServiceMgr* service_mgr() const { return service_mgr_; }
 
 private:
+    void SeparateThreadHandle();
+    std::optional<MsgUnique> PopMsgWithLock();
+
+private:
     ServiceMgr* service_mgr_;
     std::list<std::shared_ptr<Service>>::iterator iter_;
+
+    ServiceState state_ = ServiceState::kReady;
+
+    bool in_queue_ = false;
 
     std::mutex msgs_mutex_;
     std::queue<MsgUnique> msgs_;
 
     MsgExecutor excutor_;
 
-    bool in_queue_ = false;
-    ServiceState state_ = ServiceState::kReady;
-
     std::unique_ptr<IService> iservice_;
+
+    struct SeparateWorker {
+        std::thread thread;
+        std::condition_variable cv;
+
+        SeparateWorker(const std::function<void()>& func) : thread(func) { thread.detach(); }
+    };
+    std::unique_ptr<SeparateWorker> separate_worker_;
 };
 
 } // namespace million

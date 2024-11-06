@@ -75,11 +75,6 @@ public:
         logger_->flush();
     }
 
-    virtual Task OnMsg(MsgUnique msg) override {
-        co_await MsgDispatch(std::move(msg));
-        co_return;
-    }
-
     MILLION_MSG_DISPATCH(LoggerService);
 
     MILLION_MSG_HANDLE(LoggerLogMsg, msg) {

@@ -28,7 +28,7 @@ public:
     virtual ServiceHandle AddService(std::unique_ptr<IService> iservice) override;
     using IMillion::NewService;
 
-    virtual void DeleteService(const ServiceHandle& service_handle) override;
+    virtual void DeleteService(ServiceHandle&& service_handle) override;
 
     virtual SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     virtual SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) override;
@@ -38,6 +38,7 @@ public:
     virtual void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) override;
     virtual asio::io_context& NextIoContext() override;
     virtual void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) override;
+    virtual void EnableSeparateWorker(const ServiceHandle& service) override;
 
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& session_mgr() { assert(session_mgr_); return *session_mgr_; }

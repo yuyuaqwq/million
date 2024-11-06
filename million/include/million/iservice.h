@@ -57,6 +57,8 @@ public:
         Timeout(tick, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
+    void EnableSeparateWorker();
+
     virtual void OnInit() {};
     virtual Task OnMsg(MsgUnique msg) = 0;
     virtual void OnExit() {};
@@ -71,7 +73,7 @@ protected:
 
 #define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_) \
     using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
-    ::million::Task MsgDispatch(::million::MsgUnique msg) { \
+    virtual ::million::Task OnMsg(::million::MsgUnique msg) override { \
         auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg->type()); \
         if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
             auto task = (this->*iter->second)(std::move(msg)); \

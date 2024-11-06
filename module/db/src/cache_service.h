@@ -37,47 +37,10 @@ public:
             std::cerr << "Redis error: " << e.what() << std::endl;
         }
 
-        thread_.emplace([this]() {
-            while (run_) {
-                try {
-                    std::unique_lock guard(queue_mutex_);
-                    while (run_ && queue_.empty()) {
-                        queue_cv_.wait(guard);
-                    }
-                    if (!run_) return;
-
-                    auto msg = std::move(queue_.front());
-                    queue_.pop();
-
-                    // 自行分发消息，因为没有调度器，不能使用co_await等待消息
-                    auto task = MsgDispatch(std::move(msg));
-                    task.rethrow_if_exception();
-                    if (!task.coroutine.done()) {
-                        std::cerr << "Message processing is waiting." << std::endl;
-                    }
-                }
-                catch (const sw::redis::Error& e) {
-                    std::cerr << "Redis error: " << e.what() << std::endl;
-                }
-                catch (const std::exception& e)
-                {
-                    std::cerr << "Error: " << e.what() << std::endl;
-                }
-            }
-        });
-    }
-
-    virtual Task OnMsg(MsgUnique msg) override {
-        // 交给redis线程去读写，避免阻塞work线程
-        auto guard = std::lock_guard(queue_mutex_);
-        queue_.emplace(std::move(msg));
-        co_return;
+        EnableSeparateWorker();
     }
 
     virtual void OnExit() override {
-        queue_cv_.notify_one();
-        run_ = false;
-        thread_->join();
         redis_ = std::nullopt;
     }
 
@@ -338,12 +301,6 @@ public:
 
 private:
     std::optional<sw::redis::Redis> redis_;
-    std::optional<std::jthread> thread_;
-    bool run_;
-
-    std::queue<MsgUnique> queue_;
-    std::mutex queue_mutex_;
-    std::condition_variable queue_cv_;
 };
 
 } // namespace db
