@@ -33,13 +33,15 @@ void Service::Close() {
 }
 
 void Service::PushMsg(MsgUnique msg) {
-    auto lock = std::lock_guard(msgs_mutex_);
-    if (state_ == ServiceState::kStopping || state_ == ServiceState::kStop) {
-        // 服务关闭，不再接收消息
-        return;
+    {
+        auto lock = std::lock_guard(msgs_mutex_);
+        if (state_ == ServiceState::kStopping || state_ == ServiceState::kStop) {
+            // 服务关闭，不再接收消息
+            return;
+        }
+        msgs_.emplace(std::move(msg));
     }
-    msgs_.emplace(std::move(msg));
-    if (separate_worker_) {
+    if (HasSeparateWorker()) {
         separate_worker_->cv.notify_one();
     }
 }
@@ -99,7 +101,6 @@ bool Service::HasSeparateWorker() const {
 
 void Service::SeparateThreadHandle() {
     while (true) {
-        // 后续可以使用队列交换优化
         std::optional<MsgUnique> msg;
         {
             auto lock = std::unique_lock(msgs_mutex_);
