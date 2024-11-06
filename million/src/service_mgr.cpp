@@ -27,7 +27,7 @@ ServiceHandle ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
     return handle;
 }
 
-void ServiceMgr::DeleteService(const ServiceHandle& handle) {
+void ServiceMgr::DeleteService(ServiceHandle&& handle) {
     million_->Send<MillionServiceExitMsg>(handle, handle);
 }
 

@@ -17,18 +17,22 @@ class MILLION_CLASS_API ServiceHandle {
 public:
     ServiceHandle() = default;
     explicit ServiceHandle(std::shared_ptr<Service> ptr)
-        : ptr_(ptr) {}
+        : shared_(ptr) {}
     ~ServiceHandle() = default;
 
     ServiceHandle(const ServiceHandle&) = default;
     void operator=(const ServiceHandle& v) {
-        ptr_ = v.ptr_;
+        shared_ = v.shared_;
+    }
+    ServiceHandle(ServiceHandle&&) = default;
+    void operator=(ServiceHandle&& v) noexcept {
+        shared_ = std::move(v.shared_);
     }
 
-    Service* service() const { return ptr_.get(); }
+    Service* service() const { return shared_.get(); }
 
 private:
-    std::shared_ptr<Service> ptr_;
+    std::shared_ptr<Service> shared_;
 };
 
 } // namespace million

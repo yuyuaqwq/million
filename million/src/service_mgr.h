@@ -18,7 +18,7 @@ public:
     ~ServiceMgr();
 
     ServiceHandle AddService(std::unique_ptr<IService> service);
-    void DeleteService(const ServiceHandle& handle);
+    void DeleteService(ServiceHandle&& handle);
     void DeleteService(Service* service);
 
     void PushService(Service* service);
