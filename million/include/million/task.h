@@ -218,7 +218,11 @@ inline bool Task::await_ready() const noexcept {
 inline void Task::await_suspend(std::coroutine_handle<TaskPromise> parent_coroutine) noexcept {
     // 向上设置awaiter，让service可以拿到正在等待的awaiter，来恢复等待awaiter的协程
     coroutine.promise().set_parent_coroutine(parent_coroutine);
-    parent_coroutine.promise().set_session_awaiter(coroutine.promise().session_awaiter());
+    // 可能新的co_await Task()，需要将当前Task等待的session设置给整条Task链
+    do {
+        parent_coroutine.promise().set_session_awaiter(coroutine.promise().session_awaiter());
+        parent_coroutine = parent_coroutine.promise().parent_coroutine();
+    } while (parent_coroutine);
 }
 
 inline void Task::await_resume() noexcept {}

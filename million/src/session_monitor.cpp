@@ -22,7 +22,6 @@ void SessionMonitor::Start() {
     thread_.emplace([this]() {
         tasks_.Init();
         auto timeout = [this](auto&& task) {
-            // ����һ����Ϣ���÷����÷����Լ�ȥȷ���ûỰ�Ƿ��Ѿ�����ˣ�û������Ƴ�����ʱ�澯
             million_->Send<MillionSessionTimeoutMsg>(task.data.service, task.data.service, task.data.session_id);
         };
         while (run_) {
