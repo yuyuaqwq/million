@@ -16,26 +16,14 @@ Service::Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
 
 Service::~Service() = default;
 
-bool Service::IsStoping() const {
-    return state_ == ServiceState::kStopping;
-}
-
-void Service::Close() {
-    {
-        auto lock = std::lock_guard(msgs_mutex_);
-        if (state_ == ServiceState::kStop) {
-            return;
-        }
-        state_ = ServiceState::kStop;
-    }
-    iservice().OnExit();
-    service_mgr_->DeleteService(this);
+bool Service::IsStop() const {
+    return state_ == ServiceState::kStop;
 }
 
 void Service::PushMsg(MsgUnique msg) {
     {
         auto lock = std::lock_guard(msgs_mutex_);
-        if (state_ == ServiceState::kStopping || state_ == ServiceState::kStop) {
+        if (state_ == ServiceState::kStop) {
             // 服务关闭，不再接收消息
             return;
         }
@@ -63,7 +51,8 @@ void Service::ProcessMsg(MsgUnique msg) {
         return;
     }
     else if (msg->type() == MillionServiceExitMsg::kType) {
-        state_ = ServiceState::kStopping;
+        iservice_->OnExit();
+        state_ = ServiceState::kStop;
         return;
     }
     else if (msg->type() == MillionSessionTimeoutMsg::kType) {
@@ -93,6 +82,7 @@ void Service::ProcessMsgs(size_t count) {
 
 void Service::EnableSeparateWorker() {
     separate_worker_ = std::make_unique<SeparateWorker>([this] { SeparateThreadHandle(); });
+    separate_worker_->thread.detach();
 }
 
 bool Service::HasSeparateWorker() const {
@@ -111,12 +101,12 @@ void Service::SeparateThreadHandle() {
         }
         do {
             ProcessMsg(std::move(*msg));
+            if (IsStop()) {
+                // 销毁服务
+                service_mgr_->DeleteService(this);
+                break;
+            }
         } while (msg = PopMsg());
-        if (IsStoping()) {
-            // 停止并销毁服务
-            Close();
-            break;
-        }
     }
 }
 

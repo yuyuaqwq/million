@@ -27,9 +27,9 @@ void Worker::Start() {
                 service_mgr.PushService(&service);
                 continue;
             }
-            if (service.IsStoping()) {
-                // 停止并销毁服务
-                service.Close();
+            if (service.IsStop()) {
+                // 销毁服务
+                service_mgr.DeleteService(&service);
             }
         }
     });
