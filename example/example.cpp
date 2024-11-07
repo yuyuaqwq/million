@@ -57,14 +57,23 @@ class TestService : public million::IService {
     }
 
     million::Task On4() {
-        throw std::runtime_error("sb");
+        //throw std::runtime_error("sb");
         auto res = co_await Recv<million::IMsg>(6);
-        throw std::runtime_error("sb2");
+        //throw std::runtime_error("sb2");
         auto msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << res->session_id() << std::endl;
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
+        co_await On7();
 
         co_return;
+    }
+
+    million::Task On7() {
+        auto res = co_await Recv<million::IMsg>(7);
+        //throw std::runtime_error("sb2");
+        auto msg_ = static_cast<Test1Msg*>(res.get());
+        std::cout << res->session_id() << std::endl;
+        std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
     }
 
     million::Task On5() {

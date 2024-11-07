@@ -26,7 +26,7 @@ std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
     if (iter == tasks_.end()) {
         return msg;
     }
-    auto awaiter = iter->second.coroutine.promise().awaiter();
+    auto awaiter = iter->second.coroutine.promise().session_awaiter();
     awaiter->set_result(std::move(msg));
     auto waiting_coroutine = awaiter->waiting_coroutine();
     waiting_coroutine.resume();
@@ -45,7 +45,7 @@ std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
     }
     if (!iter->second.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        RePush(id, iter->second.coroutine.promise().awaiter()->waiting_session());
+        RePush(id, iter->second.coroutine.promise().session_awaiter()->waiting_session());
     }
     else {
         tasks_.erase(iter);
@@ -68,8 +68,8 @@ void MsgExecutor::AddTask(Task&& task) {
         }
     }
     if (!task.coroutine.done()) {
-        assert(task.coroutine.promise().awaiter());
-        Push(task.coroutine.promise().awaiter()->waiting_session(), std::move(task));
+        assert(task.coroutine.promise().session_awaiter());
+        Push(task.coroutine.promise().session_awaiter()->waiting_session(), std::move(task));
     }
 }
 
@@ -80,7 +80,7 @@ void MsgExecutor::TimeoutCleanup(SessionId id) {
     }
     // 超时，写出日志告警
     auto million = service_->service_mgr()->million();
-    MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session timeout {}.", iter->second.coroutine.promise().awaiter()->waiting_session());
+    MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session timeout {}.", iter->second.coroutine.promise().session_awaiter()->waiting_session());
     tasks_.erase(iter);
 }
 

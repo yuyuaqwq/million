@@ -26,8 +26,8 @@ public:
     }
 
     template <typename MsgT>
-    Awaiter<MsgT> Recv(SessionId session_id) {
-        return Awaiter<MsgT>(session_id);
+    SessionAwaiter<MsgT> Recv(SessionId session_id) {
+        return SessionAwaiter<MsgT>(session_id);
     }
 
     void Reply(MsgUnique msg);
@@ -41,12 +41,12 @@ public:
     }
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
-    Awaiter<RecvMsgT> Call(const ServiceHandle& target, Args&&... args) {
+    SessionAwaiter<RecvMsgT> Call(const ServiceHandle& target, Args&&... args) {
         auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
         return Recv<RecvMsgT>(session_id);
     }
     template <typename MsgT, typename ...Args>
-    Awaiter<MsgT> Call(const ServiceHandle& target, Args&&... args) {
+    SessionAwaiter<MsgT> Call(const ServiceHandle& target, Args&&... args) {
         auto session_id = Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
         return Recv<MsgT>(session_id);
     }
