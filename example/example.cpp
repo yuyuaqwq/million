@@ -46,9 +46,8 @@ class TestService : public million::IService {
         std::cout << msg_->session_id() << std::endl;
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
-        auto task = On4();
-        co_await task;
-        task.rethrow_if_exception();
+        co_await On4();
+        // task.rethrow_if_exception();
 
         co_await On5();
 

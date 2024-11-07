@@ -38,11 +38,6 @@ public:
         server_.Start(8001);
     }
 
-    virtual Task OnMsg(MsgUnique msg) override {
-        co_await MsgDispatch(std::move(msg));
-        co_return;
-    }
-
     MILLION_MSG_DISPATCH(GatewayService);
 
     MILLION_MSG_HANDLE(ConnectionMsg, msg) {

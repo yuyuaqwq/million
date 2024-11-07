@@ -110,7 +110,9 @@ struct MILLION_CLASS_API TaskPromise {
     // 协程退出时，唤醒父协程
     auto final_suspend() noexcept {
         struct awaiter {
-            bool await_ready() noexcept { return false; }
+            bool await_ready() noexcept {
+                return false;
+            }
             void await_suspend(std::coroutine_handle<TaskPromise> coroutine) noexcept {
                 // 该协程执行完毕了，需要恢复父协程的执行
                 auto parent_coroutine = coroutine.promise().parent_coroutine();
@@ -146,11 +148,9 @@ struct MILLION_CLASS_API TaskPromise {
 
     // 支持等待Task
     Task await_transform(Task&& task) {
+        // 期望等待的Task可能是异常退出的，则继续上抛
+        task.rethrow_if_exception();
         return Task(std::move(task));
-    }
-
-    Task& await_transform(Task& task) {
-        return task;
     }
 
     void set_awaiter(Awaiter<IMsg>* awaiter) {
@@ -165,6 +165,10 @@ struct MILLION_CLASS_API TaskPromise {
 
     std::exception_ptr exception() const {
         return exception_;
+    }
+
+    void set_exception(std::exception_ptr exception) {
+        exception_ = exception;
     }
 
 private:

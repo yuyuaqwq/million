@@ -76,9 +76,7 @@ protected:
     virtual ::million::Task OnMsg(::million::MsgUnique msg) override { \
         auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg->type()); \
         if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
-            auto task = (this->*iter->second)(std::move(msg)); \
-            co_await task; \
-            task.rethrow_if_exception(); \
+            co_await (this->*iter->second)(std::move(msg)); \
         } \
         co_return; \
     } \
@@ -88,9 +86,7 @@ protected:
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
     ::million::Task _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(::million::MsgUnique MILLION_MSG_) { \
         auto msg = ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release())); \
-        auto task = _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(std::move(msg)); \
-        co_await task; \
-        task.rethrow_if_exception(); \
+        co_await _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(std::move(msg)); \
         co_return; \
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
