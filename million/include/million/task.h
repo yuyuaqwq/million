@@ -149,6 +149,10 @@ struct MILLION_CLASS_API TaskPromise {
         return Task(std::move(task));
     }
 
+    Task& await_transform(Task& task) {
+        return task;
+    }
+
     void set_awaiter(Awaiter<IMsg>* awaiter) {
         awaiter_ = reinterpret_cast<Awaiter<IMsg>*>(awaiter);
     }
