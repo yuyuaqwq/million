@@ -1,6 +1,5 @@
-#include "net/tcp_server.h"
-
-#include "net/tcp_connection.h"
+#include <million/net/tcp_server.h>
+#include <million/net/tcp_connection.h>
 
 namespace million {
 namespace net {
@@ -17,7 +16,7 @@ void TcpServer::Start(uint16_t port) {
 
 void TcpServer::Stop() {
     {
-        auto guard = std::lock_guard(connections_mutex_);
+        auto lock = std::lock_guard(connections_mutex_);
         for (auto& connection : connections_) {
             connection->Close();
         }
@@ -25,7 +24,7 @@ void TcpServer::Stop() {
 }
 
 void TcpServer::RemoveConnection(std::list<TcpConnectionShared>::iterator iter) {
-    auto guard = std::lock_guard(connections_mutex_);
+    auto lock = std::lock_guard(connections_mutex_);
     connections_.erase(iter);
 }
 
@@ -38,7 +37,7 @@ TcpConnectionShared TcpServer::AddConnection(asio::ip::tcp::socket&& socket, con
     auto connection = MakeTcpConnectionShared(this, std::move(socket), executor);
     auto handle = TcpConnectionShared(connection);
     {
-        auto guard = std::lock_guard(connections_mutex_);
+        auto lock = std::lock_guard(connections_mutex_);
         connections_.emplace_back(std::move(connection));
         iter = --connections_.end();
     }

@@ -53,7 +53,7 @@ std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
     return std::nullopt;
 }
 
-void MsgExecutor::AddTask(Task&& task) {
+void MsgExecutor::AddTask(Task<>&& task) {
     if (task.has_exception()) {
         auto million = service_->service_mgr()->million();
         // 记录异常
@@ -84,7 +84,7 @@ void MsgExecutor::TimeoutCleanup(SessionId id) {
     tasks_.erase(iter);
 }
 
-void MsgExecutor::Push(SessionId id, Task&& task) {
+void MsgExecutor::Push(SessionId id, Task<>&& task) {
     service_->service_mgr()->million()->session_monitor().AddSession(service_->service_handle(), id);
     tasks_.emplace(id, std::move(task));
 }

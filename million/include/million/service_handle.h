@@ -10,7 +10,7 @@
 
 namespace million {
 
-using ServiceCodeName = std::string;
+using ServiceUniqueName = std::string;
 
 class Service;
 class MILLION_CLASS_API ServiceHandle {

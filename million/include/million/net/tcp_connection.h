@@ -6,13 +6,14 @@
 
 #include <asio.hpp>
 
-#include "net/packet.h"
+#include <million/api.h>
+#include <million/net/packet.h>
 
 namespace million {
 namespace net {
 
 class TcpServer;
-class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
+class MILLION_CLASS_API TcpConnection {
 public:
     TcpConnection(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
     virtual ~TcpConnection();

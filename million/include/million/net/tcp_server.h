@@ -9,14 +9,13 @@
 
 #include <million/noncopyable.h>
 #include <million/imillion.h>
-
-#include "net/tcp_connection_handle.h"
-#include "net/packet.h"
+#include <million/net/tcp_connection_handle.h>
+#include <million/net/packet.h>
 
 namespace million {
 namespace net {
 
-class TcpServer : noncopyable {
+class MILLION_CLASS_API TcpServer : noncopyable {
 public:
     using TcpConnectionFunc = std::function<void(TcpConnectionShared)>;
     using TcpMsgFunc = std::function<void(TcpConnection&, Packet&&)>;

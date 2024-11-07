@@ -24,7 +24,7 @@ class TestService : public million::IService {
         std::cout << "Elapsed time: " << duratioin.count() << "ms:" << j << " seconds\n";
     }
 
-    virtual million::Task OnMsg(million::MsgUnique msg) override {
+    virtual million::Task<> OnMsg(million::MsgUnique msg) override {
         if (msg->type() == Test2Msg::kType) {
             auto msg_ = static_cast<Test2Msg*> (msg.get());
             std::cout << msg_->session_id() << std::endl;
@@ -54,27 +54,28 @@ class TestService : public million::IService {
         co_return;
     }
 
-    million::Task On6() {
+    million::Task<> On6() {
         //throw std::runtime_error("sb");
         auto res = co_await Recv<million::IMsg>(6);
         //throw std::runtime_error("sb2");
         auto msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << res->session_id() << std::endl;
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
-        co_await On7();
+        auto i = co_await On7();
 
         co_return;
     }
 
-    million::Task On7() {
+    million::Task<int> On7() {
         auto res = co_await Recv<million::IMsg>(7);
         //throw std::runtime_error("sb2");
         auto msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << res->session_id() << std::endl;
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
+        co_return 1;
     }
 
-    million::Task On8() {
+    million::Task<> On8() {
         auto session_id = Send<Test1Msg>(service_handle(), 8, "hjh");
         auto res = co_await Recv<Test1Msg>(session_id);
         auto msg_ = static_cast<Test1Msg*>(res.get());

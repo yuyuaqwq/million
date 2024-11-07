@@ -9,18 +9,18 @@
 #include <gateway/api.h>
 
 #include "cs_proto_mgr.h"
-#include "gateway_server.h"
+#include "cluster_server.h"
 
 namespace million {
-namespace gateway {
+namespace cluster {
 
 MILLION_MSG_DEFINE(, ConnectionMsg, (net::TcpConnectionShared) connection)
 MILLION_MSG_DEFINE(, RecvPacketMsg, (net::TcpConnection*) connection, (net::Packet) packet)
 
-class GatewayService : public IService {
+class ClusterService : public IService {
 public:
     using Base = IService;
-    GatewayService(IMillion* imillion)
+    ClusterService(IMillion* imillion)
         : Base(imillion)
         , server_(imillion, &proto_mgr_) { }
 
@@ -72,6 +72,19 @@ public:
                 Send<RecvProtoMsg>(service, handle, std::move(proto_msg));
             }
         }
+
+        // auto res_proto_msg = co_await Cluster.Call<ProtoMsgUnique>(src_unique_name, target_unique_name, proto_msg);
+
+        // Task支持定义返回值，Cluster.Call返回一个Task<ProtoMsgUnique>，通过co_return 将proto_msg返回回来
+        // Cluster.Call内部：
+        // msg = co_await service.Call<ClusterPacketMsg, ClusterSendMsg>(Cluster.Service, proto_msg);
+        // co_return ProtoMsgUnique转换为GoogleProtoMsgUnique;
+        // 
+        // Cluster服务OnMsg，接收到ClusterSendMsg，将proto_msg序列化，头部再带session_id、src_unique_name、target_unique_name，发送给其他集群
+        // Cluster服务OnMsg，接收到ClusterRecvMsg，解析拿到session_id、src_unique_name、target_unique_name，以及反序列化google_proto_msg，打包为ClusterPacketMsg并发送给src_unique_name服务
+        // 即Cluster.Call的co_await等到结果
+
+        // 其他集群收到包，向Cluster服务发送ClusterRecvMsg
 
         // auto token = token_generator_.Generate();
 

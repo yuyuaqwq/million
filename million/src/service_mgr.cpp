@@ -71,15 +71,16 @@ Service& ServiceMgr::PopService() {
     return *service;
 }
 
-void ServiceMgr::SetServiceCodeName(const ServiceHandle& handle, const ServiceCodeName& code_name) {
-    std::lock_guard guard(service_code_name_map_mutex_);
-    service_code_name_map_.insert(std::make_pair(code_name, handle));
+bool ServiceMgr::SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name) {
+    std::lock_guard guard(unique_name_map_mutex_);
+    auto res = unique_name_map_.emplace(unique_name, handle);
+    return res.second;
 }
 
-std::optional<ServiceHandle> ServiceMgr::GetServiceByCodeNum(const ServiceCodeName& code_name) {
-    std::lock_guard guard(service_code_name_map_mutex_);
-    auto iter = service_code_name_map_.find(code_name);
-    if (iter == service_code_name_map_.end()) {
+std::optional<ServiceHandle> ServiceMgr::GetServiceByUniqueNum(const ServiceUniqueName& unique_name) {
+    std::lock_guard guard(unique_name_map_mutex_);
+    auto iter = unique_name_map_.find(unique_name);
+    if (iter == unique_name_map_.end()) {
         return std::nullopt;
     }
     return iter->second;

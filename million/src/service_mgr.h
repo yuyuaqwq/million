@@ -24,8 +24,8 @@ public:
     void PushService(Service* service);
     Service& PopService();
 
-    void SetServiceCodeName(const ServiceHandle& handle, const ServiceCodeName& code_name);
-    std::optional<ServiceHandle> GetServiceByCodeNum(const ServiceCodeName& code_name);
+    bool SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name);
+    std::optional<ServiceHandle> GetServiceByUniqueNum(const ServiceUniqueName& unique_name);
 
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     
@@ -38,8 +38,8 @@ private:
     std::mutex services_mutex_;
     std::list<std::shared_ptr<Service>> services_;
     
-    std::mutex service_code_name_map_mutex_;
-    std::unordered_map<ServiceCodeName, ServiceHandle> service_code_name_map_;
+    std::mutex unique_name_map_mutex_;
+    std::unordered_map<ServiceUniqueName, ServiceHandle> unique_name_map_;
 
     std::mutex service_queue_mutex_;
     std::queue<Service*> service_queue_;
