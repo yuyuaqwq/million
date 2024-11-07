@@ -46,17 +46,15 @@ class TestService : public million::IService {
         std::cout << msg_->session_id() << std::endl;
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
-        co_await On4();
-        // task.rethrow_if_exception();
-
-        co_await On5();
+        co_await On6();
+        co_await On8();
 
         std::cout << "end" << std::endl;
 
         co_return;
     }
 
-    million::Task On4() {
+    million::Task On6() {
         //throw std::runtime_error("sb");
         auto res = co_await Recv<million::IMsg>(6);
         //throw std::runtime_error("sb2");
@@ -76,14 +74,14 @@ class TestService : public million::IService {
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
     }
 
-    million::Task On5() {
-        auto session_id = Send<Test1Msg>(service_handle(), 7, "hjh");
+    million::Task On8() {
+        auto session_id = Send<Test1Msg>(service_handle(), 8, "hjh");
         auto res = co_await Recv<Test1Msg>(session_id);
         auto msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << msg_->session_id() << std::endl;
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
-        res = co_await Call<Test1Msg, Test1Msg>(service_handle(), 8, "sbsb");
+        res = co_await Call<Test1Msg, Test1Msg>(service_handle(), 9, "sbsb");
         msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << msg_->session_id() << std::endl;
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
@@ -109,6 +107,10 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     mili->Send<Test1Msg>(service_handle, service_handle, 6, "hhh");
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    mili->Send<Test1Msg>(service_handle, service_handle, 7, "hhh");
+
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
