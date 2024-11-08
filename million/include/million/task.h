@@ -204,7 +204,7 @@ struct TaskPromise : public TaskPromiseBase {
         result_value = std::forward<T>(value);
     }
 
-    T result_value;
+    std::optional<T> result_value;
 };
 
 // 针对 void 类型的特化，只处理 void 特有的部分
@@ -271,7 +271,7 @@ inline bool Task<T>::await_ready() const noexcept {
 template <typename T>
 inline T Task<T>::await_resume() noexcept {
     if constexpr (!std::is_void_v<T>) {
-        return std::move(coroutine.promise().result_value);
+        return std::move(*coroutine.promise().result_value);
     }
 }
 

@@ -47,9 +47,9 @@ class TestService : public million::IService {
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
         co_await On6();
-        co_await On8();
+        auto res2 = co_await On8();
 
-        std::cout << "end" << std::endl;
+        std::cout << "end:" << res2->session_id() << std::endl;
 
         co_return;
     }
@@ -75,7 +75,7 @@ class TestService : public million::IService {
         co_return 1;
     }
 
-    million::Task<> On8() {
+    million::Task<std::unique_ptr<Test1Msg>> On8() {
         auto session_id = Send<Test1Msg>(service_handle(), 8, "hjh");
         auto res = co_await Recv<Test1Msg>(session_id);
         auto msg_ = static_cast<Test1Msg*>(res.get());
@@ -87,7 +87,7 @@ class TestService : public million::IService {
         std::cout << msg_->session_id() << std::endl;
         std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
-        co_return;
+        co_return std::move(res);
     }
 };
 
