@@ -71,7 +71,10 @@ struct SessionAwaiter {
     }
 
     // co_await等待在当前对象中的协程被恢复时调用
-    std::unique_ptr<MsgT> await_resume() noexcept;
+    std::unique_ptr<MsgT> await_resume() noexcept {
+        // 调度器恢复了等待当前awaiter的协程，说明已经等到结果了
+        return std::unique_ptr<MsgT>(static_cast<MsgT*>(result_.release()));
+    }
 
 private:
     SessionId waiting_session_id_;
@@ -99,11 +102,23 @@ struct Task {
     Task(const Task&) = delete;
     Task& operator=(const Task&) = delete;
     
-    bool has_exception() const;
+    bool has_exception() const {
+        return coroutine.promise().exception() != nullptr;
+    }
 
-    void rethrow_if_exception() const;
+    void rethrow_if_exception() const {
+        if (has_exception()) std::rethrow_exception(coroutine.promise().exception());
+    }
 
-    bool await_ready() const noexcept;
+    bool await_ready() const noexcept {
+        // co_await Task() 时调用，检查下Task内是否co_await
+        if (!coroutine.promise().session_awaiter()) {
+            // 没有等在一个会话中，无需挂起，会直接调用await_resume，跳过await_suspend
+            return true;
+        }
+        // 等待会话，会调用await_suspend
+        return false;
+    }
 
     template <typename U>
     void await_suspend(std::coroutine_handle<TaskPromise<U>> parent_coroutine) noexcept {
@@ -118,7 +133,11 @@ struct Task {
         } while (parent_coroutine_void);
     }
 
-    T await_resume() noexcept;
+    T await_resume() noexcept {
+        if constexpr (!std::is_void_v<T>) {
+            return std::move(*coroutine.promise().result_value);
+        }
+    }
 
     std::coroutine_handle<promise_type> coroutine;
 };
@@ -130,8 +149,14 @@ struct TaskAwaiter {
     }
 
     template <typename U>
-    void await_suspend(std::coroutine_handle<TaskPromise<U>> coroutine) noexcept;
-    void await_resume() noexcept;
+    void await_suspend(std::coroutine_handle<TaskPromise<U>> coroutine) noexcept {
+        // 该协程执行完毕了，需要恢复父协程的执行
+        auto parent_coroutine = coroutine.promise().parent_coroutine();
+        if (parent_coroutine) {
+            parent_coroutine.resume();
+        }
+    }
+    void await_resume() noexcept {}
 };
 
 // 管理协程运行、保存协程状态的类
@@ -216,74 +241,5 @@ struct TaskPromise<void> : public TaskPromiseBase {
 
     void return_void() noexcept {}
 };
-
-//template <typename MsgT>
-//void SessionAwaiter<MsgT>::await_suspend(std::coroutine_handle<TaskPromise<>> parent_coroutine) noexcept {
-//    // 何时resume交给调度器，设计上的等待是必定挂起的
-//    waiting_coroutine_ = parent_coroutine;
-//
-//    // 向上设置awaiter，让service可以拿到正在等待的awaiter，来恢复等待awaiter的协程
-//    // 因为Task链都在挂起，需要在这里设置
-//    do {
-//        parent_coroutine.promise().set_session_awaiter(reinterpret_cast<SessionAwaiter<IMsg>*>(this));
-//        parent_coroutine = parent_coroutine.promise().parent_coroutine();
-//    } while (parent_coroutine);
-//}
-
-template <typename MsgT>
-std::unique_ptr<MsgT> SessionAwaiter<MsgT>::await_resume() noexcept {
-    // 调度器恢复了等待当前awaiter的协程，说明已经等到结果了
-    return std::unique_ptr<MsgT>(static_cast<MsgT*>(result_.release()));
-}
-
-template <typename T>
-inline bool Task<T>::has_exception() const {
-    return coroutine.promise().exception() != nullptr;
-}
-
-template <typename T>
-inline void Task<T>::rethrow_if_exception() const {
-    if (has_exception()) std::rethrow_exception(coroutine.promise().exception());
-}
-
-template <typename T>
-inline bool Task<T>::await_ready() const noexcept {
-    // co_await Task() 时调用，检查下Task内是否co_await
-    if (!coroutine.promise().session_awaiter()) {
-        // 没有等在一个会话中，无需挂起，会直接调用await_resume，跳过await_suspend
-        return true;
-    }
-    // 等待会话，会调用await_suspend
-    return false;
-}
-
-//template <typename T, typename U>
-//inline void Task<T>::await_suspend(std::coroutine_handle<TaskPromise<U>> parent_coroutine) noexcept {
-//    // 向上设置awaiter，让service可以拿到正在等待的awaiter，来恢复等待awaiter的协程
-//    coroutine.promise().set_parent_coroutine(parent_coroutine);
-//    // 可能新的co_await Task()，需要将当前Task等待的session设置给整条Task链
-//    do {
-//        parent_coroutine.promise().set_session_awaiter(coroutine.promise().session_awaiter());
-//        parent_coroutine = parent_coroutine.promise().parent_coroutine();
-//    } while (parent_coroutine);
-//}
-
-template <typename T>
-inline T Task<T>::await_resume() noexcept {
-    if constexpr (!std::is_void_v<T>) {
-        return std::move(*coroutine.promise().result_value);
-    }
-}
-
-template <typename U>
-inline void TaskAwaiter::await_suspend(std::coroutine_handle<TaskPromise<U>> coroutine) noexcept {
-    // 该协程执行完毕了，需要恢复父协程的执行
-    auto parent_coroutine = coroutine.promise().parent_coroutine();
-    if (parent_coroutine) {
-        parent_coroutine.resume();
-    }
-}
-
-inline void TaskAwaiter::await_resume() noexcept {}
 
 } // namespace million
