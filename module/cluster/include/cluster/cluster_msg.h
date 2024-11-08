@@ -37,6 +37,9 @@ MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterProtoMsg, (ProtoMsgUnique) proto_ms
 
 class Cluster {
 public:
+
+	// node name, src_unique_name, target_unique_name, 
+
 	Task<ProtoMsgUnique> Call(const ServiceHandle& target, ProtoMsgUnique req_msg) {
 		auto res_msg = co_await service_->Call<ClusterProtoMsg>(service_->service_handle(), req_msg);
 		co_return std::move(res_msg->proto_msg);
@@ -46,5 +49,5 @@ public:
 	ClusterService* service_;
 };
 
-} // namespace gateway
+} // namespace cluster
 } // namespace million
