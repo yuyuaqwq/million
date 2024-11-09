@@ -14,16 +14,16 @@
 #include <million/proto_msg.h>
 #include <million/net/packet.h>
 
-#include <gateway/proto_msg.h>
+#include <cluster/proto_msg.h>
 
 #include "user_session.h"
 
 namespace million {
-namespace gateway {
+namespace cluster {
 
 namespace protobuf = google::protobuf;
 
-class CsProtoMgr : noncopyable {
+class SsProtoMgr : noncopyable {
 public:
     // 初始化消息映射
     void InitMsgMap() {
@@ -182,5 +182,5 @@ private:
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
 
-} // namespace gateway
+} // namespace cluster
 } // namespace million

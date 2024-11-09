@@ -113,7 +113,7 @@ void TcpConnection::Send(Packet&& packet) {
         catch (const std::exception& e) {
             Close();
         }
-    });
+    }, asio::detached);
 }
 
 } // namespace net

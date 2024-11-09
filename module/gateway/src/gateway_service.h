@@ -60,9 +60,10 @@ public:
             // todo: 需要断开原先token指向的连接
         }
 
+        co_await ProtoMsgDispatch(handle, msg_id, sub_msg_id, std::move(proto_msg));
+
         // 没登录，只能分发给UserMsg
-        if (session->header().token == kInvaildToken && msg_id != Cs::MSG_ID_USER) {
-            co_return;
+        if (session->header().token == kInvaildToken && msg_id != Cs::MSG_ID_USER) {            co_return;
         }
 
         auto iter = register_services_.find(msg_id);
@@ -98,13 +99,17 @@ public:
         co_return;
     }
 
-    MILLION_PROTO_MSG_DISPATCH(Cs);
+    MILLION_CS_PROTO_MSG_DISPATCH();
     
-    MILLION_PROTO_MSG_ID(Cs, MSG_ID_USER);
+    MILLION_CS_PROTO_MSG_ID(MSG_ID_USER);
 
-    MILLION_PROTO_MSG_HANDLE(Cs, SubMsgIdUser::SUB_MSG_ID_USER_LOGIN, UserRegisterReq, req) {
+    MILLION_CS_PROTO_MSG_HANDLE(SubMsgIdUser::SUB_MSG_ID_USER_LOGIN_REQ, UserLoginReq, req) {
         
         std::cout << "login:" << req->user_name() << req->password() << std::endl;
+
+        Cs::UserLoginRes res;
+        res.set_success(true);
+        handle.user_session().Send(res);
         co_return;
     }
 

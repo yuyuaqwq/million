@@ -9,8 +9,11 @@ enum SubMsgIdUser {
     option (cs_msg_id) = MSG_ID_USER;
     
     SUB_MSG_ID_USER_INVALID = 0;
-    SUB_MSG_ID_USER_REGISTER = 1;
-    SUB_MSG_ID_USER_LOGIN = 2;
+    SUB_MSG_ID_USER_REGISTER_REQ = 1;
+    SUB_MSG_ID_USER_REGISTER_RES = 2;
+    SUB_MSG_ID_USER_LOGIN_REQ = 3;
+    SUB_MSG_ID_USER_LOGIN_RES = 4;
+    
 }
 
 extend google.protobuf.MessageOptions {
@@ -18,23 +21,23 @@ extend google.protobuf.MessageOptions {
 }
 
 message UserRegisterReq {
-    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_REGISTER;
+    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_REGISTER_REQ;
     string user_name = 1;
     string password = 2;
 }
 
 message UserRegisterRes {
-    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_REGISTER;
-    
+    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_REGISTER_RES;
+    bool success = 1;
 }
 
 message UserLoginReq {
-    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_LOGIN;
+    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_LOGIN_REQ;
     string user_name = 1;
     string password = 2;
 }
 
 message UserLoginRes {
-    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_LOGIN;
-    
+    option (cs_sub_msg_id_user) = SUB_MSG_ID_USER_LOGIN_RES;
+    bool success = 1;
 }

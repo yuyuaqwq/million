@@ -9,9 +9,9 @@ module:
     dirs: 
         - ../../lib/Debug
     loads:
-#        - db
+        - db
         - pysvr
-#        - gateway
+        - gateway
 
 timer:
     ms_per_tick: 10

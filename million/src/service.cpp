@@ -81,8 +81,9 @@ void Service::ProcessMsgs(size_t count) {
 }
 
 void Service::EnableSeparateWorker() {
-    separate_worker_ = std::make_unique<SeparateWorker>([this] { SeparateThreadHandle(); });
-    separate_worker_->thread.detach();
+    separate_worker_ = std::make_unique<SeparateWorker>([this] {
+        SeparateThreadHandle();
+    });
 }
 
 bool Service::HasSeparateWorker() const {

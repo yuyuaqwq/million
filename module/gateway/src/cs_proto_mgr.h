@@ -167,6 +167,7 @@ private:
 
     std::optional<ProtoMsgUnique> NewMessage(Cs::MsgId msg_id, uint32_t sub_msg_id) {
         auto desc = GetMsgDesc(msg_id, sub_msg_id);
+        if (!desc) return std::nullopt;
         const protobuf::Message* proto_msg = protobuf::MessageFactory::generated_factory()->GetPrototype(desc);
         if (proto_msg != nullptr) {
             return ProtoMsgUnique(proto_msg->New());
