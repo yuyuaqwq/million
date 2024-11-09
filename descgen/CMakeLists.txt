@@ -26,6 +26,7 @@ file(GLOB SRC
 if(SRC)
     add_library(${DESCGEN_LIB} STATIC ${SRC})
     target_include_directories(${DESCGEN_LIB} PRIVATE ${DESCGEN_HEADER_DIR})
+    target_include_directories(${DESCGEN_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 else()
     message(WARNING "No source files found in ${DESCGEN_LIB}")
 endif()

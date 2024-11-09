@@ -10,7 +10,7 @@ set(PROTOGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protogen CACHE STRING "proto
 set(PROTOGEN_LIB protogen CACHE STRING "protogen lib")
 
 # desc
-set(DESCGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/descgen CACHE STRING "descgen header dir")
+set(DESCGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/descgen/include CACHE STRING "descgen header dir")
 set(DESCGEN_LIB descgen CACHE STRING "descgen lib")
 
 # third_party

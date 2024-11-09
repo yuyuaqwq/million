@@ -8,7 +8,8 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include "rapidcsv.h"
+
+#include <descgen/rapidcsv.h>
 
 
 #define TabDelim1 ('|')
