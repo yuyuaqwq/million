@@ -15,10 +15,10 @@
 namespace million {
 
 class Service;
-class MsgExecutor {
+class TaskExecutor {
 public:
-    MsgExecutor(Service* service);
-    ~MsgExecutor();
+    TaskExecutor(Service* service);
+    ~TaskExecutor();
 
     // 尝试调度
     std::optional<MsgUnique> TrySchedule(SessionId id, MsgUnique msg);

@@ -68,7 +68,7 @@ private:
     std::mutex msgs_mutex_;
     std::queue<MsgUnique> msgs_;
 
-    MsgExecutor excutor_;
+    TaskExecutor excutor_;
 
     std::unique_ptr<IService> iservice_;
 

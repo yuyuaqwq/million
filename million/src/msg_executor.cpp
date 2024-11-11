@@ -15,13 +15,13 @@
 
 namespace million {
 
-MsgExecutor::MsgExecutor(Service* service)
+TaskExecutor::TaskExecutor(Service* service)
     : service_(service) {}
 
-MsgExecutor::~MsgExecutor() = default;
+TaskExecutor::~TaskExecutor() = default;
 
 // 尝试调度
-std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
+std::optional<MsgUnique> TaskExecutor::TrySchedule(SessionId id, MsgUnique msg) {
     auto iter = tasks_.find(id);
     if (iter == tasks_.end()) {
         return msg;
@@ -53,7 +53,7 @@ std::optional<MsgUnique> MsgExecutor::TrySchedule(SessionId id, MsgUnique msg) {
     return std::nullopt;
 }
 
-void MsgExecutor::AddTask(Task<>&& task) {
+void TaskExecutor::AddTask(Task<>&& task) {
     if (task.has_exception()) {
         auto million = service_->service_mgr()->million();
         // 记录异常
@@ -73,7 +73,7 @@ void MsgExecutor::AddTask(Task<>&& task) {
     }
 }
 
-void MsgExecutor::TimeoutCleanup(SessionId id) {
+void TaskExecutor::TimeoutCleanup(SessionId id) {
     auto iter = tasks_.find(id);
     if (iter == tasks_.end()) {
         return;
@@ -84,12 +84,12 @@ void MsgExecutor::TimeoutCleanup(SessionId id) {
     tasks_.erase(iter);
 }
 
-void MsgExecutor::Push(SessionId id, Task<>&& task) {
+void TaskExecutor::Push(SessionId id, Task<>&& task) {
     service_->service_mgr()->million()->session_monitor().AddSession(service_->service_handle(), id);
     tasks_.emplace(id, std::move(task));
 }
 
-void MsgExecutor::RePush(SessionId old_id, SessionId new_id) {
+void TaskExecutor::RePush(SessionId old_id, SessionId new_id) {
     auto iter = tasks_.find(old_id);
     if (iter == tasks_.end()) {
         return;
