@@ -4,12 +4,18 @@
 
 #include <million/iservice.h>
 
-#include <protogen/cs/cs_user.pb.h>
-
 #include <gateway/api.h>
 
 #include "cs_proto_mgr.h"
 #include "gateway_server.h"
+#include "user_session.h"
+
+#include <protogen/cs/cs_msgid.pb.h>
+#include <protogen/cs/cs_user.pb.h>
+
+#define MILLION_CS_PROTO_MSG_DISPATCH() MILLION_PROTO_MSG_DISPATCH(Cs, ::million::gateway::UserSessionHandle)
+#define MILLION_CS_PROTO_MSG_ID(MSG_ID_) MILLION_PROTO_MSG_ID(Cs, MSG_ID_)
+#define MILLION_CS_PROTO_MSG_HANDLE(SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) MILLION_PROTO_MSG_HANDLE(Cs, ::million::gateway::UserSessionHandle, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_)
 
 namespace million {
 namespace gateway {
@@ -25,8 +31,12 @@ public:
         , server_(imillion, &proto_mgr_) { }
 
     virtual void OnInit() override {
-        proto_mgr_.InitMsgMap();
-        proto_mgr_.RegistrySubMsg(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
+        proto_mgr_.Init();
+        const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
+        protobuf::DescriptorDatabase* db = pool->internal_generated_database();
+        auto cs_user = pool->FindFileByName("cs_user.proto");
+        
+        proto_mgr_.RegisterProto(*cs_user, Cs::cs_msg_id, Cs::cs_sub_msg_id_user);
 
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto connection) {
@@ -48,7 +58,7 @@ public:
         UserHeader header;
         auto res = proto_mgr_.DecodeMessage(msg->packet, &header);
         if (!res) co_return;
-        auto&& [proto_msg, msg_id, sub_msg_id] = *res;
+        auto&& [proto_msg, msg_id_u32, sub_msg_id] = *res;
 
         auto session = static_cast<UserSession*>(msg->connection);
         auto handle = UserSessionHandle(session);
@@ -59,7 +69,7 @@ public:
 
             // todo: 需要断开原先token指向的连接
         }
-
+        auto msg_id = static_cast<Cs::MsgId>(msg_id_u32);
         co_await ProtoMsgDispatch(handle, msg_id, sub_msg_id, std::move(proto_msg));
 
         // 没登录，只能分发给UserMsg
@@ -114,7 +124,7 @@ public:
     }
 
 private:
-    CsProtoMgr proto_mgr_;
+    CsProtoMgr<UserHeader> proto_mgr_;
     GatewayServer server_;
     TokenGenerator token_generator_;
     std::unordered_map<Cs::MsgId, std::vector<ServiceHandle>> register_services_;

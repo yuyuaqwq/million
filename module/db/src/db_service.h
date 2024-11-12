@@ -16,7 +16,6 @@
 #include <db/sql_msg.h>
 
 #include <protogen/db/db_options.pb.h>
-#include <protogen/db/db_user.pb.h>
 
 #include <million/logger/logger.h>
 
@@ -28,43 +27,44 @@ namespace db {
 namespace protobuf = google::protobuf;
 class DbProtoMgr : noncopyable{
 public:
-    // 初始化消息映射
-    void InitMsgMap() {
-        const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
-        protobuf::DescriptorDatabase* db = pool->internal_generated_database();
-        if (db == nullptr) {
-            return;
+    // 初始化
+    void Init() {
+        //const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
+        //protobuf::DescriptorDatabase* db = pool->internal_generated_database();
+        //if (db == nullptr) {
+        //    return;
+        //}
+        //std::vector<std::string> file_names;
+        //db->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
+        //for (const std::string& filename : file_names) {
+        //    const protobuf::FileDescriptor* file_desc = pool->FindFileByName(filename);
+        //    if (file_desc == nullptr) continue;
+        //    RegisterProto(*file_desc);
+        //}
+    }
+
+    bool RegisterProto(const protobuf::FileDescriptor& file_desc) {
+        // 获取该文件的options，确认是否设置了db
+        const auto& file_options = file_desc.options();
+        // 检查 db 是否被设置
+        if (!file_options.HasExtension(Db::db)) {
+            return false;
         }
+        const auto& db_options = file_options.GetExtension(Db::db);
 
-        Db::User user;
-
-        std::vector<std::string> file_names;
-        db->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
-        for (const std::string& filename : file_names) {
-            const protobuf::FileDescriptor* file_descriptor = pool->FindFileByName(filename);
-            if (file_descriptor == nullptr) continue;
-
-            // 获取该文件的options，确认是否设置了db
-            const auto& file_options = file_descriptor->options();
-            // 检查 db 是否被设置
-            if (!file_options.HasExtension(Db::db)) {
+        int message_count = file_desc.message_type_count();
+        for (int i = 0; i < message_count; i++) {
+            const protobuf::Descriptor* desc = file_desc.message_type(i);
+            if (!desc) continue;
+            const auto& msg_options = desc->options();
+            if (!msg_options.HasExtension(Db::table)) {
                 continue;
             }
-            const auto& db_options = file_options.GetExtension(Db::db);
-
-            int message_count = file_descriptor->message_type_count();
-            for (int i = 0; i < message_count; i++) {
-                const protobuf::Descriptor* descriptor = file_descriptor->message_type(i);
-                if (!descriptor) continue;
-                const auto& msg_options = descriptor->options();
-                if (!msg_options.HasExtension(Db::table)) {
-                    continue;
-                }
-                const auto& table_options = msg_options.GetExtension(Db::table);
-                const auto& table_name = table_options.name();
-                table_map_.emplace(table_name, descriptor);
-            }
+            const auto& table_options = msg_options.GetExtension(Db::table);
+            const auto& table_name = table_options.name();
+            table_map_.emplace(table_name, desc);
         }
+        return true;
     }
 
     const protobuf::Descriptor* GetMsgDesc(const std::string& table_name) {
@@ -84,7 +84,6 @@ public:
     }
 
     const auto& table_map() const { return table_map_; }
-
 
 private:
     std::unordered_map<std::string, const protobuf::Descriptor*> table_map_;
@@ -107,7 +106,7 @@ public:
     virtual void OnInit() override {
         LOG_DEBUG("DbService Init");
 
-        proto_mgr_.InitMsgMap();
+        proto_mgr_.Init();
     }
 
     virtual void OnExit() override {
@@ -122,16 +121,16 @@ public:
             co_await Call<SqlCreateTableMsg>(sql_service_, table_info.second);
         }
 
-        Db::User user;
-        user.set_name("sb");
-        user.set_email("fake@qq.com");
-        user.set_phone_number("1234567890");
-        user.set_password_hash("AWDaoDWHGOAUGH");
+        //Db::User user;
+        //user.set_name("sb");
+        //user.set_email("fake@qq.com");
+        //user.set_phone_number("1234567890");
+        //user.set_password_hash("AWDaoDWHGOAUGH");
 
-        co_await Call<SqlInsertMsg>(sql_service_, &user);
+        //co_await Call<SqlInsertMsg>(sql_service_, &user);
 
-        std::vector<bool> dirty_bits(user.GetDescriptor()->field_count());
-        auto res = co_await Call<SqlQueryMsg>(sql_service_, "1", &user, &dirty_bits, false);
+        //std::vector<bool> dirty_bits(user.GetDescriptor()->field_count());
+        //auto res = co_await Call<SqlQueryMsg>(sql_service_, "1", &user, &dirty_bits, false);
 
         co_return;
     }

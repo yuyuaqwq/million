@@ -4,25 +4,20 @@
 
 #include <utility>
 
-#include <protogen/cs/cs_msgid.pb.h>
-
 namespace million {
 namespace gateway {
 
 constexpr static inline uint32_t kMsgIdMax = std::numeric_limits<uint16_t>::max();
 constexpr static inline uint32_t kSubMsgIdMax = std::numeric_limits<uint16_t>::max();
 
-template <typename MsgIdT>
-inline uint32_t CalcKey(MsgIdT msg_id, uint32_t sub_msg_id) {
-    static_assert(sizeof(MsgIdT) == sizeof(sub_msg_id), "");
+inline uint32_t CalcKey(uint32_t msg_id, uint32_t sub_msg_id) {
     assert(static_cast<uint32_t>(msg_id) <= kMsgIdMax);
     assert(sub_msg_id <= kSubMsgIdMax);
     return uint32_t(static_cast<uint32_t>(msg_id) << 16) | static_cast<uint16_t>(sub_msg_id);
 }
 
-template <typename MsgIdT>
-inline std::pair<MsgIdT, uint32_t> CalcMsgId(uint32_t key) {
-    auto msg_id = static_cast<MsgIdT>(key >> 16);
+inline std::pair<uint32_t, uint32_t> CalcMsgId(uint32_t key) {
+    auto msg_id = key >> 16;
     auto sub_msg_id = key & 0xffff;
     return std::make_pair(msg_id, sub_msg_id);
 }
@@ -59,11 +54,6 @@ inline std::pair<MsgIdT, uint32_t> CalcMsgId(uint32_t key) {
             return true; \
         }(); \
     ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const HANDLE_TYPE_& handle, ::std::unique_ptr<::NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
-
-
-#define MILLION_CS_PROTO_MSG_DISPATCH() MILLION_PROTO_MSG_DISPATCH(Cs, ::million::gateway::UserSessionHandle)
-#define MILLION_CS_PROTO_MSG_ID(MSG_ID_) MILLION_PROTO_MSG_ID(Cs, MSG_ID_)
-#define MILLION_CS_PROTO_MSG_HANDLE(SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) MILLION_PROTO_MSG_HANDLE(Cs, ::million::gateway::UserSessionHandle, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_)
 
 
 } // namespace gateway

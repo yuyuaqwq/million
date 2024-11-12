@@ -14,10 +14,12 @@ struct UserHeader {
     Token token;
 };
 
+template<typename HeaderT>
 class CsProtoMgr;
+
 class UserSession : public net::TcpConnection {
 public:
-    UserSession(CsProtoMgr* proto_mgr, net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
+    UserSession(CsProtoMgr<UserHeader>* proto_mgr, net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
     ~UserSession();
 
     bool Send(const google::protobuf::Message& message);
@@ -26,7 +28,7 @@ public:
     UserHeader& header() { return header_; }
 
 private:
-    CsProtoMgr* proto_mgr_;
+    CsProtoMgr<UserHeader>* proto_mgr_;
     UserHeader header_;
 };
 

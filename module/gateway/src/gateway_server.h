@@ -2,14 +2,18 @@
 
 #include <million/net/tcp_server.h>
 
+#include "user_session.h"
+
 namespace million {
 namespace gateway {
 
+template<typename HeaderT>
 class CsProtoMgr;
+
 class GatewayServer : public net::TcpServer {
 public:
     using TcpServer = net::TcpServer;
-    GatewayServer(IMillion* million, CsProtoMgr* proto_mgr)
+    GatewayServer(IMillion* million, CsProtoMgr<UserHeader>* proto_mgr)
         : proto_mgr_(proto_mgr)
         , TcpServer(million) {}
 
@@ -18,7 +22,7 @@ public:
     }
 
 private:
-    CsProtoMgr* proto_mgr_;
+    CsProtoMgr<UserHeader>* proto_mgr_;
 };
 
 } // namespace gateway

@@ -8,7 +8,7 @@ namespace million {
 namespace gateway {
 
 
-UserSession::UserSession(CsProtoMgr* proto_mgr, net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor)
+UserSession::UserSession(CsProtoMgr<UserHeader>* proto_mgr, net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor)
     : proto_mgr_(proto_mgr)
     , TcpConnection(server, std::move(socket), executor)
 {

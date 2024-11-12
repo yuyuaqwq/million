@@ -8,90 +8,71 @@
 
 #include <asio.hpp>
 
-#include <protogen/cs/cs_msgid.pb.h>
-
 #include <million/noncopyable.h>
 #include <million/proto_msg.h>
 #include <million/net/packet.h>
 
 #include <gateway/proto_msg.h>
 
-#include "user_session.h"
-
 namespace million {
 namespace gateway {
 
 namespace protobuf = google::protobuf;
 
+template<typename HeaderT>
 class CsProtoMgr : noncopyable {
 public:
-    // 初始化消息映射
-    void InitMsgMap() {
-        const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
-        protobuf::DescriptorDatabase* db = pool->internal_generated_database();
-        if (db == nullptr) {
-            return;
-        }
+    // 初始化
+    void Init() {
 
-        std::vector<std::string> file_names;
-        db->FindAllFileNames(&file_names);
-        for (const std::string& filename : file_names) {
-            const protobuf::FileDescriptor* file_descriptor = pool->FindFileByName(filename);
-            if (file_descriptor == nullptr) continue;
-
-            int enum_count = file_descriptor->enum_type_count();
-            const protobuf::EnumDescriptor* enum_descriptor = nullptr;
-            for (int i = 0; i < enum_count; i++) {
-                const protobuf::EnumDescriptor* descriptor = file_descriptor->enum_type(i);
-                if (!descriptor) continue;
-                const std::string& name = descriptor->full_name();
-                auto& opts = descriptor->options();
-                if (opts.HasExtension(Cs::cs_msg_id)) {
-                    Cs::MsgId msg_id = opts.GetExtension(Cs::cs_msg_id);
-
-                    file_desc_map_.insert(std::make_pair(msg_id, file_descriptor));
-                    break;
-                }
-            }
-        }
     }
 
-    // 注册子消息
-    template <typename ExtensionIdT>
-    bool RegistrySubMsg(Cs::MsgId msg_id, const ExtensionIdT& id) {
-        if (static_cast<uint32_t>(msg_id) > kMsgIdMax) {
-            throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{} > kMsgIdMax", static_cast<uint32_t>(msg_id)));
-        }
-        auto file_desc = FindFileDesc(msg_id);
-        if (!file_desc) return false;
-
-        int message_count = file_desc->message_type_count();
-        for (int i = 0; i < message_count; i++) {
-            const protobuf::Descriptor* desc = file_desc->message_type(i);
-            auto& options = desc->options();
-            if (options.HasExtension(id)) {
-                auto sub_msg_id_t = options.GetExtension(id);
-                auto sub_msg_id = static_cast<uint32_t>(sub_msg_id_t);
-                if (sub_msg_id > kSubMsgIdMax) {
-                    throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", static_cast<uint32_t>(msg_id), static_cast<uint32_t>(sub_msg_id)));
+    // 注册协议
+    template <typename IdTagT, typename SubIdTagT>
+    bool RegisterProto(const protobuf::FileDescriptor& file_desc, IdTagT id_tag, const SubIdTagT& sub_id_tag) {
+        int enum_count = file_desc.enum_type_count();
+        for (int i = 0; i < enum_count; i++) {
+            const protobuf::EnumDescriptor* enum_desc = file_desc.enum_type(i);
+            if (!enum_desc) continue;
+            auto& enum_opts = enum_desc->options();
+            if (!enum_opts.HasExtension(id_tag)) { // Cs::cs_msg_id
+                continue;
+            }
+            auto msg_id = enum_opts.GetExtension(id_tag);
+            auto msg_id_u32 = static_cast<uint32_t>(msg_id);
+            if (msg_id_u32 > kMsgIdMax) {
+                throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{} > kMsgIdMax", msg_id_u32));
+            }
+            int message_count = file_desc.message_type_count();
+            for (int i = 0; i < message_count; i++) {
+                const protobuf::Descriptor* desc = file_desc.message_type(i);
+                auto& msg_opts = desc->options();
+                if (!msg_opts.HasExtension(sub_id_tag)) {
+                    continue;
                 }
-                static_assert(sizeof(Cs::MsgId) == sizeof(sub_msg_id), "");
-                auto key = CalcKey(msg_id, sub_msg_id);
+                auto sub_msg_id = msg_opts.GetExtension(sub_id_tag);
+                auto sub_msg_id_u32 = static_cast<uint32_t>(sub_msg_id);
+                if (sub_msg_id_u32 > kSubMsgIdMax) {
+                    throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", msg_id_u32, sub_msg_id_u32));
+                }
+                static_assert(sizeof(msg_id) == sizeof(sub_msg_id), "");
+                auto key = CalcKey(msg_id, sub_msg_id_u32);
                 msg_desc_map_.insert({ key, desc });
                 msg_id_map_.insert({ desc, key });
             }
+            return true;
         }
-        return true;
+        return false;
     }
 
     // 编码消息
-    std::optional<net::Packet> EncodeMessage(const UserHeader& header, const protobuf::Message& message) {
+    std::optional<net::Packet> EncodeMessage(const HeaderT& header, const protobuf::Message& message) {
         auto desc = message.GetDescriptor();
         auto msg_key = GetMsgKey(desc);
         if (!msg_key) {
             return {};
         }
-        auto [msg_id, sub_msg_id] = CalcMsgId<Cs::MsgId>(*msg_key);
+        auto [msg_id, sub_msg_id] = CalcMsgId(*msg_key);
 
         net::Packet buffer;
         uint16_t msg_id_net = asio::detail::socket_ops::host_to_network_short(static_cast<uint16_t>(msg_id));
@@ -111,7 +92,7 @@ public:
     }
 
     // 解码消息
-    std::optional<std::tuple<ProtoMsgUnique, Cs::MsgId, uint32_t>> DecodeMessage(const net::Packet& buffer, UserHeader* header) {
+    std::optional<std::tuple<ProtoMsgUnique, uint32_t, uint32_t>> DecodeMessage(const net::Packet& buffer, HeaderT* header) {
         uint16_t msg_id_net, sub_msg_id_net;
         if (buffer.size() < sizeof(msg_id_net) + sizeof(sub_msg_id_net) + sizeof(*header)) return std::nullopt;
 
@@ -123,9 +104,9 @@ public:
         if (header) { std::memcpy(header, buffer.data() + i, sizeof(*header)); }
         i += sizeof(*header);
 
-        Cs::MsgId msg_id = static_cast<Cs::MsgId>(asio::detail::socket_ops::network_to_host_short(msg_id_net));
+        uint32_t msg_id = static_cast<uint32_t>(asio::detail::socket_ops::network_to_host_short(msg_id_net));
         uint32_t sub_msg_id = static_cast<uint32_t>(asio::detail::socket_ops::network_to_host_short(sub_msg_id_net));
-        if (static_cast<uint32_t>(msg_id) > kMsgIdMax) {
+        if (msg_id > kMsgIdMax) {
             return std::nullopt;
         }
         if (sub_msg_id > kMsgIdMax) {
@@ -143,16 +124,8 @@ public:
         return std::make_tuple(std::move(proto_msg), msg_id, sub_msg_id);
     }
 
-
 private:
-    const protobuf::FileDescriptor* FindFileDesc(Cs::MsgId msg_id) {
-        auto iter = file_desc_map_.find(msg_id);
-        if (iter == file_desc_map_.end()) { return nullptr; }
-        const protobuf::FileDescriptor* file_descriptor = iter->second;
-        return file_descriptor;
-    }
-
-    const protobuf::Descriptor* GetMsgDesc(Cs::MsgId msg_id, uint32_t sub_msg_id) {
+    const protobuf::Descriptor* GetMsgDesc(uint32_t msg_id, uint32_t sub_msg_id) {
         auto key = CalcKey(msg_id, sub_msg_id);
         auto iter = msg_desc_map_.find(key);
         if (iter == msg_desc_map_.end()) return nullptr;
@@ -165,7 +138,7 @@ private:
         return iter->second;
     }
 
-    std::optional<ProtoMsgUnique> NewMessage(Cs::MsgId msg_id, uint32_t sub_msg_id) {
+    std::optional<ProtoMsgUnique> NewMessage(uint32_t msg_id, uint32_t sub_msg_id) {
         auto desc = GetMsgDesc(msg_id, sub_msg_id);
         if (!desc) return std::nullopt;
         const protobuf::Message* proto_msg = protobuf::MessageFactory::generated_factory()->GetPrototype(desc);
@@ -176,9 +149,6 @@ private:
     }
 
 private:
-    static_assert(sizeof(Cs::MsgId) == sizeof(uint32_t), "sizeof(MsgId) error.");
-
-    std::unordered_map<Cs::MsgId, const protobuf::FileDescriptor*> file_desc_map_;
     std::unordered_map<uint32_t, const protobuf::Descriptor*> msg_desc_map_;
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
