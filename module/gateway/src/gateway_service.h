@@ -8,7 +8,6 @@
 
 #include "cs_proto_mgr.h"
 #include "gateway_server.h"
-#include "user_session.h"
 
 #include <protogen/cs/cs_msgid.pb.h>
 #include <protogen/cs/cs_user.pb.h>
