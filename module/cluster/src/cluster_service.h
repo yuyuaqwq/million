@@ -17,20 +17,21 @@ public:
     using Base = IService;
     ClusterService(IMillion* imillion)
         : Base(imillion)
-        , server_(imillion, &proto_mgr_) { }
+        // , server_(imillion, &proto_mgr_)
+    { }
 
     virtual void OnInit() override {
         // proto_mgr_.InitMsgMap();
         // proto_mgr_.RegistrySubMsg(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
 
         // io线程回调，发给work线程处理
-        server_.set_on_connection([this](auto connection) {
-            Send<ConnectionMsg>(service_handle(), std::move(connection));
-        });
-        server_.set_on_msg([this](auto& connection, auto&& packet) {
-            Send<RecvPacketMsg>(service_handle(), &connection, std::move(packet));
-        });
-        server_.Start(8002);
+        //server_.set_on_connection([this](auto connection) {
+        //    Send<ConnectionMsg>(service_handle(), std::move(connection));
+        //});
+        //server_.set_on_msg([this](auto& connection, auto&& packet) {
+        //    Send<RecvPacketMsg>(service_handle(), &connection, std::move(packet));
+        //});
+        //server_.Start(8002);
     }
 
     //MILLION_MSG_DISPATCH(GatewayService);
@@ -109,7 +110,7 @@ public:
 
 private:
     // CsProtoMgr proto_mgr_;
-    ClusterServer server_;
+    //ClusterServer server_;
     // TokenGenerator token_generator_;
     // std::unordered_map<Cs::MsgId, std::vector<ServiceHandle>> register_services_;
     // std::list<UserSession> users_;
