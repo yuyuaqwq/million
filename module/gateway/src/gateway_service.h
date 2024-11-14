@@ -3,21 +3,23 @@
 #include <gateway/getaway_msg.h>
 
 #include <million/iservice.h>
+#include <million/proto_msg.h>
 
 #include <gateway/api.h>
 
-#include "cs_proto_mgr.h"
 #include "gateway_server.h"
 
 #include <protogen/cs/cs_msgid.pb.h>
-#include <protogen/cs/cs_user.pb.h>
+#include <protogen/cs/cs_test.pb.h>
 
 #define MILLION_CS_PROTO_MSG_DISPATCH() MILLION_PROTO_MSG_DISPATCH(Cs, ::million::gateway::UserSessionHandle)
 #define MILLION_CS_PROTO_MSG_ID(MSG_ID_) MILLION_PROTO_MSG_ID(Cs, MSG_ID_)
-#define MILLION_CS_PROTO_MSG_HANDLE(SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) MILLION_PROTO_MSG_HANDLE(Cs, ::million::gateway::UserSessionHandle, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_)
+#define MILLION_CS_PROTO_MSG_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) MILLION_PROTO_MSG_HANDLE(Cs::##NAMESPACE_, ::million::gateway::UserSessionHandle, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_)
 
 namespace million {
 namespace gateway {
+
+namespace protobuf = google::protobuf; 
 
 MILLION_MSG_DEFINE(, ConnectionMsg, (net::TcpConnectionShared) connection)
 MILLION_MSG_DEFINE(, RecvPacketMsg, (net::TcpConnection*) connection, (net::Packet) packet)
@@ -33,10 +35,11 @@ public:
         proto_mgr_.Init();
         const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
         protobuf::DescriptorDatabase* db = pool->internal_generated_database();
-        auto cs_user = pool->FindFileByName("cs_user.proto");
+        auto cs_user = pool->FindFileByName("cs_test.proto");
+        if (cs_user) {
+            proto_mgr_.RegisterProto(*cs_user, Cs::cs_msg_id, Cs::Test::cs_sub_msg_id_user);
+        }
         
-        proto_mgr_.RegisterProto(*cs_user, Cs::cs_msg_id, Cs::cs_sub_msg_id_user);
-
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto connection) {
             Send<ConnectionMsg>(service_handle(), std::move(connection));
@@ -112,18 +115,18 @@ public:
     
     MILLION_CS_PROTO_MSG_ID(MSG_ID_USER);
 
-    MILLION_CS_PROTO_MSG_HANDLE(SubMsgIdUser::SUB_MSG_ID_USER_LOGIN_REQ, UserLoginReq, req) {
+    MILLION_CS_PROTO_MSG_HANDLE(Test, SubMsgIdUser::SUB_MSG_ID_USER_LOGIN_REQ, UserLoginReq, req) {
         
         std::cout << "login:" << req->user_name() << req->password() << std::endl;
-
-        Cs::UserLoginRes res;
+        
+        Cs::Test::UserLoginRes res;
         res.set_success(true);
         handle.user_session().Send(res);
         co_return;
     }
 
 private:
-    CsProtoMgr<UserHeader> proto_mgr_;
+    CommProtoMgr<UserHeader> proto_mgr_;
     GatewayServer server_;
     TokenGenerator token_generator_;
     std::unordered_map<Cs::MsgId, std::vector<ServiceHandle>> register_services_;

@@ -7,13 +7,10 @@
 namespace million {
 namespace gateway {
 
-template<typename HeaderT>
-class CsProtoMgr;
-
 class GatewayServer : public net::TcpServer {
 public:
     using TcpServer = net::TcpServer;
-    GatewayServer(IMillion* million, CsProtoMgr<UserHeader>* proto_mgr)
+    GatewayServer(IMillion* million, CommProtoMgr<UserHeader>* proto_mgr)
         : proto_mgr_(proto_mgr)
         , TcpServer(million) {}
 
@@ -22,7 +19,7 @@ public:
     }
 
 private:
-    CsProtoMgr<UserHeader>* proto_mgr_;
+    CommProtoMgr<UserHeader>* proto_mgr_;
 };
 
 } // namespace gateway

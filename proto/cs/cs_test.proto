@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package Cs;
+package Cs.Test;
 
 import "google/protobuf/descriptor.proto";
 import "cs/cs_msgid.proto";

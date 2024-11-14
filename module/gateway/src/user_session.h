@@ -4,6 +4,7 @@
 
 #include <million/noncopyable.h>
 #include <million/net/tcp_connection.h>
+#include <million/proto_msg.h>
 
 #include "token.h"
 
@@ -14,12 +15,9 @@ struct UserHeader {
     Token token;
 };
 
-template<typename HeaderT>
-class CsProtoMgr;
-
 class UserSession : public net::TcpConnection {
 public:
-    UserSession(CsProtoMgr<UserHeader>* proto_mgr, net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
+    UserSession(CommProtoMgr<UserHeader>* proto_mgr, net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
     ~UserSession();
 
     bool Send(const google::protobuf::Message& message);
@@ -28,7 +26,7 @@ public:
     UserHeader& header() { return header_; }
 
 private:
-    CsProtoMgr<UserHeader>* proto_mgr_;
+    CommProtoMgr<UserHeader>* proto_mgr_;
     UserHeader header_;
 };
 

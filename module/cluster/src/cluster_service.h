@@ -2,8 +2,6 @@
 
 #include <million/iservice.h>
 
-#include <protogen/cs/cs_user.pb.h>
-
 #include "cluster_server.h"
 
 namespace million {
