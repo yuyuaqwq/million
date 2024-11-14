@@ -4,12 +4,15 @@
 #include <string>
 
 #include <million/imillion.h>
+#include <million/proto_msg.h>
 
 #include <pocketpy/pocketpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
+
+
 
 namespace pybind11 {
     thread_local pkpy::VM* vm = nullptr;
@@ -40,7 +43,7 @@ bool set_field(google::protobuf::Message* message, const std::string& field_name
     return true;
 }
 
-void create_message(const std::string& message_type, pybind11::kwargs kwargs) {
+void send(const std::string& message_type, pybind11::kwargs kwargs) {
     std::unique_ptr<google::protobuf::Message> message;
 
     // 根据消息类型名称创建消息实例
@@ -69,11 +72,11 @@ void create_message(const std::string& message_type, pybind11::kwargs kwargs) {
 }
 
 
-PYBIND11_EMBEDDED_MODULE(example, m) {
-    m.doc() = "pybind11 example with dynamic Protobuf message creation";
+PYBIND11_EMBEDDED_MODULE(million, m) {
+    m.doc() = "million core module";
 
-    // 绑定 create_message 函数
-    m.def("create_message", &create_message, "Create a protobuf message by type name and kwargs",
+    // 绑定 send 函数
+    m.def("send", &send, "Create a protobuf message by type name and kwargs",
         py::arg("message_type"));
 }
 
@@ -94,7 +97,18 @@ struct Point {
 //    //    py::arg("message_type"));
 //}
 
+struct SsProtoMgrHeader {
+
+};
+
 MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
+
+    CommProtoMgr<SsProtoMgrHeader> ss_proto_mgr;
+    ss_proto_mgr.Init();
+    // 支持按full_name查找消息
+    // 收到py的调用后，通过full_name找到ss消息，再new，并通过field_name进行set
+    // 然后调用目标
+
     auto vm_ = new pkpy::VM(); // std::make_unique<pkpy::VM>
     // 对新创建的vm进行pybind11初始化
     py::interpreter::initialize(vm_);
@@ -126,11 +140,11 @@ MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
     //    });
 
     // use the Point class
-    vm_->exec("import example");
+    vm_->exec("import million");
     vm_->exec("print('pysvr:')");         // 1
     //vm->exec("print(a.x)");         // 1
     //vm->exec("print(a.y)");         // 2
-    vm_->exec("a = example.create_message(\"shabi\", a = 1, b = 2)");
+    vm_->exec("a = million.send(\"shabi\", a = 1, b = 2)");
 
 
     return true;
