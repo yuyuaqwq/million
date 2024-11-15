@@ -8,8 +8,9 @@ aux_source_directory(./ SRC)
 add_library(${PYSVR_LIB} SHARED ${SRC})
 
 target_include_directories(${PYSVR_LIB} PRIVATE ${MILLION_HEADER_DIR})
-target_include_directories(${PYSVR_LIB} PRIVATE ${POCKET_PY_HEADER_DIR})
+target_link_libraries(${PYSVR_LIB} PRIVATE ${MILLION_LIB})
 
+target_include_directories(${PYSVR_LIB} PRIVATE ${POCKET_PY_HEADER_DIR})
 target_link_libraries(${PYSVR_LIB} PRIVATE ${POCKET_PY_LIB})
 
 if (WIN32)

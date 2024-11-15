@@ -12,15 +12,6 @@
 
 namespace py = pybind11;
 
-
-
-namespace pybind11 {
-    thread_local pkpy::VM* vm = nullptr;
-}
-inline static void switch_vm(pkpy::VM* vm_) {
-    py::vm = vm_;
-}
-
 bool set_field(google::protobuf::Message* message, const std::string& field_name, const py::object& value) {
     const google::protobuf::Descriptor* descriptor = message->GetDescriptor();
     const google::protobuf::Reflection* reflection = message->GetReflection();
@@ -47,15 +38,12 @@ void send(const std::string& message_type, pybind11::kwargs kwargs) {
     std::unique_ptr<google::protobuf::Message> message;
 
     // 根据消息类型名称创建消息实例
-    if (message_type == "Person") {
+    //if (message_type == "test") {
         // message = ;
-    }
-    //else if (message_type == "Address") {
-    //    message = ;
     //}
-    else {
-        throw std::runtime_error("Unsupported message type: " + message_type);
-    }
+    //else {
+        // throw std::runtime_error("Unsupported message type: " + message_type);
+    //}
 
     // 遍历关键字参数并设置消息字段
     for (auto item : kwargs) {
@@ -68,17 +56,73 @@ void send(const std::string& message_type, pybind11::kwargs kwargs) {
     std::string serialized_data;
     message->SerializeToString(&serialized_data);
 
+
     // return pybind11::bytes(serialized_data);
 }
+//
+//PYBIND11_EMBEDDED_MODULE(million, m) {
+//    m.doc() = "million core module";
+//
+//    // 绑定 send 函数
+//    m.def("send", &send, "Create a protobuf message by type name and kwargs",
+//        py::arg("message_type"));
+//}
+
+class PyService : public million::IService {
+public:
+    using Base = IService;
+    using Base::Base;
+
+    virtual void OnInit() override {
+        vm_ = std::make_unique<pkpy::VM>();
+        py::interpreter::initialize(vm_.get());
+
+        ss_proto_mgr.Init();
+
+        vm_->exec("import million");
+        vm_->exec("print('pysvr:')");         // 1
+        //vm->exec("print(a.x)");         // 1
+        //vm->exec("print(a.y)");         // 2
+
+        auto r = vm_->exec("def my_generator():\n    yield 1\n    yield 2\n    yield 3");
 
 
-PYBIND11_EMBEDDED_MODULE(million, m) {
-    m.doc() = "million core module";
+        vm_->call(r);
 
-    // 绑定 send 函数
-    m.def("send", &send, "Create a protobuf message by type name and kwargs",
-        py::arg("message_type"));
-}
+        
+
+        //pkpy::PyVar obj;
+        //vm_->bind(obj, "my_generator()", [](auto vm, auto args) {
+
+        //    return vm->None;
+        //});
+
+        // vm_->call("my_generator");
+
+        // vm_->exec("a = million.send(\"test\", a = 1, b = 2)");
+
+
+        //auto a= vm_->eval();
+        //
+        //vm_->ge();
+    }
+
+    virtual void OnExit() override {
+
+    }
+
+    virtual million::Task<> OnMsg(million::MsgUnique) override {
+        co_return;
+    }
+
+
+private:
+    struct SsProtoMgrHeader { };
+    million::CommProtoMgr<SsProtoMgrHeader> ss_proto_mgr;
+
+    std::unique_ptr<pkpy::VM> vm_;
+};
+
 
 namespace million {
 namespace pysvr {
@@ -97,25 +141,21 @@ struct Point {
 //    //    py::arg("message_type"));
 //}
 
-struct SsProtoMgrHeader {
 
-};
 
 MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
 
-    CommProtoMgr<SsProtoMgrHeader> ss_proto_mgr;
-    ss_proto_mgr.Init();
+    auto handle = imillion->NewService<PyService>();
+    
     // 支持按full_name查找消息
     // 收到py的调用后，通过full_name找到ss消息，再new，并通过field_name进行set
     // 然后调用目标
 
-    auto vm_ = new pkpy::VM(); // std::make_unique<pkpy::VM>
+    // std::make_unique<pkpy::VM>
     // 对新创建的vm进行pybind11初始化
-    py::interpreter::initialize(vm_);
+    
 
-    // 切换到此vm
-    switch_vm(vm_);
-
+    
     // auto guard = py::scoped_interpreter(vm_);
     // auto mod = vm->new_module("example");
     //vm->register_user_class<Point>(mod, "Point",
@@ -140,11 +180,6 @@ MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
     //    });
 
     // use the Point class
-    vm_->exec("import million");
-    vm_->exec("print('pysvr:')");         // 1
-    //vm->exec("print(a.x)");         // 1
-    //vm->exec("print(a.y)");         // 2
-    vm_->exec("a = million.send(\"shabi\", a = 1, b = 2)");
 
 
     return true;
