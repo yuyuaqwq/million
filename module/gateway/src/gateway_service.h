@@ -9,8 +9,6 @@
 
 #include "gateway_server.h"
 
-#include <protogen/cs/cs_test.pb.h>
-
 #define MILLION_CS_PROTO_MSG_DISPATCH() MILLION_PROTO_MSG_DISPATCH(Cs, ::million::gateway::UserSessionHandle)
 #define MILLION_CS_PROTO_MSG_ID(MSG_ID_) MILLION_PROTO_MSG_ID(Cs, MSG_ID_)
 #define MILLION_CS_PROTO_MSG_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) MILLION_PROTO_MSG_HANDLE(Cs::##NAMESPACE_, ::million::gateway::UserSessionHandle, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_)
@@ -20,8 +18,8 @@ namespace gateway {
 
 namespace protobuf = google::protobuf; 
 
-MILLION_MSG_DEFINE(, ConnectionMsg, (net::TcpConnectionShared) connection)
-MILLION_MSG_DEFINE(, RecvPacketMsg, (net::TcpConnection*) connection, (net::Packet) packet)
+MILLION_MSG_DEFINE(, GatewayConnectionMsg, (net::TcpConnectionShared) connection)
+MILLION_MSG_DEFINE(, GatewayRecvPacketMsg, (net::TcpConnection*) connection, (net::Packet) packet)
 
 class GatewayService : public IService {
 public:
@@ -32,30 +30,35 @@ public:
 
     virtual void OnInit() override {
         proto_mgr_.Init();
-        // const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
-        // protobuf::DescriptorDatabase* db = pool->internal_generated_database();
+        //const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
+        //protobuf::DescriptorDatabase* db = pool->internal_generated_database();
         //auto cs_user = pool->FindFileByName("cs_test.proto");
         //if (cs_user) {
         //    proto_mgr_.RegisterProto(*cs_user, Cs::cs_msg_id, Cs::Test::cs_sub_msg_id_user);
         //}
-        
+
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto connection) {
-            Send<ConnectionMsg>(service_handle(), std::move(connection));
+            Send<GatewayConnectionMsg>(service_handle(), std::move(connection));
         });
         server_.set_on_msg([this](auto& connection, auto&& packet) {
-            Send<RecvPacketMsg>(service_handle(), &connection, std::move(packet));
+            Send<GatewayRecvPacketMsg>(service_handle(), &connection, std::move(packet));
         });
         server_.Start(8001);
     }
 
     MILLION_MSG_DISPATCH(GatewayService);
 
-    MILLION_MSG_HANDLE(ConnectionMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayConnectionMsg, msg) {
         co_return;
     }
 
-    MILLION_MSG_HANDLE(RecvPacketMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayRegisterProtoMsg, msg) {
+        proto_mgr_.RegisterProto(msg->msg_id, msg->sub_msg_list);
+        co_return;
+    }
+
+    MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
         UserHeader header;
         auto res = proto_mgr_.DecodeMessage(msg->packet, &header);
         if (!res) co_return;
@@ -70,25 +73,24 @@ public:
 
             // todo: 需要断开原先token指向的连接
         }
-        auto msg_id = static_cast<Cs::MsgId>(msg_id_u32);
         // co_await ProtoMsgDispatch(handle, msg_id, sub_msg_id, std::move(proto_msg));
 
         // 没有token
         if (session->header().token == kInvaildToken) {
-            auto iter = register_no_token_services_.find(msg_id);
+            auto iter = register_no_token_services_.find(msg_id_u32);
             if (iter != register_no_token_services_.end()) {
                 auto& services = iter->second;
                 for (auto& service : services) {
-                    Send<RecvProtoMsg>(service, handle, std::move(proto_msg));
+                    Send<GatewayRecvProtoMsg>(service, handle, std::move(proto_msg));
                 }
             }
         }
         else {
-            auto iter = register_services_.find(msg_id);
+            auto iter = register_services_.find(msg_id_u32);
             if (iter != register_services_.end()) {
                 auto& services = iter->second;
                 for (auto& service : services) {
-                    Send<RecvProtoMsg>(service, handle, std::move(proto_msg));
+                    Send<GatewayRecvProtoMsg>(service, handle, std::move(proto_msg));
                 }
             }
         }
@@ -96,17 +98,12 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(RegisterProtoMsg, msg) {
-        proto_mgr_.RegisterProto(*msg->file_desc, msg->msg_ext_id, msg->sub_msg_ext_id);
-        co_return;
-    }
-
-    MILLION_MSG_HANDLE(RegisterServiceMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayRegisterServiceMsg, msg) {
         register_no_token_services_[msg->msg_id].push_back(msg->service_handle);
         co_return;
     }
 
-    MILLION_MSG_HANDLE(RegisterNoTokenServiceMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayRegisterNoTokenServiceMsg, msg) {
         register_services_[msg->msg_id].push_back(msg->service_handle);
         co_return;
     }
@@ -121,13 +118,13 @@ public:
     //    co_return;
     //}
 
-    MILLION_MSG_HANDLE(SetTokenMsg, msg) {
+    MILLION_MSG_HANDLE(GatewaySetTokenMsg, msg) {
         auto token = token_generator_.Generate();
         msg->user_session_handle.user_session().header().token = token;
         co_return;
     }
 
-    MILLION_MSG_HANDLE(SendProtoMsg, msg) {
+    MILLION_MSG_HANDLE(GatewaySendProtoMsg, msg) {
         msg->user_session_handle.user_session().Send(*msg->proto_msg);
         co_return;
     }

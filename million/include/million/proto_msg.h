@@ -32,7 +32,53 @@ inline std::pair<uint32_t, uint32_t> CalcMsgId(uint32_t key) {
 
 namespace protobuf = google::protobuf;
 
-template<typename HeaderT>
+struct CommProtoSubMsgInfo {
+    const protobuf::Descriptor* desc;
+    uint32_t sub_msg_id;
+};
+
+// 获取Proto中的所有的CommMessage
+template <typename MsgExtIdT, typename SubMsgExtIdT>
+inline static bool CommProtoGetMessageList(const protobuf::FileDescriptor& file_desc, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id, uint32_t* msg_id, std::vector<CommProtoSubMsgInfo>* sub_msg_list) {
+    int enum_count = file_desc.enum_type_count();
+    for (int i = 0; i < enum_count; i++) {
+        const protobuf::EnumDescriptor* enum_desc = file_desc.enum_type(i);
+        if (!enum_desc) continue;
+        auto& enum_opts = enum_desc->options();
+        if (!enum_opts.HasExtension(msg_ext_id)) {
+            continue;
+        }
+
+        auto msg_id_enum = enum_opts.GetExtension(msg_ext_id);
+        auto msg_id_u32 = static_cast<uint32_t>(msg_id_enum);
+
+        *msg_id = msg_id_u32;
+
+        int message_count = file_desc.message_type_count();
+        for (int j = 0; j < message_count; j++) {
+            const protobuf::Descriptor* desc = file_desc.message_type(j);
+            auto& msg_opts = desc->options();
+            if (!msg_opts.HasExtension(sub_msg_ext_id)) {
+                continue;
+            }
+
+            auto sub_msg_id = msg_opts.GetExtension(sub_msg_ext_id);
+            auto sub_msg_id_u32 = static_cast<uint32_t>(sub_msg_id);
+
+            static_assert(sizeof(msg_id) == sizeof(sub_msg_id), "");
+
+            CommProtoSubMsgInfo sub_msg_info;
+            sub_msg_info.desc = desc;
+            sub_msg_info.sub_msg_id = sub_msg_id;
+
+            sub_msg_list->emplace_back(sub_msg_info);
+        }
+        return true;
+    }
+    return false;
+}
+
+template<typename HeaderT >
 class CommProtoMgr : noncopyable {
 public:
     // 初始化
@@ -41,41 +87,24 @@ public:
     }
 
     // 注册协议
-    template <typename MsgExtIdT, typename SubMsgExtIdT>
-    bool RegisterProto(const protobuf::FileDescriptor& file_desc, MsgExtIdT msg_ext_id, const SubMsgExtIdT& sub_msg_ext_id) {
-        int enum_count = file_desc.enum_type_count();
-        for (int i = 0; i < enum_count; i++) {
-            const protobuf::EnumDescriptor* enum_desc = file_desc.enum_type(i);
-            if (!enum_desc) continue;
-            auto& enum_opts = enum_desc->options();
-            if (!enum_opts.HasExtension(msg_ext_id)) { // Cs::cs_msg_id
-                continue;
-            }
-            auto msg_id = enum_opts.GetExtension(msg_ext_id);
-            auto msg_id_u32 = static_cast<uint32_t>(msg_id);
-            if (msg_id_u32 > kMsgIdMax) {
-                throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{} > kMsgIdMax", msg_id_u32));
-            }
-            int message_count = file_desc.message_type_count();
-            for (int i = 0; i < message_count; i++) {
-                const protobuf::Descriptor* desc = file_desc.message_type(i);
-                auto& msg_opts = desc->options();
-                if (!msg_opts.HasExtension(sub_msg_ext_id)) {
-                    continue;
-                }
-                auto sub_msg_id = msg_opts.GetExtension(sub_msg_ext_id);
-                auto sub_msg_id_u32 = static_cast<uint32_t>(sub_msg_id);
-                if (sub_msg_id_u32 > kSubMsgIdMax) {
-                    throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", msg_id_u32, sub_msg_id_u32));
-                }
-                static_assert(sizeof(msg_id) == sizeof(sub_msg_id), "");
-                auto key = CalcKey(msg_id, sub_msg_id_u32);
-                msg_desc_map_.insert({ key, desc });
-                msg_id_map_.insert({ desc, key });
-            }
-            return true;
+    bool RegisterProto(uint32_t msg_id, const std::vector<CommProtoSubMsgInfo>& sub_msg_list) {
+        if (msg_id > kMsgIdMax) {
+            // throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{} > kMsgIdMax", msg_id_u32));
+            return false;
         }
-        return false;
+
+        for (const auto& sub_msg : sub_msg_list) {
+            if (sub_msg.sub_msg_id > kSubMsgIdMax) {
+                // throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", msg_id_u32, sub_msg_id_u32));
+                return false;
+            }
+
+            auto key = CalcKey(msg_id, sub_msg.sub_msg_id);
+            msg_desc_map_.emplace(key, sub_msg.desc);
+            msg_id_map_.emplace(sub_msg.desc, key);
+        }
+        
+        return true;
     }
 
     // 编码消息
