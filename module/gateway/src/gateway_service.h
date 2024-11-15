@@ -9,7 +9,6 @@
 
 #include "gateway_server.h"
 
-#include <protogen/cs/cs_msgid.pb.h>
 #include <protogen/cs/cs_test.pb.h>
 
 #define MILLION_CS_PROTO_MSG_DISPATCH() MILLION_PROTO_MSG_DISPATCH(Cs, ::million::gateway::UserSessionHandle)
@@ -33,12 +32,12 @@ public:
 
     virtual void OnInit() override {
         proto_mgr_.Init();
-        const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
-        protobuf::DescriptorDatabase* db = pool->internal_generated_database();
-        auto cs_user = pool->FindFileByName("cs_test.proto");
-        if (cs_user) {
-            proto_mgr_.RegisterProto(*cs_user, Cs::cs_msg_id, Cs::Test::cs_sub_msg_id_user);
-        }
+        // const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
+        // protobuf::DescriptorDatabase* db = pool->internal_generated_database();
+        //auto cs_user = pool->FindFileByName("cs_test.proto");
+        //if (cs_user) {
+        //    proto_mgr_.RegisterProto(*cs_user, Cs::cs_msg_id, Cs::Test::cs_sub_msg_id_user);
+        //}
         
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto connection) {
@@ -72,27 +71,43 @@ public:
             // todo: 需要断开原先token指向的连接
         }
         auto msg_id = static_cast<Cs::MsgId>(msg_id_u32);
-        co_await ProtoMsgDispatch(handle, msg_id, sub_msg_id, std::move(proto_msg));
+        // co_await ProtoMsgDispatch(handle, msg_id, sub_msg_id, std::move(proto_msg));
 
-        // 没登录，只能分发给UserMsg
-        if (session->header().token == kInvaildToken && msg_id != Cs::MSG_ID_USER) {            co_return;
-        }
-
-        auto iter = register_services_.find(msg_id);
-        if (iter != register_services_.end()) {
-            auto& services = iter->second;
-            for (auto& service : services) {
-                Send<RecvProtoMsg>(service, handle, std::move(proto_msg));
+        // 没有token
+        if (session->header().token == kInvaildToken) {
+            auto iter = register_no_token_services_.find(msg_id);
+            if (iter != register_no_token_services_.end()) {
+                auto& services = iter->second;
+                for (auto& service : services) {
+                    Send<RecvProtoMsg>(service, handle, std::move(proto_msg));
+                }
             }
         }
-
+        else {
+            auto iter = register_services_.find(msg_id);
+            if (iter != register_services_.end()) {
+                auto& services = iter->second;
+                for (auto& service : services) {
+                    Send<RecvProtoMsg>(service, handle, std::move(proto_msg));
+                }
+            }
+        }
         // auto token = token_generator_.Generate();
+        co_return;
+    }
 
+    MILLION_MSG_HANDLE(RegisterProtoMsg, msg) {
+        proto_mgr_.RegisterProto(*msg->file_desc, msg->msg_ext_id, msg->sub_msg_ext_id);
         co_return;
     }
 
     MILLION_MSG_HANDLE(RegisterServiceMsg, msg) {
-        register_services_[msg->cs_msg_id].push_back(msg->service_handle);
+        register_no_token_services_[msg->msg_id].push_back(msg->service_handle);
+        co_return;
+    }
+
+    MILLION_MSG_HANDLE(RegisterNoTokenServiceMsg, msg) {
+        register_services_[msg->msg_id].push_back(msg->service_handle);
         co_return;
     }
 
@@ -106,30 +121,37 @@ public:
     //    co_return;
     //}
 
+    MILLION_MSG_HANDLE(SetTokenMsg, msg) {
+        auto token = token_generator_.Generate();
+        msg->user_session_handle.user_session().header().token = token;
+        co_return;
+    }
+
     MILLION_MSG_HANDLE(SendProtoMsg, msg) {
-        msg->session_handle.user_session().Send(*msg->proto_msg);
+        msg->user_session_handle.user_session().Send(*msg->proto_msg);
         co_return;
     }
 
-    MILLION_CS_PROTO_MSG_DISPATCH();
-    
-    MILLION_CS_PROTO_MSG_ID(MSG_ID_USER);
+    //MILLION_CS_PROTO_MSG_DISPATCH();
+    //
+    //MILLION_CS_PROTO_MSG_ID(MSG_ID_USER);
 
-    MILLION_CS_PROTO_MSG_HANDLE(Test, SubMsgIdUser::SUB_MSG_ID_USER_LOGIN_REQ, UserLoginReq, req) {
-        
-        std::cout << "login:" << req->user_name() << req->password() << std::endl;
-        
-        Cs::Test::UserLoginRes res;
-        res.set_success(true);
-        handle.user_session().Send(res);
-        co_return;
-    }
+    //MILLION_CS_PROTO_MSG_HANDLE(Test, SubMsgIdUser::SUB_MSG_ID_USER_LOGIN_REQ, UserLoginReq, req) {
+    //    
+    //    std::cout << "login:" << req->user_name() << req->password() << std::endl;
+    //    
+    //    Cs::Test::UserLoginRes res;
+    //    res.set_success(true);
+    //    handle.user_session().Send(res);
+    //    co_return;
+    //}
 
 private:
     CommProtoMgr<UserHeader> proto_mgr_;
     GatewayServer server_;
     TokenGenerator token_generator_;
-    std::unordered_map<Cs::MsgId, std::vector<ServiceHandle>> register_services_;
+    std::unordered_map<uint32_t, std::vector<ServiceHandle>> register_services_;
+    std::unordered_map<uint32_t, std::vector<ServiceHandle>> register_no_token_services_;
     std::list<UserSession> users_;
 };
 

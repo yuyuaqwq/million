@@ -41,17 +41,17 @@ public:
     }
 
     // ×¢²áÐ­Òé
-    template <typename IdTagT, typename SubIdTagT>
-    bool RegisterProto(const protobuf::FileDescriptor& file_desc, IdTagT id_tag, const SubIdTagT& sub_id_tag) {
+    template <typename MsgExtIdT, typename SubMsgExtIdT>
+    bool RegisterProto(const protobuf::FileDescriptor& file_desc, MsgExtIdT msg_ext_id, const SubMsgExtIdT& sub_msg_ext_id) {
         int enum_count = file_desc.enum_type_count();
         for (int i = 0; i < enum_count; i++) {
             const protobuf::EnumDescriptor* enum_desc = file_desc.enum_type(i);
             if (!enum_desc) continue;
             auto& enum_opts = enum_desc->options();
-            if (!enum_opts.HasExtension(id_tag)) { // Cs::cs_msg_id
+            if (!enum_opts.HasExtension(msg_ext_id)) { // Cs::cs_msg_id
                 continue;
             }
-            auto msg_id = enum_opts.GetExtension(id_tag);
+            auto msg_id = enum_opts.GetExtension(msg_ext_id);
             auto msg_id_u32 = static_cast<uint32_t>(msg_id);
             if (msg_id_u32 > kMsgIdMax) {
                 throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{} > kMsgIdMax", msg_id_u32));
@@ -60,10 +60,10 @@ public:
             for (int i = 0; i < message_count; i++) {
                 const protobuf::Descriptor* desc = file_desc.message_type(i);
                 auto& msg_opts = desc->options();
-                if (!msg_opts.HasExtension(sub_id_tag)) {
+                if (!msg_opts.HasExtension(sub_msg_ext_id)) {
                     continue;
                 }
-                auto sub_msg_id = msg_opts.GetExtension(sub_id_tag);
+                auto sub_msg_id = msg_opts.GetExtension(sub_msg_ext_id);
                 auto sub_msg_id_u32 = static_cast<uint32_t>(sub_msg_id);
                 if (sub_msg_id_u32 > kSubMsgIdMax) {
                     throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", msg_id_u32, sub_msg_id_u32));

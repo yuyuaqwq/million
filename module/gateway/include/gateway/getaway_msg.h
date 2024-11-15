@@ -4,8 +4,6 @@
 
 #include <utility>
 
-#include <protogen/cs/cs_msgid.pb.h>
-
 #include <million/imsg.h>
 #include <million/proto_msg.h>
 
@@ -15,10 +13,13 @@
 namespace million {
 namespace gateway {
 
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, RegisterServiceMsg, (ServiceHandle) service_handle, (Cs::MsgId) cs_msg_id)
-// MILLION_MSG_DEFINE(GATEWAY_CLASS_API, UnRegisterServiceMsg, (ServiceHandle) service_handle, (Cs::MsgId) cs_msg_id)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, RecvProtoMsg, (UserSessionHandle) session_handle, (ProtoMsgUnique) proto_msg)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, SendProtoMsg, (UserSessionHandle) session_handle, (ProtoMsgUnique) proto_msg)
+	
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, RegisterProtoMsg, (const google::protobuf::FileDescriptor*) file_desc)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, RegisterNoTokenServiceMsg, (ServiceHandle) service_handle, (uint32_t) msg_id)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, RegisterServiceMsg, (ServiceHandle) service_handle, (uint32_t) msg_id)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, SetTokenMsg, (UserSessionHandle) user_session_handle)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, RecvProtoMsg, (UserSessionHandle) user_session_handle, (ProtoMsgUnique) proto_msg)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, SendProtoMsg, (UserSessionHandle) user_session_handle, (ProtoMsgUnique) proto_msg)
 
 } // namespace gateway
 } // namespace million

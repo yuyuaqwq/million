@@ -79,15 +79,17 @@ public:
 
         ss_proto_mgr.Init();
 
-        vm_->exec("import million");
-        vm_->exec("print('pysvr:')");         // 1
+        // vm_->exec("import million");
+        // vm_->exec("print('pysvr:')");         // 1
         //vm->exec("print(a.x)");         // 1
         //vm->exec("print(a.y)");         // 2
 
-        auto r = vm_->exec("def my_generator():\n    yield 1\n    yield 2\n    yield 3");
+        // auto r = vm_->exec("def my_generator():\n    yield 1\n    yield 2\n    yield 3");
 
-
-        vm_->call(r);
+        auto mod = vm_->new_module("module");
+        // mod->type();
+        auto func = mod->attr().try_get("");
+        vm_->call(func);
 
         
 
