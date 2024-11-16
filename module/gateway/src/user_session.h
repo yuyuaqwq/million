@@ -13,6 +13,7 @@ namespace gateway {
 
 struct UserHeader {
     Token token;
+    uint64_t user_inc_id;
 };
 
 class UserSession : public net::TcpConnection {

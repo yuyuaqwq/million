@@ -38,10 +38,10 @@ public:
         //}
 
         // io线程回调，发给work线程处理
-        server_.set_on_connection([this](auto connection) {
+        server_.set_on_connection([this](auto&& connection) {
             Send<GatewayTcpConnectionMsg>(service_handle(), connection);
         });
-        server_.set_on_msg([this](auto& connection, auto&& packet) {
+        server_.set_on_msg([this](auto&& connection, auto&& packet) {
             Send<GatewayTcpRecvPacketMsg>(service_handle(), connection, std::move(packet));
         });
         server_.Start(8001);
@@ -51,12 +51,14 @@ public:
 
     MILLION_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
         auto& connection = msg->connection;
+        auto session = static_cast<UserSession*>(msg->connection.get());
         if (connection->Connected()) {
-            // auto session = static_cast<UserSession*>(msg->connection);
-            // agent_services_.emplace(session, );
+            auto user_inc_id = ++user_inc_id_;
+            session->header().user_inc_id = user_inc_id;
+            users_.emplace(session->header().user_inc_id, session);
         }
         else {
-
+            users_.erase(session->header().user_inc_id);
         }
         co_return;
     }
@@ -74,14 +76,15 @@ public:
         }
         // co_await ProtoMsgDispatch(handle, msg_id, sub_msg_id, std::move(proto_msg));
 
+        auto user_inc_id = session->header().user_inc_id;
         // 没有token
         if (session->header().token == kInvaildToken) {
-            Send<GatewayRecvPacketMsg>(login_service_, session_handle, std::move(msg->packet));
+            Send<GatewayRecvPacketMsg>(login_service_, user_inc_id, std::move(msg->packet));
         }
         else {
-            auto iter = agent_services_.find(session);
+            auto iter = agent_services_.find(session->header().user_inc_id);
             if (iter != agent_services_.end()) {
-                Send<GatewayRecvPacketMsg>(iter->second, session_handle, std::move(msg->packet));
+                Send<GatewayRecvPacketMsg>(iter->second, user_inc_id, std::move(msg->packet));
             }
         }
         co_return;
@@ -93,7 +96,7 @@ public:
     }
 
     MILLION_MSG_HANDLE(GatewaySureAgentMsg, msg) {
-        
+        agent_services_.emplace(msg->user_inc_id, msg->agent_service);
         co_return;
     }
 
@@ -137,7 +140,9 @@ private:
     TokenGenerator token_generator_;
     ServiceHandle login_service_;
     // 需要改掉UserSession*
-    std::unordered_map<UserSession*, ServiceHandle> agent_services_;
+    std::atomic_uint64_t user_inc_id_ = 0;
+    std::unordered_map<uint64_t, UserSession*> users_;
+    std::unordered_map<uint64_t, ServiceHandle> agent_services_;
 };
 
 } // namespace gateway

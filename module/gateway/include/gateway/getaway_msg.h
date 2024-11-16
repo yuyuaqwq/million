@@ -18,11 +18,11 @@ namespace gateway {
 
 // recv
 MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRegisterLoginServiceMsg, (ServiceHandle) login_service)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySureAgentMsg, (UserSessionHandle) user_session, (ServiceHandle) agent_service)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySendPacketMsg, (UserSessionHandle) user_session, (net::Packet) packet)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySureAgentMsg, (uint64_t) user_inc_id, (ServiceHandle) agent_service)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySendPacketMsg, (uint64_t) user_inc_id, (net::Packet) packet)
 
 // send
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvPacketMsg, (UserSessionHandle) user_session, (net::Packet) packet)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvPacketMsg, (uint64_t) user_inc_id, (net::Packet) packet)
 
 } // namespace gateway
 } // namespace million
