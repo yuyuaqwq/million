@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package Ss;
+
+message ProtoMsg {
+    uint32 msg_id = 1;
+    uint32 sub_msg_id = 2;
+    bytes msg_body = 3;
+}

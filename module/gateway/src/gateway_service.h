@@ -18,18 +18,18 @@ namespace gateway {
 
 namespace protobuf = google::protobuf; 
 
-MILLION_MSG_DEFINE(, GatewayConnectionMsg, (net::TcpConnectionShared) connection)
-MILLION_MSG_DEFINE(, GatewayRecvPacketMsg, (net::TcpConnection*) connection, (net::Packet) packet)
+MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (net::TcpConnectionShared) connection)
+MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
 
 class GatewayService : public IService {
 public:
     using Base = IService;
     GatewayService(IMillion* imillion)
         : Base(imillion)
-        , server_(imillion, &proto_mgr_) { }
+        , server_(imillion) { }
 
     virtual void OnInit() override {
-        proto_mgr_.Init();
+        // proto_mgr_.Init();
         //const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
         //protobuf::DescriptorDatabase* db = pool->internal_generated_database();
         //auto cs_user = pool->FindFileByName("cs_test.proto");
@@ -39,37 +39,36 @@ public:
 
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto connection) {
-            Send<GatewayConnectionMsg>(service_handle(), std::move(connection));
+            Send<GatewayTcpConnectionMsg>(service_handle(), connection);
         });
         server_.set_on_msg([this](auto& connection, auto&& packet) {
-            Send<GatewayRecvPacketMsg>(service_handle(), &connection, std::move(packet));
+            Send<GatewayTcpRecvPacketMsg>(service_handle(), connection, std::move(packet));
         });
         server_.Start(8001);
     }
 
     MILLION_MSG_DISPATCH(GatewayService);
 
-    MILLION_MSG_HANDLE(GatewayConnectionMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
+        auto& connection = msg->connection;
+        if (connection->Connected()) {
+            // auto session = static_cast<UserSession*>(msg->connection);
+            // agent_services_.emplace(session, );
+        }
+        else {
+
+        }
         co_return;
     }
 
-    MILLION_MSG_HANDLE(GatewayRegisterProtoMsg, msg) {
-        proto_mgr_.RegisterProto(msg->msg_id, msg->sub_msg_list);
-        co_return;
-    }
 
-    MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
-        UserHeader header;
-        auto res = proto_mgr_.DecodeMessage(msg->packet, &header);
-        if (!res) co_return;
-        auto&& [proto_msg, msg_id_u32, sub_msg_id] = *res;
-
-        auto session = static_cast<UserSession*>(msg->connection);
-        auto handle = UserSessionHandle(session);
+    MILLION_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
+        auto session = static_cast<UserSession*>(msg->connection.get());
+        auto session_handle = UserSessionHandle(session);
 
         if (session->header().token == kInvaildToken) {
             // 连接没token，但是发来了token，当成断线重连处理
-            session->header().token = header.token;
+            // session->header().token = header.token;
 
             // todo: 需要断开原先token指向的连接
         }
@@ -77,34 +76,24 @@ public:
 
         // 没有token
         if (session->header().token == kInvaildToken) {
-            auto iter = register_no_token_services_.find(msg_id_u32);
-            if (iter != register_no_token_services_.end()) {
-                auto& services = iter->second;
-                for (auto& service : services) {
-                    Send<GatewayRecvProtoMsg>(service, handle, std::move(proto_msg));
-                }
-            }
+            Send<GatewayRecvPacketMsg>(login_service_, session_handle, std::move(msg->packet));
         }
         else {
-            auto iter = register_services_.find(msg_id_u32);
-            if (iter != register_services_.end()) {
-                auto& services = iter->second;
-                for (auto& service : services) {
-                    Send<GatewayRecvProtoMsg>(service, handle, std::move(proto_msg));
-                }
+            auto iter = agent_services_.find(session);
+            if (iter != agent_services_.end()) {
+                Send<GatewayRecvPacketMsg>(iter->second, session_handle, std::move(msg->packet));
             }
         }
-        // auto token = token_generator_.Generate();
         co_return;
     }
 
-    MILLION_MSG_HANDLE(GatewayRegisterServiceMsg, msg) {
-        register_no_token_services_[msg->msg_id].push_back(msg->service_handle);
+    MILLION_MSG_HANDLE(GatewayRegisterLoginServiceMsg, msg) {
+        login_service_ = msg->login_service;
         co_return;
     }
 
-    MILLION_MSG_HANDLE(GatewayRegisterNoTokenServiceMsg, msg) {
-        register_services_[msg->msg_id].push_back(msg->service_handle);
+    MILLION_MSG_HANDLE(GatewaySureAgentMsg, msg) {
+        
         co_return;
     }
 
@@ -118,16 +107,16 @@ public:
     //    co_return;
     //}
 
-    MILLION_MSG_HANDLE(GatewaySetTokenMsg, msg) {
-        auto token = token_generator_.Generate();
-        msg->user_session_handle.user_session().header().token = token;
-        co_return;
-    }
+    //MILLION_MSG_HANDLE(GatewaySetTokenMsg, msg) {
+    //    auto token = token_generator_.Generate();
+    //    msg->user_session_handle.user_session().header().token = token;
+    //    co_return;
+    //}
 
-    MILLION_MSG_HANDLE(GatewaySendProtoMsg, msg) {
-        msg->user_session_handle.user_session().Send(*msg->proto_msg);
-        co_return;
-    }
+    //MILLION_MSG_HANDLE(GatewaySendProtoMsg, msg) {
+    //    msg->user_session_handle.user_session().Send(*msg->proto_msg);
+    //    co_return;
+    //}
 
     //MILLION_CS_PROTO_MSG_DISPATCH();
     //
@@ -144,12 +133,11 @@ public:
     //}
 
 private:
-    CommProtoMgr<UserHeader> proto_mgr_;
     GatewayServer server_;
     TokenGenerator token_generator_;
-    std::unordered_map<uint32_t, std::vector<ServiceHandle>> register_services_;
-    std::unordered_map<uint32_t, std::vector<ServiceHandle>> register_no_token_services_;
-    std::list<UserSession> users_;
+    ServiceHandle login_service_;
+    // 需要改掉UserSession*
+    std::unordered_map<UserSession*, ServiceHandle> agent_services_;
 };
 
 } // namespace gateway

@@ -26,6 +26,10 @@ void TcpConnection::Close() {
 
 void TcpConnection::Process() {
     asio::co_spawn(executor_, [this]() -> asio::awaitable<void> {
+        const auto& on_connection = server_->on_connection();
+        if (on_connection) {
+            on_connection(*iter_);
+        }
         try {
             while (true) {
                 uint32_t total_packet_size = 0;
@@ -70,13 +74,16 @@ void TcpConnection::Process() {
                 }
                 const auto& on_msg = server_->on_msg();
                 if (on_msg) {
-                    on_msg(*iter_->get(), std::move(packet));
+                    on_msg(*iter_, std::move(packet));
                 }
             }
         }
         catch (std::exception&) {
         }
         Close();
+        if (on_connection) {
+            on_connection(*iter_);
+        }
         server_->RemoveConnection(iter_);
     }, asio::detached);
 }
@@ -114,6 +121,10 @@ void TcpConnection::Send(Packet&& packet) {
             Close();
         }
     }, asio::detached);
+}
+
+bool TcpConnection::Connected() {
+    return socket_.is_open();
 }
 
 } // namespace net

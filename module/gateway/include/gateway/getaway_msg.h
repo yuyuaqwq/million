@@ -13,26 +13,16 @@
 namespace million {
 namespace gateway {
 
+// 注册login服务，没有token的消息发往login-n服务
+// login-n服务再通知agentmgr服务，agentmgr让nodemgr创建agent-n，然后再关联到gateway，gateway下次就可以直接发给这个agent
+
 // recv
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRegisterProtoMsg, (int32_t) msg_id, (std::vector<CommProtoSubMsgInfo>) sub_msg_list)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRegisterNoTokenServiceMsg, (ServiceHandle) service_handle, (uint32_t) msg_id)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRegisterServiceMsg, (ServiceHandle) service_handle, (uint32_t) msg_id)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySetTokenMsg, (UserSessionHandle) user_session_handle)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySendProtoMsg, (UserSessionHandle) user_session_handle, (ProtoMsgUnique) proto_msg)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRegisterLoginServiceMsg, (ServiceHandle) login_service)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySureAgentMsg, (UserSessionHandle) user_session, (ServiceHandle) agent_service)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySendPacketMsg, (UserSessionHandle) user_session, (net::Packet) packet)
 
 // send
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvProtoMsg, (UserSessionHandle) user_session_handle, (ProtoMsgUnique) proto_msg)
-
-
-template <typename MsgExtIdT, typename SubMsgExtIdT>
-inline std::optional<MsgUnique> MakeRegisterProtoMsg(const protobuf::FileDescriptor& file_desc, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
-    uint32_t msg_id = 0;
-    std::vector<CommProtoSubMsgInfo> sub_msg_list;
-    if (!CommProtoGetMessageList(file_desc, msg_ext_id, sub_msg_ext_id, &msg_id, &sub_msg_list)) {
-        return std::nullopt;
-    }
-    return std::make_unique<RegisterProtoMsg>(msg_id, std::move(sub_msg_list));
-}
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvPacketMsg, (UserSessionHandle) user_session, (net::Packet) packet)
 
 } // namespace gateway
 } // namespace million

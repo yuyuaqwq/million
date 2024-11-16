@@ -19,10 +19,9 @@ public:
     virtual ~TcpConnection();
 
     void Close();
-
     void Process();
-
     void Send(Packet&& packet);
+    bool Connected();
 
     auto iter() const { return iter_; }
     void set_iter(std::list<std::shared_ptr<TcpConnection>>::iterator iter) { iter_ = iter; }

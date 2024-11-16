@@ -17,8 +17,8 @@ namespace net {
 
 class MILLION_CLASS_API TcpServer : noncopyable {
 public:
-    using TcpConnectionFunc = std::function<void(TcpConnectionShared)>;
-    using TcpMsgFunc = std::function<void(TcpConnection&, Packet&&)>;
+    using TcpConnectionFunc = std::function<void(const TcpConnectionShared&)>;
+    using TcpMsgFunc = std::function<void(const TcpConnectionShared&, Packet&&)>;
 
 public:
     TcpServer(IMillion* imillion);

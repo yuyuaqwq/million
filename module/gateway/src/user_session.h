@@ -17,7 +17,7 @@ struct UserHeader {
 
 class UserSession : public net::TcpConnection {
 public:
-    UserSession(CommProtoMgr<UserHeader>* proto_mgr, net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
+    UserSession(net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
     ~UserSession();
 
     bool Send(const google::protobuf::Message& message);
@@ -26,7 +26,6 @@ public:
     UserHeader& header() { return header_; }
 
 private:
-    CommProtoMgr<UserHeader>* proto_mgr_;
     UserHeader header_;
 };
 

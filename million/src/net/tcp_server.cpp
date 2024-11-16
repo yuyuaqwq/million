@@ -53,9 +53,6 @@ asio::awaitable<void> TcpServer::Listen(uint16_t port) {
         // 获取io_context，新连接绑定到该io_context中
         auto& io_context = imillion_->NextIoContext();
         auto handle = AddConnection(std::move(socket), io_context.get_executor());
-        if (on_connection_) {
-            on_connection_(handle);
-        }
         handle->Process();
     }
 }

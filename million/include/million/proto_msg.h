@@ -32,53 +32,6 @@ inline std::pair<uint32_t, uint32_t> CalcMsgId(uint32_t key) {
 
 namespace protobuf = google::protobuf;
 
-struct CommProtoSubMsgInfo {
-    const protobuf::Descriptor* desc;
-    uint32_t sub_msg_id;
-};
-
-// 获取Proto中的所有的CommMessage
-template <typename MsgExtIdT, typename SubMsgExtIdT>
-inline static bool CommProtoGetMessageList(const protobuf::FileDescriptor& file_desc, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id, uint32_t* msg_id, std::vector<CommProtoSubMsgInfo>* sub_msg_list) {
-    int enum_count = file_desc.enum_type_count();
-    for (int i = 0; i < enum_count; i++) {
-        const protobuf::EnumDescriptor* enum_desc = file_desc.enum_type(i);
-        if (!enum_desc) continue;
-        auto& enum_opts = enum_desc->options();
-        if (!enum_opts.HasExtension(msg_ext_id)) {
-            continue;
-        }
-
-        auto msg_id_enum = enum_opts.GetExtension(msg_ext_id);
-        auto msg_id_u32 = static_cast<uint32_t>(msg_id_enum);
-
-        *msg_id = msg_id_u32;
-
-        int message_count = file_desc.message_type_count();
-        for (int j = 0; j < message_count; j++) {
-            const protobuf::Descriptor* desc = file_desc.message_type(j);
-            auto& msg_opts = desc->options();
-            if (!msg_opts.HasExtension(sub_msg_ext_id)) {
-                continue;
-            }
-
-            auto sub_msg_id = msg_opts.GetExtension(sub_msg_ext_id);
-            auto sub_msg_id_u32 = static_cast<uint32_t>(sub_msg_id);
-
-            static_assert(sizeof(msg_id) == sizeof(sub_msg_id), "");
-
-            CommProtoSubMsgInfo sub_msg_info;
-            sub_msg_info.desc = desc;
-            sub_msg_info.sub_msg_id = sub_msg_id;
-
-            sub_msg_list->emplace_back(sub_msg_info);
-        }
-        return true;
-    }
-    return false;
-}
-
-template<typename HeaderT >
 class CommProtoMgr : noncopyable {
 public:
     // 初始化
@@ -87,28 +40,52 @@ public:
     }
 
     // 注册协议
-    bool RegisterProto(uint32_t msg_id, const std::vector<CommProtoSubMsgInfo>& sub_msg_list) {
-        if (msg_id > kMsgIdMax) {
-            // throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{} > kMsgIdMax", msg_id_u32));
-            return false;
-        }
+    template <typename MsgExtIdT, typename SubMsgExtIdT>
+    bool RegisterProto(const protobuf::FileDescriptor& file_desc, uint32_t msg_id, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
+        int enum_count = file_desc.enum_type_count();
+        for (int i = 0; i < enum_count; i++) {
+            const protobuf::EnumDescriptor* enum_desc = file_desc.enum_type(i);
+            if (!enum_desc) continue;
+            auto& enum_opts = enum_desc->options();
+            if (!enum_opts.HasExtension(msg_ext_id)) {
+                continue;
+            }
 
-        for (const auto& sub_msg : sub_msg_list) {
-            if (sub_msg.sub_msg_id > kSubMsgIdMax) {
-                // throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", msg_id_u32, sub_msg_id_u32));
+            auto msg_id = enum_opts.GetExtension(msg_ext_id);
+            auto msg_id_u32 = static_cast<uint32_t>(msg_id);
+            if (msg_id_u32 > kMsgIdMax) {
+                // throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{} > kMsgIdMax", msg_id_u32));
                 return false;
             }
 
-            auto key = CalcKey(msg_id, sub_msg.sub_msg_id);
-            msg_desc_map_.emplace(key, sub_msg.desc);
-            msg_id_map_.emplace(sub_msg.desc, key);
+            int message_count = file_desc.message_type_count();
+            for (int j = 0; j < message_count; j++) {
+                const protobuf::Descriptor* desc = file_desc.message_type(j);
+                auto& msg_opts = desc->options();
+                if (!msg_opts.HasExtension(sub_msg_ext_id)) {
+                    continue;
+                }
+
+                auto sub_msg_id = msg_opts.GetExtension(sub_msg_ext_id);
+                auto sub_msg_id_u32 = static_cast<uint32_t>(sub_msg_id);
+                if (sub_msg_id_u32 > kSubMsgIdMax) {
+                    // throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", msg_id_u32, sub_msg_id_u32));
+                    return false;
+                }
+
+                static_assert(sizeof(msg_id) == sizeof(sub_msg_id), "");
+
+                auto key = CalcKey(msg_id_u32, sub_msg_id_u32);
+                msg_desc_map_.emplace(key, desc);
+                msg_id_map_.emplace(desc, key);
+            }
+            return true;
         }
-        
-        return true;
+        return false;
     }
 
     // 编码消息
-    std::optional<net::Packet> EncodeMessage(const HeaderT& header, const protobuf::Message& message) {
+    std::optional<net::Packet> EncodeMessage(const protobuf::Message& message) {
         auto desc = message.GetDescriptor();
         auto msg_key = GetMsgKey(desc);
         if (!msg_key) {
@@ -120,31 +97,27 @@ public:
         uint16_t msg_id_net = host_to_network_short(static_cast<uint16_t>(msg_id));
         uint16_t sub_msg_id_net = host_to_network_short(static_cast<uint16_t>(sub_msg_id));
 
-        buffer.resize(sizeof(msg_id_net) + sizeof(sub_msg_id_net) + sizeof(header) + message.ByteSize());
+        buffer.resize(sizeof(msg_id_net) + sizeof(sub_msg_id_net) + message.ByteSize());
         size_t i = 0;
         std::memcpy(buffer.data() + i, &msg_id_net, sizeof(msg_id_net));
         i += sizeof(msg_id_net);
         std::memcpy(buffer.data() + i, &sub_msg_id_net, sizeof(sub_msg_id_net));
         i += sizeof(sub_msg_id_net);
-        std::memcpy(buffer.data() + i, &header, sizeof(header));
-        i += sizeof(header);
 
         message.SerializeToArray(buffer.data() + i, message.ByteSize());
         return buffer;
     }
 
     // 解码消息
-    std::optional<std::tuple<ProtoMsgUnique, uint32_t, uint32_t>> DecodeMessage(const net::Packet& buffer, HeaderT* header) {
+    std::optional<std::tuple<ProtoMsgUnique, uint32_t, uint32_t>> DecodeMessage(const net::Packet& buffer) {
         uint16_t msg_id_net, sub_msg_id_net;
-        if (buffer.size() < sizeof(msg_id_net) + sizeof(sub_msg_id_net) + sizeof(*header)) return std::nullopt;
+        if (buffer.size() < sizeof(msg_id_net) + sizeof(sub_msg_id_net)) return std::nullopt;
 
         size_t i = 0;
         std::memcpy(&msg_id_net, buffer.data() + i, sizeof(msg_id_net));
         i += sizeof(msg_id_net);
         std::memcpy(&sub_msg_id_net, buffer.data() + i, sizeof(sub_msg_id_net));
         i += sizeof(sub_msg_id_net);
-        if (header) { std::memcpy(header, buffer.data() + i, sizeof(*header)); }
-        i += sizeof(*header);
 
         uint32_t msg_id = static_cast<uint32_t>(network_to_host_short(msg_id_net));
         uint32_t sub_msg_id = static_cast<uint32_t>(network_to_host_short(sub_msg_id_net));
