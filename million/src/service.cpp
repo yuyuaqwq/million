@@ -16,15 +16,15 @@ Service::Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
 
 Service::~Service() = default;
 
-bool Service::IsStop() const {
-    return state_ == ServiceState::kStop;
+bool Service::IsExit() const {
+    return state_ == ServiceState::kExit;
 }
 
 void Service::PushMsg(MsgUnique msg) {
     {
         auto lock = std::lock_guard(msgs_mutex_);
-        if (state_ == ServiceState::kStop) {
-            // 服务关闭，不再接收消息
+        if (IsExit()) {
+            // 服务退出，不再接收消息
             return;
         }
         msgs_.emplace(std::move(msg));
@@ -45,15 +45,9 @@ bool Service::MsgQueueIsEmpty() {
 }
 
 void Service::ProcessMsg(MsgUnique msg) {
-    if (msg->type() == MillionServiceStartMsg::kType) {
-        auto task = iservice_->OnStart();
-        excutor_.AddTask(std::move(task));
-        state_ = ServiceState::kRunning;
-        return;
-    }
-    else if (msg->type() == MillionServiceExitMsg::kType) {
+    if (msg->type() == MillionServiceStopMsg::kType) {
         iservice_->OnExit();
-        state_ = ServiceState::kStop;
+        state_ = ServiceState::kExit;
         return;
     }
     else if (msg->type() == MillionSessionTimeoutMsg::kType) {
@@ -67,6 +61,7 @@ void Service::ProcessMsg(MsgUnique msg) {
     if (!msg_opt) {
         return;
     }
+
     auto task = iservice_->OnMsg(std::move(*msg_opt));
     excutor_.AddTask(std::move(task));
 }
@@ -103,7 +98,7 @@ void Service::SeparateThreadHandle() {
         }
         do {
             ProcessMsg(std::move(*msg));
-            if (IsStop()) {
+            if (IsExit()) {
                 // 销毁服务
                 service_mgr_->DeleteService(this);
                 break;

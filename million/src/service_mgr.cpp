@@ -26,12 +26,12 @@ std::optional<ServiceHandle> ServiceMgr::AddService(std::unique_ptr<IService> is
         iter = --services_.end();
     }
     service_ptr->set_iter(iter);
-    million_->Send<MillionServiceStartMsg>(handle, handle);
+    // million_->Send<MillionServiceStartMsg>(handle, handle);
     return handle;
 }
 
 void ServiceMgr::DeleteService(ServiceHandle&& handle) {
-    million_->Send<MillionServiceExitMsg>(handle, handle);
+    million_->Send<MillionServiceStopMsg>(handle, handle);
 }
 
 void ServiceMgr::DeleteService(Service* service) {

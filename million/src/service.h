@@ -18,7 +18,7 @@ namespace million {
 enum class ServiceState {
     kReady,
     kRunning,
-    kStop,
+    kExit,
 };
 
 class ServiceMgr;
@@ -27,7 +27,7 @@ public:
     Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
     ~Service();
 
-    bool IsStop() const;
+    bool IsExit() const;
 
     void PushMsg(MsgUnique msg);
     std::optional<MsgUnique> PopMsg();
@@ -61,7 +61,7 @@ private:
     ServiceMgr* service_mgr_;
     std::list<std::shared_ptr<Service>>::iterator iter_;
 
-    ServiceState state_ = ServiceState::kReady;
+    ServiceState state_ = ServiceState::kRunning;
 
     bool in_queue_ = false;
 
