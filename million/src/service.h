@@ -18,6 +18,7 @@ namespace million {
 enum class ServiceState {
     kReady,
     kRunning,
+    // kStoping,
     kExit,
 };
 
@@ -61,7 +62,8 @@ private:
     ServiceMgr* service_mgr_;
     std::list<std::shared_ptr<Service>>::iterator iter_;
 
-    ServiceState state_ = ServiceState::kRunning;
+    std::optional<Task<>> task_;
+    ServiceState state_ = ServiceState::kReady;
 
     bool in_queue_ = false;
 

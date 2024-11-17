@@ -21,12 +21,13 @@ public:
     ~TaskExecutor();
 
     // 尝试调度
-    std::optional<MsgUnique> TrySchedule(SessionId id, MsgUnique msg);
+    std::optional<MsgUnique> TrySchedule(MsgUnique msg);
+    std::optional<MsgUnique> TrySchedule(Task<>& task, MsgUnique msg);
 
     // 将任务添加到调度器
     void AddTask(Task<>&& task);
 
-    void TimeoutCleanup(SessionId id);
+    std::optional<Task<>> TimeoutCleanup(SessionId id);
 
 private:
     // 加入待调度队列等待调度

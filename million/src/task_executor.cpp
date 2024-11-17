@@ -21,27 +21,17 @@ TaskExecutor::TaskExecutor(Service* service)
 TaskExecutor::~TaskExecutor() = default;
 
 // 尝试调度
-std::optional<MsgUnique> TaskExecutor::TrySchedule(SessionId id, MsgUnique msg) {
+std::optional<MsgUnique> TaskExecutor::TrySchedule(MsgUnique msg) {
+    auto id = msg->session_id();
     auto iter = tasks_.find(id);
     if (iter == tasks_.end()) {
         return msg;
     }
-    auto awaiter = iter->second.coroutine.promise().session_awaiter();
-    awaiter->set_result(std::move(msg));
-    auto waiting_coroutine = awaiter->waiting_coroutine();
-    waiting_coroutine.resume();
-    if (iter->second.has_exception()) {
+    auto msg_opt = TrySchedule(iter->second, std::move(msg));
+    if (msg_opt) {
+        // find找到的task，却未处理，异常情况
         auto million = service_->service_mgr()->million();
-        // 记录异常
-        try {
-            iter->second.rethrow_if_exception();
-        }
-        catch (const std::exception& e) {
-            MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session exception: {}.", e.what());
-        }
-        catch (...) {
-            MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session exception: {}.", "unknown exception");
-        }
+        MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kCritical, "[million] try schedule exception: {}.", id);
     }
     if (!iter->second.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
@@ -49,6 +39,31 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(SessionId id, MsgUnique msg) 
     }
     else {
         tasks_.erase(iter);
+    }
+    return std::nullopt;
+}
+
+std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, MsgUnique msg) {
+    auto id = msg->session_id();
+    auto awaiter = task.coroutine.promise().session_awaiter();
+    if (awaiter->waiting_session() != id) {
+        return msg;
+    }
+    awaiter->set_result(std::move(msg));
+    auto waiting_coroutine = awaiter->waiting_coroutine();
+    waiting_coroutine.resume();
+    if (task.has_exception()) {
+        auto million = service_->service_mgr()->million();
+        // 记录异常
+        try {
+            task.rethrow_if_exception();
+        }
+        catch (const std::exception& e) {
+            MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session exception: {}.", e.what());
+        }
+        catch (...) {
+            MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session exception: {}.", "unknown exception");
+        }
     }
     return std::nullopt;
 }
@@ -73,15 +88,17 @@ void TaskExecutor::AddTask(Task<>&& task) {
     }
 }
 
-void TaskExecutor::TimeoutCleanup(SessionId id) {
+std::optional<Task<>> TaskExecutor::TimeoutCleanup(SessionId id) {
     auto iter = tasks_.find(id);
     if (iter == tasks_.end()) {
-        return;
+        return std::nullopt;
     }
     // 超时，写出日志告警
     auto million = service_->service_mgr()->million();
     MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session timeout {}.", iter->second.coroutine.promise().session_awaiter()->waiting_session());
+    auto task = std::move(iter->second);
     tasks_.erase(iter);
+    return task;
 }
 
 void TaskExecutor::Push(SessionId id, Task<>&& task) {

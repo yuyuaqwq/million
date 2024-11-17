@@ -60,8 +60,11 @@ public:
     void EnableSeparateWorker();
 
     virtual bool OnInit() { return true; }
+    virtual Task<> OnStart() { co_return; }
     virtual Task<> OnMsg(MsgUnique msg) = 0;
+    // virtual Task<> OnStop() { co_return; }
     virtual void OnExit() {}
+    virtual void OnTimeout(Task<>&& task) {}
 
     const ServiceHandle& service_handle() const { return service_handle_; }
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }

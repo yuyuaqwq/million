@@ -4,7 +4,9 @@
 
 #include <million/iservice.h>
 
+#include "million.h"
 #include "service_mgr.h"
+#include "session_monitor.h"
 #include "million_msg.h"
 
 namespace million {
@@ -45,19 +47,66 @@ bool Service::MsgQueueIsEmpty() {
 }
 
 void Service::ProcessMsg(MsgUnique msg) {
-    if (msg->type() == MillionServiceStopMsg::kType) {
-        iservice_->OnExit();
-        state_ = ServiceState::kExit;
+    if (msg->type() == MillionServiceStartMsg::kType) {
+        task_.emplace(iservice_->OnStart());
+        if (!task_->coroutine.done()) {
+            // OnStart未完成，等待处理完成
+            auto id = task_->coroutine.promise().session_awaiter()->waiting_session();
+            service_mgr()->million()->session_monitor().AddSession(service_handle(), id);
+        }
+        else {
+            task_ = std::nullopt;
+            state_ = ServiceState::kRunning;
+        }
         return;
     }
-    else if (msg->type() == MillionSessionTimeoutMsg::kType) {
-        auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
-        excutor_.TimeoutCleanup(msg_ptr->timeout_id);
+    else if (msg->type() == MillionServiceStopMsg::kType) {
+        // if (state_ == ServiceState::kReady) {
+            // OnStart未完成，直接退出
+            iservice_->OnExit();
+            state_ = ServiceState::kExit;
+            return;
+        // }
+        // 等待OnStop完成
         return;
     }
 
-    auto session_id = msg->session_id();
-    auto msg_opt = excutor_.TrySchedule(session_id, std::move(msg));
+    if (state_ == ServiceState::kReady && task_) {
+        // 只能尝试调度OnStart
+        auto msg_opt = excutor_.TrySchedule(*task_, std::move(msg));
+        if (task_->coroutine.done()) {
+            task_ = std::nullopt;
+            state_ = ServiceState::kRunning;
+            return;
+        }
+        if (!msg_opt) {
+            return;
+        }
+        msg = std::move(*msg_opt);
+    }
+    
+    if (msg->type() == MillionSessionTimeoutMsg::kType) {
+        auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
+        if (state_ == ServiceState::kReady) {
+            // 超时未完成OnStart，准备销毁服务
+            iservice_->OnTimeout(std::move(*task_));
+            task_ = std::nullopt;
+            iservice_->Send<MillionServiceStopMsg>(service_handle());
+        }
+        else {
+            auto task_opt = excutor_.TimeoutCleanup(msg_ptr->timeout_id);
+            if (task_opt) {
+                iservice_->OnTimeout(std::move(*task_opt));
+            }
+        }
+        return;
+    }
+
+    if (state_ != ServiceState::kRunning) {
+        return;
+    }
+
+    auto msg_opt = excutor_.TrySchedule(std::move(msg));
     if (!msg_opt) {
         return;
     }
