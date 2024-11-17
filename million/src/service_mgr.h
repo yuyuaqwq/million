@@ -17,7 +17,7 @@ public:
     ServiceMgr(Million* million);
     ~ServiceMgr();
 
-    ServiceHandle AddService(std::unique_ptr<IService> service);
+    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> service);
     void DeleteService(ServiceHandle&& handle);
     void DeleteService(Service* service);
 

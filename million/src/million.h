@@ -18,21 +18,23 @@ class Timer;
 class Logger;
 class Million {
 public:
-    Million(IMillion* imillion, std::string_view config_path);
+    Million(IMillion* imillion);
     ~Million();
 
-    void Init();
+    bool Init(std::string_view config_path);
     void Start();
     void Stop();
 
-    ServiceHandle AddService(std::unique_ptr<IService> iservice);
+    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice);
     template <typename IServiceT, typename ...Args>
-    ServiceHandle NewService(Args&&... args) {
+    std::optional<ServiceHandle> NewService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(imillion_, std::forward<Args>(args)...);
         return AddService(std::move(iservice));
     }
-
     void DeleteService(ServiceHandle&& service_handle);
+    bool SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name);
+    std::optional<ServiceHandle> GetServiceByUniqueNum(const ServiceUniqueName& unique_name);
+
 
     SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);

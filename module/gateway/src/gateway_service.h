@@ -28,7 +28,7 @@ public:
         : Base(imillion)
         , server_(imillion) { }
 
-    virtual void OnInit() override {
+    virtual bool OnInit() override {
         // proto_mgr_.Init();
         //const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
         //protobuf::DescriptorDatabase* db = pool->internal_generated_database();
@@ -45,6 +45,8 @@ public:
             Send<GatewayTcpRecvPacketMsg>(service_handle(), connection, std::move(packet));
         });
         server_.Start(8001);
+
+        return true;
     }
 
     MILLION_MSG_DISPATCH(GatewayService);

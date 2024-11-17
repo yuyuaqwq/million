@@ -23,8 +23,13 @@ MILLION_FUNC_API void InitMillion() {
     // google::protobuf::ShutdownProtobufLibrary();
 }
 
-Million::Million(IMillion* imillion, std::string_view config_path)
+Million::Million(IMillion* imillion)
     : imillion_(imillion) {
+}
+
+Million::~Million() = default;
+
+bool Million::Init(std::string_view config_path) {
     config_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(config_path)));
     auto config = *config_;
 
@@ -34,30 +39,36 @@ Million::Million(IMillion* imillion, std::string_view config_path)
 
     auto worker_mgr_config = config["worker_mgr"];
     if (!worker_mgr_config) {
-        throw ConfigException("cannot find 'worker_mgr'.");
+        std::cerr << "[config][error]cannot find 'worker_mgr'." << std::endl;
+        return false;
     }
     if (!worker_mgr_config["num"]) {
-        throw ConfigException("cannot find 'worker_mgr.num'.");
+        std::cerr << "[config][error]cannot find 'worker_mgr.num'." << std::endl;
+        return false;
     }
     auto worker_num = worker_mgr_config["num"].as<size_t>();
     worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
 
     auto io_context_mgr_config = config["io_context_mgr"];
     if (!io_context_mgr_config) {
-        throw ConfigException("cannot find 'io_context_mgr'.");
+        std::cerr << "[config][error]cannot find 'io_context_mgr'." << std::endl;
+        return false;
     }
     if (!io_context_mgr_config["num"]) {
-        throw ConfigException("cannot find 'io_context_mgr.num'.");
+        std::cerr << "[config][error]cannot find 'io_context_mgr.num'." << std::endl;
+        return false;
     }
     auto io_context_num = io_context_mgr_config["num"].as<size_t>();
     io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
 
     auto module_config = config["module"];
     if (!module_config) {
-        throw ConfigException("cannot find 'module'.");
+        std::cerr << "[config][error]cannot find 'module'." << std::endl;
+        return false;
     }
     if (!module_config["dirs"]) {
-        throw ConfigException("cannot find 'module.dirs'.");
+        std::cerr << "[config][error]cannot find 'module.dirs'." << std::endl;
+        return false;
     }
     auto module_dirs = module_config["dirs"].as<std::vector<std::string>>();
     module_mgr_ = std::make_unique<ModuleMgr>(this, module_dirs);
@@ -70,36 +81,39 @@ Million::Million(IMillion* imillion, std::string_view config_path)
 
     auto session_monitor_config = config["session_monitor"];
     if (!session_monitor_config) {
-        throw ConfigException("cannot find 'session_monitor_config'.");
+        std::cerr << "[config][error]cannot find 'session_monitor_config'." << std::endl;
+        return false;
     }
     if (!session_monitor_config["s_per_tick"]) {
-        throw ConfigException("cannot find 'session_monitor_config.s_per_tick'.");
+        std::cerr << "[config][error]cannot find 'session_monitor_config.s_per_tick'." << std::endl;
+        return false;
     }
     auto tick_s = session_monitor_config["s_per_tick"].as<uint32_t>();
     if (!session_monitor_config["timeout_tick"]) {
-        throw ConfigException("cannot find 'session_monitor_config.timeout_tick'.");
+        std::cerr << "[config][error]cannot find 'session_monitor_config.timeout_tick'." << std::endl;
+        return false;
     }
     auto timeout_s = session_monitor_config["timeout_tick"].as<uint32_t>();
     session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
 
     auto timer_config = config["timer"];
     if (!timer_config) {
-        throw ConfigException("cannot find 'timer'.");
+        std::cerr << "[config][error]cannot find 'timer'." << std::endl;
+        return false;
     }
     if (!timer_config["ms_per_tick"]) {
-        throw ConfigException("cannot find 'timer.ms_per_tick'.");
+        std::cerr << "[config][error]cannot find 'timer.ms_per_tick'." << std::endl;
+        return false;
     }
     auto ms_per_tick = timer_config["ms_per_tick"].as<uint32_t>();
     timer_ = std::make_unique<Timer>(this, ms_per_tick);
 
-}
-
-Million::~Million() = default;
-
-void Million::Init() {
-    assert(module_mgr_);
-    logger_->Init();
+    if (!logger_->Init()) {
+        return false;
+    }
     module_mgr_->Init();
+
+    return true;
 }
 
 void Million::Start() {
@@ -115,12 +129,20 @@ void Million::Stop() {
     timer_->Stop();
 }
 
-ServiceHandle Million::AddService(std::unique_ptr<IService> iservice) {
+std::optional<ServiceHandle> Million::AddService(std::unique_ptr<IService> iservice) {
     return service_mgr_->AddService(std::move(iservice));
 }
 
 void Million::DeleteService(ServiceHandle&& service_handle) {
     service_mgr_->DeleteService(std::move(service_handle));
+}
+
+bool Million::SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name) {
+    return service_mgr_->SetServiceUniqueName(handle, unique_name);
+}
+
+std::optional<ServiceHandle> Million::GetServiceByUniqueNum(const ServiceUniqueName& unique_name) {
+    return service_mgr_->GetServiceByUniqueNum(unique_name);
 }
 
 SessionId Million::Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {

@@ -73,7 +73,7 @@ public:
     using Base = IService;
     using Base::Base;
 
-    virtual void OnInit() override {
+    virtual bool OnInit() override {
         vm_ = std::make_unique<pkpy::VM>();
         py::interpreter::initialize(vm_.get());
 
@@ -107,6 +107,8 @@ public:
         //auto a= vm_->eval();
         //
         //vm_->ge();
+
+        return true;
     }
 
     virtual void OnExit() override {

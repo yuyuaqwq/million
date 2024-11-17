@@ -18,7 +18,7 @@ public:
         // , server_(imillion, &proto_mgr_)
     { }
 
-    virtual void OnInit() override {
+    virtual bool OnInit() override {
         // proto_mgr_.InitMsgMap();
         // proto_mgr_.RegistrySubMsg(Cs::MSG_ID_USER, Cs::cs_sub_msg_id_user);
 
@@ -30,6 +30,7 @@ public:
         //    Send<RecvPacketMsg>(service_handle(), &connection, std::move(packet));
         //});
         //server_.Start(8002);
+        return true;
     }
 
     //MILLION_MSG_DISPATCH(GatewayService);

@@ -11,19 +11,22 @@ ServiceMgr::ServiceMgr(Million* million)
 
 ServiceMgr::~ServiceMgr() = default;
 
-ServiceHandle ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
+std::optional<ServiceHandle> ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
     decltype(services_)::iterator iter;
     auto service_shared = std::make_shared<Service>(this, std::move(iservice));
     auto handle = ServiceHandle(service_shared);
     service_shared->iservice().set_service_handle(handle);
     auto service_ptr = service_shared.get();
+    if (!service_shared->iservice().OnInit()) {
+        return std::nullopt;
+    }
     {
         auto lock = std::lock_guard(services_mutex_);
         services_.emplace_back(std::move(service_shared));
         iter = --services_.end();
     }
     service_ptr->set_iter(iter);
-    million_->Send<MillionServiceInitMsg>(handle, handle);
+    million_->Send<MillionServiceStartMsg>(handle, handle);
     return handle;
 }
 

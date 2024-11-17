@@ -12,7 +12,7 @@ class TestService : public million::IService {
     using Base = million::IService;
     using Base::Base;
 
-    virtual void OnInit() override {
+    virtual bool OnInit() override {
         auto start = std::chrono::high_resolution_clock::now();
         int j = 0;
         //for (int i = 0; i < 100; i++) {
@@ -22,6 +22,8 @@ class TestService : public million::IService {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         auto duratioin = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "Elapsed time: " << duratioin.count() << "ms:" << j << " seconds\n";
+
+        return true;
     }
 
     virtual million::Task<> OnMsg(million::MsgUnique msg) override {
@@ -92,14 +94,23 @@ class TestService : public million::IService {
 };
 
 class TestApp : public million::IMillion {
-    using Base = million::IMillion;
-    using Base::Base;
+    //using Base = million::IMillion;
+    //using Base::Base;
+
+    
 };
 
 int main() {
-    auto test_app = std::make_unique<TestApp>("example_config.yaml");
+    auto test_app = std::make_unique<TestApp>();
+    if (!test_app->Init("example_config.yaml")) {
+        return 0;
+    }
 
-    auto service_handle = test_app->NewService<TestService>();
+    auto service_opt = test_app->NewService<TestService>();
+    if (!service_opt) {
+        return 0;
+    }
+    auto service_handle = *service_opt;
 
     test_app->Send<Test1Msg>(service_handle, service_handle, 3, "sb");
 

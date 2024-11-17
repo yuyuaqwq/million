@@ -4,23 +4,38 @@
 
 namespace million {
 
-IMillion::IMillion(std::string_view config_path) {
-    auto million = new Million(this, config_path);
+IMillion::IMillion() {
+    auto million = new Million(this);
     million_ = million;
-    million_->Init();
-    million_->Start();
 }
 
 IMillion::~IMillion() {
     delete million_;
 }
 
-ServiceHandle IMillion::AddService(std::unique_ptr<IService> iservice) {
+bool IMillion::Init(std::string_view config_path) {
+    auto success = million_->Init(config_path);
+    if (!success) {
+        return false;
+    }
+    million_->Start();
+    return true;
+}
+
+std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iservice) {
     return million_->AddService(std::move(iservice));
 }
 
 void IMillion::DeleteService(ServiceHandle&& service_handle) {
     million_->DeleteService(std::move(service_handle));
+}
+
+bool IMillion::SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name) {
+    return million_->SetServiceUniqueName(handle, unique_name);
+}
+
+std::optional<ServiceHandle> IMillion::GetServiceByUniqueNum(const ServiceUniqueName& unique_name) {
+    return million_->GetServiceByUniqueNum(unique_name);
 }
 
 SessionId IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {

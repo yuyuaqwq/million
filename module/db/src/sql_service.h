@@ -34,7 +34,7 @@ public:
     static inline const std::string_view user = "root";
     static inline const std::string_view password = "You_Yu666";
 
-    virtual void OnInit() override {
+    virtual bool OnInit() override {
         try {
             // 建立与 MySQL 数据库的连接
             sql_ = soci::session(soci::mysql, std::format("db={} user={} password={} host={}", db, user, password, host));
@@ -47,6 +47,8 @@ public:
         }
 
         EnableSeparateWorker();
+
+        return true;
     }
 
     virtual void OnExit() override {

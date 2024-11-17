@@ -11,7 +11,7 @@ public:
 	Logger(Million* million);
 	~Logger();
 
-	void Init();
+	bool Init();
 	void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str);
 	void SetLevel(const ServiceHandle& sender, std::string_view level);
 

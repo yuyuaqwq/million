@@ -103,10 +103,12 @@ public:
     using Base = IService;
     using Base::Base;
 
-    virtual void OnInit() override {
+    virtual bool OnInit() override {
         LOG_DEBUG("DbService Init");
 
         proto_mgr_.Init();
+
+        return true;
     }
 
     virtual void OnExit() override {

@@ -31,19 +31,22 @@ public:
     using Base = IService;
     using Base::Base;
 
-    virtual void OnInit() override {
+    virtual bool OnInit() override {
         auto& config = imillion_->YamlConfig();
         auto logger_config = config["logger"];
         if (!logger_config) {
-            throw ConfigException("cannot find 'logger'.");
+            std::cerr << "[config][error]cannot find 'logger'." << std::endl;
+            return false;
         }
         if (!logger_config["log_file"]) {
-            throw ConfigException("cannot find 'logger.log_file'.");
+            std::cerr << "[config][error]cannot find 'logger.log_file'." << std::endl;
+            return false;
         }
         auto log_file = logger_config["log_file"].as<std::string>();
 
         if (!logger_config["level"]) {
-            throw ConfigException("cannot find 'logger.level'.");
+            std::cerr << "[config][error]cannot find 'logger.level'." << std::endl;
+            return false;
         }
         auto level_str = logger_config["level"].as<std::string>();
         auto level = spdlog::level::from_str(level_str);
@@ -69,6 +72,8 @@ public:
         logger_->set_pattern(pattern);
 
         spdlog::flush_every(std::chrono::seconds(flush_every));
+
+        return true;
     }
 
     virtual void OnExit() override  {
@@ -98,8 +103,12 @@ Logger::~Logger() {
 
 }
 
-void Logger::Init() {
-    logger_handle_ = million_->NewService<LoggerService>();
+bool Logger::Init() {
+    auto logger_opt = million_->NewService<LoggerService>();
+    if (!logger_opt) {
+        return false;
+    }
+    logger_handle_ = *logger_opt;
 }
 
 void Logger::Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) {

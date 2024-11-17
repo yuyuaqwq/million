@@ -22,27 +22,23 @@ class io_context;
 
 namespace million {
 
-class MILLION_CLASS_API ConfigException : public std::runtime_error {
-public:
-    explicit ConfigException(const std::string& message)
-        : std::runtime_error("config error: " + message) {}
-};
-
 class Million;
 class MILLION_CLASS_API IMillion : noncopyable {
 public:
-    IMillion(std::string_view config_path);
+    IMillion();
     virtual ~IMillion();
 
-    ServiceHandle AddService(std::unique_ptr<IService> iservice);
+    bool Init(std::string_view config_path);
 
+    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice);
     template <typename IServiceT, typename ...Args>
-    ServiceHandle NewService(Args&&... args) {
+    std::optional<ServiceHandle> NewService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
         return AddService(std::move(iservice));
     }
-
     void DeleteService(ServiceHandle&& service_handle);
+    bool SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name);
+    std::optional<ServiceHandle> GetServiceByUniqueNum(const ServiceUniqueName& unique_name);
 
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
@@ -58,6 +54,7 @@ public:
     void EnableSeparateWorker(const ServiceHandle& service);
 
 private:
+
     Million* million_ = nullptr;
 };
 

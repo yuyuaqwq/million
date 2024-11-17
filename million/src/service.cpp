@@ -45,8 +45,9 @@ bool Service::MsgQueueIsEmpty() {
 }
 
 void Service::ProcessMsg(MsgUnique msg) {
-    if (msg->type() == MillionServiceInitMsg::kType) {
-        iservice_->OnInit();
+    if (msg->type() == MillionServiceStartMsg::kType) {
+        auto task = iservice_->OnStart();
+        excutor_.AddTask(std::move(task));
         state_ = ServiceState::kRunning;
         return;
     }
