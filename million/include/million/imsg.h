@@ -40,33 +40,7 @@ private:
 // 生成一个逗号, 直到__VA_ARGS__末尾不生成
 #define _MILLION_COMMON_IF_NOT_END(i, ...) META_NOT_IF(META_INDEX_IS_END(i, __VA_ARGS__), _MILLION_COMMON_IF_TRUE)
 
-// 从字段声明中提取名称(第二步)
-// 解析:
-// 这里x是([MAYBE] DEFAULT) NAME
-// META_IS_PAREN判断是不是括号, 如果有括号就去除括号, 如果没有直接返回
-#define _MILLION_FIELD_EXTRACT_NAME_I(x) META_IF_ELSE(META_IS_PAREN(x), META_EMPTY x, x)
-
-// 从字段声明中提取默认值(第二步)
-// 解析:
-// 这里x是([MAYBE] DEFAULT) NAME
-// 如果有括号, 就通过META_EXTRACT_PAREN_UNPACK获取括号内容, 如果没有就返回{}
-#define _MILLION_FIELD_EXTRACT_DEFAULT_I(x) META_IF_ELSE(META_IS_PAREN(x), META_EXTRACT_PAREN_UNPACK(x), {})
-
-// 从字段声明中提取名称
-// (TYPE)([MAYBE] DEFAULT) NAME -> NAME
-#define _MILLION_FIELD_EXTRACT_NAME(field) _MILLION_FIELD_EXTRACT_NAME_I(META_EMPTY field)
-// 从字段声明中提取默认值
-// (TYPE) NAME -> {}
-// (TYPE)(DEFAULT) NAME -> DEFAULT
-#define _MILLION_FIELD_EXTRACT_DEFAULT(field) _MILLION_FIELD_EXTRACT_DEFAULT_I(META_EMPTY field)
-// 从字段声明中提取类型
-// (TYPE)([MAYBE] DEFAULT) NAME -> TYPE
-#define _MILLION_FIELD_EXTRACT_TYPE(field) META_EXTRACT_PAREN_UNPACK(field)
-
-// 将未加工过的字段声明, 转为字段声明
-// (TYPE)([MAYBE] DEFAULT) NAME -> TYPE NAME
-#define _MILLION_FIELD_TO_DECL(field) _MILLION_FIELD_EXTRACT_TYPE(field) _MILLION_FIELD_EXTRACT_NAME(field)
-
+#define _MW_SIGNAL_FIELD_TO_DECL(field) META_EXTRACT_PAREN_UNPACK(field) META_EMPTY field
 
 #define _MILLION_FIELD_TO_CONST_REF_DECL_I(x) auto&&//x&&
 // 假设这里x是(float) kk，所以后面展开就是 FIELD_TO_CONST_REF_DECL_I (float) kk
@@ -127,7 +101,7 @@ private:
 // 字段声明转字段定义
 // (TYPE) NAME -> TYPE NAME;
 // (FIELDS_DECL的META_FOR_EACH循环代码)
-#define _MILLION_FIELDS_TO_DECL(x) META_UNPACK(x);
+#define _MILLION_FIELDS_TO_DECL(x) _MW_SIGNAL_FIELD_TO_DECL(x);
 
 // 生成构造函数的初始化列表
 // 参数 __VA_ARGS__: 未加工的字段声明列表
