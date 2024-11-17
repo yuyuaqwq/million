@@ -71,7 +71,8 @@ void Service::ProcessMsg(MsgUnique msg) {
         return;
     }
 
-    if (state_ == ServiceState::kReady && task_) {
+    if (state_ == ServiceState::kReady) {
+        assert(task_);
         // 只能尝试调度OnStart
         auto msg_opt = excutor_.TrySchedule(*task_, std::move(msg));
         if (task_->coroutine.done()) {
@@ -88,6 +89,7 @@ void Service::ProcessMsg(MsgUnique msg) {
     if (msg->type() == MillionSessionTimeoutMsg::kType) {
         auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
         if (state_ == ServiceState::kReady) {
+            assert(task_);
             // 超时未完成OnStart，准备销毁服务
             iservice_->OnTimeout(std::move(*task_));
             task_ = std::nullopt;
