@@ -29,7 +29,7 @@ public:
 
 private:
     ServiceHandle sender_;
-    SessionId session_id_{ kSessionIdInvalid };
+    SessionId session_id_ = kSessionIdInvalid;
 };
 
 

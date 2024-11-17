@@ -14,7 +14,7 @@ namespace million {
 namespace gateway {
 
 // 注册login服务，没有token的消息发往login-n服务
-// login-n服务再通知agentmgr服务，agentmgr让nodemgr创建agent-n，然后再关联到gateway，gateway下次就可以直接发给这个agent
+// login-n服务再通知agentmgr(全局唯一)服务，agentmgr让nodemgr(本机唯一)创建agent-n，然后再关联到gateway，gateway下次就可以直接发给这个agent
 
 // recv
 MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRegisterLoginServiceMsg, (ServiceHandle) login_service)
