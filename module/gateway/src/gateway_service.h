@@ -63,7 +63,6 @@ public:
         co_return;
     }
 
-
     MILLION_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto session = static_cast<UserSession*>(msg->connection.get());
         auto session_handle = UserSessionHandle(session);

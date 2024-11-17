@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package Db;
+package Million.Proto.Db;
 
 import "google/protobuf/descriptor.proto";
 
@@ -17,7 +17,7 @@ message FileOptionsDb {
 }
 
 extend google.protobuf.FileOptions {
-    FileOptionsDb db = 20001;
+    FileOptionsDb db = 20000;
 }
 
 // SQL 相关选项（MySQL）

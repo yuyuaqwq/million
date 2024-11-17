@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package Million.Proto.Cs.Example;
+
+import "google/protobuf/descriptor.proto";
+import "cs/cs_msgid.proto";
+
+enum CsSubMsgIdUser {
+    option (cs_msg_id) = CS_MSG_ID_EXAMPLE;
+    
+    CS_SUB_MSG_ID_EXAMPLE_INVALID = 0;
+    CS_SUB_MSG_ID_EXAMPLE_LOGIN_REQ = 1;
+    CS_SUB_MSG_ID_EXAMPLE_LOGIN_RES = 2;
+    
+}
+
+extend google.protobuf.MessageOptions {
+    CsSubMsgIdUser cs_sub_msg_id_example = 10001;
+}
+
+message UserLoginReq {
+    option (cs_sub_msg_id_example) = CS_SUB_MSG_ID_EXAMPLE_LOGIN_REQ;
+    string user_name = 1;
+    string password = 2;
+}
+
+message UserLoginRes {
+    option (cs_sub_msg_id_example) = CS_SUB_MSG_ID_EXAMPLE_LOGIN_RES;
+    bool success = 1;
+}

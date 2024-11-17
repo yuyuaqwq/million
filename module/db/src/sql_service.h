@@ -19,6 +19,8 @@
 
 #include <db/sql_msg.h>
 
+namespace Db = Million::Proto::Db;
+
 namespace million {
 namespace db {
 
