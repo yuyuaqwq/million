@@ -16,30 +16,38 @@ class WorkerMgr;
 class IoContextMgr;
 class Timer;
 class Logger;
-class Million : public IMillion {
+class Million {
 public:
-    Million(std::string_view config_path);
+    Million(IMillion* imillion, std::string_view config_path);
     ~Million();
 
     void Init();
     void Start();
     void Stop();
 
-    virtual ServiceHandle AddService(std::unique_ptr<IService> iservice) override;
-    using IMillion::NewService;
+    ServiceHandle AddService(std::unique_ptr<IService> iservice);
+    template <typename IServiceT, typename ...Args>
+    ServiceHandle NewService(Args&&... args) {
+        auto iservice = std::make_unique<IServiceT>(imillion_, std::forward<Args>(args)...);
+        return AddService(std::move(iservice));
+    }
 
-    virtual void DeleteService(ServiceHandle&& service_handle) override;
+    void DeleteService(ServiceHandle&& service_handle);
 
-    virtual SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
-    virtual SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) override;
-    using IMillion::Send;
+    SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
+    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
+    template <typename MsgT, typename ...Args>
+    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
+        return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
+    }
 
-    virtual const YAML::Node& YamlConfig() const override;
-    virtual void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) override;
-    virtual asio::io_context& NextIoContext() override;
-    virtual void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) override;
-    virtual void EnableSeparateWorker(const ServiceHandle& service) override;
+    const YAML::Node& YamlConfig() const;
+    void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
+    asio::io_context& NextIoContext();
+    void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str);
+    void EnableSeparateWorker(const ServiceHandle& service);
 
+    auto imillion() { return imillion_; }
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& session_mgr() { assert(session_mgr_); return *session_mgr_; }
     auto& session_monitor() { assert(session_monitor_); return *session_monitor_; }
@@ -50,6 +58,8 @@ public:
     auto& timer() { assert(timer_); return *timer_; }
 
 private:
+    IMillion* imillion_;
+
     std::unique_ptr<YAML::Node> config_;
 
     std::unique_ptr<ServiceMgr> service_mgr_;

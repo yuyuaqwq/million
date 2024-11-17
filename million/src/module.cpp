@@ -2,6 +2,8 @@
 
 #include <cassert>
 
+#include "million.h"
+
 namespace million {
 
 Module::Module(Million* million, const std::filesystem::path& module_file_path)
@@ -17,7 +19,7 @@ Module::~Module() {
     if (!exit_func) {
         return;
     }
-    exit_func(million_);
+    exit_func(million_->imillion());
 }
 
 bool Module::Loaded() {
@@ -30,7 +32,7 @@ bool Module::Init() {
     if (!init_func) {
         return false;
     }
-    init_ = init_func(million_);
+    init_ = init_func(million_->imillion());
     return init_;
 }
 

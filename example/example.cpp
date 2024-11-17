@@ -91,26 +91,30 @@ class TestService : public million::IService {
     }
 };
 
+class TestApp : public million::IMillion {
+    using Base = million::IMillion;
+    using Base::Base;
+};
+
 int main() {
-    auto mili = million::NewMillion("example_config.yaml");
+    auto test_app = std::make_unique<TestApp>("example_config.yaml");
 
+    auto service_handle = test_app->NewService<TestService>();
 
-    auto service_handle = mili->NewService<TestService>();
-
-    mili->Send<Test1Msg>(service_handle, service_handle, 3, "sb");
-
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    mili->Send<Test1Msg>(service_handle, service_handle, 4, "6");
+    test_app->Send<Test1Msg>(service_handle, service_handle, 3, "sb");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    mili->Send<Test1Msg>(service_handle, service_handle, 5, "emm");
+
+    test_app->Send<Test1Msg>(service_handle, service_handle, 4, "6");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    mili->Send<Test1Msg>(service_handle, service_handle, 6, "hhh");
+    test_app->Send<Test1Msg>(service_handle, service_handle, 5, "emm");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    mili->Send<Test1Msg>(service_handle, service_handle, 7, "hhh");
+    test_app->Send<Test1Msg>(service_handle, service_handle, 6, "hhh");
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    test_app->Send<Test1Msg>(service_handle, service_handle, 7, "hhh");
 
 
     std::this_thread::sleep_for(std::chrono::seconds(1));

@@ -23,19 +23,8 @@ MILLION_FUNC_API void InitMillion() {
     // google::protobuf::ShutdownProtobufLibrary();
 }
 
-MILLION_FUNC_API IMillion* NewMillion(std::string_view config_path) {
-    auto mili = new Million(config_path);
-    mili->Init();
-    mili->Start();
-
-    return mili;
-}
-
-MILLION_FUNC_API void DeleteMillion(IMillion* mili) {
-    delete mili;
-}
-
-Million::Million(std::string_view config_path) {
+Million::Million(IMillion* imillion, std::string_view config_path)
+    : imillion_(imillion) {
     config_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(config_path)));
     auto config = *config_;
 

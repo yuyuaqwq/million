@@ -28,11 +28,13 @@ public:
         : std::runtime_error("config error: " + message) {}
 };
 
+class Million;
 class MILLION_CLASS_API IMillion : noncopyable {
 public:
-    virtual ~IMillion() = default;
+    IMillion(std::string_view config_path);
+    virtual ~IMillion();
 
-    virtual ServiceHandle AddService(std::unique_ptr<IService> iservice) = 0;
+    ServiceHandle AddService(std::unique_ptr<IService> iservice);
 
     template <typename IServiceT, typename ...Args>
     ServiceHandle NewService(Args&&... args) {
@@ -40,20 +42,23 @@ public:
         return AddService(std::move(iservice));
     }
 
-    virtual void DeleteService(ServiceHandle&& service_handle) = 0;
+    void DeleteService(ServiceHandle&& service_handle);
 
-    virtual SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) = 0;
-    virtual SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) = 0;
+    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
+    SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
         return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
-    virtual const YAML::Node& YamlConfig() const = 0;
-    virtual void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) = 0;
-    virtual asio::io_context& NextIoContext() = 0;
-    virtual void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) = 0;
-    virtual void EnableSeparateWorker(const ServiceHandle& service) = 0;
+    const YAML::Node& YamlConfig() const;
+    void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
+    asio::io_context& NextIoContext();
+    void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str);
+    void EnableSeparateWorker(const ServiceHandle& service);
+
+private:
+    Million* million_ = nullptr;
 };
 
 inline SessionId IService::Send(const ServiceHandle& target, MsgUnique msg) {
@@ -79,7 +84,5 @@ inline void IService::EnableSeparateWorker() {
 }
 
 MILLION_FUNC_API void InitMillion();
-MILLION_FUNC_API IMillion* NewMillion(std::string_view config_path);
-MILLION_FUNC_API void DeleteMillion(IMillion* million);
 
 } // namespace million

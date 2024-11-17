@@ -77,7 +77,7 @@ public:
         vm_ = std::make_unique<pkpy::VM>();
         py::interpreter::initialize(vm_.get());
 
-        ss_proto_mgr.Init();
+        // ss_proto_mgr.Init();
 
         // vm_->exec("import million");
         // vm_->exec("print('pysvr:')");         // 1
@@ -88,8 +88,8 @@ public:
 
         auto mod = vm_->new_module("module");
         // mod->type();
-        auto func = mod->attr().try_get("");
-        vm_->call(func);
+        // auto func = mod->attr().try_get("");
+        // vm_->call(func);
 
         
 
@@ -120,7 +120,7 @@ public:
 
 private:
     struct SsProtoMgrHeader { };
-    million::CommProtoMgr<SsProtoMgrHeader> ss_proto_mgr;
+    // million::CommProtoMgr<SsProtoMgrHeader> ss_proto_mgr;
 
     std::unique_ptr<pkpy::VM> vm_;
 };

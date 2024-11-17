@@ -9,9 +9,10 @@
 namespace million {
 
 class Million;
+class IMillion;
 
-using ModuleInitFunc = bool(Million*);
-using ModuleExitFunc = void(Million*);
+using ModuleInitFunc = bool(IMillion*);
+using ModuleExitFunc = void(IMillion*);
 
 constexpr std::string_view kModuleInitName = "MillionModuleInit";
 constexpr std::string_view kModuleExitName = "MillionModuleExit";
