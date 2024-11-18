@@ -63,9 +63,9 @@ void Service::ProcessMsg(MsgUnique msg) {
     else if (msg->type() == MillionServiceStopMsg::kType) {
         // if (state_ == ServiceState::kReady) {
             // OnStart未完成，直接退出
-            iservice_->OnExit();
-            state_ = ServiceState::kExit;
-            return;
+        iservice_->OnExit();
+        state_ = ServiceState::kExit;
+        return;
         // }
         // 等待OnStop完成
         return;
@@ -73,33 +73,28 @@ void Service::ProcessMsg(MsgUnique msg) {
 
     if (state_ == ServiceState::kReady) {
         assert(task_);
-        // 只能尝试调度OnStart
-        auto msg_opt = excutor_.TrySchedule(*task_, std::move(msg));
-        if (task_->coroutine.done()) {
-            task_ = std::nullopt;
-            state_ = ServiceState::kRunning;
-            return;
-        }
-        if (!msg_opt) {
-            return;
-        }
-        msg = std::move(*msg_opt);
-    }
-    
-    if (msg->type() == MillionSessionTimeoutMsg::kType) {
-        auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
-        if (state_ == ServiceState::kReady) {
-            assert(task_);
+        if (msg->type() == MillionSessionTimeoutMsg::kType) {
+            auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
             // 超时未完成OnStart，准备销毁服务
             iservice_->OnTimeout(std::move(*task_));
             task_ = std::nullopt;
             iservice_->Send<MillionServiceStopMsg>(service_handle());
+            return;
         }
-        else {
-            auto task_opt = excutor_.TimeoutCleanup(msg_ptr->timeout_id);
-            if (task_opt) {
-                iservice_->OnTimeout(std::move(*task_opt));
-            }
+        // 只能尝试调度OnStart
+        excutor_.TrySchedule(*task_, std::move(msg));
+        if (task_->coroutine.done()) {
+            task_ = std::nullopt;
+            state_ = ServiceState::kRunning;
+        }
+        return;
+    }
+
+    if (msg->type() == MillionSessionTimeoutMsg::kType) {
+        auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
+        auto task_opt = excutor_.TimeoutCleanup(msg_ptr->timeout_id);
+        if (task_opt) {
+            iservice_->OnTimeout(std::move(*task_opt));
         }
         return;
     }
