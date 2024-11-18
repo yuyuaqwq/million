@@ -1,4 +1,4 @@
 mkdir build
 cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=?/vcpkg/scripts/buildsystems/vcpkg.cmake -Dprotobuf_DIR=?/vcpkg/installed/x64-windows/share/protobuf -DMYSQL_HEADER_DIR="?/mysql-*/include" -DMYSQL_LIB="?/mysql-*/lib/libmysql.lib"
+cmake ..-DPROTOBUF_LIB_DIR=? -DPROTOBUF_INCLUDE_DIR=? -DMYSQL_HEADER_DIR="?/mysql-*/include" -DMYSQL_LIB="?/mysql-*/lib/libmysql.lib"
 pause

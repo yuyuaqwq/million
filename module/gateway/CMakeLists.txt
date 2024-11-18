@@ -46,10 +46,8 @@ target_link_libraries(${GATEWAY_LIB} PRIVATE ${YAML_CPP_LIB})
 if (WIN32)
     message(STATUS "Compiling on Windows")
     
-    # cmake -DCMAKE_TOOLCHAIN_FILE=<vcpkg_path>/scripts/buildsystems/vcpkg.cmake -Dprotobuf_DIR=<vcpkg_path>/installed/x64-windows/share/protobuf ..
-    find_package(protobuf CONFIG REQUIRED)
-    target_link_libraries(${GATEWAY_LIB} PRIVATE protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
-
+    target_include_directories(${GATEWAY_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
+    target_link_libraries(${GATEWAY_LIB} PRIVATE ${PROTOBUF_LIB})
 elseif(UNIX)
     message(STATUS "Compiling on Linux")
 

@@ -46,9 +46,8 @@ target_link_libraries(${DB_LIB} PRIVATE ${SOCI_LIB})
 if (WIN32)
     message(STATUS "Compiling on Windows")
     
-    find_package(protobuf CONFIG REQUIRED)
-    target_link_libraries(${DB_LIB} PRIVATE protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
-
+    target_include_directories(${DB_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
+    target_link_libraries(${DB_LIB} PRIVATE ${PROTOBUF_LIB})
 elseif(UNIX)
     message(STATUS "Compiling on Linux")
 

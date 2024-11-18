@@ -8,8 +8,13 @@ set(EXECUTABLE_OUTPUT_PATH ${MILLION_BUILD_DIR}/bin)
 
 # proto
 # set(MILLION_PROTO ${CMAKE_CURRENT_SOURCE_DIR}/proto)
-set(PROTOGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protogen CACHE STRING "protogen header dir")
-set(PROTOGEN_LIB protogen CACHE STRING "protogen lib")
+
+find_library(PROTOBUF_PROTOC_LIB libprotocd find_library PATHS ${PROTOBUF_LIB_DIR})
+find_library(PROTOBUF_CORE_LIB libprotobufd find_library PATHS ${PROTOBUF_LIB_DIR})
+set(PROTOBUF_LIB ${PROTOBUF_PROTOC_LIB} ${PROTOBUF_CORE_LIB})
+
+set(PROTOGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protogen CACHE STRING "protobuf header dir")
+set(PROTOGEN_LIB protogen CACHE STRING "protobuf lib")
 
 # desc
 set(DESCGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/descgen/include CACHE STRING "descgen header dir")

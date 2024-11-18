@@ -23,8 +23,8 @@ if(SRC)
     if (WIN32)
         message(STATUS "Compiling on Windows")
         
-        find_package(protobuf CONFIG REQUIRED)
-        target_link_libraries(${PROTOGEN_LIB} PRIVATE protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
+        target_include_directories(${PROTOGEN_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
+        target_link_libraries(${PROTOGEN_LIB} PRIVATE ${PROTOBUF_LIB})
     elseif(UNIX)
         message(STATUS "Compiling on Linux")
 
