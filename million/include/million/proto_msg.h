@@ -186,27 +186,29 @@ private:
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
 
+MILLION_MSG_DEFINE(MILLION_CLASS_API, ProtoMsg, (ProtoMsgUnique)proto_msg);
+
 #define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, HANDLE_TYPE_) \
-    ::million::Task<> ProtoMsgDispatch(const HANDLE_TYPE_& handle, ::NAMESPACE_::MsgId msg_id, uint32_t sub_msg_id, ::million::ProtoMsgUnique&& proto_msg) { \
+    ::million::Task<> ProtoMsgDispatch(const HANDLE_TYPE_& handle, NAMESPACE_::##NAMESPACE_##MsgId msg_id, uint32_t sub_msg_id, ::million::ProtoMsgUnique&& proto_msg) { \
         auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::CalcKey(msg_id, sub_msg_id)); \
         if (iter != _MILLION_PROTO_MSG_HANDLE_MAP_.end()) { \
             co_await (this->*iter->second)(handle, std::move(proto_msg)); \
         } \
         co_return; \
     } \
-    ::NAMESPACE_::MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = ::NAMESPACE_::MSG_ID_INVALID; \
+    NAMESPACE_::##NAMESPACE_##MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_; \
     ::std::unordered_map<uint32_t, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const HANDLE_TYPE_&, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
 
 #define MILLION_PROTO_MSG_ID(NAMESPACE_, MSG_ID_) \
     const bool _MILLION_PROTO_MSG_HANDLE_SET_MSG_ID_##MSG_ID_ = \
         [this] { \
-            _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = ::NAMESPACE_::MSG_ID_; \
+            _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = NAMESPACE_::MSG_ID_; \
             return true; \
         }() \
 
 #define MILLION_PROTO_MSG_HANDLE(NAMESPACE_, HANDLE_TYPE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
     ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(const HANDLE_TYPE_& handle, ::million::ProtoMsgUnique MILLION_PROTO_MSG_) { \
-        auto msg = ::std::unique_ptr<::NAMESPACE_::MSG_TYPE_>(static_cast<::NAMESPACE_::MSG_TYPE_*>(MILLION_PROTO_MSG_.release())); \
+        auto msg = ::std::unique_ptr<NAMESPACE_::MSG_TYPE_>(static_cast<NAMESPACE_::MSG_TYPE_*>(MILLION_PROTO_MSG_.release())); \
         co_await _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(handle, std::move(msg)); \
         co_return; \
     } \
@@ -217,7 +219,7 @@ private:
             )); \
             return true; \
         }(); \
-    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const HANDLE_TYPE_& handle, ::std::unique_ptr<::NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
+    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const HANDLE_TYPE_& handle, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
 
 
 } // namespace million
