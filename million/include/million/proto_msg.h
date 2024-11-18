@@ -186,13 +186,14 @@ private:
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
 
-MILLION_MSG_DEFINE(MILLION_CLASS_API, ProtoMsg, (ProtoMsgUnique)proto_msg);
+MILLION_MSG_DEFINE(MILLION_CLASS_API, ProtoMsg, (int)handle, (uint32_t)msg_id, (uint32_t)sub_msg_id, (ProtoMsgUnique)proto_msg);
 
 #define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, HANDLE_TYPE_) \
-    ::million::Task<> ProtoMsgDispatch(const HANDLE_TYPE_& handle, NAMESPACE_::##NAMESPACE_##MsgId msg_id, uint32_t sub_msg_id, ::million::ProtoMsgUnique&& proto_msg) { \
-        auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::CalcKey(msg_id, sub_msg_id)); \
+    using MillionProtoMsg = million::ProtoMsg; \
+    MILLION_MSG_HANDLE(MillionProtoMsg, msg) { \
+        auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::CalcKey(msg->msg_id, msg->sub_msg_id)); \
         if (iter != _MILLION_PROTO_MSG_HANDLE_MAP_.end()) { \
-            co_await (this->*iter->second)(handle, std::move(proto_msg)); \
+            co_await (this->*iter->second)(msg->handle, std::move(msg->proto_msg)); \
         } \
         co_return; \
     } \
