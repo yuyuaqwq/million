@@ -13,9 +13,9 @@
 
 namespace million {
 
-using ProtoMsgUnique = std::unique_ptr<google::protobuf::Message>;
-
 namespace protobuf = google::protobuf;
+
+using ProtoMsgUnique = std::unique_ptr<protobuf::Message>;
 
 class MILLION_CLASS_API ProtoMgr : noncopyable {
 public:
@@ -197,12 +197,12 @@ private:
         auto&& [proto_msg, msg_id, sub_msg_id] = std::move(*res); \
         auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::ProtoMgr::CalcKey(msg_id, sub_msg_id)); \
         if (iter != _MILLION_PROTO_MSG_HANDLE_MAP_.end()) { \
-            co_await (this->*iter->second)(msg->handle, std::move(proto_msg)); \
+            co_await (this->*iter->second)(msg->session, std::move(proto_msg)); \
         } \
         co_return; \
     } \
     NAMESPACE_::##NAMESPACE_##MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_; \
-    ::std::unordered_map<uint32_t, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::handle)&, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<uint32_t, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::session)&, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
 
 #define MILLION_PROTO_MSG_ID(NAMESPACE_, MSG_ID_) \
     const bool _MILLION_PROTO_MSG_HANDLE_SET_MSG_ID_##MSG_ID_ = \
@@ -212,9 +212,9 @@ private:
         }() \
 
 #define MILLION_PROTO_MSG_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::handle)& handle, ::million::ProtoMsgUnique MILLION_PROTO_MSG_) { \
+    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::session)& session, ::million::ProtoMsgUnique MILLION_PROTO_MSG_) { \
         auto msg = ::std::unique_ptr<NAMESPACE_::MSG_TYPE_>(static_cast<NAMESPACE_::MSG_TYPE_*>(MILLION_PROTO_MSG_.release())); \
-        co_await _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(handle, std::move(msg)); \
+        co_await _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(session, std::move(msg)); \
         co_return; \
     } \
     const bool MILLION_PROTO_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
@@ -224,7 +224,7 @@ private:
             )); \
             return true; \
         }(); \
-    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::handle)& handle, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
+    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::session)& session, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
 
 
 } // namespace million

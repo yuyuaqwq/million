@@ -3,7 +3,6 @@
 #include <gateway/getaway_msg.h>
 
 #include <million/iservice.h>
-#include <million/proto_msg.h>
 
 #include <gateway/api.h>
 
@@ -18,8 +17,8 @@ namespace gateway {
 
 namespace protobuf = google::protobuf; 
 
-MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (net::TcpConnectionShared) connection)
-MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
+MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (net::TcpConnectionShared)connection)
+MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (net::TcpConnectionShared)connection, (net::Packet)packet)
 
 class GatewayService : public IService {
 public:
@@ -29,14 +28,6 @@ public:
         , server_(imillion) { }
 
     virtual bool OnInit() override {
-        // proto_mgr_.Init();
-        //const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
-        //protobuf::DescriptorDatabase* db = pool->internal_generated_database();
-        //auto cs_user = pool->FindFileByName("cs_test.proto");
-        //if (cs_user) {
-        //    proto_mgr_.RegisterProto(*cs_user, Cs::cs_msg_id, Cs::Test::cs_sub_msg_id_user);
-        //}
-
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) {
             Send<GatewayTcpConnectionMsg>(service_handle(), connection);
@@ -80,7 +71,7 @@ public:
         auto user_inc_id = session->header().user_inc_id;
         // 没有token
         if (session->header().token == kInvaildToken) {
-            Send<GatewayRecvPacketMsg>(login_service_, user_inc_id, std::move(msg->packet));
+            Send<GatewayRecvPacketMsg>(user_service_, user_inc_id, std::move(msg->packet));
         }
         else {
             auto iter = agent_services_.find(session->header().user_inc_id);
@@ -91,55 +82,20 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(GatewayRegisterLoginServiceMsg, msg) {
-        login_service_ = msg->login_service;
+    MILLION_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
+        user_service_ = msg->user_service;
         co_return;
     }
 
     MILLION_MSG_HANDLE(GatewaySureAgentMsg, msg) {
-        agent_services_.emplace(msg->user_inc_id, msg->agent_service);
+        agent_services_.emplace(msg->session, msg->agent_service);
         co_return;
     }
-
-    //MILLION_MSG_HANDLE(UnRegisterServiceMsg, msg) {
-    //    auto iter = register_services_.find(msg->cs_msg_id);
-    //    if (iter == register_services_.end()) co_return;
-    //    auto& services = iter->second;
-    //    auto remove = std::remove(services.begin(), services.end(), msg->service_handle);
-    //    services.erase(remove, services.end());
-    //    Reply(msg->sender(), msg->session_id());
-    //    co_return;
-    //}
-
-    //MILLION_MSG_HANDLE(GatewaySetTokenMsg, msg) {
-    //    auto token = token_generator_.Generate();
-    //    msg->user_session_handle.user_session().header().token = token;
-    //    co_return;
-    //}
-
-    //MILLION_MSG_HANDLE(GatewaySendProtoMsg, msg) {
-    //    msg->user_session_handle.user_session().Send(*msg->proto_msg);
-    //    co_return;
-    //}
-
-    //MILLION_CS_PROTO_MSG_DISPATCH();
-    //
-    //MILLION_CS_PROTO_MSG_ID(MSG_ID_USER);
-
-    //MILLION_CS_PROTO_MSG_HANDLE(Test, SubMsgIdUser::SUB_MSG_ID_USER_LOGIN_REQ, UserLoginReq, req) {
-    //    
-    //    std::cout << "login:" << req->user_name() << req->password() << std::endl;
-    //    
-    //    Cs::Test::UserLoginRes res;
-    //    res.set_success(true);
-    //    handle.user_session().Send(res);
-    //    co_return;
-    //}
 
 private:
     GatewayServer server_;
     TokenGenerator token_generator_;
-    ServiceHandle login_service_;
+    ServiceHandle user_service_;
     // 需要改掉UserSession*
     std::atomic_uint64_t user_inc_id_ = 0;
     std::unordered_map<uint64_t, UserSession*> users_;
