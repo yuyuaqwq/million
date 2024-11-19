@@ -42,7 +42,7 @@ private:
 
 #define _MW_SIGNAL_FIELD_TO_DECL(field) META_EXTRACT_PAREN_UNPACK(field) META_EMPTY field
 
-#define _MILLION_FIELD_TO_CONST_REF_DECL_I(x) x&& // auto&&
+#define _MILLION_FIELD_TO_CONST_REF_DECL_I(x) auto&&//x&&
 // 假设这里x是(float) kk，所以后面展开就是 FIELD_TO_CONST_REF_DECL_I (float) kk
 // FIELD_TO_CONST_REF_DECL_I (float)会被识别成宏调用，把float作为参数传入
 // 于是就得到了const float&的结果
