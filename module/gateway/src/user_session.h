@@ -21,8 +21,6 @@ public:
     UserSession(net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
     ~UserSession();
 
-    bool Send(const google::protobuf::Message& message);
-
     const UserHeader& header() const { return header_; }
     UserHeader& header() { return header_; }
 

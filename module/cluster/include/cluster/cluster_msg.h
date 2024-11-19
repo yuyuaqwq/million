@@ -37,11 +37,13 @@ MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterProtoMsg, (ProtoMsgUnique)proto_msg
 
 // 1. Cluster.Call
 	// 1. 参数必须是net::Packet，通过ProtoMgr进行编码
-	// 2. tcp发送ClusterPacket
+	// 2. 集群服务通过tcp发送ClusterPacket，将net::Packet带出去
 	// 3. 目标节点收包，反序列化为ClusterPacket
 	// 4. 目标节点通过ProtoMgr解析net::Packet，分发proto消息
-	// 5. 目标处理完成，调用Cluster.Reply，将ClusterPacket发回给当前节点
+	// 5. 目标处理完成，再通过ProtoMgr进行编码，调用Cluster.Reply，发回给当前节点
 	// 6. 当前节点收包，返回net::Packet
+// 2. 优化点
+	// ClusterPacket可以不通过proto，而是直接组包send，避免多次拷贝
 
 class Cluster {
 public:

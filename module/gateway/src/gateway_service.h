@@ -66,8 +66,6 @@ public:
 
             // todo: 需要断开原先token指向的连接
         }
-        // co_await ProtoMsgDispatch(handle, msg_id, sub_msg_id, std::move(proto_msg));
-
         auto user_inc_id = session->header().user_inc_id;
         // 没有token
         if (session->header().token == kInvaildToken) {
@@ -89,6 +87,15 @@ public:
 
     MILLION_MSG_HANDLE(GatewaySureAgentMsg, msg) {
         agent_services_.emplace(msg->session, msg->agent_service);
+        co_return;
+    }
+
+    MILLION_MSG_HANDLE(GatewaySendPacketMsg, msg) {
+        auto iter = users_.find(msg->session);
+        if (iter == users_.end()) {
+            co_return;
+        }
+        iter->second->Send(std::move(msg->packet));
         co_return;
     }
 

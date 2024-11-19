@@ -20,6 +20,10 @@ using ProtoMsgUnique = std::unique_ptr<protobuf::Message>;
 class MILLION_CLASS_API ProtoMgr : noncopyable {
 public:
     // 初始化
+    // void Init(size_t header_size) {
+        // header_size_ = header_size;
+    // }
+
     void Init() {
 
     }
@@ -71,6 +75,10 @@ public:
 
     // 编码消息
     std::optional<net::Packet> EncodeMessage(const protobuf::Message& message) {
+        return EncodeMessage(message, nullptr);
+    }
+
+    std::optional<net::Packet> EncodeMessage(const protobuf::Message& message, const void* header) {
         auto desc = message.GetDescriptor();
         auto msg_key = GetMsgKey(desc);
         if (!msg_key) {
@@ -82,8 +90,11 @@ public:
         uint16_t msg_id_net = host_to_network_short(static_cast<uint16_t>(msg_id));
         uint16_t sub_msg_id_net = host_to_network_short(static_cast<uint16_t>(sub_msg_id));
 
-        buffer.resize(sizeof(msg_id_net) + sizeof(sub_msg_id_net) + message.ByteSize());
-        size_t i = 0;
+        buffer.resize(header_size_ + sizeof(msg_id_net) + sizeof(sub_msg_id_net) + message.ByteSize());
+        if (header) {
+            std::memcpy(buffer.data(), header, header_size_);
+        }
+        size_t i = header_size_;
         std::memcpy(buffer.data() + i, &msg_id_net, sizeof(msg_id_net));
         i += sizeof(msg_id_net);
         std::memcpy(buffer.data() + i, &sub_msg_id_net, sizeof(sub_msg_id_net));
@@ -94,34 +105,43 @@ public:
     }
 
     // 解码消息
-    std::optional<std::tuple<ProtoMsgUnique, uint32_t, uint32_t>> DecodeMessage(const net::Packet& buffer) {
-        uint16_t msg_id_net, sub_msg_id_net;
-        if (buffer.size() < sizeof(msg_id_net) + sizeof(sub_msg_id_net)) return std::nullopt;
+    struct DecodeRes {
+        const void* header;
+        uint32_t msg_id;
+        uint32_t sub_msg_id;
+        ProtoMsgUnique proto_msg;
+    };
+    std::optional<DecodeRes> DecodeMessage(const net::Packet& buffer) {
+        DecodeRes res = { 0 };
 
-        size_t i = 0;
+        uint16_t msg_id_net, sub_msg_id_net;
+        if (buffer.size() < header_size_ + sizeof(msg_id_net) + sizeof(sub_msg_id_net)) return std::nullopt;
+
+        res.header = buffer.data();
+        size_t i = header_size_;
         std::memcpy(&msg_id_net, buffer.data() + i, sizeof(msg_id_net));
         i += sizeof(msg_id_net);
         std::memcpy(&sub_msg_id_net, buffer.data() + i, sizeof(sub_msg_id_net));
         i += sizeof(sub_msg_id_net);
 
-        uint32_t msg_id = static_cast<uint32_t>(network_to_host_short(msg_id_net));
-        uint32_t sub_msg_id = static_cast<uint32_t>(network_to_host_short(sub_msg_id_net));
-        if (msg_id > kMsgIdMax) {
+        res.msg_id = static_cast<uint32_t>(network_to_host_short(msg_id_net));
+        res.sub_msg_id = static_cast<uint32_t>(network_to_host_short(sub_msg_id_net));
+        if (res.msg_id > kMsgIdMax) {
             return std::nullopt;
         }
-        if (sub_msg_id > kMsgIdMax) {
+        if (res.sub_msg_id > kMsgIdMax) {
             return std::nullopt;
         }
 
-        auto proto_msg_opt = NewMessage(msg_id, sub_msg_id);
+        auto proto_msg_opt = NewMessage(res.msg_id, res.sub_msg_id);
         if (!proto_msg_opt) return {};
-        auto& proto_msg = *proto_msg_opt;
+        res.proto_msg = std::move(*proto_msg_opt);
 
-        auto success = proto_msg->ParseFromArray(buffer.data() + i, buffer.size() - i);
+        auto success = res.proto_msg->ParseFromArray(buffer.data() + i, buffer.size() - i);
         if (!success) {
             return std::nullopt;
         }
-        return std::make_tuple(std::move(proto_msg), msg_id, sub_msg_id);
+        return res;
     }
 
 #undef max
@@ -183,6 +203,7 @@ private:
     }
 
 private:
+    size_t header_size_ = 0;
     std::unordered_map<uint32_t, const protobuf::Descriptor*> msg_desc_map_;
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
@@ -194,10 +215,9 @@ private:
         if (!res) { \
             co_return; \
         } \
-        auto&& [proto_msg, msg_id, sub_msg_id] = std::move(*res); \
-        auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::ProtoMgr::CalcKey(msg_id, sub_msg_id)); \
+        auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::ProtoMgr::CalcKey(res->msg_id, res->sub_msg_id)); \
         if (iter != _MILLION_PROTO_MSG_HANDLE_MAP_.end()) { \
-            co_await (this->*iter->second)(msg->session, std::move(proto_msg)); \
+            co_await (this->*iter->second)(msg->session, std::move(res->proto_msg)); \
         } \
         co_return; \
     } \
