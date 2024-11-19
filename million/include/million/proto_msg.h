@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <optional>
 
 #include <google/protobuf/message.h>
 #include <google/protobuf/descriptor.h>
@@ -14,25 +15,9 @@ namespace million {
 
 using ProtoMsgUnique = std::unique_ptr<google::protobuf::Message>;
 
-#undef max
-constexpr static inline uint32_t kMsgIdMax = std::numeric_limits<uint16_t>::max();
-constexpr static inline uint32_t kSubMsgIdMax = std::numeric_limits<uint16_t>::max();
-
-inline uint32_t CalcKey(uint32_t msg_id, uint32_t sub_msg_id) {
-    assert(static_cast<uint32_t>(msg_id) <= kMsgIdMax);
-    assert(sub_msg_id <= kSubMsgIdMax);
-    return uint32_t(static_cast<uint32_t>(msg_id) << 16) | static_cast<uint16_t>(sub_msg_id);
-}
-
-inline std::pair<uint32_t, uint32_t> CalcMsgId(uint32_t key) {
-    auto msg_id = key >> 16;
-    auto sub_msg_id = key & 0xffff;
-    return std::make_pair(msg_id, sub_msg_id);
-}
-
 namespace protobuf = google::protobuf;
 
-class CommProtoMgr : noncopyable {
+class MILLION_CLASS_API ProtoMgr : noncopyable {
 public:
     // 初始化
     void Init() {
@@ -41,7 +26,7 @@ public:
 
     // 注册协议
     template <typename MsgExtIdT, typename SubMsgExtIdT>
-    bool RegisterProto(const protobuf::FileDescriptor& file_desc, uint32_t msg_id, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
+    bool RegisterProto(const protobuf::FileDescriptor& file_desc, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
         int enum_count = file_desc.enum_type_count();
         for (int i = 0; i < enum_count; i++) {
             const protobuf::EnumDescriptor* enum_desc = file_desc.enum_type(i);
@@ -139,6 +124,22 @@ public:
         return std::make_tuple(std::move(proto_msg), msg_id, sub_msg_id);
     }
 
+#undef max
+    constexpr static inline uint32_t kMsgIdMax = std::numeric_limits<uint16_t>::max();
+    constexpr static inline uint32_t kSubMsgIdMax = std::numeric_limits<uint16_t>::max();
+
+    static uint32_t CalcKey(uint32_t msg_id, uint32_t sub_msg_id) {
+        assert(static_cast<uint32_t>(msg_id) <= kMsgIdMax);
+        assert(sub_msg_id <= kSubMsgIdMax);
+        return uint32_t(static_cast<uint32_t>(msg_id) << 16) | static_cast<uint16_t>(sub_msg_id);
+    }
+
+    static std::pair<uint32_t, uint32_t> CalcMsgId(uint32_t key) {
+        auto msg_id = key >> 16;
+        auto sub_msg_id = key & 0xffff;
+        return std::make_pair(msg_id, sub_msg_id);
+    }
+
 private:
     const protobuf::Descriptor* GetMsgDesc(uint32_t msg_id, uint32_t sub_msg_id) {
         auto key = CalcKey(msg_id, sub_msg_id);
@@ -186,14 +187,16 @@ private:
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
 
-MILLION_MSG_DEFINE(MILLION_CLASS_API, ProtoMsg, (int)handle, (uint32_t)msg_id, (uint32_t)sub_msg_id, (ProtoMsgUnique)proto_msg);
-
-#define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, HANDLE_TYPE_) \
-    using MillionProtoMsg = million::ProtoMsg; \
-    MILLION_MSG_HANDLE(MillionProtoMsg, msg) { \
-        auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::CalcKey(msg->msg_id, msg->sub_msg_id)); \
+#define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, PROTO_MGR_, PROTO_PACKET_MSG_TYPE_, HANDLE_TYPE_) \
+    MILLION_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
+        auto res = (PROTO_MGR_)->DecodeMessage(msg->packet); \
+        if (!res) { \
+            co_return; \
+        } \
+        auto&& [proto_msg, msg_id, sub_msg_id] = std::move(*res); \
+        auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::ProtoMgr::CalcKey(msg_id, sub_msg_id)); \
         if (iter != _MILLION_PROTO_MSG_HANDLE_MAP_.end()) { \
-            co_await (this->*iter->second)(msg->handle, std::move(msg->proto_msg)); \
+            co_await (this->*iter->second)(msg->handle, std::move(proto_msg)); \
         } \
         co_return; \
     } \
@@ -215,7 +218,7 @@ MILLION_MSG_DEFINE(MILLION_CLASS_API, ProtoMsg, (int)handle, (uint32_t)msg_id, (
     } \
     const bool MILLION_PROTO_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            _MILLION_PROTO_MSG_HANDLE_MAP_.insert(::std::make_pair(::million::CalcKey(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
+            _MILLION_PROTO_MSG_HANDLE_MAP_.insert(::std::make_pair(::million::ProtoMgr::CalcKey(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
                 &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I \
             )); \
             return true; \

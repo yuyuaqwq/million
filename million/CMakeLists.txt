@@ -39,3 +39,16 @@ target_include_directories(${MILLION_LIB} PRIVATE ${ASIO_HEADER_DIR})
 
 target_include_directories(${MILLION_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
 target_link_libraries(${MILLION_LIB} PRIVATE ${YAML_CPP_LIB})
+
+if (WIN32)
+    message(STATUS "Compiling on Windows")
+    
+    target_include_directories(${MILLION_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
+    target_link_libraries(${MILLION_LIB} PRIVATE ${PROTOBUF_LIB})
+elseif(UNIX)
+    message(STATUS "Compiling on Linux")
+
+    find_package(Protobuf REQUIRED)
+    target_include_directories(${MILLION_LIB} PRIVATE ${Protobuf_INCLUDE_DIRS})
+    target_link_libraries(${MILLION_LIB} PRIVATE ${Protobuf_LIBRARIES})
+endif()
