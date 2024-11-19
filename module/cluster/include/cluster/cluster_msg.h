@@ -18,13 +18,13 @@
 namespace million {
 namespace cluster {
 
-MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterProtoMsg, (ProtoMsgUnique) proto_msg)
+MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterProtoMsg, (ProtoMsgUnique)proto_msg)
 //// MILLION_MSG_DEFINE(GATEWAY_CLASS_API, UnRegisterServiceMsg, (ServiceHandle) service_handle, (Cs::MsgId) cs_msg_id)
 //MILLION_MSG_DEFINE(GATEWAY_CLASS_API, RecvProtoMsg, (UserSessionHandle) session_handle, (ProtoMsgUnique) proto_msg)
 //MILLION_MSG_DEFINE(GATEWAY_CLASS_API, SendProtoMsg, (UserSessionHandle) session_handle, (ProtoMsgUnique) proto_msg)
 
 
-// Task支持定义返回值，Cluster.Call返回一个Task<ProtoMsgUnique>，通过co_return 将proto_msg返回回来
+// Cluster.Call返回一个Task<ProtoMsgUnique>，通过co_return 将proto_msg返回回来
 // Cluster.Call内部：
 // msg = co_await service.Call<ClusterPacketMsg, ClusterSendMsg>(Cluster.Service, proto_msg);
 // co_return ProtoMsgUnique转换为GoogleProtoMsgUnique;
@@ -34,6 +34,14 @@ MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterProtoMsg, (ProtoMsgUnique) proto_ms
 // 即Cluster.Call的co_await等到结果
 
 // 其他集群收到包，向Cluster服务发送ClusterRecvMsg
+
+// 1. Cluster.Call
+	// 1. 参数必须是net::Packet，通过ProtoMgr进行编码
+	// 2. tcp发送ClusterPacket
+	// 3. 目标节点收包，反序列化为ClusterPacket
+	// 4. 目标节点通过ProtoMgr解析net::Packet，分发proto消息
+	// 5. 目标处理完成，调用Cluster.Reply，将ClusterPacket发回给当前节点
+	// 6. 当前节点收包，返回net::Packet
 
 class Cluster {
 public:

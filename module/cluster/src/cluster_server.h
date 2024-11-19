@@ -5,7 +5,6 @@
 namespace million {
 namespace cluster {
 
-class CsProtoMgr;
 class ClusterServer : public net::TcpServer {
 public:
     using TcpServer = net::TcpServer;
