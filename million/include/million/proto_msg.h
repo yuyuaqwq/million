@@ -187,7 +187,8 @@ private:
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
 
-#define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, PROTO_MGR_, PROTO_PACKET_MSG_TYPE_, HANDLE_TYPE_) \
+#define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, PROTO_MGR_, PROTO_PACKET_MSG_TYPE_) \
+    using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
     MILLION_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
         auto res = (PROTO_MGR_)->DecodeMessage(msg->packet); \
         if (!res) { \
@@ -201,7 +202,7 @@ private:
         co_return; \
     } \
     NAMESPACE_::##NAMESPACE_##MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_; \
-    ::std::unordered_map<uint32_t, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const HANDLE_TYPE_&, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<uint32_t, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::handle)&, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
 
 #define MILLION_PROTO_MSG_ID(NAMESPACE_, MSG_ID_) \
     const bool _MILLION_PROTO_MSG_HANDLE_SET_MSG_ID_##MSG_ID_ = \
@@ -210,8 +211,8 @@ private:
             return true; \
         }() \
 
-#define MILLION_PROTO_MSG_HANDLE(NAMESPACE_, HANDLE_TYPE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(const HANDLE_TYPE_& handle, ::million::ProtoMsgUnique MILLION_PROTO_MSG_) { \
+#define MILLION_PROTO_MSG_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
+    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::handle)& handle, ::million::ProtoMsgUnique MILLION_PROTO_MSG_) { \
         auto msg = ::std::unique_ptr<NAMESPACE_::MSG_TYPE_>(static_cast<NAMESPACE_::MSG_TYPE_*>(MILLION_PROTO_MSG_.release())); \
         co_await _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(handle, std::move(msg)); \
         co_return; \
@@ -223,7 +224,7 @@ private:
             )); \
             return true; \
         }(); \
-    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const HANDLE_TYPE_& handle, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
+    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::handle)& handle, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
 
 
 } // namespace million
