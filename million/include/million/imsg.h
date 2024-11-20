@@ -42,12 +42,15 @@ private:
 
 #define _MW_SIGNAL_FIELD_TO_DECL(field) META_EXTRACT_PAREN_UNPACK(field) META_EMPTY field
 
-#define _MILLION_FIELD_TO_CONST_REF_DECL_I(x) x const& //auto&&//x&&
+#define _MILLION_FIELD_TO_CONST_REF_DECL_I(x) x&& //auto&&
+#define _MILLION_FIELD_TO_CONST_REF_DECL_I_2(x) auto&& //x&&
 // 假设这里x是(float) kk，所以后面展开就是 FIELD_TO_CONST_REF_DECL_I (float) kk
 // FIELD_TO_CONST_REF_DECL_I (float)会被识别成宏调用，把float作为参数传入
 // 于是就得到了const float&的结果
 // 然后在加上后面的kk，就组成了const float& kk
 #define _MILLION_FIELD_TO_CONST_REF_DECL(x) _MILLION_FIELD_TO_CONST_REF_DECL_I x
+#define _MILLION_FIELD_TO_CONST_REF_DECL_2(x) _MILLION_FIELD_TO_CONST_REF_DECL_I_2 x
+
 
 // 生成构造函数的参数声明, 以及默认参数
 // 参数 i: 类似for的索引
@@ -55,6 +58,9 @@ private:
 // (CTOR_ARGS_DECL_WITH_DEFAULT的META_FOR循环代码)
 #define _MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_IMPL(i, ...) \
 	_MILLION_FIELD_TO_CONST_REF_DECL(META_INDEX(i, __VA_ARGS__)) _MILLION_COMMON_IF_NOT_END(i, __VA_ARGS__)
+#define _MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_IMPL_2(i, ...) \
+	_MILLION_FIELD_TO_CONST_REF_DECL_2(META_INDEX(i, __VA_ARGS__)) _MILLION_COMMON_IF_NOT_END(i, __VA_ARGS__)
+
 
 // 字段声明转构造函数字段初始化(第二步)
 // 参数 field_name: 字段名称
@@ -109,6 +115,9 @@ private:
 // 生成构造函数的参数声明和默认参数
 // 参数 __VA_ARGS__: 未加工的字段声明列表
 #define _MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(...) META_FOR(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_IMPL, 0, META_COUNT(__VA_ARGS__), __VA_ARGS__)
+#define _MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_2(...) META_FOR(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_IMPL_2, 0, META_COUNT(__VA_ARGS__), __VA_ARGS__)
+
+
 // 生成成员变量的声明
 // 参数 __VA_ARGS__: 未加工的字段声明列表
 #define _MILLION_FIELDS_DECL(...) META_FOR_EACH(_MILLION_FIELDS_TO_DECL, __VA_ARGS__)
@@ -124,6 +133,8 @@ private:
 	public: \
         name() = delete; \
 		name(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
+			: _MILLION_CTOR_INIT_LIST(__VA_ARGS__) {} \
+		name(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT_2(__VA_ARGS__)) \
 			: _MILLION_CTOR_INIT_LIST(__VA_ARGS__) {} \
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
         constexpr static inline const char* kType = #name; \
