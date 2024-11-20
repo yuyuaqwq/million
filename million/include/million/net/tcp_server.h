@@ -9,8 +9,8 @@
 
 #include <million/noncopyable.h>
 #include <million/imillion.h>
-#include <million/net/tcp_connection_handle.h>
 #include <million/net/packet.h>
+#include <million/net/tcp_connection.h>
 
 namespace million {
 namespace net {
@@ -32,6 +32,7 @@ public:
     void Start(uint16_t port);
     void Stop();
     void RemoveConnection(std::list<TcpConnectionShared>::iterator iter);
+    asio::awaitable<std::optional<TcpConnectionShared>> ConnectTo(std::string_view host, std::string_view port);
 
     virtual TcpConnectionShared MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) const;
 

@@ -4,8 +4,6 @@
 
 #include <utility>
 
-#include <protogen/cs/cs_msgid.pb.h>
-
 #include <million/imillion.h>
 #include <million/proto_msg.h>
 
@@ -13,12 +11,13 @@
 
 #include "cluster_service.h"
 
-// #include <gateway/user_session_handle.h>
-
 namespace million {
 namespace cluster {
 
-MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterProtoMsg, (ProtoMsgUnique)proto_msg)
+using NodeUniqueName = std::string;
+
+MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterPacketMsg, (NodeUniqueName)target_node, (net::Packet)packet)
+
 //// MILLION_MSG_DEFINE(GATEWAY_CLASS_API, UnRegisterServiceMsg, (ServiceHandle) service_handle, (Cs::MsgId) cs_msg_id)
 //MILLION_MSG_DEFINE(GATEWAY_CLASS_API, RecvProtoMsg, (UserSessionHandle) session_handle, (ProtoMsgUnique) proto_msg)
 //MILLION_MSG_DEFINE(GATEWAY_CLASS_API, SendProtoMsg, (UserSessionHandle) session_handle, (ProtoMsgUnique) proto_msg)
@@ -45,19 +44,19 @@ MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterProtoMsg, (ProtoMsgUnique)proto_msg
 // 2. 优化点
 	// ClusterPacket可以不通过proto，而是直接组包send，避免多次拷贝
 
-class Cluster {
-public:
-
-	// node name, src_unique_name, target_unique_name, 
-
-	Task<ProtoMsgUnique> Call(const ServiceHandle& target, ProtoMsgUnique req_msg) {
-		auto res_msg = co_await service_->Call<ClusterProtoMsg>(service_->service_handle(), req_msg);
-		co_return std::move(res_msg->proto_msg);
-	}
-
-	// IMillion* imillion;
-	ClusterService* service_;
-};
+//class Cluster {
+//public:
+//
+//	// node name, src_unique_name, target_unique_name, 
+//
+//	Task<ProtoMsgUnique> Call(const ServiceHandle& target, ProtoMsgUnique req_msg) {
+//		auto res_msg = co_await service_->Call<ClusterProtoMsg>(service_->service_handle(), req_msg);
+//		co_return std::move(res_msg->proto_msg);
+//	}
+//
+//	// IMillion* imillion;
+//	ClusterService* service_;
+//};
 
 } // namespace cluster
 } // namespace million

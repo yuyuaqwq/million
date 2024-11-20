@@ -23,7 +23,16 @@ session_monitor:
 gateway:
     services:
         - port:10086
-        
+
 logger:
     log_file: .\logs\log.txt
     level: debug
+
+cluster:
+    nodes:
+        node1:
+            ip: 127.0.0.1
+            port: 8100
+        node2:
+            ip: 127.0.0.1
+            port: 8101

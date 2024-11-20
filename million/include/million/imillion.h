@@ -62,6 +62,10 @@ inline SessionId IService::Send(const ServiceHandle& target, MsgUnique msg) {
     return imillion_->Send(service_handle_, target, std::move(msg));
 }
 
+inline void IService::Resend(const ServiceHandle& target, MsgUnique msg) {
+    imillion_->Send(msg->session_id(), msg->sender(), target, std::move(msg));
+}
+
 inline void IService::Reply(MsgUnique msg) {
     auto target = msg->sender();
     auto session_id = msg->session_id();

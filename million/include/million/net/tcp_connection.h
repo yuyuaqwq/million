@@ -8,6 +8,7 @@
 
 #include <million/api.h>
 #include <million/net/packet.h>
+#include <million/net/tcp_connection_handle.h>
 
 namespace million {
 namespace net {
@@ -24,13 +25,13 @@ public:
     bool Connected();
 
     auto iter() const { return iter_; }
-    void set_iter(std::list<std::shared_ptr<TcpConnection>>::iterator iter) { iter_ = iter; }
+    void set_iter(std::list<TcpConnectionShared>::iterator iter) { iter_ = iter; }
 
     asio::ip::tcp::socket& socket() { return socket_; }
 
 public:
     TcpServer* server_;
-    std::list<std::shared_ptr<TcpConnection>>::iterator iter_;
+    std::list<TcpConnectionShared>::iterator iter_;
 
     std::mutex close_mutex_;
 

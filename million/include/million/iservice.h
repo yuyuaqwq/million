@@ -25,6 +25,8 @@ public:
         return Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
+    void Resend(const ServiceHandle& target, MsgUnique msg);
+
     template <typename MsgT>
     SessionAwaiter<MsgT> Recv(SessionId session_id) {
         return SessionAwaiter<MsgT>(session_id);

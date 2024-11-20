@@ -31,13 +31,13 @@ Million::~Million() = default;
 
 bool Million::Init(std::string_view config_path) {
     config_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(config_path)));
-    auto config = *config_;
+    const auto& config = *config_;
 
     service_mgr_ = std::make_unique<ServiceMgr>(this);
     session_mgr_ = std::make_unique<SessionMgr>(this);
     logger_ = std::make_unique<Logger>(this);
 
-    auto worker_mgr_config = config["worker_mgr"];
+    const auto& worker_mgr_config = config["worker_mgr"];
     if (!worker_mgr_config) {
         std::cerr << "[config][error]cannot find 'worker_mgr'." << std::endl;
         return false;
@@ -49,7 +49,7 @@ bool Million::Init(std::string_view config_path) {
     auto worker_num = worker_mgr_config["num"].as<size_t>();
     worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
 
-    auto io_context_mgr_config = config["io_context_mgr"];
+    const auto& io_context_mgr_config = config["io_context_mgr"];
     if (!io_context_mgr_config) {
         std::cerr << "[config][error]cannot find 'io_context_mgr'." << std::endl;
         return false;
@@ -61,7 +61,7 @@ bool Million::Init(std::string_view config_path) {
     auto io_context_num = io_context_mgr_config["num"].as<size_t>();
     io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
 
-    auto module_config = config["module"];
+    const auto& module_config = config["module"];
     if (!module_config) {
         std::cerr << "[config][error]cannot find 'module'." << std::endl;
         return false;
@@ -72,14 +72,15 @@ bool Million::Init(std::string_view config_path) {
     }
     auto module_dirs = module_config["dirs"].as<std::vector<std::string>>();
     module_mgr_ = std::make_unique<ModuleMgr>(this, module_dirs);
-    if (module_config["loads"]) {
-        for (auto name_config : module_config["loads"]) {
+    const auto& loads = module_config["loads"];
+    if (loads) {
+        for (auto name_config : loads) {
             auto name = name_config.as<std::string>();
             module_mgr_->Load(name);
         }
     }
 
-    auto session_monitor_config = config["session_monitor"];
+    const auto& session_monitor_config = config["session_monitor"];
     if (!session_monitor_config) {
         std::cerr << "[config][error]cannot find 'session_monitor_config'." << std::endl;
         return false;
@@ -96,7 +97,7 @@ bool Million::Init(std::string_view config_path) {
     auto timeout_s = session_monitor_config["timeout_tick"].as<uint32_t>();
     session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
 
-    auto timer_config = config["timer"];
+    const auto& timer_config = config["timer"];
     if (!timer_config) {
         std::cerr << "[config][error]cannot find 'timer'." << std::endl;
         return false;
