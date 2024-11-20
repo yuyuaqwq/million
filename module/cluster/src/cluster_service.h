@@ -51,7 +51,10 @@ public:
         if (!connection_ptr) {
             auto& io_context = imillion_->NextIoContext();
             asio::co_spawn(io_context.get_executor(), [this, msg = std::move(msg), end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
-                co_await server_.ConnectTo(end_point.ip, end_point.port);
+                auto res = co_await server_.ConnectTo(end_point.ip, end_point.port);
+                if (!res) {
+                    co_return;
+                }
                 // io线程执行，重新发这条消息
                 auto imsg = msg.get();
                 Resend(service_handle(), std::move(msg));
