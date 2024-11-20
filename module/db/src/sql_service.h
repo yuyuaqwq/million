@@ -335,7 +335,7 @@ public:
     }
 
     MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
-        google::protobuf::Message* proto_msg = msg->proto_msg;
+        const google::protobuf::Message* proto_msg = msg->proto_msg;
 
         const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
@@ -383,7 +383,7 @@ public:
     }
 
     MILLION_MSG_HANDLE(SqlUpdateMsg, msg) {
-        google::protobuf::Message* proto_msg = msg->proto_msg;
+        const google::protobuf::Message* proto_msg = msg->proto_msg;
 
         const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
         const google::protobuf::Reflection* reflection = proto_msg->GetReflection();

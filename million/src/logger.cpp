@@ -15,8 +15,8 @@
 
 namespace million {
 
-MILLION_MSG_DEFINE(, LoggerLogMsg, (logger::LogLevel) level, (const char*) file, (int) line, (const char*) function, (std::string) info);
-MILLION_MSG_DEFINE(, LoggerSetLevelMsg, (std::string) level);
+MILLION_MSG_DEFINE(, LoggerLogMsg, (logger::LogLevel)level, (const char*)file, (int)line, (const char*)function, (std::string)info);
+MILLION_MSG_DEFINE(, LoggerSetLevelMsg, (std::string)level);
 
 static_assert(logger::LogLevel::kTrace == spdlog::level::level_enum::trace);
 static_assert(logger::LogLevel::kDebug == spdlog::level::level_enum::debug);
@@ -111,11 +111,11 @@ bool Logger::Init() {
     logger_handle_ = *logger_opt;
 }
 
-void Logger::Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) {
+void Logger::Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, const std::string& str) {
     million_->Send<LoggerLogMsg>(sender, logger_handle_, level, file, line, function, str);
 }
 
-void Logger::SetLevel(const ServiceHandle& sender, std::string_view level) {
+void Logger::SetLevel(const ServiceHandle& sender, const std::string& level) {
     million_->Send<LoggerSetLevelMsg>(sender, logger_handle_, level);
 }
 

@@ -58,7 +58,7 @@ asio::io_context& IMillion::NextIoContext() {
     return million_->NextIoContext();
 }
 
-void IMillion::Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, std::string_view str) {
+void IMillion::Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, const std::string& str) {
     million_->Log(sender, level, file, line, function, str);
 }
 
