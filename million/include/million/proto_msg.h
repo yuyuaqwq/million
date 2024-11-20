@@ -208,7 +208,7 @@ private:
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
 
-#define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, PROTO_MGR_, PROTO_PACKET_MSG_TYPE_) \
+#define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, PROTO_PACKET_MSG_TYPE_, PROTO_MGR_) \
     using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
     MILLION_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
         auto res = (PROTO_MGR_)->DecodeMessage(msg->packet); \

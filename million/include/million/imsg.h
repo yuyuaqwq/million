@@ -60,7 +60,7 @@ private:
 
 // 字段声明转构造函数字段初始化(第二步)
 // 参数 field_name: 字段名称
-#define _MILLION_FIELD_TO_CTOR_INIT_I(field_name) field_name(std::forward<decltype(field_name)>(field_name))
+#define _MILLION_FIELD_TO_CTOR_INIT_I(field_name) field_name(std::move(field_name)) // std::forward<decltype(field_name)>
 // 字段声明转构造函数字段初始化(第一步)
 // 参数 field: 未加工的字段
 // (由CTOR_INIT_LIST_IMPL调用)
