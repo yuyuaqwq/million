@@ -47,7 +47,7 @@ void TcpConnection::Process() {
                 }
 
                 // 避免恶意total_packet_size
-                constexpr uint32_t max_read_size = 65536;
+                constexpr uint32_t max_read_size = 1024 * 64;
                 constexpr uint32_t max_expansion_size = 1024 * 1024 * 64;
                 auto packet = Packet(std::min(total_packet_size, max_read_size));
                 uint32_t total_bytes_read = 0;
@@ -72,6 +72,7 @@ void TcpConnection::Process() {
                     }
                     total_bytes_read += bytes_read;
                 }
+                packet.resize(total_packet_size);
                 const auto& on_msg = server_->on_msg();
                 if (on_msg) {
                     on_msg(*iter_, std::move(packet));
