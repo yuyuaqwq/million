@@ -90,30 +90,38 @@ void TcpConnection::Process() {
 }
 
 void TcpConnection::Send(Packet&& packet) {
+    auto span = std::span<uint8_t>(packet.data(), packet.size());
+    auto total_size = packet.size();
+    Send(std::move(packet), span, total_size);
+}
+
+void TcpConnection::Send(Packet&& packet, std::span<uint8_t> span, uint32_t total_size) {
     {
-        auto guard = std::lock_guard(send_queue_mutex_);
+        auto lock = std::lock_guard(send_queue_mutex_);
         bool send_in_progress = !send_queue_.empty();
-        send_queue_.emplace(std::move(packet));
+        send_queue_.emplace(std::move(packet), span, total_size);
         if (send_in_progress) {
             return;
         }
     }
 
     asio::co_spawn(executor_, [this]() -> asio::awaitable<void> {
-        std::queue<Packet> tmp_queue;
+        std::queue<SendPacket> tmp_queue;
         try {
             do {
                 {
-                    auto guard = std::lock_guard(send_queue_mutex_);
+                    auto lock = std::lock_guard(send_queue_mutex_);
                     if (send_queue_.empty()) break;
                     std::swap(tmp_queue, send_queue_);
                 }
                 while (!tmp_queue.empty()) {
                     auto& packet = tmp_queue.front();
-                    uint32_t len = packet.size();
-                    len = asio::detail::socket_ops::host_to_network_long(len);
-                    co_await asio::async_write(socket_, asio::buffer(&len, sizeof(len)), asio::use_awaitable);
-                    co_await asio::async_write(socket_, asio::buffer(packet.data(), packet.size()), asio::use_awaitable);
+                    uint32_t len = packet.total_size;
+                    if (len != 0) {
+                        len = asio::detail::socket_ops::host_to_network_long(len);
+                        co_await asio::async_write(socket_, asio::buffer(&len, sizeof(len)), asio::use_awaitable);
+                    }
+                    co_await asio::async_write(socket_, asio::buffer(packet.span.data(), packet.span.size()), asio::use_awaitable);
                     tmp_queue.pop();
                 }
             } while (true);

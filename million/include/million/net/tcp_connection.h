@@ -22,6 +22,7 @@ public:
     void Close();
     void Process();
     void Send(Packet&& packet);
+    void Send(Packet&& packet, std::span<uint8_t> span, uint32_t total_size);
     bool Connected();
 
     auto iter() const { return iter_; }
@@ -39,7 +40,12 @@ public:
     const asio::any_io_executor& executor_;
 
     std::mutex send_queue_mutex_;
-    std::queue<Packet> send_queue_;
+    struct SendPacket {
+        Packet packet;
+        std::span<uint8_t> span;
+        uint32_t total_size;  // 为0表示不写入total_size
+    };
+    std::queue<SendPacket> send_queue_;
 };
 
 } // namespace net
