@@ -6,6 +6,8 @@
 #include <million/net/tcp_connection.h>
 #include <million/proto_msg.h>
 
+#include <gateway/gateway_msg.h>
+
 #include "token.h"
 
 namespace million {
@@ -15,6 +17,7 @@ struct UserHeader {
     Token token;
     uint64_t user_inc_id;
 };
+static_assert(sizeof(UserHeader) == kGatewayPacketHeaderSize);
 
 class UserSession : public net::TcpConnection {
 public:

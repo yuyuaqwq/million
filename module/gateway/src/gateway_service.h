@@ -60,6 +60,8 @@ public:
         auto session = static_cast<UserSession*>(msg->connection.get());
         auto session_handle = UserSessionHandle(session);
 
+        
+
         if (session->header().token == kInvaildToken) {
             // 连接没token，但是发来了token，当成断线重连处理
             // session->header().token = header.token;
