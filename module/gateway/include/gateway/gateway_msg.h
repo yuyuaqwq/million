@@ -19,10 +19,10 @@ namespace gateway {
 // recv
 MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRegisterUserServiceMsg, (ServiceHandle)user_service)
 MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySureAgentMsg, (uint64_t)session, (ServiceHandle)agent_service)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySendPacketMsg, (uint64_t)session, (net::Packet)packet)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySendProtoMsg, (uint64_t)session, (ProtoMsgUnique)proto_msg)
 
 // send
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvPacketMsg, (uint64_t)session, (net::Packet)packet)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvProtoMsg, (uint64_t)session, (ProtoMsgUnique)proto_msg)
 
 } // namespace gateway
 } // namespace million

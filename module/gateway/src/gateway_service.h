@@ -1,6 +1,6 @@
 #pragma once
 
-#include <gateway/getaway_msg.h>
+#include <gateway/gateway_msg.h>
 
 #include <million/iservice.h>
 

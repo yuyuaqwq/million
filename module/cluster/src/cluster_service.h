@@ -35,14 +35,15 @@ public:
     MILLION_MSG_DISPATCH(ClusterService);
 
     MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
-
+        // 有可能目标节点已经主动连接当前节点
+        co_return;
     }
 
     MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
-
+        co_return;
     }
 
-    MILLION_MSG_HANDLE(ClusterPacketMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterSendPacketMsg, msg) {
         EndPointRes end_point;
         auto connection_ptr = FindNode(msg->target_node, &end_point);
         if (!connection_ptr && end_point.ip.empty()) {
