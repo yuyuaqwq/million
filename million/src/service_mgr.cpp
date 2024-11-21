@@ -75,13 +75,13 @@ Service& ServiceMgr::PopService() {
 }
 
 bool ServiceMgr::SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name) {
-    std::lock_guard guard(unique_name_map_mutex_);
+    auto lock = std::lock_guard(unique_name_map_mutex_);
     auto res = unique_name_map_.emplace(unique_name, handle);
     return res.second;
 }
 
 std::optional<ServiceHandle> ServiceMgr::GetServiceByUniqueNum(const ServiceUniqueName& unique_name) {
-    std::lock_guard guard(unique_name_map_mutex_);
+    auto lock = std::lock_guard(unique_name_map_mutex_);
     auto iter = unique_name_map_.find(unique_name);
     if (iter == unique_name_map_.end()) {
         return std::nullopt;

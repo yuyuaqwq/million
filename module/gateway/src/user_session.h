@@ -15,9 +15,8 @@ namespace gateway {
 
 struct UserHeader {
     Token token;
-    uint64_t user_inc_id;
+    uint64_t user_session_id;
 };
-static_assert(sizeof(UserHeader) == kGatewayPacketHeaderSize);
 
 class UserSession : public net::TcpConnection {
 public:

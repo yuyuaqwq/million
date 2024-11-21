@@ -46,12 +46,12 @@ public:
         auto& connection = msg->connection;
         auto session = static_cast<UserSession*>(msg->connection.get());
         if (connection->Connected()) {
-            auto user_inc_id = ++user_inc_id_;
-            session->header().user_inc_id = user_inc_id;
-            users_.emplace(session->header().user_inc_id, session);
+            auto user_session_id = ++user_session_id_;
+            session->header().user_session_id = user_session_id;
+            users_.emplace(session->header().user_session_id, session);
         }
         else {
-            users_.erase(session->header().user_inc_id);
+            users_.erase(session->header().user_session_id);
         }
         co_return;
     }
@@ -60,23 +60,21 @@ public:
         auto session = static_cast<UserSession*>(msg->connection.get());
         auto session_handle = UserSessionHandle(session);
 
-        
-
         if (session->header().token == kInvaildToken) {
             // 连接没token，但是发来了token，当成断线重连处理
             // session->header().token = header.token;
 
             // todo: 需要断开原先token指向的连接
         }
-        auto user_inc_id = session->header().user_inc_id;
+        auto user_session_id = session->header().user_session_id;
         // 没有token
         if (session->header().token == kInvaildToken) {
-            Send<GatewayRecvPacketMsg>(user_service_, user_inc_id, std::move(msg->packet));
+            Send<GatewayRecvPacketMsg>(user_service_, user_session_id, std::move(msg->packet));
         }
         else {
-            auto iter = agent_services_.find(session->header().user_inc_id);
+            auto iter = agent_services_.find(session->header().user_session_id);
             if (iter != agent_services_.end()) {
-                Send<GatewayRecvPacketMsg>(iter->second, user_inc_id, std::move(msg->packet));
+                Send<GatewayRecvPacketMsg>(iter->second, user_session_id, std::move(msg->packet));
             }
         }
         co_return;
@@ -106,7 +104,7 @@ private:
     TokenGenerator token_generator_;
     ServiceHandle user_service_;
     // 需要改掉UserSession*
-    std::atomic_uint64_t user_inc_id_ = 0;
+    std::atomic_uint64_t user_session_id_ = 0;
     std::unordered_map<uint64_t, UserSession*> users_;
     std::unordered_map<uint64_t, ServiceHandle> agent_services_;
 };

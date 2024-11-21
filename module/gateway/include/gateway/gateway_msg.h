@@ -13,7 +13,7 @@
 namespace million {
 namespace gateway {
 
-constexpr uint32_t kGatewayPacketHeaderSize = 16;
+constexpr uint32_t kGatewayPacketHeaderSize = 8;
 
 // 注册user服务，没有token的消息发往user-n服务
 // user-n服务再通知agentmgr(全局唯一)服务，agentmgr让nodemgr(本机唯一)创建agent-n，然后再关联到gateway，gateway下次就可以直接发给这个agent
