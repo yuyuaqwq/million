@@ -2,12 +2,16 @@
 
 #include <million/iservice.h>
 
+#include <protogen/ss/ss_cluster.pb.h>
+
 #include <cluster/cluster_msg.h>
 
 #include "cluster_server.h"
 
 namespace million {
 namespace cluster {
+
+namespace Ss = ::Million::Proto::Ss;
 
 MILLION_MSG_DEFINE(, ClusterTcpConnectionMsg, (net::TcpConnectionShared)connection)
 MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (net::TcpConnectionShared)connection, (net::Packet)packet)
@@ -40,6 +44,18 @@ public:
     }
 
     MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
+        // 解析头部
+        Ss::ClusterHeader header;
+        header.ParseFromArray(msg->packet.data(), msg->packet.size());
+
+        auto& src_service = header.src_service();
+        auto& target_service = header.target_service();
+
+        auto target_service_handle = imillion_->GetServiceByUniqueNum(target_service);
+        if (target_service_handle) {
+            // 还需要获取下源节点
+            Send<ClusterRecvPacketMsg>(*target_service_handle, std::string(), std::move(src_service), std::move(msg->packet), net::PacketSpan(msg->packet.begin() + header.ByteSize(), msg->packet.end()));
+        }
         co_return;
     }
 
@@ -63,7 +79,13 @@ public:
             co_return;
         }
         auto& connection = *connection_ptr;
-        connection->Send(std::move(msg->packet));
+        // 追加集群头部
+        Ss::ClusterHeader header;
+        header.set_src_service(std::move(msg->src_service));
+        header.set_target_service(std::move(msg->target_service));
+        auto header_packet = net::Packet(header.ByteSize());
+        connection->Send(std::move(header_packet), net::PacketSpan(header_packet.begin(), header_packet.end()), header_packet.size() + msg->packet.size());
+        connection->Send(std::move(msg->packet), net::PacketSpan(msg->packet.begin(), msg->packet.end()), 0);
         co_return;
     }
 

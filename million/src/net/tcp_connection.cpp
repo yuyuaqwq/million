@@ -90,12 +90,12 @@ void TcpConnection::Process() {
 }
 
 void TcpConnection::Send(Packet&& packet) {
-    auto span = std::span<uint8_t>(packet.data(), packet.size());
+    auto span = PacketSpan(packet.data(), packet.size());
     auto total_size = packet.size();
     Send(std::move(packet), span, total_size);
 }
 
-void TcpConnection::Send(Packet&& packet, std::span<uint8_t> span, uint32_t total_size) {
+void TcpConnection::Send(Packet&& packet, PacketSpan span, uint32_t total_size) {
     {
         auto lock = std::lock_guard(send_queue_mutex_);
         bool send_in_progress = !send_queue_.empty();

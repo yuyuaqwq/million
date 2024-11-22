@@ -22,7 +22,7 @@ public:
     void Close();
     void Process();
     void Send(Packet&& packet);
-    void Send(Packet&& packet, std::span<uint8_t> span, uint32_t total_size);
+    void Send(Packet&& packet, PacketSpan span, uint32_t total_size);
     bool Connected();
 
     auto iter() const { return iter_; }
@@ -42,7 +42,7 @@ public:
     std::mutex send_queue_mutex_;
     struct SendPacket {
         Packet packet;
-        std::span<uint8_t> span;
+        PacketSpan span;
         uint32_t total_size;  // 为0表示不写入total_size
     };
     std::queue<SendPacket> send_queue_;

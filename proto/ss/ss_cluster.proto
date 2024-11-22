@@ -2,9 +2,7 @@ syntax = "proto3";
 
 package Million.Proto.Ss;
 
-message ClusterPacket {
-    // session_id
-    // src_unique_name
-    // target_unique_name
-    bytes packet = 1;
+message ClusterHeader {
+    string src_service = 1;
+    string target_service = 2;
 }

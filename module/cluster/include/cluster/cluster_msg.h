@@ -16,7 +16,9 @@ namespace cluster {
 
 using NodeUniqueName = std::string;
 
-MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterSendPacketMsg, (NodeUniqueName)target_node, (net::Packet)packet)
+MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterSendPacketMsg, (ServiceUniqueName)src_service, (NodeUniqueName)target_node, (ServiceUniqueName)target_service, (net::Packet)packet)
+MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterRecvPacketMsg, (NodeUniqueName)src_node, (ServiceUniqueName)src_service, (net::Packet)packet, (net::PacketSpan)raw_packet)
+
 
 //// MILLION_MSG_DEFINE(GATEWAY_CLASS_API, UnRegisterServiceMsg, (ServiceHandle) service_handle, (Cs::MsgId) cs_msg_id)
 //MILLION_MSG_DEFINE(GATEWAY_CLASS_API, RecvProtoMsg, (UserSessionHandle) session_handle, (ProtoMsgUnique) proto_msg)
