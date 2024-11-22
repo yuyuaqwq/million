@@ -7,6 +7,7 @@
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/hourly_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <million/logger/logger.h>
 
@@ -51,25 +52,29 @@ public:
         auto level_str = logger_config["level"].as<std::string>();
         auto level = spdlog::level::from_str(level_str);
         
-        std::string pattern;
+        std::string pattern = "[%Y-%m-%d %H:%M:%S.%e] [thread %t] [%^%l%$] [%s:%#] [%!] %v";
         if (logger_config["pattern"]) {
             pattern = logger_config["pattern"].as<std::string>();
         }
-        else {
-            pattern = "[%Y-%m-%d %H:%M:%S.%e] [thread %t] [%^%l%$] [%s:%#] [%!] %v";
-        }
 
-        int flush_every;
+        int flush_every = 1;
         if (logger_config["flush_every_s"]) {
             flush_every = logger_config["flush_every_s"].as<int>();
         }
-        else {
-            flush_every = 1;
+
+        auto console_level = spdlog::level::level_enum::off;;
+        if (logger_config["console_level"]) {
+            auto level_str = logger_config["level"].as<std::string>();
+            console_level = spdlog::level::from_str(level_str);;
         }
 
-        logger_ = spdlog::hourly_logger_mt("million_logger", log_file, 0, 0);
+        logger_ = spdlog::hourly_logger_st("million_logger", log_file, 0, 0);
         logger_->set_level(level);
         logger_->set_pattern(pattern);
+
+        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_st>();
+        console_sink->set_level(console_level);
+        logger_->sinks().push_back(console_sink);
 
         spdlog::flush_every(std::chrono::seconds(flush_every));
 

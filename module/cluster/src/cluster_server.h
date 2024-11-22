@@ -2,6 +2,8 @@
 
 #include <million/net/tcp_server.h>
 
+#include "node_session.h"
+
 namespace million {
 namespace cluster {
 
@@ -11,9 +13,9 @@ public:
     ClusterServer(IMillion* million)
         : TcpServer(million) {}
 
-    //virtual ::million::net::TcpConnectionShared MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) const override {
-    //    return std::make_shared<NodeSession>(server, std::move(socket), executor);
-    //}
+    virtual ::million::net::TcpConnectionShared MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) const override {
+        return std::make_shared<NodeSession>(server, std::move(socket), executor);
+    }
 
 };
 

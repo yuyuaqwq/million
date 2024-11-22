@@ -2,6 +2,10 @@ syntax = "proto3";
 
 package Million.Proto.Ss;
 
+message ClusterHandshake {
+    string src_node = 1;
+}
+
 message ClusterHeader {
     string src_service = 1;
     string target_service = 2;

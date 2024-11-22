@@ -29,11 +29,13 @@ public:
 
     virtual bool OnInit() override {
         // io线程回调，发给work线程处理
-        server_.set_on_connection([this](auto&& connection) {
+        server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
             Send<GatewayTcpConnectionMsg>(service_handle(), connection);
+            co_return;
         });
-        server_.set_on_msg([this](auto&& connection, auto&& packet) {
+        server_.set_on_msg([this](auto&& connection, auto&& packet) -> asio::awaitable<void> {
             Send<GatewayTcpRecvPacketMsg>(service_handle(), connection, std::move(packet));
+            co_return;
         });
         const auto& config = imillion_->YamlConfig();
         const auto& gateway_config = config["gateway"];
@@ -58,11 +60,11 @@ public:
         auto session = static_cast<UserSession*>(msg->connection.get());
         if (connection->Connected()) {
             auto user_session_id = ++user_session_id_;
-            session->header().user_session_id = user_session_id;
-            users_.emplace(session->header().user_session_id, session);
+            session->info().user_session_id = user_session_id;
+            users_.emplace(session->info().user_session_id, session);
         }
         else {
-            users_.erase(session->header().user_session_id);
+            users_.erase(session->info().user_session_id);
         }
         co_return;
     }
@@ -71,19 +73,19 @@ public:
         auto session = static_cast<UserSession*>(msg->connection.get());
         auto session_handle = UserSessionHandle(session);
 
-        if (session->header().token == kInvaildToken) {
+        if (session->info().token == kInvaildToken) {
             // 连接没token，但是发来了token，当成断线重连处理
-            // session->header().token = header.token;
+            // session->info().token = info.token;
 
             // todo: 需要断开原先token指向的连接
         }
-        auto user_session_id = session->header().user_session_id;
+        auto user_session_id = session->info().user_session_id;
         // 没有token
-        if (session->header().token == kInvaildToken) {
+        if (session->info().token == kInvaildToken) {
             Send<GatewayRecvPacketMsg>(user_service_, user_session_id, std::move(msg->packet));
         }
         else {
-            auto iter = agent_services_.find(session->header().user_session_id);
+            auto iter = agent_services_.find(session->info().user_session_id);
             if (iter != agent_services_.end()) {
                 Send<GatewayRecvPacketMsg>(iter->second, user_session_id, std::move(msg->packet));
             }

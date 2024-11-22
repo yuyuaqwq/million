@@ -13,9 +13,9 @@
 namespace million {
 namespace gateway {
 
-struct UserHeader {
-    Token token;
-    uint64_t user_session_id;
+struct UserSessionInfo {
+    Token token = kInvaildToken;
+    uint64_t user_session_id = 0;
 };
 
 class UserSession : public net::TcpConnection {
@@ -23,11 +23,11 @@ public:
     UserSession(net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
     ~UserSession();
 
-    const UserHeader& header() const { return header_; }
-    UserHeader& header() { return header_; }
+    const UserSessionInfo& info() const { return info_; }
+    UserSessionInfo& info() { return info_; }
 
 private:
-    UserHeader header_;
+    UserSessionInfo info_;
 };
 
 } // namespace gateway

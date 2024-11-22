@@ -23,12 +23,17 @@ public:
     void Process();
     void Send(Packet&& packet);
     void Send(Packet&& packet, PacketSpan span, uint32_t total_size);
-    bool Connected();
+    bool Connected() const;
+
+    template<typename T>
+    T* get_ptr() { return static_cast<T*>(this); }
 
     auto iter() const { return iter_; }
     void set_iter(std::list<TcpConnectionShared>::iterator iter) { iter_ = iter; }
 
     asio::ip::tcp::socket& socket() { return socket_; }
+    const asio::ip::tcp::socket& socket() const { return socket_; }
+    const asio::ip::tcp::endpoint& remote_endpoint() const { return remote_endpoint_; }
 
 public:
     TcpServer* server_;
@@ -37,6 +42,7 @@ public:
     std::mutex close_mutex_;
 
     asio::ip::tcp::socket socket_;
+    asio::ip::tcp::endpoint remote_endpoint_;
     const asio::any_io_executor& executor_;
 
     std::mutex send_queue_mutex_;

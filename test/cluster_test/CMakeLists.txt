@@ -16,6 +16,9 @@ target_link_libraries(cluster_test PRIVATE ${CLUSTER_LIB})
 target_include_directories(cluster_test PRIVATE ${PROTOGEN_HEADER_DIR})
 target_link_libraries(cluster_test PRIVATE ${PROTOGEN_LIB})
 
+target_include_directories(cluster_test PRIVATE ${YAML_CPP_HEADER_DIR})
+target_link_libraries(cluster_test PRIVATE ${YAML_CPP_LIB})
+
 find_package(Threads)
 target_link_libraries(cluster_test PRIVATE Threads::Threads)
 

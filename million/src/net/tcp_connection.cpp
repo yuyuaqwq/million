@@ -26,9 +26,10 @@ void TcpConnection::Close() {
 
 void TcpConnection::Process() {
     asio::co_spawn(executor_, [this]() -> asio::awaitable<void> {
+        remote_endpoint_ = socket_.remote_endpoint();
         const auto& on_connection = server_->on_connection();
         if (on_connection) {
-            on_connection(*iter_);
+            co_await on_connection(*iter_);
         }
         try {
             while (true) {
@@ -75,7 +76,7 @@ void TcpConnection::Process() {
                 packet.resize(total_packet_size);
                 const auto& on_msg = server_->on_msg();
                 if (on_msg) {
-                    on_msg(*iter_, std::move(packet));
+                    co_await on_msg(*iter_, std::move(packet));
                 }
             }
         }
@@ -83,7 +84,7 @@ void TcpConnection::Process() {
         }
         Close();
         if (on_connection) {
-            on_connection(*iter_);
+            co_await on_connection(*iter_);
         }
         server_->RemoveConnection(iter_);
     }, asio::detached);
@@ -132,7 +133,7 @@ void TcpConnection::Send(Packet&& packet, PacketSpan span, uint32_t total_size) 
     }, asio::detached);
 }
 
-bool TcpConnection::Connected() {
+bool TcpConnection::Connected() const {
     return socket_.is_open();
 }
 

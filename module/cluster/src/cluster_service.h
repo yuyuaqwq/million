@@ -13,8 +13,8 @@ namespace cluster {
 
 namespace Ss = ::Million::Proto::Ss;
 
-MILLION_MSG_DEFINE(, ClusterTcpConnectionMsg, (net::TcpConnectionShared)connection)
-MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (net::TcpConnectionShared)connection, (net::Packet)packet)
+MILLION_MSG_DEFINE(, ClusterTcpConnectionMsg, (net::TcpConnectionShared) connection)
+MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
 
 class ClusterService : public IService {
 public:
@@ -25,24 +25,26 @@ public:
 
     virtual bool OnInit() override {
         // io线程回调，发给work线程处理
-        server_.set_on_connection([this](auto&& connection) {
+        server_.set_on_connection([this](const net::TcpConnectionShared& connection) -> asio::awaitable<void> {
             Send<ClusterTcpConnectionMsg>(service_handle(), connection);
+            co_return;
         });
-        server_.set_on_msg([this](auto&& connection, auto&& packet) {
+        server_.set_on_msg([this](auto&& connection, auto&& packet) -> asio::awaitable<void> {
             Send<ClusterTcpRecvPacketMsg>(service_handle(), connection, std::move(packet));
+            co_return;
         });
 
         const auto& config = imillion_->YamlConfig();
         const auto& cluster_config = config["cluster"];
         if (!cluster_config) {
-            std::cerr << "[cluster] [config] [error] cannot find 'cluster'." << std::endl;
+            LOG_ERR("[cluster] [config] [error] cannot find 'cluster'.");
             return false;
         }
 
         const auto& name_config = cluster_config["name"];
         if (!name_config)
         {
-            std::cerr << "[cluster] [config] [error] cannot find 'cluster.name'." << std::endl;
+            LOG_ERR("[cluster] [config] [error] cannot find 'cluster.name'.");
             return false;
         }
         node_name_ = name_config.as<std::string>();
@@ -50,7 +52,7 @@ public:
         const auto& port_config = cluster_config["port"];
         if (!port_config)
         {
-            std::cerr << "[cluster] [config] [error] cannot find 'cluster.port'." << std::endl;
+            LOG_ERR("cannot find 'cluster.port'.");
             return false;
         }
         server_.Start(port_config.as<uint16_t>());
@@ -60,11 +62,33 @@ public:
     MILLION_MSG_DISPATCH(ClusterService);
 
     MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
-        // 有可能目标节点已经主动连接当前节点
+        // 可能是主动发起，也可能是被动收到连接的，需要考虑连接去重
+
+        auto& ep = msg->connection->remote_endpoint();
+        auto ip = ep.address().to_string();
+        auto port = std::to_string(ep.port());
+        if (msg->connection->Connected()) {
+            LOG_DEBUG("Connection establishment: ip: {}, port: {}", ip, port);
+        }
+        else {
+            LOG_DEBUG("Disconnection: ip: {}, port: {}", ip, port);
+        }
+
+        // 连接投递到定时任务，比如10s还没有握手成功就断开连接
+        
         co_return;
     }
 
     MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
+        auto node_session = msg->connection->get_ptr<NodeSession>();
+        if (node_session->info().node_name.empty()) {
+            // 未进行身份验证的连接，处理身份验证
+            Ss::ClusterHandshake handshake;
+            handshake.ParseFromArray(msg->packet.data(), msg->packet.size());
+            node_session->info().node_name = handshake.src_node();
+            co_return;
+        }
+
         // 解析头部
         Ss::ClusterHeader header;
         header.ParseFromArray(msg->packet.data(), msg->packet.size());
@@ -82,23 +106,34 @@ public:
 
     MILLION_MSG_HANDLE(ClusterSendPacketMsg, msg) {
         EndPointRes end_point;
-        auto connection_ptr = FindNode(msg->target_node, &end_point);
+        auto connection_ptr = FindNodeConnection(msg->target_node, &end_point);
         if (!connection_ptr && end_point.ip.empty()) {
             co_return;
         }
         if (!connection_ptr) {
             auto& io_context = imillion_->NextIoContext();
-            // 还需要标记该节点为连接中，连接过程中有其他发给该节点的消息需要放入队列等待
-            asio::co_spawn(io_context.get_executor(), [this, msg = std::move(msg), end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
-                auto res = co_await server_.ConnectTo(end_point.ip, end_point.port);
-                if (!res) {
+            // 还需要考虑连接过程中有其他发给该节点的消息的处理
+            asio::co_spawn(io_context.get_executor(), [this, end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
+                auto connection_opt = co_await server_.ConnectTo(end_point.ip, end_point.port);
+                if (!connection_opt) {
                     co_return;
                 }
-                // io线程执行，重新处理这条消息
-                auto imsg = msg.get();
-                Resend(service_handle(), std::move(msg));
+                auto& connection = *connection_opt;
+                Ss::ClusterHandshake handshake;
+                handshake.set_src_node(node_name_);
+                auto packet = net::Packet(handshake.ByteSize());
+                handshake.SerializeToArray(packet.data(), packet.size());
+                connection->Send(std::move(packet));
+
+                // 这里发个通知，告知连接成功
+                Send<>();
             }, asio::detached);
-            co_return;
+
+            // 这里等待通知，然后继续处理
+            co_await Recv<>();
+
+            auto iter = nodes_.find(msg->target_node);
+            connection_ptr = &iter->second;
         }
         auto& connection = *connection_ptr;
         // 追加集群头部
@@ -116,7 +151,7 @@ private:
         std::string ip;
         std::string port;
     };
-    net::TcpConnectionShared* FindNode(NodeUniqueName node_name, EndPointRes* end_point) {
+    net::TcpConnectionShared* FindNodeConnection(NodeUniqueName node_name, EndPointRes* end_point) {
         auto iter = nodes_.find(node_name);
         if (iter != nodes_.end()) {
             return &iter->second;
@@ -126,13 +161,13 @@ private:
         const auto& config = imillion_->YamlConfig();
         const auto& cluster_config = config["cluster"];
         if (!cluster_config) {
-            std::cerr << "[cluster] [config] [error] cannot find 'cluster'." << std::endl;
+            LOG_ERR("cannot find 'cluster'.");
             return nullptr;
         }
 
         const auto& nodes = cluster_config["nodes"];
         if (!nodes) {
-            std::cerr << "[cluster] [config] [error] cannot find 'cluster.nodes'." << std::endl;
+            LOG_ERR("cannot find 'cluster.nodes'.");
             return nullptr;
         }
 

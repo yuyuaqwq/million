@@ -2,6 +2,8 @@
 
 #include <million/imillion.h>
 
+#include <yaml-cpp/yaml.h>
+
 #include <cluster/cluster_msg.h>
 
 #include <protogen/ss/ss_test.pb.h>
@@ -9,7 +11,7 @@
 namespace Ss = Million::Proto::Ss;
 namespace protobuf = google::protobuf;
 
-MILLION_MSG_DEFINE(, TestMsg, (Ss::Test::TestReq)req);
+MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeUniqueName)target_node, (Ss::Test::TestReq)req);
 
 class TestService : public million::IService {
 public:
@@ -37,7 +39,7 @@ public:
     MILLION_MSG_DISPATCH(TestService);
 
     MILLION_MSG_HANDLE(TestMsg, msg) {
-        Send<million::cluster::ClusterSendPacketMsg>(cluster_, "TestService", "node2", "TestService", proto_codec_.EncodeMessage(msg->req).value());
+        Send<million::cluster::ClusterSendPacketMsg>(cluster_, "TestService", msg->target_node, "TestService", proto_codec_.EncodeMessage(msg->req).value());
         co_return;
     }
 
@@ -64,9 +66,18 @@ int main() {
     }
     auto service_handle = *service_opt;
 
+    getchar();
+
     Ss::Test::TestReq req;
     req.set_value("sb");
-    test_app->Send<TestMsg>(service_handle, service_handle, std::move(req));
 
+    const auto& config = test_app->YamlConfig();
+    if (config["cluster"]["name"].as<std::string>() == "node1") {
+        test_app->Send<TestMsg>(service_handle, service_handle, "node2", std::move(req));
+    }
+    else {
+        test_app->Send<TestMsg>(service_handle, service_handle, "node1", std::move(req));
+    }
+   
     return 0;
 }
