@@ -9,8 +9,6 @@
 
 #include <cluster/api.h>
 
-#include "cluster_service.h"
-
 namespace million {
 namespace cluster {
 

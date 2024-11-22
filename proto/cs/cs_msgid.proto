@@ -10,5 +10,5 @@ extend google.protobuf.EnumOptions {
 
 enum CsMsgId {
     CS_MSG_ID_INVALID = 0;
-    CS_MSG_ID_EXAMPLE = 1;
+    CS_MSG_ID_TEST = 1;
 }

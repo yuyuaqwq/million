@@ -124,10 +124,5 @@ int main() {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     test_app->Send<Test1Msg>(service_handle, service_handle, 7, "hhh");
 
-
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    std::this_thread::sleep_for(std::chrono::seconds(1000));
-
     return 0;
 }

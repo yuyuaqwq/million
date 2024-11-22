@@ -35,8 +35,19 @@ public:
         server_.set_on_msg([this](auto&& connection, auto&& packet) {
             Send<GatewayTcpRecvPacketMsg>(service_handle(), connection, std::move(packet));
         });
-        server_.Start(8001);
-
+        const auto& config = imillion_->YamlConfig();
+        const auto& gateway_config = config["gateway"];
+        if (!gateway_config) {
+            std::cerr << "[gateway] [config] [error] cannot find 'gateway'." << std::endl;
+            return false;
+        }
+        const auto& port_config = gateway_config["port"];
+        if (!port_config)
+        {
+            std::cerr << "[gateway] [config] [error] cannot find 'gateway.port'." << std::endl;
+            return false;
+        }
+        server_.Start(port_config.as<uint16_t>());
         return true;
     }
 

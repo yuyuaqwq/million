@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package Million.Proto.Cs.Test;
+
+import "google/protobuf/descriptor.proto";
+import "cs/cs_msgid.proto";
+
+enum CsSubMsgIdTest {
+    option (cs_msg_id) = CS_MSG_ID_TEST;
+    
+    CS_SUB_MSG_ID_TEST_INVALID = 0;
+    CS_SUB_MSG_ID_TEST_REQ = 1;
+    CS_SUB_MSG_ID_TEST_RES = 2;
+    
+}
+
+extend google.protobuf.MessageOptions {
+    CsSubMsgIdTest cs_sub_msg_id_test = 10001;
+}
+
+message TestReq {
+    option (cs_sub_msg_id_test) = CS_SUB_MSG_ID_TEST_REQ;
+    string value = 1;
+}
+
+message TestRes {
+    option (cs_sub_msg_id_test) = CS_SUB_MSG_ID_TEST_RES;
+    string value = 1;
+}

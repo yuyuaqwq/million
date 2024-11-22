@@ -54,7 +54,7 @@ set(MILLION_LIB million CACHE STRING "million lib")
 # add
 add_subdirectory(million)
 add_subdirectory(module)
-add_subdirectory(example)
+add_subdirectory(test)
 add_subdirectory(protogen)
 set(YAML_BUILD_SHARED_LIBS ON)
 add_subdirectory(third_party/yaml-cpp)

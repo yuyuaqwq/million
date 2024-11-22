@@ -10,6 +10,9 @@ namespace gateway {
 MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
     auto handle = imillion->NewService<GatewayService>();
+    if (!handle) {
+        return false;
+    }
     imillion->SetServiceUniqueName(*handle, "GatewayService");
     return true;
 }
