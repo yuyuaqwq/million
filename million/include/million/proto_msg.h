@@ -19,8 +19,6 @@ using ProtoMsgUnique = std::unique_ptr<protobuf::Message>;
 
 class MILLION_CLASS_API ProtoCodec : noncopyable {
 public:
-    ProtoCodec(uint32_t header_size) : header_size_(header_size) {}
-
     // ×¢²áÐ­Òé
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     bool RegisterProto(const protobuf::FileDescriptor& file_desc, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
@@ -78,8 +76,8 @@ public:
         uint16_t msg_id_net = host_to_network_short(static_cast<uint16_t>(msg_id));
         uint16_t sub_msg_id_net = host_to_network_short(static_cast<uint16_t>(sub_msg_id));
 
-        auto packet = net::Packet(header_size_ + sizeof(msg_id_net) + sizeof(sub_msg_id_net) + message.ByteSize());
-        size_t i = header_size_;
+        auto packet = net::Packet(sizeof(msg_id_net) + sizeof(sub_msg_id_net) + message.ByteSize());
+        size_t i = 0;
         std::memcpy(packet.data() + i, &msg_id_net, sizeof(msg_id_net));
         i += sizeof(msg_id_net);
         std::memcpy(packet.data() + i, &sub_msg_id_net, sizeof(sub_msg_id_net));
@@ -95,13 +93,13 @@ public:
         uint32_t sub_msg_id;
         ProtoMsgUnique proto_msg;
     };
-    std::optional<DecodeRes> DecodeMessage(const net::Packet& packet) {
+    std::optional<DecodeRes> DecodeMessage(const net::PacketSpan packet) {
         DecodeRes res = { 0 };
 
         uint16_t msg_id_net, sub_msg_id_net;
-        if (packet.size() < header_size_ + sizeof(msg_id_net) + sizeof(sub_msg_id_net)) return std::nullopt;
+        if (packet.size() <  sizeof(msg_id_net) + sizeof(sub_msg_id_net)) return std::nullopt;
 
-        size_t i = header_size_;
+        size_t i = 0;
         std::memcpy(&msg_id_net, packet.data() + i, sizeof(msg_id_net));
         i += sizeof(msg_id_net);
         std::memcpy(&sub_msg_id_net, packet.data() + i, sizeof(sub_msg_id_net));
@@ -192,7 +190,6 @@ private:
     }
 
 private:
-    uint32_t header_size_ = 0;
     std::unordered_map<uint32_t, const protobuf::Descriptor*> msg_desc_map_;
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
 };
@@ -200,7 +197,7 @@ private:
 #define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, PROTO_PACKET_MSG_TYPE_, PROTO_CODEC_) \
     using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
     MILLION_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
-        auto res = (PROTO_CODEC_)->DecodeMessage(msg->packet); \
+        auto res = (PROTO_CODEC_)->DecodeMessage(msg->span); \
         if (!res) { \
             co_return; \
         } \
