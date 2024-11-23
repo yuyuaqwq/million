@@ -20,7 +20,7 @@ public:
     virtual ~TcpConnection();
 
     void Close();
-    void Process();
+    void Process(bool call_on_connection);
     void Send(Packet&& packet);
     void Send(Packet&& packet, PacketSpan span, uint32_t total_size);
     bool Connected() const;

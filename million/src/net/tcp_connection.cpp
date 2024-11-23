@@ -10,7 +10,10 @@ TcpConnection::TcpConnection(
     const asio::any_io_executor& executor)
     : server_(server)
     , socket_(std::move(socket))
-    , executor_(executor) {};
+    , executor_(executor)
+{
+    remote_endpoint_ = socket_.remote_endpoint();
+};
 
     TcpConnection::~TcpConnection() = default;
 
@@ -24,11 +27,10 @@ void TcpConnection::Close() {
     socket_.close(ec);
 }
 
-void TcpConnection::Process() {
-    asio::co_spawn(executor_, [this]() -> asio::awaitable<void> {
-        remote_endpoint_ = socket_.remote_endpoint();
+void TcpConnection::Process(bool call_on_connection) {
+    asio::co_spawn(executor_, [this, call_on_connection]() -> asio::awaitable<void> {
         const auto& on_connection = server_->on_connection();
-        if (on_connection) {
+        if (call_on_connection && on_connection) {
             co_await on_connection(*iter_);
         }
         try {

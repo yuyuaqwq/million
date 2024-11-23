@@ -19,6 +19,8 @@ public:
         : imillion_(imillion) {}
     virtual ~IService() = default;
 
+    SessionId AllocSessionId();
+
     SessionId Send(const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     SessionId Send(const ServiceHandle& target, Args&&... args) {

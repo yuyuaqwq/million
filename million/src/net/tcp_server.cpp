@@ -38,7 +38,7 @@ asio::awaitable<std::optional<TcpConnectionShared>> TcpServer::ConnectTo(std::st
         co_await asio::async_connect(socket, endpoints, asio::use_awaitable);
         auto& io_context = imillion_->NextIoContext();
         auto handle = AddConnection(std::move(socket), io_context.get_executor());
-        handle->Process();
+        handle->Process(true);
         co_return handle;
     }
     catch (const std::exception& e) {
@@ -73,7 +73,7 @@ asio::awaitable<void> TcpServer::Listen(uint16_t port) {
             // 获取io_context，新连接绑定到该io_context中
             auto& io_context = imillion_->NextIoContext();
             auto handle = AddConnection(std::move(socket), io_context.get_executor());
-            handle->Process();
+            handle->Process(true);
         }
         catch (const std::exception& e) {
             // std::cerr << "Error: " << e.what() << std::endl;

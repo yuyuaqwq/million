@@ -40,6 +40,8 @@ public:
     bool SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name);
     std::optional<ServiceHandle> GetServiceByUniqueNum(const ServiceUniqueName& unique_name);
 
+    SessionId AllocSessionId();
+
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
@@ -57,6 +59,10 @@ private:
 
     Million* million_ = nullptr;
 };
+
+inline SessionId IService::AllocSessionId() {
+    return imillion_->AllocSessionId();
+}
 
 inline SessionId IService::Send(const ServiceHandle& target, MsgUnique msg) {
     return imillion_->Send(service_handle_, target, std::move(msg));

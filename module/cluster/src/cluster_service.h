@@ -15,6 +15,7 @@ namespace Ss = ::Million::Proto::Ss;
 
 MILLION_MSG_DEFINE(, ClusterTcpConnectionMsg, (net::TcpConnectionShared) connection)
 MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
+MILLION_MSG_DEFINE(, ClusterTcpConnectToNotifyMsg, (net::TcpConnectionShared) connection)
 
 class ClusterService : public IService {
 public:
@@ -37,14 +38,14 @@ public:
         const auto& config = imillion_->YamlConfig();
         const auto& cluster_config = config["cluster"];
         if (!cluster_config) {
-            LOG_ERR("[cluster] [config] [error] cannot find 'cluster'.");
+            LOG_ERR("cannot find 'cluster'.");
             return false;
         }
 
         const auto& name_config = cluster_config["name"];
         if (!name_config)
         {
-            LOG_ERR("[cluster] [config] [error] cannot find 'cluster.name'.");
+            LOG_ERR("cannot find 'cluster.name'.");
             return false;
         }
         node_name_ = name_config.as<std::string>();
@@ -83,9 +84,16 @@ public:
         auto node_session = msg->connection->get_ptr<NodeSession>();
         if (node_session->info().node_name.empty()) {
             // 未进行身份验证的连接，处理身份验证
+
             Ss::ClusterHandshake handshake;
             handshake.ParseFromArray(msg->packet.data(), msg->packet.size());
-            node_session->info().node_name = handshake.src_node();
+
+            InsertNode(handshake.src_node(), msg->connection);
+            
+            // 可能是当前节点主动发起，也可能是目标节点发起
+            // 检查下nodes是否已有此节点
+            // 断开连接用<判断node_name就行
+
             co_return;
         }
 
@@ -111,29 +119,32 @@ public:
             co_return;
         }
         if (!connection_ptr) {
+            auto session_id = AllocSessionId();
             auto& io_context = imillion_->NextIoContext();
             // 还需要考虑连接过程中有其他发给该节点的消息的处理
-            asio::co_spawn(io_context.get_executor(), [this, end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
+            asio::co_spawn(io_context.get_executor(), [this, session_id, end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
                 auto connection_opt = co_await server_.ConnectTo(end_point.ip, end_point.port);
                 if (!connection_opt) {
                     co_return;
                 }
-                auto& connection = *connection_opt;
-                Ss::ClusterHandshake handshake;
-                handshake.set_src_node(node_name_);
-                auto packet = net::Packet(handshake.ByteSize());
-                handshake.SerializeToArray(packet.data(), packet.size());
-                connection->Send(std::move(packet));
-
                 // 这里发个通知，告知连接成功
-                Send<>();
+                Reply<ClusterTcpConnectToNotifyMsg>(service_handle(), session_id, *connection_opt);
             }, asio::detached);
 
             // 这里等待通知，然后继续处理
-            co_await Recv<>();
+            auto notify_msg = co_await Recv<ClusterTcpConnectToNotifyMsg>(session_id);
 
-            auto iter = nodes_.find(msg->target_node);
-            connection_ptr = &iter->second;
+            // 设置下节点名
+            auto& connection = notify_msg->connection;
+            auto res = InsertNode(msg->target_node, connection);
+
+            Ss::ClusterHandshake handshake;
+            handshake.set_src_node(node_name_);
+            auto packet = net::Packet(handshake.ByteSize());
+            handshake.SerializeToArray(packet.data(), packet.size());
+            connection->Send(std::move(packet));
+
+            connection_ptr = &res.first->second;
         }
         auto& connection = *connection_ptr;
         // 追加集群头部
@@ -181,6 +192,19 @@ private:
             break;
         }
         return nullptr;
+    }
+
+    auto InsertNode(const NodeUniqueName& node_name, const net::TcpConnectionShared& connection) {
+        // 如果存在则需要插入失败
+        auto res = nodes_.emplace(node_name, connection);
+        if (res.second) {
+            auto node_session = connection->get_ptr<NodeSession>();
+            node_session->info().node_name = node_name;
+        }
+        else {
+            // 已存在，根据需要选择断开某一条连接
+        }
+        return res;
     }
 
 private:

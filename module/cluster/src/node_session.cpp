@@ -1,7 +1,7 @@
 #include "node_session.h"
 
 namespace million {
-namespace gateway {
+namespace cluster {
 
 
 NodeSession::NodeSession(net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor)

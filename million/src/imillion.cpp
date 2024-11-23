@@ -38,6 +38,10 @@ std::optional<ServiceHandle> IMillion::GetServiceByUniqueNum(const ServiceUnique
     return million_->GetServiceByUniqueNum(unique_name);
 }
 
+SessionId IMillion::AllocSessionId() {
+    return million_->AllocSessionId();
+}
+
 SessionId IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
     return million_->Send(sender, target, std::move(msg));
 }

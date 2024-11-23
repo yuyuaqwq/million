@@ -146,6 +146,10 @@ std::optional<ServiceHandle> Million::GetServiceByUniqueNum(const ServiceUniqueN
     return service_mgr_->GetServiceByUniqueNum(unique_name);
 }
 
+SessionId Million::AllocSessionId() {
+    return session_mgr_->AllocSessionId();
+}
+
 SessionId Million::Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
     msg->set_session_id(session_id);
     return service_mgr_->Send(sender, target, std::move(msg));
