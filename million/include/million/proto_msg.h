@@ -19,6 +19,10 @@ using ProtoMsgUnique = std::unique_ptr<protobuf::Message>;
 
 class MILLION_CLASS_API ProtoCodec : noncopyable {
 public:
+    void Init() {
+        
+    }
+
     // 注册协议
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     bool RegisterProto(const protobuf::FileDescriptor& file_desc, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
@@ -41,6 +45,14 @@ public:
             int message_count = file_desc.message_type_count();
             for (int j = 0; j < message_count; j++) {
                 const protobuf::Descriptor* desc = file_desc.message_type(j);
+
+                // 得加这个才会初始化，不知道具体原因
+                message_factory_ = protobuf::MessageFactory::generated_factory();
+                const protobuf::Message* msg = message_factory_->GetPrototype(desc);
+                if (!msg) {
+                    continue;
+                }
+
                 auto& msg_opts = desc->options();
                 if (!msg_opts.HasExtension(sub_msg_ext_id)) {
                     continue;
@@ -93,7 +105,7 @@ public:
         uint32_t sub_msg_id;
         ProtoMsgUnique proto_msg;
     };
-    std::optional<DecodeRes> DecodeMessage(const net::PacketSpan packet) {
+    std::optional<DecodeRes> DecodeMessage(net::PacketSpan packet) {
         DecodeRes res = { 0 };
 
         uint16_t msg_id_net, sub_msg_id_net;
@@ -164,7 +176,7 @@ private:
     std::optional<ProtoMsgUnique> NewMessage(uint32_t msg_id, uint32_t sub_msg_id) {
         auto desc = GetMsgDesc(msg_id, sub_msg_id);
         if (!desc) return std::nullopt;
-        const protobuf::Message* proto_msg = protobuf::MessageFactory::generated_factory()->GetPrototype(desc);
+        const protobuf::Message* proto_msg = message_factory_->GetPrototype(desc);
         if (proto_msg != nullptr) {
             return ProtoMsgUnique(proto_msg->New());
         }
@@ -190,14 +202,17 @@ private:
     }
 
 private:
+    protobuf::MessageFactory* message_factory_;
+
     std::unordered_map<uint32_t, const protobuf::Descriptor*> msg_desc_map_;
     std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
+
 };
 
 #define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, PROTO_PACKET_MSG_TYPE_, PROTO_CODEC_) \
     using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
     MILLION_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
-        auto res = (PROTO_CODEC_)->DecodeMessage(msg->span); \
+        auto res = (PROTO_CODEC_)->DecodeMessage(msg->packet); \
         if (!res) { \
             co_return; \
         } \

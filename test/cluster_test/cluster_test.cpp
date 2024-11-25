@@ -13,6 +13,8 @@ namespace protobuf = google::protobuf;
 
 MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeUniqueName)target_node, (Ss::Test::TestReq)req);
 
+using ClusterRecvPacketMsg = million::cluster::ClusterRecvPacketMsg;
+
 class TestService : public million::IService {
 public:
     using Base = million::IService;
@@ -22,11 +24,15 @@ public:
     //    , Base(imillion) {}
 
     virtual bool OnInit() override {
+        imillion_->SetServiceUniqueName(service_handle(), "TestService");
+
         auto handle = imillion_->GetServiceByUniqueNum("ClusterService");
         if (!handle) {
             return false;
         }
         cluster_ = *handle;
+
+        proto_codec_.Init();
 
         const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
         protobuf::DescriptorDatabase* db = pool->internal_generated_database();
@@ -38,6 +44,15 @@ public:
     }
 
     MILLION_MSG_DISPATCH(TestService);
+
+    MILLION_PROTO_MSG_DISPATCH(Ss, ClusterRecvPacketMsg, &proto_codec_);
+
+    MILLION_PROTO_MSG_ID(Ss, SS_MSG_ID_TEST);
+
+    MILLION_PROTO_MSG_HANDLE(Ss::Test, SS_SUB_MSG_ID_TEST_REQ, TestReq, req) {
+        LOG_INFO("test, value:{}", req->value());
+        co_return;
+    }
 
     MILLION_MSG_HANDLE(TestMsg, msg) {
         Send<million::cluster::ClusterSendPacketMsg>(cluster_, "TestService", msg->target_node, "TestService", proto_codec_.EncodeMessage(msg->req).value());

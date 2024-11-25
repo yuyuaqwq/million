@@ -106,7 +106,7 @@ public:
         auto target_service_handle = imillion_->GetServiceByUniqueNum(target_service);
         if (target_service_handle) {
             // 还需要获取下源节点
-            Send<ClusterRecvPacketMsg>(*target_service_handle, std::string(), std::move(src_service), std::move(msg->packet), net::PacketSpan(msg->packet.begin() + header.ByteSize(), msg->packet.end()));
+            Send<ClusterRecvPacketMsg>(*target_service_handle, NodeSessionHandle{ .src_node = "", .src_service = src_service }, std::move(msg->packet), net::PacketSpan(msg->packet.begin() + header.ByteSize(), msg->packet.end()));
         }
         co_return;
     }

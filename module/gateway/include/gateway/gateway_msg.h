@@ -22,7 +22,7 @@ MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySureAgentMsg, (uint64_t)session, (S
 MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySendPacketMsg, (uint64_t)session, (net::Packet)packet)
 
 // send
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvPacketMsg, (uint64_t)session, (net::Packet)packet, (net::PacketSpan)span)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvPacketMsg, (uint64_t)session, (net::Packet)packet_raw, (net::PacketSpan)packet)
 
 } // namespace gateway
 } // namespace million
