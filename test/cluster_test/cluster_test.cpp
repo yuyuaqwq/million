@@ -16,9 +16,10 @@ MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeUniqueName)target_node, (Ss
 class TestService : public million::IService {
 public:
     using Base = million::IService;
-    TestService(million::IMillion* imillion)
-        : proto_codec_(0)
-        , Base(imillion) {}
+    using Base::Base;
+    //TestService(million::IMillion* imillion)
+    //    : proto_codec_(0)
+    //    , Base(imillion) {}
 
     virtual bool OnInit() override {
         auto handle = imillion_->GetServiceByUniqueNum("ClusterService");

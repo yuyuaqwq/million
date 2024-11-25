@@ -101,36 +101,42 @@ void TcpConnection::Send(Packet&& packet) {
 void TcpConnection::Send(Packet&& packet, PacketSpan span, uint32_t total_size) {
     {
         auto lock = std::lock_guard(send_queue_mutex_);
-        bool send_in_progress = !send_queue_.empty();
         send_queue_.emplace(std::move(packet), span, total_size);
-        if (send_in_progress) {
+        if (sending_) {
             return;
         }
+        sending_ = true;
     }
 
-    asio::co_spawn(executor_, [this]() -> asio::awaitable<void> {
+    auto self = shared_from_this();
+    asio::co_spawn(executor_, [self = std::move(self)]() -> asio::awaitable<void> {
         std::queue<SendPacket> tmp_queue;
-        try {
+        try { 
             do {
                 {
-                    auto lock = std::lock_guard(send_queue_mutex_);
-                    if (send_queue_.empty()) break;
-                    std::swap(tmp_queue, send_queue_);
+                    auto lock = std::lock_guard(self->send_queue_mutex_);
+                    if (self->send_queue_.empty()) {
+                        self->sending_ = false;
+                        break;
+                    }
+                    std::swap(tmp_queue, self->send_queue_);
                 }
                 while (!tmp_queue.empty()) {
                     auto& packet = tmp_queue.front();
                     uint32_t len = packet.total_size;
                     if (len != 0) {
                         len = asio::detail::socket_ops::host_to_network_long(len);
-                        co_await asio::async_write(socket_, asio::buffer(&len, sizeof(len)), asio::use_awaitable);
+                        co_await asio::async_write(self->socket_, asio::buffer(&len, sizeof(len)), asio::use_awaitable);
                     }
-                    co_await asio::async_write(socket_, asio::buffer(packet.span.data(), packet.span.size()), asio::use_awaitable);
+                    co_await asio::async_write(self->socket_, asio::buffer(packet.span.data(), packet.span.size()), asio::use_awaitable);
                     tmp_queue.pop();
                 }
             } while (true);
         }
-        catch (const std::exception& e) {
-            Close();
+        //catch (const std::exception& e) {
+        //}
+        catch (...) {
+            self->Close();
         }
     }, asio::detached);
 }
