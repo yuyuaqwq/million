@@ -132,6 +132,7 @@ public:
                     ++iter;
                 }
             }
+            wait_nodes_.erase(res.target_node());
 
             // 创建节点
             break;
@@ -171,7 +172,13 @@ public:
             LOG_ERR("Node cannot be found: {}.", msg->target_node);
             co_return;
         }
-        if (!node_session) {
+        if (node_session) {
+            ForwardPacket(std::move(msg), node_session);
+            co_return;
+        }
+
+        if (wait_nodes_.find(msg->target_node) == wait_nodes_.end()) {
+            wait_nodes_.emplace(msg->target_node);
             auto& io_context = imillion_->NextIoContext();
             asio::co_spawn(io_context.get_executor(), [this, msg = std::move(msg), end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
                 auto connection_opt = co_await server_.ConnectTo(end_point.ip, end_point.port);
@@ -190,18 +197,13 @@ public:
 
                 auto node_session = connection->get_ptr<NodeSession>();
                 node_session->info().node_name = std::move(msg->target_node);
-            }, asio::detached);
-
-            // 还需要考虑连接过程中有其他发给该节点的消息的处理
-            // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
-            // 可以使用一个全局队列，因为这种连接排队的包很少，直接扫描就行
-
-            send_queue_.emplace_back(std::move(msg));
-
-            co_return;
+                }, asio::detached);
         }
 
-        ForwardPacket(std::move(msg), node_session);
+        // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
+        // 使用一个全局队列，因为这种连接排队的包很少，直接扫描就行
+        send_queue_.emplace_back(std::move(msg));
+
         co_return;
     }
 
@@ -297,6 +299,7 @@ private:
     NodeUniqueName node_name_;
     std::unordered_map<NodeUniqueName, net::TcpConnectionShared> nodes_;
 
+    std::set<std::string> wait_nodes_;
     std::list<std::unique_ptr<ClusterSendPacketMsg>> send_queue_;
 };
 
