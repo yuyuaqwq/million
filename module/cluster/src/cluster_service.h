@@ -97,7 +97,9 @@ public:
             // 收到握手请求，当前是被动连接方
             auto& req = cluster_msg.handshake_req();
 
-            // 是否匹配都回包
+            node_session->info().node_name = req.src_node();
+
+            // 能否匹配都回包
             Ss::Cluster::ClusterMsg cluster_msg;
             auto* res = cluster_msg.mutable_handshake_res();
             res->set_target_node(node_name_);
@@ -109,9 +111,6 @@ public:
                 msg->connection->Close();
                 co_return;
             }
-
-            node_session->info().node_name = req.src_node();
-
 
             // 创建节点
 
