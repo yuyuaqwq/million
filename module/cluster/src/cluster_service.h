@@ -95,6 +95,13 @@ public:
         switch (cluster_msg.body_case()) {
         case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeReq: {
             // 收到握手请求，当前是被动连接方
+            auto& req = cluster_msg.handshake_req();
+            if (node_name_ != req.src_node()) {
+                LOG_ERR("Src node name mismatch, ip: {}, port: {}, cur_src_node: {}, req_src_node: {}", ip, port, node_name_, req.src_node());
+                msg->connection->Close();
+                co_return;
+            }
+
             Ss::Cluster::ClusterMsg cluster_msg;
             auto* res = cluster_msg.mutable_handshake_res();
             res->set_target_node(node_name_);
@@ -109,7 +116,7 @@ public:
             // 收到握手响应，当前是主动连接方
             auto& res = cluster_msg.handshake_res();
             if (node_session->info().node_name != res.target_node()) {
-                LOG_ERR("Target node name mismatch, ip: {}, port: {}, cur_node: {}, res_node: {}", ip, port, node_session->info().node_name, res.target_node());
+                LOG_ERR("Target node name mismatch, ip: {}, port: {}, cur_target_node: {}, res_target_node: {}", ip, port, node_session->info().node_name, res.target_node());
                 msg->connection->Close();
                 co_return;
             }
@@ -130,6 +137,8 @@ public:
             break;
         }
         case Ss::Cluster::ClusterMsg::BodyCase::kForwardHeader: {
+            // 还需要判断下，连接状态没有完成握手，则不允许转发包
+
             auto& header = cluster_msg.forward_header();
             auto& src_service = header.src_service();
             auto& target_service = header.target_service();
