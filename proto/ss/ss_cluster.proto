@@ -1,12 +1,24 @@
 syntax = "proto3";
 
-package Million.Proto.Ss;
+package Million.Proto.Ss.Cluster;
 
-message ClusterHandshake {
+message ClusterMsg {
+    oneof body {
+        ClusterHandshakeReq handshake_req = 1;
+        ClusterHandshakeRes handshake_res = 2;
+        ClusterForwardHeader forward_header = 3;
+    }
+}
+
+message ClusterHandshakeReq {
     string src_node = 1;
 }
 
-message ClusterHeader {
+message ClusterHandshakeRes {
+    string target_node = 1;
+}
+
+message ClusterForwardHeader {
     string src_service = 1;
     string target_service = 2;
 }

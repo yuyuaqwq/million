@@ -209,6 +209,14 @@ private:
 
 };
 
+inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
+    auto packet = net::Packet(msg.ByteSize());
+    if (!msg.SerializeToArray(packet.data(), packet.size())) {
+        throw std::runtime_error("Failed to serialize protobuf message to packet.");
+    }
+    return packet;
+}
+
 #define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, PROTO_PACKET_MSG_TYPE_, PROTO_CODEC_) \
     using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
     MILLION_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \

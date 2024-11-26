@@ -15,7 +15,7 @@ namespace Ss = ::Million::Proto::Ss;
 
 MILLION_MSG_DEFINE(, ClusterTcpConnectionMsg, (net::TcpConnectionShared) connection)
 MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
-MILLION_MSG_DEFINE(, ClusterTcpConnectToNotifyMsg, (net::TcpConnectionShared) connection)
+MILLION_MSG_DEFINE(, ClusterHandshakeResMsg, (net::TcpConnectionShared) connection)
 
 class ClusterService : public IService {
 public:
@@ -80,34 +80,50 @@ public:
     }
 
     MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
-        auto node_session = msg->connection->get_ptr<NodeSession>();
-        if (node_session->info().node_name.empty()) {
-            // 未进行身份验证的连接，处理身份验证，是目标节点发起的连接
-            Ss::ClusterHandshake handshake;
-            if (!handshake.ParseFromArray(msg->packet.data(), msg->packet.size())) {
-                auto& ep = msg->connection->remote_endpoint();
-                auto ip = ep.address().to_string();
-                auto port = std::to_string(ep.port());
-                LOG_WARN("Invalid ClusterHandshake: ip: {}, port: {}", ip, port);
-                msg->connection->Close();
-                co_return;
-            }
-            CreateNode(handshake.src_node(), std::move(msg->connection), false);
+        Ss::Cluster::ClusterMsg cluster_msg;
+        if (!cluster_msg.ParseFromArray(msg->packet.data(), msg->packet.size())) {
+            auto& ep = msg->connection->remote_endpoint();
+            auto ip = ep.address().to_string();
+            auto port = std::to_string(ep.port());
+            LOG_WARN("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
+            msg->connection->Close();
             co_return;
         }
 
-        // 解析头部
-        Ss::ClusterHeader header;
-        header.ParseFromArray(msg->packet.data(), msg->packet.size());
+        auto node_session = msg->connection->get_ptr<NodeSession>();
 
-        auto& src_service = header.src_service();
-        auto& target_service = header.target_service();
+        switch (cluster_msg.body_case()) {
+        case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeReq: {
 
-        auto target_service_handle = imillion_->GetServiceByUniqueNum(target_service);
-        if (target_service_handle) {
-            // 还需要获取下源节点
-            Send<ClusterRecvPacketMsg>(*target_service_handle, NodeSessionHandle{ .src_node = "", .src_service = src_service }, std::move(msg->packet), net::PacketSpan(msg->packet.begin() + header.ByteSize(), msg->packet.end()));
+            break;
         }
+        case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeRes: {
+
+            break;
+        }
+        case Ss::Cluster::ClusterMsg::BodyCase::kForwardHeader: {
+            auto& header = cluster_msg.forward_header();
+            auto& src_service = header.src_service();
+            auto& target_service = header.target_service();
+            auto target_service_handle = imillion_->GetServiceByUniqueNum(target_service);
+            if (target_service_handle) {
+                // 还需要获取下源节点
+                auto span = net::PacketSpan(msg->packet.begin() + header.ByteSize(), msg->packet.end());
+                Send<ClusterRecvPacketMsg>(*target_service_handle, 
+                    NodeSessionHandle{ .src_node = "", .src_service = src_service }, 
+                    std::move(msg->packet), span);
+            }
+            break;
+        }
+        }
+        //Reply<ClusterHandshakeResMsg>(service_handle(), session_id, msg->connection);
+
+        //CreateNode(req.src_node(), std::move(msg->connection), false);
+        
+
+        //if (node_session->info().node_name.empty()) {
+        //    
+        //}
         co_return;
     }
 
@@ -125,34 +141,40 @@ public:
             asio::co_spawn(io_context.get_executor(), [this, session_id, end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
                 auto connection_opt = co_await server_.ConnectTo(end_point.ip, end_point.port);
                 if (!connection_opt) {
+                    LOG_ERR("server_.ConnectTo failed, ip: {}, port: {}.", end_point.ip, end_point.port);
                     co_return;
                 }
-                // 这里发个通知，告知连接成功
-                Reply<ClusterTcpConnectToNotifyMsg>(service_handle(), session_id, *connection_opt);
+
+                auto connection = *connection_opt;
+                // 握手
+                Ss::Cluster::ClusterMsg cluster_msg;
+                auto* req = cluster_msg.mutable_handshake_req();
+                req->set_src_node(node_name_);
+                auto packet = ProtoMsgToPacket(cluster_msg);
+                connection->Send(std::move(packet));
             }, asio::detached);
 
-            // 这里等待通知，然后继续处理
-            auto notify_msg = co_await Recv<ClusterTcpConnectToNotifyMsg>(session_id);
+            // 等待握手响应
+            // 考虑不在这里等待了，把即将要send的所有包放到队列里，在握手完成时统一发包
+            auto notify_msg = co_await Recv<ClusterHandshakeResMsg>(session_id);
 
             auto& connection = CreateNode(msg->target_node, std::move(notify_msg->connection), true);
 
-            // 发起身份验证
-            Ss::ClusterHandshake handshake;
-            handshake.set_src_node(node_name_);
-            auto packet = net::Packet(handshake.ByteSize());
-            handshake.SerializeToArray(packet.data(), packet.size());
-            connection->Send(std::move(packet));
-
             connection_ptr = connection.get();
         }
+
         // 追加集群头部
-        Ss::ClusterHeader header;
-        header.set_src_service(std::move(msg->src_service));
-        header.set_target_service(std::move(msg->target_service));
-        auto header_packet = net::Packet(header.ByteSize());
-        header.SerializeToArray(header_packet.data(), header_packet.size());
-        connection_ptr->Send(std::move(header_packet), net::PacketSpan(header_packet.begin(), header_packet.end()), header_packet.size() + msg->packet.size());
-        connection_ptr->Send(std::move(msg->packet), net::PacketSpan(msg->packet.begin(), msg->packet.end()), 0);
+        Ss::Cluster::ClusterMsg cluster_msg;
+        auto* header = cluster_msg.mutable_forward_header();
+        header->set_src_service(std::move(msg->src_service));
+        header->set_target_service(std::move(msg->target_service));
+        auto packet = ProtoMsgToPacket(cluster_msg);
+        auto span = net::PacketSpan(packet.begin(), packet.end());
+        auto size = packet.size() + msg->packet.size();
+        connection_ptr->Send(std::move(packet), span, size);
+
+        span = net::PacketSpan(msg->packet.begin(), msg->packet.end());
+        connection_ptr->Send(std::move(msg->packet), span, 0);
         co_return;
     }
 

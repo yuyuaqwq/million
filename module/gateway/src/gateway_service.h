@@ -20,6 +20,11 @@ namespace protobuf = google::protobuf;
 MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (net::TcpConnectionShared)connection)
 MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (net::TcpConnectionShared)connection, (net::Packet)packet)
 
+// 网关服务有两种模式
+// 集群、非集群
+// 集群模式：
+    // 网关服务分为主服务及代理服务，主服务负责收包，部署在单节点上
+    // 其他需要接收网关转发的包的节点，需要部署一个代理服务，代理服务负责接收集群服务转发来的网关主服务发的包，再转发给节点内的其他服务
 class GatewayService : public IService {
 public:
     using Base = IService;
