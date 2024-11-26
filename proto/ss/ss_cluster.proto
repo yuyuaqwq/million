@@ -12,6 +12,7 @@ message ClusterMsg {
 
 message ClusterHandshakeReq {
     string src_node = 1;
+    string target_node = 2;
 }
 
 message ClusterHandshakeRes {

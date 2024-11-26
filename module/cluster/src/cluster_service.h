@@ -96,17 +96,22 @@ public:
         case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeReq: {
             // 收到握手请求，当前是被动连接方
             auto& req = cluster_msg.handshake_req();
-            if (node_name_ != req.src_node()) {
-                LOG_ERR("Src node name mismatch, ip: {}, port: {}, cur_src_node: {}, req_src_node: {}", ip, port, node_name_, req.src_node());
-                msg->connection->Close();
-                co_return;
-            }
 
+            // 是否匹配都回包
             Ss::Cluster::ClusterMsg cluster_msg;
             auto* res = cluster_msg.mutable_handshake_res();
             res->set_target_node(node_name_);
             auto packet = ProtoMsgToPacket(cluster_msg);
             msg->connection->Send(std::move(packet));
+
+            if (node_name_ != req.target_node()) {
+                LOG_ERR("Src node name mismatch, ip: {}, port: {}, cur_node: {}, req_target_node: {}", ip, port, node_name_, req.target_node());
+                msg->connection->Close();
+                co_return;
+            }
+
+            node_session->info().node_name = req.src_node();
+
 
             // 创建节点
 
@@ -116,7 +121,7 @@ public:
             // 收到握手响应，当前是主动连接方
             auto& res = cluster_msg.handshake_res();
             if (node_session->info().node_name != res.target_node()) {
-                LOG_ERR("Target node name mismatch, ip: {}, port: {}, cur_target_node: {}, res_target_node: {}", ip, port, node_session->info().node_name, res.target_node());
+                LOG_ERR("Target node name mismatch, ip: {}, port: {}, target_node: {}, res_target_node: {}", ip, port, node_session->info().node_name, res.target_node());
                 msg->connection->Close();
                 co_return;
             }
@@ -192,6 +197,7 @@ public:
                 Ss::Cluster::ClusterMsg cluster_msg;
                 auto* req = cluster_msg.mutable_handshake_req();
                 req->set_src_node(node_name_);
+                req->set_target_node(msg->target_node);
                 auto packet = ProtoMsgToPacket(cluster_msg);
                 connection->Send(std::move(packet));
 
