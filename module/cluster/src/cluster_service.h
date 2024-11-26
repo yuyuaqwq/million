@@ -115,6 +115,17 @@ public:
             }
             // 完成连接，发送所有队列包
 
+            for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
+                auto& msg = *iter;
+                if (msg->target_node == res.target_node()) {
+                    ForwardPacket(std::move(msg), node_session);
+                    send_queue_.erase(iter++);
+                }
+                else {
+                    ++iter;
+                }
+            }
+
             // 创建节点
             break;
         }
@@ -127,7 +138,7 @@ public:
                 // 还需要获取下源节点
                 auto span = net::PacketSpan(msg->packet.begin() + header.ByteSize(), msg->packet.end());
                 Send<ClusterRecvPacketMsg>(*target_service_handle, 
-                    NodeSessionHandle{ .src_node = "", .src_service = src_service }, 
+                    NodeSessionHandle{ .src_node = node_session->info().node_name, .src_service = src_service},
                     std::move(msg->packet), span);
             }
             break;
@@ -146,12 +157,12 @@ public:
 
     MILLION_MSG_HANDLE(ClusterSendPacketMsg, msg) {
         EndPointRes end_point;
-        auto connection_ptr = FindNode(msg->target_node, &end_point);
-        if (!connection_ptr && end_point.ip.empty()) {
+        auto node_session = FindNode(msg->target_node, &end_point);
+        if (!node_session && end_point.ip.empty()) {
             LOG_ERR("Node cannot be found: {}.", msg->target_node);
             co_return;
         }
-        if (!connection_ptr) {
+        if (!node_session) {
             auto& io_context = imillion_->NextIoContext();
             asio::co_spawn(io_context.get_executor(), [this, msg = std::move(msg), end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
                 auto connection_opt = co_await server_.ConnectTo(end_point.ip, end_point.port);
@@ -175,26 +186,18 @@ public:
             // 还需要考虑连接过程中有其他发给该节点的消息的处理
             // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
             // 可以使用一个全局队列，因为这种连接排队的包很少，直接扫描就行
+
+            send_queue_.emplace_back(std::move(msg));
+
             co_return;
         }
 
-        // 追加集群头部
-        Ss::Cluster::ClusterMsg cluster_msg;
-        auto* header = cluster_msg.mutable_forward_header();
-        header->set_src_service(std::move(msg->src_service));
-        header->set_target_service(std::move(msg->target_service));
-        auto packet = ProtoMsgToPacket(cluster_msg);
-        auto span = net::PacketSpan(packet.begin(), packet.end());
-        auto size = packet.size() + msg->packet.size();
-        connection_ptr->Send(std::move(packet), span, size);
-
-        span = net::PacketSpan(msg->packet.begin(), msg->packet.end());
-        connection_ptr->Send(std::move(msg->packet), span, 0);
+        ForwardPacket(std::move(msg), node_session);
         co_return;
     }
 
 private:
-    net::TcpConnectionShared& CreateNode(const NodeUniqueName& target_node_name, net::TcpConnectionShared&& connection, bool active) {
+    NodeSession& CreateNode(const NodeUniqueName& target_node_name, net::TcpConnectionShared&& connection, bool active) {
         // 如果存在则需要插入失败
         auto res = nodes_.emplace(target_node_name, connection);
         if (res.second) {
@@ -226,17 +229,17 @@ private:
                 LOG_INFO("Duplicate connection, disconnect new connection: {}", target_node_name);
             }
         }
-        return res.first->second;
+        return *res.first->second->get_ptr<NodeSession>();
     }
 
     struct EndPointRes {
         std::string ip;
         std::string port;
     };
-    net::TcpConnection* FindNode(NodeUniqueName node_name, EndPointRes* end_point) {
+    NodeSession* FindNode(NodeUniqueName node_name, EndPointRes* end_point) {
         auto iter = nodes_.find(node_name);
         if (iter != nodes_.end()) {
-            return iter->second.get();
+            return iter->second->get_ptr<NodeSession>();
         }
 
         // 尝试从配置文件中查找此节点
@@ -265,10 +268,27 @@ private:
         return nullptr;
     }
 
+    void ForwardPacket(std::unique_ptr<ClusterSendPacketMsg> msg, NodeSession* node_session) {
+        // 追加集群头部
+        Ss::Cluster::ClusterMsg cluster_msg;
+        auto* header = cluster_msg.mutable_forward_header();
+        header->set_src_service(std::move(msg->src_service));
+        header->set_target_service(std::move(msg->target_service));
+        auto packet = ProtoMsgToPacket(cluster_msg);
+        auto span = net::PacketSpan(packet.begin(), packet.end());
+        auto size = packet.size() + msg->packet.size();
+        node_session->Send(std::move(packet), span, size);
+
+        span = net::PacketSpan(msg->packet.begin(), msg->packet.end());
+        node_session->Send(std::move(msg->packet), span, 0);
+    }
+
 private:
     ClusterServer server_;
     NodeUniqueName node_name_;
     std::unordered_map<NodeUniqueName, net::TcpConnectionShared> nodes_;
+
+    std::list<std::unique_ptr<ClusterSendPacketMsg>> send_queue_;
 };
 
 } // namespace gateway
