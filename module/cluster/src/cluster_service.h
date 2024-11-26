@@ -15,7 +15,6 @@ namespace Ss = ::Million::Proto::Ss;
 
 MILLION_MSG_DEFINE(, ClusterTcpConnectionMsg, (net::TcpConnectionShared) connection)
 MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
-MILLION_MSG_DEFINE(, ClusterHandshakeResMsg, (net::TcpConnectionShared) connection)
 
 class ClusterService : public IService {
 public:
@@ -80,11 +79,12 @@ public:
     }
 
     MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
+        auto& ep = msg->connection->remote_endpoint();
+        auto ip = ep.address().to_string();
+        auto port = std::to_string(ep.port());
+
         Ss::Cluster::ClusterMsg cluster_msg;
         if (!cluster_msg.ParseFromArray(msg->packet.data(), msg->packet.size())) {
-            auto& ep = msg->connection->remote_endpoint();
-            auto ip = ep.address().to_string();
-            auto port = std::to_string(ep.port());
             LOG_WARN("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
             msg->connection->Close();
             co_return;
@@ -94,11 +94,28 @@ public:
 
         switch (cluster_msg.body_case()) {
         case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeReq: {
+            // 收到握手请求，当前是被动连接方
+            Ss::Cluster::ClusterMsg cluster_msg;
+            auto* res = cluster_msg.mutable_handshake_res();
+            res->set_target_node(node_name_);
+            auto packet = ProtoMsgToPacket(cluster_msg);
+            msg->connection->Send(std::move(packet));
+
+            // 创建节点
 
             break;
         }
         case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeRes: {
+            // 收到握手响应，当前是主动连接方
+            auto& res = cluster_msg.handshake_res();
+            if (node_session->info().node_name != res.target_node()) {
+                LOG_ERR("Target node name mismatch, ip: {}, port: {}, cur_node: {}, res_node: {}", ip, port, node_session->info().node_name, res.target_node());
+                msg->connection->Close();
+                co_return;
+            }
+            // 完成连接，发送所有队列包
 
+            // 创建节点
             break;
         }
         case Ss::Cluster::ClusterMsg::BodyCase::kForwardHeader: {
@@ -135,32 +152,30 @@ public:
             co_return;
         }
         if (!connection_ptr) {
-            auto session_id = AllocSessionId();
             auto& io_context = imillion_->NextIoContext();
-            // 还需要考虑连接过程中有其他发给该节点的消息的处理
-            asio::co_spawn(io_context.get_executor(), [this, session_id, end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
+            asio::co_spawn(io_context.get_executor(), [this, msg = std::move(msg), end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
                 auto connection_opt = co_await server_.ConnectTo(end_point.ip, end_point.port);
                 if (!connection_opt) {
                     LOG_ERR("server_.ConnectTo failed, ip: {}, port: {}.", end_point.ip, end_point.port);
                     co_return;
                 }
 
-                auto connection = *connection_opt;
                 // 握手
+                auto connection = *connection_opt;
                 Ss::Cluster::ClusterMsg cluster_msg;
                 auto* req = cluster_msg.mutable_handshake_req();
                 req->set_src_node(node_name_);
                 auto packet = ProtoMsgToPacket(cluster_msg);
                 connection->Send(std::move(packet));
+
+                auto node_session = connection->get_ptr<NodeSession>();
+                node_session->info().node_name = std::move(msg->target_node);
             }, asio::detached);
 
-            // 等待握手响应
-            // 考虑不在这里等待了，把即将要send的所有包放到队列里，在握手完成时统一发包
-            auto notify_msg = co_await Recv<ClusterHandshakeResMsg>(session_id);
-
-            auto& connection = CreateNode(msg->target_node, std::move(notify_msg->connection), true);
-
-            connection_ptr = connection.get();
+            // 还需要考虑连接过程中有其他发给该节点的消息的处理
+            // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
+            // 可以使用一个全局队列，因为这种连接排队的包很少，直接扫描就行
+            co_return;
         }
 
         // 追加集群头部
