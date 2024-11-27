@@ -69,7 +69,9 @@ public:
             LOG_DEBUG("Connection establishment: ip: {}, port: {}", ip, port);
         }
         else {
-            LOG_DEBUG("Disconnection: ip: {}, port: {}", ip, port);
+            auto node_session = msg->connection->get_ptr<NodeSession>();
+            LOG_DEBUG("Disconnection: ip: {}, port: {}, cur_node: {}, target_node : {}", ip, port, node_name_, node_session->info().node_name);
+            DeleteNodeSession(node_session);
         }
 
         // 可能是主动发起，也可能是被动收到连接的，连接去重不在这里处理
@@ -110,8 +112,8 @@ public:
             // 还需要检查是否与目标节点存在连接，如果已存在，说明该连接已经失效，需要断开
             auto old_node_session = FindNodeSession(req.src_node(), nullptr);
             if (old_node_session) {
-                LOG_INFO("Disconnect the old connection, ip: {}, port: {}, cur_node: {}, req_src_node: {}", ip, port, node_name_, req.src_node());
-                DeleteNodeSession(old_node_session);
+                old_node_session->Close();
+                LOG_INFO("old connection, ip: {}, port: {}, cur_node: {}, req_src_node: {}", ip, port, node_name_, req.src_node());
             }
 
             // 能否匹配都回包
@@ -304,7 +306,6 @@ private:
     }
 
     void DeleteNodeSession(NodeSession* node_session) {
-        node_session->Close();
         nodes_.erase(node_session->info().node_name);
     }
 
