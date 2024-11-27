@@ -83,8 +83,17 @@ public:
         auto ip = ep.address().to_string();
         auto port = std::to_string(ep.port());
 
+        uint32_t header_size = 0;
+        if (msg->packet.size() < sizeof(header_size)) {
+            LOG_WARN("Invalid header size: ip: {}, port: {}", ip, port);
+            msg->connection->Close();
+            co_return;
+        }
+        header_size = *reinterpret_cast<uint32_t*>(msg->packet.data());
+        header_size = asio::detail::socket_ops::network_to_host_long(header_size);
+
         Ss::Cluster::ClusterMsg cluster_msg;
-        if (!cluster_msg.ParseFromArray(msg->packet.data(), msg->packet.size())) {
+        if (!cluster_msg.ParseFromArray(msg->packet.data() + sizeof(header_size), header_size)) {
             LOG_WARN("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
             msg->connection->Close();
             co_return;
@@ -96,7 +105,6 @@ public:
         case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeReq: {
             // 收到握手请求，当前是被动连接方
             auto& req = cluster_msg.handshake_req();
-
             node_session->info().node_name = req.src_node();
 
             // 能否匹配都回包
@@ -104,16 +112,20 @@ public:
             auto* res = cluster_msg.mutable_handshake_res();
             res->set_target_node(node_name_);
             auto packet = ProtoMsgToPacket(cluster_msg);
-            msg->connection->Send(std::move(packet));
+
+            SendInit(node_session, packet, net::Packet());
+
+            auto span = net::PacketSpan(packet.begin(), packet.end());
+            node_session->Send(std::move(packet), span, 0);
 
             if (node_name_ != req.target_node()) {
                 LOG_ERR("Src node name mismatch, ip: {}, port: {}, cur_node: {}, req_target_node: {}", ip, port, node_name_, req.target_node());
-                msg->connection->Close();
+                node_session->Close();
                 co_return;
             }
 
             // 创建节点
-
+            CreateNode(std::move(msg->connection), false);
             break;
         }
         case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeRes: {
@@ -124,12 +136,15 @@ public:
                 msg->connection->Close();
                 co_return;
             }
-            // 完成连接，发送所有队列包
+            
+            // 创建节点
+            auto& node_session_ref = CreateNode(std::move(msg->connection), true);
 
+            // 完成连接，发送所有队列包
             for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
                 auto& msg = *iter;
                 if (msg->target_node == res.target_node()) {
-                    ForwardPacket(std::move(msg), node_session);
+                    ForwardPacket(&node_session_ref, std::move(msg));
                     send_queue_.erase(iter++);
                 }
                 else {
@@ -137,12 +152,10 @@ public:
                 }
             }
             wait_nodes_.erase(res.target_node());
-
-            // 创建节点
             break;
         }
         case Ss::Cluster::ClusterMsg::BodyCase::kForwardHeader: {
-            // 还需要判断下，连接状态没有完成握手，则不允许转发包
+            // 还需要判断下，连接没有完成握手，则不允许转发包
 
             auto& header = cluster_msg.forward_header();
             auto& src_service = header.src_service();
@@ -158,14 +171,6 @@ public:
             break;
         }
         }
-        //Reply<ClusterHandshakeResMsg>(service_handle(), session_id, msg->connection);
-
-        //CreateNode(req.src_node(), std::move(msg->connection), false);
-        
-
-        //if (node_session->info().node_name.empty()) {
-        //    
-        //}
         co_return;
     }
 
@@ -177,14 +182,14 @@ public:
             co_return;
         }
         if (node_session) {
-            ForwardPacket(std::move(msg), node_session);
+            ForwardPacket(node_session, std::move(msg));
             co_return;
         }
 
         if (wait_nodes_.find(msg->target_node) == wait_nodes_.end()) {
             wait_nodes_.emplace(msg->target_node);
             auto& io_context = imillion_->NextIoContext();
-            asio::co_spawn(io_context.get_executor(), [this, msg = std::move(msg), end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
+            asio::co_spawn(io_context.get_executor(), [this, target_node = msg->target_node, end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
                 auto connection_opt = co_await server_.ConnectTo(end_point.ip, end_point.port);
                 if (!connection_opt) {
                     LOG_ERR("server_.ConnectTo failed, ip: {}, port: {}.", end_point.ip, end_point.port);
@@ -193,15 +198,20 @@ public:
 
                 // 握手
                 auto connection = *connection_opt;
+                auto node_session = connection->get_ptr<NodeSession>();
+
                 Ss::Cluster::ClusterMsg cluster_msg;
                 auto* req = cluster_msg.mutable_handshake_req();
                 req->set_src_node(node_name_);
-                req->set_target_node(msg->target_node);
+                req->set_target_node(target_node);
                 auto packet = ProtoMsgToPacket(cluster_msg);
-                connection->Send(std::move(packet));
 
-                auto node_session = connection->get_ptr<NodeSession>();
-                node_session->info().node_name = std::move(msg->target_node);
+                SendInit(node_session, packet, net::Packet());
+
+                auto span = net::PacketSpan(packet.begin(), packet.end());
+                node_session->Send(std::move(packet), span, 0);
+
+                node_session->info().node_name = std::move(target_node);
                 }, asio::detached);
         }
 
@@ -213,12 +223,12 @@ public:
     }
 
 private:
-    NodeSession& CreateNode(const NodeUniqueName& target_node_name, net::TcpConnectionShared&& connection, bool active) {
+    NodeSession& CreateNode(net::TcpConnectionShared&& connection, bool active) {
         // 如果存在则需要插入失败
+        auto node_session = connection->get_ptr<NodeSession>();
+        auto& target_node_name = node_session->info().node_name;
         auto res = nodes_.emplace(target_node_name, connection);
         if (res.second) {
-            auto node_session = connection->get_ptr<NodeSession>();
-            node_session->info().node_name = target_node_name;
             LOG_INFO("CreateNode: {}", target_node_name);
         }
         else {
@@ -284,18 +294,30 @@ private:
         return nullptr;
     }
 
-    void ForwardPacket(std::unique_ptr<ClusterSendPacketMsg> msg, NodeSession* node_session) {
+    void SendInit(NodeSession* node_session, const net::Packet& header_packet, const net::Packet& forward_packet) {
+        uint32_t header_size = header_packet.size();
+        header_size = asio::detail::socket_ops::host_to_network_long(header_size);
+        auto size_packet = net::Packet(sizeof(header_size));
+        std::memcpy(size_packet.data(), &header_size, sizeof(header_size));
+        auto size_span = net::PacketSpan(size_packet.begin(), size_packet.end());
+        auto total_size = sizeof(header_size) + header_packet.size() + forward_packet.size();
+        node_session->Send(std::move(size_packet), size_span, total_size);
+    }
+
+    void ForwardPacket(NodeSession* node_session, std::unique_ptr<ClusterSendPacketMsg> msg) {
         // 追加集群头部
         Ss::Cluster::ClusterMsg cluster_msg;
         auto* header = cluster_msg.mutable_forward_header();
         header->set_src_service(std::move(msg->src_service));
         header->set_target_service(std::move(msg->target_service));
-        auto packet = ProtoMsgToPacket(cluster_msg);
-        auto span = net::PacketSpan(packet.begin(), packet.end());
-        auto size = packet.size() + msg->packet.size();
-        node_session->Send(std::move(packet), span, size);
+        auto header_packet = ProtoMsgToPacket(cluster_msg);
+        
+        SendInit(node_session, header_packet, msg->packet);
 
-        span = net::PacketSpan(msg->packet.begin(), msg->packet.end());
+        auto header_span = net::PacketSpan(header_packet.begin(), header_packet.end());
+        node_session->Send(std::move(header_packet), header_span, 0);
+
+        auto span = net::PacketSpan(msg->packet.begin(), msg->packet.end());
         node_session->Send(std::move(msg->packet), span, 0);
     }
 

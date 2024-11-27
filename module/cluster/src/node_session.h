@@ -17,7 +17,7 @@ struct NodeSessionInfo {
 
 class NodeSession : public net::TcpConnection {
 public:
-    NodeSession(net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
+    NodeSession(net::TcpServer* server, asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor);
     ~NodeSession();
 
     const NodeSessionInfo& info() const { return info_; }

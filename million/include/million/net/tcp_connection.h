@@ -16,7 +16,7 @@ namespace net {
 class TcpServer;
 class MILLION_CLASS_API TcpConnection : public std::enable_shared_from_this<TcpConnection> {
 public:
-    TcpConnection(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
+    TcpConnection(TcpServer* server, asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor);
     virtual ~TcpConnection();
 
     void Close();
@@ -43,7 +43,7 @@ public:
 
     asio::ip::tcp::socket socket_;
     asio::ip::tcp::endpoint remote_endpoint_;
-    const asio::any_io_executor& executor_;
+    asio::any_io_executor executor_;
 
     std::mutex send_queue_mutex_;
     struct SendPacket {

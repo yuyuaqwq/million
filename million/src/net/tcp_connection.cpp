@@ -7,10 +7,10 @@ namespace net {
 TcpConnection::TcpConnection(
     TcpServer* server,
     asio::ip::tcp::socket&& socket,
-    const asio::any_io_executor& executor)
+    asio::any_io_executor&& executor)
     : server_(server)
     , socket_(std::move(socket))
-    , executor_(executor)
+    , executor_(std::move(executor))
 {
     remote_endpoint_ = socket_.remote_endpoint();
 };

@@ -20,7 +20,7 @@ struct UserSessionInfo {
 
 class UserSession : public net::TcpConnection {
 public:
-    UserSession(net::TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
+    UserSession(net::TcpServer* server, asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor);
     ~UserSession();
 
     const UserSessionInfo& info() const { return info_; }

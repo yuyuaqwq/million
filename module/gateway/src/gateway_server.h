@@ -13,8 +13,8 @@ public:
     GatewayServer(IMillion* million)
         : TcpServer(million) {}
 
-    virtual ::million::net::TcpConnectionShared MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) const override {
-        return std::make_shared<UserSession>(server, std::move(socket), executor);
+    virtual ::million::net::TcpConnectionShared MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor) const override {
+        return std::make_shared<UserSession>(server, std::move(socket), std::move(executor));
     }
 
 };

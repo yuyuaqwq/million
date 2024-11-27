@@ -35,10 +35,10 @@ public:
     // 主动建立连接，建立连接时不会调用on_connection，断开连接时会调用on_connection
     asio::awaitable<std::optional<TcpConnectionShared>> ConnectTo(std::string_view host, std::string_view port);
 
-    virtual TcpConnectionShared MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) const;
+    virtual TcpConnectionShared MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor) const;
 
 private:
-    TcpConnectionShared AddConnection(asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor);
+    TcpConnectionShared AddConnection(asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor);
     asio::awaitable<void> Listen(uint16_t port);
 
 private:

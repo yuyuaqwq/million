@@ -47,13 +47,13 @@ asio::awaitable<std::optional<TcpConnectionShared>> TcpServer::ConnectTo(std::st
     co_return std::nullopt;
 }
 
-TcpConnectionShared TcpServer::MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) const {
-    return std::make_shared<TcpConnection>(server, std::move(socket), executor);
+TcpConnectionShared TcpServer::MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor) const {
+    return std::make_shared<TcpConnection>(server, std::move(socket), std::move(executor));
 }
 
-TcpConnectionShared TcpServer::AddConnection(asio::ip::tcp::socket&& socket, const asio::any_io_executor& executor) {
+TcpConnectionShared TcpServer::AddConnection(asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor) {
     decltype(connections_)::iterator iter;
-    auto connection = MakeTcpConnectionShared(this, std::move(socket), executor);
+    auto connection = MakeTcpConnectionShared(this, std::move(socket), std::move(executor));
     auto handle = TcpConnectionShared(connection);
     {
         auto lock = std::lock_guard(connections_mutex_);
