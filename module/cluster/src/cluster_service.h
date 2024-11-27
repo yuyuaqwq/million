@@ -107,6 +107,13 @@ public:
             auto& req = cluster_msg.handshake_req();
             node_session->info().node_name = req.src_node();
 
+            // 还需要检查是否与目标节点存在连接，如果已存在，说明该连接已经失效，需要断开
+            auto old_node_session = FindNodeSession(req.src_node(), nullptr);
+            if (old_node_session) {
+                LOG_INFO("Disconnect the old connection, ip: {}, port: {}, cur_node: {}, req_src_node: {}", ip, port, node_name_, req.src_node());
+                DeleteNodeSession(old_node_session);
+            }
+
             // 能否匹配都回包
             Ss::Cluster::ClusterMsg cluster_msg;
             auto* res = cluster_msg.mutable_handshake_res();
@@ -125,7 +132,7 @@ public:
             }
 
             // 创建节点
-            CreateNode(std::move(msg->connection), false);
+            CreateNodeSession(std::move(msg->connection), false);
             break;
         }
         case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeRes: {
@@ -138,7 +145,7 @@ public:
             }
             
             // 创建节点
-            auto& node_session_ref = CreateNode(std::move(msg->connection), true);
+            auto& node_session_ref = CreateNodeSession(std::move(msg->connection), true);
 
             // 完成连接，发送所有队列包
             for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
@@ -176,7 +183,7 @@ public:
 
     MILLION_MSG_HANDLE(ClusterSendPacketMsg, msg) {
         EndPointRes end_point;
-        auto node_session = FindNode(msg->target_node, &end_point);
+        auto node_session = FindNodeSession(msg->target_node, &end_point);
         if (!node_session && end_point.ip.empty()) {
             LOG_ERR("Node cannot be found: {}.", msg->target_node);
             co_return;
@@ -223,7 +230,7 @@ public:
     }
 
 private:
-    NodeSession& CreateNode(net::TcpConnectionShared&& connection, bool active) {
+    NodeSession& CreateNodeSession(net::TcpConnectionShared&& connection, bool active) {
         // 如果存在则需要插入失败
         auto node_session = connection->get_ptr<NodeSession>();
         auto& target_node_name = node_session->info().node_name;
@@ -262,7 +269,7 @@ private:
         std::string ip;
         std::string port;
     };
-    NodeSession* FindNode(NodeUniqueName node_name, EndPointRes* end_point) {
+    NodeSession* FindNodeSession(NodeUniqueName node_name, EndPointRes* end_point) {
         auto iter = nodes_.find(node_name);
         if (iter != nodes_.end()) {
             return iter->second->get_ptr<NodeSession>();
@@ -282,16 +289,23 @@ private:
             return nullptr;
         }
 
-        for (auto node : nodes) {
-            auto node_name = node.first.as<std::string>();
-            if (node_name != node_name) continue;
+        if (end_point) {
+            for (auto node : nodes) {
+                auto node_name = node.first.as<std::string>();
+                if (node_name != node_name) continue;
 
-            end_point->ip = node.second["ip"].as<std::string>();
-            end_point->port = node.second["port"].as<std::string>();
+                end_point->ip = node.second["ip"].as<std::string>();
+                end_point->port = node.second["port"].as<std::string>();
 
-            break;
+                break;
+            }
         }
         return nullptr;
+    }
+
+    void DeleteNodeSession(NodeSession* node_session) {
+        node_session->Close();
+        nodes_.erase(node_session->info().node_name);
     }
 
     void SendInit(NodeSession* node_session, const net::Packet& header_packet, const net::Packet& forward_packet) {
