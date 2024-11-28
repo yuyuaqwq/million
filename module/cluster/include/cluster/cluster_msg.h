@@ -12,15 +12,15 @@
 namespace million {
 namespace cluster {
 
-using NodeUniqueName = std::string;
+using NodeName = std::string;
 
 struct NodeSessionHandle {
-	NodeUniqueName src_node;
-	NodeUniqueName src_service;
+	NodeName src_node;
+	NodeName src_service;
 };
 
-MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterSendPacketMsg, (ServiceUniqueName)src_service, (NodeUniqueName)target_node, (ServiceUniqueName)target_service, (net::Packet)packet)
-MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterRecvPacketMsg, (NodeSessionHandle)session, (net::Packet)raw_packet, (net::PacketSpan)packet)
+MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterSendPacketMsg, (ServiceName)src_service, (NodeName)target_node, (ServiceName)target_service, (net::Packet)packet)
+MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterRecvPacketMsg, (NodeSessionHandle)context_id, (net::Packet)raw_packet, (net::PacketSpan)packet)
 
 
 //// MILLION_MSG_DEFINE(GATEWAY_CLASS_API, UnRegisterServiceMsg, (ServiceHandle) service_handle, (Cs::MsgId) cs_msg_id)

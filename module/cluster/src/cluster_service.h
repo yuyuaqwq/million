@@ -169,7 +169,7 @@ public:
             auto& header = cluster_msg.forward_header();
             auto& src_service = header.src_service();
             auto& target_service = header.target_service();
-            auto target_service_handle = imillion_->GetServiceByUniqueNum(target_service);
+            auto target_service_handle = imillion_->GetServiceByName(target_service);
             if (target_service_handle) {
                 // 还需要获取下源节点
                 auto span = net::PacketSpan(msg->packet.begin() + sizeof(header_size) + header_size, msg->packet.end());
@@ -271,7 +271,7 @@ private:
         std::string ip;
         std::string port;
     };
-    NodeSession* FindNodeSession(NodeUniqueName node_name, EndPointRes* end_point) {
+    NodeSession* FindNodeSession(NodeName node_name, EndPointRes* end_point) {
         auto iter = nodes_.find(node_name);
         if (iter != nodes_.end()) {
             return iter->second->get_ptr<NodeSession>();
@@ -338,8 +338,8 @@ private:
 
 private:
     ClusterServer server_;
-    NodeUniqueName node_name_;
-    std::unordered_map<NodeUniqueName, net::TcpConnectionShared> nodes_;
+    NodeName node_name_;
+    std::unordered_map<NodeName, net::TcpConnectionShared> nodes_;
 
     std::set<std::string> wait_nodes_;
     std::list<std::unique_ptr<ClusterSendPacketMsg>> send_queue_;

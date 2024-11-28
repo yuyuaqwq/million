@@ -13,7 +13,7 @@ MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
     if (!handle) {
         return false;
     }
-    imillion->SetServiceUniqueName(*handle, "ClusterService");
+    imillion->SetServiceName(*handle, "ClusterService");
     return true;
 }
 

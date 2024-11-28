@@ -30,12 +30,12 @@ void IMillion::DeleteService(ServiceHandle&& service_handle) {
     million_->DeleteService(std::move(service_handle));
 }
 
-bool IMillion::SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name) {
-    return million_->SetServiceUniqueName(handle, unique_name);
+bool IMillion::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {
+    return million_->SetServiceName(handle, name);
 }
 
-std::optional<ServiceHandle> IMillion::GetServiceByUniqueNum(const ServiceUniqueName& unique_name) {
-    return million_->GetServiceByUniqueNum(unique_name);
+std::optional<ServiceHandle> IMillion::GetServiceByName(const ServiceName& name) {
+    return million_->GetServiceByName(name);
 }
 
 SessionId IMillion::AllocSessionId() {

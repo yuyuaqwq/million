@@ -11,6 +11,14 @@ ServiceMgr::ServiceMgr(Million* million)
 
 ServiceMgr::~ServiceMgr() = default;
 
+ServiceId ServiceMgr::AllocServiceId() {
+    auto id = ++service_id_;
+    if (id == 0) {
+        throw std::runtime_error("service id rolled back.");
+    }
+    return id;
+}
+
 std::optional<ServiceHandle> ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
     decltype(services_)::iterator iter;
     auto service_shared = std::make_shared<Service>(this, std::move(iservice));
@@ -74,16 +82,31 @@ Service& ServiceMgr::PopService() {
     return *service;
 }
 
-bool ServiceMgr::SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name) {
-    auto lock = std::lock_guard(unique_name_map_mutex_);
-    auto res = unique_name_map_.emplace(unique_name, handle);
+bool ServiceMgr::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {
+    auto lock = std::lock_guard(name_map_mutex_);
+    auto res = name_map_.emplace(name, handle);
     return res.second;
 }
 
-std::optional<ServiceHandle> ServiceMgr::GetServiceByUniqueNum(const ServiceUniqueName& unique_name) {
-    auto lock = std::lock_guard(unique_name_map_mutex_);
-    auto iter = unique_name_map_.find(unique_name);
-    if (iter == unique_name_map_.end()) {
+std::optional<ServiceHandle> ServiceMgr::GetServiceByName(const ServiceName& name) {
+    auto lock = std::lock_guard(name_map_mutex_);
+    auto iter = name_map_.find(name);
+    if (iter == name_map_.end()) {
+        return std::nullopt;
+    }
+    return iter->second;
+}
+
+bool ServiceMgr::SetServiceId(const ServiceHandle& handle, ServiceId id) {
+    auto lock = std::lock_guard(id_map_mutex_);
+    auto res = id_map_.emplace(id, handle);
+    return res.second;
+}
+
+std::optional<ServiceHandle> ServiceMgr::GetServiceById(ServiceId id) {
+    auto lock = std::lock_guard(id_map_mutex_);
+    auto iter = id_map_.find(id);
+    if (iter == id_map_.end()) {
         return std::nullopt;
     }
     return iter->second;

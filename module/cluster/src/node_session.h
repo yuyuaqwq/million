@@ -12,7 +12,7 @@ namespace million {
 namespace cluster {
 
 struct NodeSessionInfo {
-    NodeUniqueName node_name;
+    NodeName node_name;
 };
 
 class NodeSession : public net::TcpConnection {

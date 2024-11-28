@@ -11,7 +11,7 @@
 namespace Ss = Million::Proto::Ss;
 namespace protobuf = google::protobuf;
 
-MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeUniqueName)target_node, (Ss::Test::TestReq)req);
+MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeName)target_node, (Ss::Test::TestReq)req);
 
 using ClusterRecvPacketMsg = million::cluster::ClusterRecvPacketMsg;
 
@@ -24,9 +24,9 @@ public:
     //    , Base(imillion) {}
 
     virtual bool OnInit() override {
-        imillion_->SetServiceUniqueName(service_handle(), "TestService");
+        imillion_->SetServiceName(service_handle(), "TestService");
 
-        auto handle = imillion_->GetServiceByUniqueNum("ClusterService");
+        auto handle = imillion_->GetServiceByName("ClusterService");
         if (!handle) {
             return false;
         }

@@ -138,12 +138,12 @@ void Million::DeleteService(ServiceHandle&& service_handle) {
     service_mgr_->DeleteService(std::move(service_handle));
 }
 
-bool Million::SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name) {
-    return service_mgr_->SetServiceUniqueName(handle, unique_name);
+bool Million::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {
+    return service_mgr_->SetServiceName(handle, name);
 }
 
-std::optional<ServiceHandle> Million::GetServiceByUniqueNum(const ServiceUniqueName& unique_name) {
-    return service_mgr_->GetServiceByUniqueNum(unique_name);
+std::optional<ServiceHandle> Million::GetServiceByName(const ServiceName& name) {
+    return service_mgr_->GetServiceByName(name);
 }
 
 SessionId Million::AllocSessionId() {

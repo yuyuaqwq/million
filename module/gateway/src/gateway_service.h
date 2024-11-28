@@ -71,13 +71,13 @@ public:
         auto port = std::to_string(ep.port());
 
         if (connection->Connected()) {
-            auto user_session_id = ++user_session_id_;
-            session->info().user_session_id = user_session_id;
-            users_.emplace(session->info().user_session_id, session);
+            auto user_context_id = ++user_context_id_;
+            session->info().user_context_id = user_context_id;
+            users_.emplace(session->info().user_context_id, session);
             LOG_DEBUG("Gateway connection establishment: ip: {}, port: {}", ip, port);
         }
         else {
-            users_.erase(session->info().user_session_id);
+            users_.erase(session->info().user_context_id);
             LOG_DEBUG("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
         co_return;
@@ -93,16 +93,16 @@ public:
 
             // todo: 需要断开原先token指向的连接
         }
-        auto user_session_id = session->info().user_session_id;
+        auto user_context_id = session->info().user_context_id;
         // 没有token
         auto span = net::PacketSpan(msg->packet.begin() + kGatewayHeaderSize, msg->packet.end());
         if (session->info().token == kInvaildToken) {
-            Send<GatewayRecvPacketMsg>(user_service_, user_session_id, std::move(msg->packet), span);
+            Send<GatewayRecvPacketMsg>(user_service_, user_context_id, std::move(msg->packet), span);
         }
         else {
-            auto iter = agent_services_.find(session->info().user_session_id);
+            auto iter = agent_services_.find(session->info().user_context_id);
             if (iter != agent_services_.end()) {
-                Send<GatewayRecvPacketMsg>(iter->second, user_session_id, std::move(msg->packet), span);
+                Send<GatewayRecvPacketMsg>(iter->second, user_context_id, std::move(msg->packet), span);
             }
         }
         co_return;
@@ -114,12 +114,12 @@ public:
     }
 
     MILLION_MSG_HANDLE(GatewaySureAgentMsg, msg) {
-        agent_services_.emplace(msg->session, msg->agent_service);
+        agent_services_.emplace(msg->context_id, msg->agent_service);
         co_return;
     }
 
     MILLION_MSG_HANDLE(GatewaySendPacketMsg, msg) {
-        auto iter = users_.find(msg->session);
+        auto iter = users_.find(msg->context_id);
         if (iter == users_.end()) {
             co_return;
         }
@@ -135,9 +135,9 @@ private:
     TokenGenerator token_generator_;
     ServiceHandle user_service_;
     // 需要改掉UserSession*
-    std::atomic_uint64_t user_session_id_ = 0;
-    std::unordered_map<uint64_t, UserSession*> users_;
-    std::unordered_map<uint64_t, ServiceHandle> agent_services_;
+    std::atomic<GatewayContextId> user_context_id_ = 0;
+    std::unordered_map<GatewayContextId, UserSession*> users_;
+    std::unordered_map<GatewayContextId, ServiceHandle> agent_services_;
 
     static constexpr uint32_t kGatewayHeaderSize = 8;
 };

@@ -32,8 +32,8 @@ public:
         return AddService(std::move(iservice));
     }
     void DeleteService(ServiceHandle&& service_handle);
-    bool SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name);
-    std::optional<ServiceHandle> GetServiceByUniqueNum(const ServiceUniqueName& unique_name);
+    bool SetServiceName(const ServiceHandle& handle, const ServiceName& name);
+    std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
 
     SessionId AllocSessionId();
 

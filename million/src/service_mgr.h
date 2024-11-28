@@ -17,6 +17,8 @@ public:
     ServiceMgr(Million* million);
     ~ServiceMgr();
 
+    ServiceId AllocServiceId();
+
     std::optional<ServiceHandle> AddService(std::unique_ptr<IService> service);
     void DeleteService(ServiceHandle&& handle);
     void DeleteService(Service* service);
@@ -24,8 +26,12 @@ public:
     void PushService(Service* service);
     Service& PopService();
 
-    bool SetServiceUniqueName(const ServiceHandle& handle, const ServiceUniqueName& unique_name);
-    std::optional<ServiceHandle> GetServiceByUniqueNum(const ServiceUniqueName& unique_name);
+    bool SetServiceName(const ServiceHandle& handle, const ServiceName& name);
+    std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
+
+    bool SetServiceId(const ServiceHandle& handle, ServiceId id);
+    std::optional<ServiceHandle> GetServiceById(ServiceId id);
+
 
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     
@@ -35,11 +41,17 @@ public:
 private:
     Million* million_;
 
+    std::atomic<ServiceId> service_id_ = 0;
+
     std::mutex services_mutex_;
     std::list<std::shared_ptr<Service>> services_;
     
-    std::mutex unique_name_map_mutex_;
-    std::unordered_map<ServiceUniqueName, ServiceHandle> unique_name_map_;
+    std::mutex name_map_mutex_;
+    std::unordered_map<ServiceName, ServiceHandle> name_map_;
+
+    std::mutex id_map_mutex_;
+    std::unordered_map<ServiceId, ServiceHandle> id_map_;
+
 
     std::mutex service_queue_mutex_;
     std::queue<Service*> service_queue_;
