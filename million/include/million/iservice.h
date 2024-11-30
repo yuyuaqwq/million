@@ -81,13 +81,13 @@ protected:
 #define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_) \
     using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
     virtual ::million::Task<> OnMsg(::million::MsgUnique msg) override { \
-        auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg->type()); \
+        auto iter = _MILLION_MSG_HANDLE_MAP_.find(&msg->type()); \
         if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
             co_await (this->*iter->second)(std::move(msg)); \
         } \
         co_return; \
     } \
-    ::std::unordered_map<std::string, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<const std::type_info*, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
 
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
@@ -98,7 +98,7 @@ protected:
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            auto res = _MILLION_MSG_HANDLE_MAP_.insert(::std::make_pair(MSG_TYPE_::kType, \
+            auto res = _MILLION_MSG_HANDLE_MAP_.insert(::std::make_pair(&MSG_TYPE_::type_static(), \
                 &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
             )); \
             assert(res.second); \

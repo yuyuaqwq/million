@@ -22,7 +22,7 @@ public:
 	const ServiceHandle& sender() const { return sender_; }
 	void set_sender(const ServiceHandle& sender) { sender_ = sender; }
 
-	virtual const char* type() const { return "IMsg"; };
+	virtual const std::type_info& type() const { return typeid(IMsg); };
 
     template<typename MsgT>
     MsgT* get() { return static_cast<MsgT*>(this); }
@@ -123,25 +123,25 @@ private:
 #define _MILLION_META_FIELD_DATAS(name, ...) META_FOR(_MILLION_DEF_META_FIELD_DATA_IMPL, 0, META_COUNT(__VA_ARGS__), name, __VA_ARGS__)
 
 // 数据定义的主宏
-#define MILLION_MSG_DEFINE(CLASS_API_, name, ...) \
-    class CLASS_API_ name : public ::million::IMsg { \
+#define MILLION_MSG_DEFINE(CLASS_API_, NAME_, ...) \
+    class CLASS_API_ NAME_ : public ::million::IMsg { \
 	public: \
-        name() = delete; \
-		name(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
+        NAME_() = delete; \
+		NAME_(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
 			: _MILLION_CTOR_INIT_LIST(__VA_ARGS__) {} \
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
-        constexpr static inline const char* kType = #name; \
-		virtual const char* type() const override { return kType; } \
+		virtual const std::type_info& type() const override { return type_static(); } \
+		static const std::type_info& type_static() { return typeid(NAME_); } \
 		template<size_t index> struct MetaFieldData; \
 		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
-		_MILLION_META_FIELD_DATAS(name, __VA_ARGS__) \
+		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
 	};
 
-#define MILLION_MSG_DEFINE_EMPTY(CLASS_API_, name) \
-    class CLASS_API_ name : public ::million::IMsg { \
+#define MILLION_MSG_DEFINE_EMPTY(CLASS_API_, NAME_) \
+    class CLASS_API_ NAME_ : public ::million::IMsg { \
 	public: \
-        constexpr static inline const char* kType = #name; \
-		virtual const char* type() const override { return kType; } \
+		virtual const std::type_info& type() const override { return type_static(); } \
+		static const std::type_info& type_static() { return typeid(NAME_); } \
 	};
 
 template<class T, class Func>

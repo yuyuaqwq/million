@@ -2,8 +2,8 @@
 
 #include <million/imillion.h>
 
-MILLION_MSG_DEFINE(, Test1Msg, (int)value1, (std::string)value2);
-MILLION_MSG_DEFINE(, Test2Msg, (int)value1, (std::string)value2);
+MILLION_MSG_DEFINE(, Test1Msg, (int) value1, (std::string) value2);
+MILLION_MSG_DEFINE(, Test2Msg, (int) value1, (std::string) value2);
 
 class TestService : public million::IService {
     using Base = million::IService;
@@ -24,7 +24,7 @@ class TestService : public million::IService {
     }
 
     virtual million::Task<> OnMsg(million::MsgUnique msg) override {
-        if (msg->type() == Test2Msg::kType) {
+        if (msg->type() == Test2Msg::type_static()) {
             auto msg_ = static_cast<Test2Msg*> (msg.get());
             std::cout << msg_->session_id() << std::endl;
             std::cout << "Test2Msg" << msg_->value1 << msg_->value2 << std::endl;
@@ -99,7 +99,7 @@ class TestApp : public million::IMillion {
 
 int main() {
     auto test_app = std::make_unique<TestApp>();
-    if (!test_app->Init("example_config.yaml")) {
+    if (!test_app->Init("task_test_config.yaml")) {
         return 0;
     }
 
@@ -122,7 +122,7 @@ int main() {
     test_app->Send<Test1Msg>(service_handle, service_handle, 6, "hhh");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    test_app->Send<Test1Msg>(service_handle, service_handle, 7, "hhh");
+    test_app->Send<Test2Msg>(service_handle, service_handle, 7, "hhh");
 
     return 0;
 }

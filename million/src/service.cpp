@@ -47,7 +47,7 @@ bool Service::MsgQueueIsEmpty() {
 }
 
 void Service::ProcessMsg(MsgUnique msg) {
-    if (msg->type() == MillionServiceStartMsg::kType) {
+    if (msg->type() == MillionServiceStartMsg::type_static()) {
         task_.emplace(iservice_->OnStart());
         if (!task_->coroutine.done()) {
             // OnStart未完成，等待处理完成
@@ -60,7 +60,7 @@ void Service::ProcessMsg(MsgUnique msg) {
         }
         return;
     }
-    else if (msg->type() == MillionServiceStopMsg::kType) {
+    else if (msg->type() == MillionServiceStartMsg::type_static()) {
         // if (state_ == ServiceState::kReady) {
             // OnStart未完成，直接退出
         iservice_->OnExit();
@@ -73,7 +73,7 @@ void Service::ProcessMsg(MsgUnique msg) {
 
     if (state_ == ServiceState::kReady) {
         assert(task_);
-        if (msg->type() == MillionSessionTimeoutMsg::kType) {
+        if (msg->type() == MillionSessionTimeoutMsg::type_static()) {
             auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
             // 超时未完成OnStart，准备销毁服务
             iservice_->OnTimeout(std::move(*task_));
@@ -90,7 +90,7 @@ void Service::ProcessMsg(MsgUnique msg) {
         return;
     }
 
-    if (msg->type() == MillionSessionTimeoutMsg::kType) {
+    if (msg->type() == MillionSessionTimeoutMsg::type_static()) {
         auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
         auto task_opt = excutor_.TimeoutCleanup(msg_ptr->timeout_id);
         if (task_opt) {

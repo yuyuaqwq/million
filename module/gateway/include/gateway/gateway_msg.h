@@ -19,12 +19,12 @@ namespace gateway {
 using GatewayContextId = uint64_t;
 
 // recv
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRegisterUserServiceMsg, (ServiceHandle)user_service)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySureAgentMsg, (GatewayContextId)context_id, (ServiceHandle)agent_service)
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySendPacketMsg, (GatewayContextId)context_id, (net::Packet)packet)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRegisterUserServiceMsg, (ServiceHandle) user_service)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySureAgentMsg, (GatewayContextId) context_id, (ServiceHandle) agent_service)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySendPacketMsg, (GatewayContextId) context_id, (net::Packet) packet)
 
 // send
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvPacketMsg, (GatewayContextId)context_id, (net::Packet)packet_raw, (net::PacketSpan)packet)
+MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvPacketMsg, (GatewayContextId) context_id, (net::Packet) packet_raw, (net::PacketSpan) packet)
 
 } // namespace gateway
 } // namespace million
