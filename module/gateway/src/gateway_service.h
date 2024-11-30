@@ -1,10 +1,11 @@
 #pragma once
 
-#include <gateway/gateway_msg.h>
+#include <yaml-cpp/yaml.h>
 
 #include <million/iservice.h>
 
 #include <gateway/api.h>
+#include <gateway/gateway_msg.h>
 
 #include "gateway_server.h"
 
@@ -16,6 +17,77 @@ namespace million {
 namespace gateway {
 
 namespace protobuf = google::protobuf; 
+
+class AgentService : public IService {
+public:
+    using Base = IService;
+    AgentService(IMillion* imillion, uint64_t gateway_context_id)
+        : Base(imillion)
+        , gateway_context_id_(gateway_context_id) {}
+
+    MILLION_MSG_DISPATCH(AgentService);
+
+    MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
+        auto res = g_proto_codec->DecodeMessage(msg->packet);
+        auto iter = g_logic_handle_map->find(res->msg_id);
+        if (iter == g_logic_handle_map->end()) {
+            LOG_ERR("DecodeMessage failed, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
+            co_return;
+        }
+        co_await iter->second(this, *res->proto_msg);
+        co_return;
+    }
+
+private:
+    friend void AgentSend(AgentService* service, const protobuf::Message& msg);
+
+    ServiceHandle gateway_;
+    GatewayContextId gateway_context_id_;
+};
+
+
+class NodeMgrService : public IService {
+public:
+    using Base = IService;
+    using Base::Base;
+
+    MILLION_MSG_DISPATCH(NodeMgrService);
+
+    MILLION_MSG_HANDLE(NodeMgrNewAgentMsg, msg) {
+        auto handle = imillion_->NewService<AgentService>(msg->context_id);
+        if (!handle) {
+            co_return;
+        }
+        msg->agent_handle = std::move(*handle);
+        Reply(std::move(msg));
+        co_return;
+    }
+
+private:
+};
+
+class AgentMgrService : public IService {
+public:
+    using Base = IService;
+    using Base::Base;
+
+    MILLION_MSG_DISPATCH(AgentMgrService);
+
+    MILLION_MSG_HANDLE(AgentMgrLoginMsg, msg) {
+        auto agent_msg = co_await Call<NodeMgrNewAgentMsg>(node_mgr_, msg->context_id, std::nullopt);
+        msg->agent_handle = std::move(agent_msg->agent_handle);
+
+        Send<GatewaySureAgentMsg>(gateway_, msg->context_id, *msg->agent_handle);
+
+        Reply(std::move(msg));
+        co_return;
+    }
+
+private:
+    ServiceHandle gateway_;
+    ServiceHandle node_mgr_;
+};
+
 
 MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (net::TcpConnectionShared) connection)
 MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)

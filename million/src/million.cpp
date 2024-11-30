@@ -176,6 +176,7 @@ void Million::Log(const ServiceHandle& sender, logger::LogLevel level, const cha
 }
 
 void Million::EnableSeparateWorker(const ServiceHandle& service) {
+    assert(service.service());
     service.service()->EnableSeparateWorker();
 }
 

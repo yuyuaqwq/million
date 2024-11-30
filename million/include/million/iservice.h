@@ -70,6 +70,7 @@ public:
     virtual void OnExit() {}
     virtual void OnTimeout(Task<>&& task) {}
 
+    IMillion& imillion() { return *imillion_; }
     const ServiceHandle& service_handle() const { return service_handle_; }
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
 
@@ -98,9 +99,9 @@ protected:
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            auto res = _MILLION_MSG_HANDLE_MAP_.insert(::std::make_pair(&MSG_TYPE_::type_static(), \
+            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(&MSG_TYPE_::type_static(), \
                 &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
-            )); \
+            ); \
             assert(res.second); \
             return true; \
         }(); \

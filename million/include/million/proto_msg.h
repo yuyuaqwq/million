@@ -17,6 +17,10 @@ namespace protobuf = google::protobuf;
 
 using ProtoMsgUnique = std::unique_ptr<protobuf::Message>;
 
+using MsgKey = uint32_t;
+using MsgId = uint32_t;
+using SubMsgId = uint32_t;
+
 class MILLION_CLASS_API ProtoCodec : noncopyable {
 public:
     void Init() {
@@ -36,8 +40,8 @@ public:
             }
 
             auto msg_id = enum_opts.GetExtension(msg_ext_id);
-            auto msg_id_u32 = static_cast<uint32_t>(msg_id);
-            if (msg_id_u32 > kMsgIdMax) {
+            auto msg_id_ui = static_cast<MsgId>(msg_id);
+            if (msg_id_ui > kMsgIdMax) {
                 // throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{} > kMsgIdMax", msg_id_u32));
                 return false;
             }
@@ -59,15 +63,15 @@ public:
                 }
 
                 auto sub_msg_id = msg_opts.GetExtension(sub_msg_ext_id);
-                auto sub_msg_id_u32 = static_cast<uint32_t>(sub_msg_id);
-                if (sub_msg_id_u32 > kSubMsgIdMax) {
+                auto sub_msg_id_ui = static_cast<SubMsgId>(sub_msg_id);
+                if (sub_msg_id_ui > kSubMsgIdMax) {
                     // throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", msg_id_u32, sub_msg_id_u32));
                     return false;
                 }
 
                 static_assert(sizeof(msg_id) == sizeof(sub_msg_id), "");
 
-                auto key = CalcKey(msg_id_u32, sub_msg_id_u32);
+                auto key = CalcKey(msg_id_ui, sub_msg_id_ui);
                 msg_desc_map_.emplace(key, desc);
                 msg_id_map_.emplace(desc, key);
             }
@@ -85,8 +89,8 @@ public:
         }
         auto [msg_id, sub_msg_id] = CalcMsgId(*msg_key);
 
-        uint16_t msg_id_net = host_to_network_short(static_cast<uint16_t>(msg_id));
-        uint16_t sub_msg_id_net = host_to_network_short(static_cast<uint16_t>(sub_msg_id));
+        MsgId msg_id_net = host_to_network_short(static_cast<uint16_t>(msg_id));
+        SubMsgId sub_msg_id_net = host_to_network_short(static_cast<uint16_t>(sub_msg_id));
 
         auto packet = net::Packet(sizeof(msg_id_net) + sizeof(sub_msg_id_net) + message.ByteSize());
         size_t i = 0;
@@ -101,14 +105,15 @@ public:
 
     // ½âÂëÏûÏ¢
     struct DecodeRes {
-        uint32_t msg_id;
-        uint32_t sub_msg_id;
+        MsgId msg_id;
+        SubMsgId sub_msg_id;
         ProtoMsgUnique proto_msg;
     };
     std::optional<DecodeRes> DecodeMessage(net::PacketSpan packet) {
         DecodeRes res = { 0 };
 
-        uint16_t msg_id_net, sub_msg_id_net;
+        MsgId msg_id_net;
+        SubMsgId sub_msg_id_net;
         if (packet.size() <  sizeof(msg_id_net) + sizeof(sub_msg_id_net)) return std::nullopt;
 
         size_t i = 0;
@@ -117,8 +122,8 @@ public:
         std::memcpy(&sub_msg_id_net, packet.data() + i, sizeof(sub_msg_id_net));
         i += sizeof(sub_msg_id_net);
 
-        res.msg_id = static_cast<uint32_t>(network_to_host_short(msg_id_net));
-        res.sub_msg_id = static_cast<uint32_t>(network_to_host_short(sub_msg_id_net));
+        res.msg_id = static_cast<MsgId>(network_to_host_short(msg_id_net));
+        res.sub_msg_id = static_cast<SubMsgId>(network_to_host_short(sub_msg_id_net));
         if (res.msg_id > kMsgIdMax) {
             return std::nullopt;
         }
@@ -137,43 +142,43 @@ public:
         return res;
     }
 
-    std::optional<std::pair<uint32_t, uint32_t>> GetMsgId(const protobuf::Message& message) {
+    std::optional<std::pair<MsgId, SubMsgId>> GetMsgId(const protobuf::Message& message) {
         auto key = GetMsgKey(message.GetDescriptor());
         if (!key) return std::nullopt;
         return CalcMsgId(*key);
     }
 
 #undef max
-    constexpr static inline uint32_t kMsgIdMax = std::numeric_limits<uint16_t>::max();
-    constexpr static inline uint32_t kSubMsgIdMax = std::numeric_limits<uint16_t>::max();
+    constexpr static inline MsgId kMsgIdMax = std::numeric_limits<uint16_t>::max();
+    constexpr static inline SubMsgId kSubMsgIdMax = std::numeric_limits<uint16_t>::max();
 
-    static uint32_t CalcKey(uint32_t msg_id, uint32_t sub_msg_id) {
+    static MsgKey CalcKey(MsgId msg_id, SubMsgId sub_msg_id) {
         assert(static_cast<uint32_t>(msg_id) <= kMsgIdMax);
         assert(sub_msg_id <= kSubMsgIdMax);
         return uint32_t(static_cast<uint32_t>(msg_id) << 16) | static_cast<uint16_t>(sub_msg_id);
     }
 
-    static std::pair<uint32_t, uint32_t> CalcMsgId(uint32_t key) {
+    static std::pair<MsgId, SubMsgId> CalcMsgId(MsgKey key) {
         auto msg_id = key >> 16;
         auto sub_msg_id = key & 0xffff;
         return std::make_pair(msg_id, sub_msg_id);
     }
 
 private:
-    const protobuf::Descriptor* GetMsgDesc(uint32_t msg_id, uint32_t sub_msg_id) {
+    const protobuf::Descriptor* GetMsgDesc(MsgId msg_id, SubMsgId sub_msg_id) {
         auto key = CalcKey(msg_id, sub_msg_id);
         auto iter = msg_desc_map_.find(key);
         if (iter == msg_desc_map_.end()) return nullptr;
         return iter->second;
     }
 
-    std::optional<uint32_t> GetMsgKey(const protobuf::Descriptor* desc) {
+    std::optional<MsgKey> GetMsgKey(const protobuf::Descriptor* desc) {
         auto iter = msg_id_map_.find(desc);
         if (iter == msg_id_map_.end()) return std::nullopt;
         return iter->second;
     }
 
-    std::optional<ProtoMsgUnique> NewMessage(uint32_t msg_id, uint32_t sub_msg_id) {
+    std::optional<ProtoMsgUnique> NewMessage(MsgId msg_id, SubMsgId sub_msg_id) {
         auto desc = GetMsgDesc(msg_id, sub_msg_id);
         if (!desc) return std::nullopt;
         const protobuf::Message* proto_msg = message_factory_->GetPrototype(desc);
@@ -204,8 +209,8 @@ private:
 private:
     protobuf::MessageFactory* message_factory_;
 
-    std::unordered_map<uint32_t, const protobuf::Descriptor*> msg_desc_map_;
-    std::unordered_map<const protobuf::Descriptor*, uint32_t> msg_id_map_;
+    std::unordered_map<MsgKey, const protobuf::Descriptor*> msg_desc_map_;
+    std::unordered_map<const protobuf::Descriptor*, MsgKey> msg_id_map_;
 
 };
 
@@ -231,7 +236,7 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
         co_return; \
     } \
     NAMESPACE_::##NAMESPACE_##MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_; \
-    ::std::unordered_map<uint32_t, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)&, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<::million::MsgKey, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)&, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
 
 #define MILLION_PROTO_MSG_ID(NAMESPACE_, MSG_ID_) \
     const bool _MILLION_PROTO_MSG_HANDLE_SET_MSG_ID_##MSG_ID_ = \
@@ -248,9 +253,9 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     } \
     const bool MILLION_PROTO_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            _MILLION_PROTO_MSG_HANDLE_MAP_.insert(::std::make_pair(::million::ProtoCodec::CalcKey(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
+            _MILLION_PROTO_MSG_HANDLE_MAP_.emplace(::million::ProtoCodec::CalcKey(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
                 &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I \
-            )); \
+            ); \
             return true; \
         }(); \
     ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)& context_id, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
