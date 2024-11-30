@@ -21,9 +21,9 @@ namespace protobuf = google::protobuf;
 class AgentService : public IService {
 public:
     using Base = IService;
-    AgentService(IMillion* imillion, uint64_t gateway_context_id)
+    AgentService(IMillion* imillion, uint64_t user_context_id)
         : Base(imillion)
-        , gateway_context_id_(gateway_context_id) {}
+        , user_context_id_(user_context_id) {}
 
     MILLION_MSG_DISPATCH(AgentService);
 
@@ -42,7 +42,7 @@ private:
     friend void AgentSend(AgentService* service, const protobuf::Message& msg);
 
     ServiceHandle gateway_;
-    GatewayContextId gateway_context_id_;
+    UserContextId user_context_id_;
 };
 
 
@@ -207,9 +207,9 @@ private:
     TokenGenerator token_generator_;
     ServiceHandle user_service_;
     // 需要改掉UserSession*
-    std::atomic<GatewayContextId> user_context_id_ = 0;
-    std::unordered_map<GatewayContextId, UserSession*> users_;
-    std::unordered_map<GatewayContextId, ServiceHandle> agent_services_;
+    std::atomic<UserContextId> user_context_id_ = 0;
+    std::unordered_map<UserContextId, UserSession*> users_;
+    std::unordered_map<UserContextId, ServiceHandle> agent_services_;
 
     static constexpr uint32_t kGatewayHeaderSize = 8;
 };
