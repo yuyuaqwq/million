@@ -28,9 +28,9 @@ public:
     MILLION_MSG_DISPATCH(AgentService);
 
     MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
-        auto res = g_proto_codec->DecodeMessage(msg->packet);
-        auto iter = g_logic_handle_map->find(res->msg_id);
-        if (iter == g_logic_handle_map->end()) {
+        auto res = g_agent_proto_codec->DecodeMessage(msg->packet);
+        auto iter = g_agent_logic_handle_map->find(res->msg_id);
+        if (iter == g_agent_logic_handle_map->end()) {
             LOG_ERR("DecodeMessage failed, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
             co_return;
         }

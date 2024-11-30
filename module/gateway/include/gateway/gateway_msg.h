@@ -37,15 +37,15 @@ MILLION_MSG_DEFINE(GATEWAY_CLASS_API, AgentMgrLoginMsg, (GatewayContextId) conte
 
 class AgentService;
 using MsgLogicHandleFunc = Task<>(*)(AgentService* agent, const protobuf::Message& proto_msg);
-extern GATEWAY_OBJECT_API ProtoCodec* g_proto_codec;
-extern GATEWAY_OBJECT_API std::unordered_map<MsgKey, MsgLogicHandleFunc>* g_logic_handle_map;
+extern GATEWAY_OBJECT_API ProtoCodec* g_agent_proto_codec;
+extern GATEWAY_OBJECT_API std::unordered_map<MsgKey, MsgLogicHandleFunc>* g_agent_logic_handle_map;
 
 void AgentSend(AgentService* agent, const protobuf::Message& proto_msg);
 
 //static MsgId s_msg_id = 0;
 //Task<> MsgHandle(AgentService* agent, const protobuf::Message& proto_msg);
 //const bool _MILLION_AGENT_MSG_HANDLE_REGISTER_ = [] { 
-//    auto res = g_logic_handle_map->emplace(g_proto_codec->CalcKey(s_msg_id, 1), MsgHandle);
+//    auto res = g_agent_logic_handle_map->emplace(g_agent_proto_codec->CalcKey(s_msg_id, 1), MsgHandle);
 //    assert(res.second);
 //    return true;
 //}();
