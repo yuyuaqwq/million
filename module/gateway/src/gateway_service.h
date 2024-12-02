@@ -30,9 +30,13 @@ private:
 
     MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
         auto res = g_agent_proto_codec->DecodeMessage(msg->packet);
-        auto iter = g_agent_logic_handle_map->find(res->msg_id);
-        if (iter == g_agent_logic_handle_map->end()) {
+        if (!res) {
             LOG_ERR("DecodeMessage failed, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
+            co_return;
+        }
+        auto iter = g_agent_logic_handle_map->find(ProtoCodec::CalcKey(res->msg_id, res->sub_msg_id));
+        if (iter == g_agent_logic_handle_map->end()) {
+            LOG_ERR("Agent logic handle not found, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
             co_return;
         }
         co_await iter->second(this, *res->proto_msg);
@@ -66,6 +70,7 @@ public:
     MILLION_MSG_HANDLE(NodeMgrNewAgentMsg, msg) {
         auto handle = imillion_->NewService<AgentService>(msg->context_id);
         if (!handle) {
+            LOG_ERR("NewService AgentService failed.");
             co_return;
         }
         msg->agent_handle = std::move(*handle);
@@ -80,6 +85,22 @@ class AgentMgrService : public IService {
 public:
     using Base = IService;
     using Base::Base;
+
+    virtual bool OnInit() override {
+        auto handle = imillion_->GetServiceByName("GatewayService");
+        if (!handle) {
+            LOG_ERR("GatewayService not found.");
+            return false;
+        }
+        gateway_ = *handle;
+
+        handle = imillion_->GetServiceByName("NodeMgrService");
+        if (!handle) {
+            LOG_ERR("NodeMgrService not found.");
+            return false;
+        }
+        node_mgr_ = *handle;
+    }
 
     MILLION_MSG_DISPATCH(AgentMgrService);
 
@@ -178,14 +199,14 @@ public:
         auto user_context_id = session->info().user_context_id;
         // 没有token
         auto span = net::PacketSpan(msg->packet.begin() + kGatewayHeaderSize, msg->packet.end());
-        if (session->info().token == kInvaildToken) {
+        auto iter = agent_services_.find(session->info().user_context_id);
+
+        // if (session->info().token == kInvaildToken) {
+        if (iter == agent_services_.end()) {
             Send<GatewayRecvPacketMsg>(user_service_, user_context_id, std::move(msg->packet), span);
         }
         else {
-            auto iter = agent_services_.find(session->info().user_context_id);
-            if (iter != agent_services_.end()) {
-                Send<GatewayRecvPacketMsg>(iter->second, user_context_id, std::move(msg->packet), span);
-            }
+            Send<GatewayRecvPacketMsg>(iter->second, user_context_id, std::move(msg->packet), span);
         }
         co_return;
     }

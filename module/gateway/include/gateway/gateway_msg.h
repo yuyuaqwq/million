@@ -39,8 +39,40 @@ class AgentService;
 using MsgLogicHandleFunc = Task<>(*)(AgentService* agent, const protobuf::Message& proto_msg);
 extern GATEWAY_OBJECT_API ProtoCodec* g_agent_proto_codec;
 extern GATEWAY_OBJECT_API std::unordered_map<MsgKey, MsgLogicHandleFunc>* g_agent_logic_handle_map;
+extern GATEWAY_OBJECT_API MsgId _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_;
+
 
 // ‘ –Ì”√ªßºÃ≥–agentservice
+
+#define MILLION_AGENT_LOGIC_MSG_ID(NAMESPACE_, MSG_ID_) \
+    const bool _MILLION_AGENT_LOGIC_HANDLE_SET_MSG_ID_##MSG_ID_ = \
+        [] { \
+            if (!::million::gateway::g_agent_proto_codec) { \
+                ::million::gateway::g_agent_proto_codec = new ::million::ProtoCodec(); \
+            } \
+            _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = static_cast<::million::MsgId>(NAMESPACE_::MSG_ID_); \
+            return true; \
+        }() \
+
+#define MILLION_AGENT_LOGIC_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_NAME_) \
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::gateway::AgentService* agent, const NAMESPACE_::MSG_TYPE_& MSG_NAME_); \
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::gateway::AgentService* agent, const protobuf::Message& MSG_NAME_) { \
+        co_await _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(agent, *static_cast<const NAMESPACE_::MSG_TYPE_*>(&MSG_NAME_)); \
+        co_return; \
+    } \
+    const bool MILLION_AGENT_LOGIC_HANDLE_REGISTER_##MSG_TYPE_ =  \
+        [] { \
+            if (!::million::gateway::g_agent_logic_handle_map) { \
+                ::million::gateway::g_agent_logic_handle_map = new std::unordered_map<::million::MsgKey, ::million::gateway::MsgLogicHandleFunc>(); \
+            } \
+            auto res = ::million::gateway::g_agent_logic_handle_map->emplace(::million::ProtoCodec::CalcKey(_MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
+                _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I \
+            ); \
+            assert(res.second); \
+            return true; \
+        }(); \
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::gateway::AgentService* agent, const NAMESPACE_::MSG_TYPE_& MSG_NAME_)
+
 
 //static MsgId s_msg_id = 0;
 //Task<> MsgHandle(AgentService* agent, const protobuf::Message& proto_msg);

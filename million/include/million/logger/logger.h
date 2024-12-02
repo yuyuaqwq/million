@@ -21,7 +21,7 @@ enum LogLevel : int {
         MILLION_->Log(SENDER, LEVEL_, __FILE__, __LINE__, __func__,  ::std::format(FMT_, __VA_ARGS__))
 
 #define MILLION_SERVICE_LOGGER_CALL(LEVEL_, FMT_, ...) \
-        imillion_->Log(service_handle(), LEVEL_, __FILE__, __LINE__, __func__,  ::std::format(FMT_, __VA_ARGS__))
+        imillion_->Log(service_handle_, LEVEL_, __FILE__, __LINE__, __func__,  ::std::format(FMT_, __VA_ARGS__))
 
 #define LOG_TRACE(...) MILLION_SERVICE_LOGGER_CALL(::million::logger::LogLevel::kTrace, __VA_ARGS__)
 #define LOG_DEBUG(...) MILLION_SERVICE_LOGGER_CALL(::million::logger::LogLevel::kDebug, __VA_ARGS__)

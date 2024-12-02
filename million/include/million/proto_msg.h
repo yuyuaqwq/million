@@ -18,8 +18,8 @@ namespace protobuf = google::protobuf;
 using ProtoMsgUnique = std::unique_ptr<protobuf::Message>;
 
 using MsgKey = uint32_t;
-using MsgId = uint32_t;
-using SubMsgId = uint32_t;
+using MsgId = uint16_t;
+using SubMsgId = uint16_t;
 
 class MILLION_CLASS_API ProtoCodec : noncopyable {
 public:
@@ -149,13 +149,13 @@ public:
     }
 
 #undef max
-    constexpr static inline MsgId kMsgIdMax = std::numeric_limits<uint16_t>::max();
-    constexpr static inline SubMsgId kSubMsgIdMax = std::numeric_limits<uint16_t>::max();
+    constexpr static inline MsgId kMsgIdMax = std::numeric_limits<MsgId>::max();
+    constexpr static inline SubMsgId kSubMsgIdMax = std::numeric_limits<SubMsgId>::max();
 
     static MsgKey CalcKey(MsgId msg_id, SubMsgId sub_msg_id) {
-        assert(static_cast<uint32_t>(msg_id) <= kMsgIdMax);
+        assert(static_cast<MsgKey>(msg_id) <= kMsgIdMax);
         assert(sub_msg_id <= kSubMsgIdMax);
-        return uint32_t(static_cast<uint32_t>(msg_id) << 16) | static_cast<uint16_t>(sub_msg_id);
+        return MsgKey(static_cast<MsgKey>(msg_id) << sizeof(sub_msg_id) * 8) | static_cast<MsgKey>(sub_msg_id);
     }
 
     static std::pair<MsgId, SubMsgId> CalcMsgId(MsgKey key) {
@@ -253,7 +253,7 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     } \
     const bool MILLION_PROTO_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            _MILLION_PROTO_MSG_HANDLE_MAP_.emplace(::million::ProtoCodec::CalcKey(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
+            _MILLION_PROTO_MSG_HANDLE_MAP_.emplace(::million::ProtoCodec::CalcKey(static_cast<::million::MsgId>(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_), static_cast<::million::SubMsgId>(NAMESPACE_::SUB_MSG_ID_)), \
                 &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I \
             ); \
             return true; \
