@@ -8,11 +8,13 @@ namespace million {
 namespace gateway {
 
 MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
-    if (!g_agent_proto_codec) {
-        g_agent_proto_codec = new ProtoCodec();
-    }
-    if (!g_agent_logic_handle_map) {
-        g_agent_logic_handle_map = new std::unordered_map<MsgKey, MsgLogicHandleFunc>();
+    g_agent_proto_codec = new ProtoCodec();
+    g_agent_logic_handle_map = new std::unordered_map<MsgKey, MsgLogicHandleFunc>();
+    
+    if (g_agent_logic_init) {
+        for (auto& init : *g_agent_logic_init) {
+            init();
+        }
     }
 
     auto& config = imillion->YamlConfig();

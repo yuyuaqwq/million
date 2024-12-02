@@ -2,6 +2,8 @@
 
 #include <cassert>
 
+#include <vector>
+#include <unordered_map>
 #include <utility>
 
 #include <million/imsg.h>
@@ -39,17 +41,25 @@ class AgentService;
 using MsgLogicHandleFunc = Task<>(*)(AgentService* agent, const protobuf::Message& proto_msg);
 extern GATEWAY_OBJECT_API ProtoCodec* g_agent_proto_codec;
 extern GATEWAY_OBJECT_API std::unordered_map<MsgKey, MsgLogicHandleFunc>* g_agent_logic_handle_map;
+extern GATEWAY_OBJECT_API std::vector<std::function<void()>>* g_agent_logic_init;
 extern GATEWAY_OBJECT_API MsgId _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_;
 
 
 // ‘ –Ì”√ªßºÃ≥–agentservice
 
-#define MILLION_AGENT_LOGIC_MSG_ID(NAMESPACE_, MSG_ID_) \
+#define MILLION_AGENT_LOGIC_MSG_ID(NAMESPACE_, MSG_ID_, PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
+    static million::MsgId _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = 0; \
     const bool _MILLION_AGENT_LOGIC_HANDLE_SET_MSG_ID_##MSG_ID_ = \
         [] { \
-            if (!::million::gateway::g_agent_proto_codec) { \
-                ::million::gateway::g_agent_proto_codec = new ::million::ProtoCodec(); \
-            } \
+            if (!::million::gateway::g_agent_logic_init) { ::million::gateway::g_agent_logic_init = new std::vector<std::function<void()>>(); } \
+                ::million::gateway::g_agent_logic_init->emplace_back([] { \
+                    const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool(); \
+                    protobuf::DescriptorDatabase* db = pool->internal_generated_database(); \
+                    auto file_desc = pool->FindFileByName(PROTO_FILE_NAME); \
+                    if (file_desc) { \
+                    ::million::gateway::g_agent_proto_codec->RegisterProto(*file_desc, MSG_EXT_ID_, SUB_MSG_EXT_ID_); \
+                    } \
+                }); \
             _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = static_cast<::million::MsgId>(NAMESPACE_::MSG_ID_); \
             return true; \
         }() \
@@ -62,13 +72,13 @@ extern GATEWAY_OBJECT_API MsgId _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_;
     } \
     const bool MILLION_AGENT_LOGIC_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [] { \
-            if (!::million::gateway::g_agent_logic_handle_map) { \
-                ::million::gateway::g_agent_logic_handle_map = new std::unordered_map<::million::MsgKey, ::million::gateway::MsgLogicHandleFunc>(); \
-            } \
-            auto res = ::million::gateway::g_agent_logic_handle_map->emplace(::million::ProtoCodec::CalcKey(_MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
-                _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I \
-            ); \
-            assert(res.second); \
+            if (!::million::gateway::g_agent_logic_init) { ::million::gateway::g_agent_logic_init = new std::vector<std::function<void()>>(); } \
+            ::million::gateway::g_agent_logic_init->emplace_back([] { \
+                auto res = ::million::gateway::g_agent_logic_handle_map->emplace(::million::ProtoCodec::CalcKey(_MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
+                    _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I \
+                ); \
+                assert(res.second); \
+            }); \
             return true; \
         }(); \
     ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::gateway::AgentService* agent, const NAMESPACE_::MSG_TYPE_& MSG_NAME_)
