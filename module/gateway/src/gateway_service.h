@@ -25,6 +25,7 @@ public:
         : Base(imillion)
         , user_context_id_(user_context_id) {}
 
+private:
     MILLION_MSG_DISPATCH(AgentService);
 
     MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
@@ -38,8 +39,17 @@ public:
         co_return;
     }
 
+public:
+    void SendProtoMsg(const protobuf::Message& proto_msg) {
+        auto res = g_agent_proto_codec->EncodeMessage(proto_msg);
+        if (!res) {
+            LOG_ERR("EncodeMessage failed: type:{}.", typeid(proto_msg).name());
+            return;
+        }
+        Send<GatewaySendPacketMsg>(gateway_, user_context_id_, *res);
+    }
+
 private:
-    friend void AgentSend(AgentService* service, const protobuf::Message& msg);
 
     ServiceHandle gateway_;
     UserContextId user_context_id_;

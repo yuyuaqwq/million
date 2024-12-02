@@ -40,7 +40,7 @@ using MsgLogicHandleFunc = Task<>(*)(AgentService* agent, const protobuf::Messag
 extern GATEWAY_OBJECT_API ProtoCodec* g_agent_proto_codec;
 extern GATEWAY_OBJECT_API std::unordered_map<MsgKey, MsgLogicHandleFunc>* g_agent_logic_handle_map;
 
-void AgentSend(AgentService* agent, const protobuf::Message& proto_msg);
+// ‘ –Ì”√ªßºÃ≥–agentservice
 
 //static MsgId s_msg_id = 0;
 //Task<> MsgHandle(AgentService* agent, const protobuf::Message& proto_msg);
@@ -50,7 +50,7 @@ void AgentSend(AgentService* agent, const protobuf::Message& proto_msg);
 //    return true;
 //}();
 //Task<> MsgHandle(AgentService* agent, const protobuf::Message& proto_msg) {
-//    SendProtoMsg(agent, proto_msg);
+//    AgentSend(agent, proto_msg);
 //    co_return;
 //}
 
