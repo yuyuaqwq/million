@@ -9,6 +9,7 @@
 #include <million/service_handle.h>
 #include <million/imsg.h>
 #include <million/task.h>
+#include <million/logger/logger.h>
 
 namespace million {
 
@@ -73,6 +74,8 @@ public:
     IMillion& imillion() { return *imillion_; }
     const ServiceHandle& service_handle() const { return service_handle_; }
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
+    Logger& logger();
+
 
 protected:
     IMillion* imillion_;

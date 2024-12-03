@@ -62,8 +62,8 @@ asio::io_context& IMillion::NextIoContext() {
     return million_->NextIoContext();
 }
 
-void IMillion::Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, const std::string& str) {
-    million_->Log(sender, level, file, line, function, str);
+Logger& IMillion::logger() {
+    return million_->logger();
 }
 
 void IMillion::EnableSeparateWorker(const ServiceHandle& service) {

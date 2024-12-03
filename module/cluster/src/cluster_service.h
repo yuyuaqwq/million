@@ -37,14 +37,14 @@ public:
         const auto& config = imillion_->YamlConfig();
         const auto& cluster_config = config["cluster"];
         if (!cluster_config) {
-            LOG_ERR("cannot find 'cluster'.");
+            logger().Err("cannot find 'cluster'.");
             return false;
         }
 
         const auto& name_config = cluster_config["name"];
         if (!name_config)
         {
-            LOG_ERR("cannot find 'cluster.name'.");
+            logger().Err("cannot find 'cluster.name'.");
             return false;
         }
         node_name_ = name_config.as<std::string>();
@@ -52,7 +52,7 @@ public:
         const auto& port_config = cluster_config["port"];
         if (!port_config)
         {
-            LOG_ERR("cannot find 'cluster.port'.");
+            logger().Err("cannot find 'cluster.port'.");
             return false;
         }
         server_.Start(port_config.as<uint16_t>());
@@ -66,11 +66,11 @@ public:
         auto ip = ep.address().to_string();
         auto port = std::to_string(ep.port());
         if (msg->connection->Connected()) {
-            LOG_DEBUG("Connection establishment: ip: {}, port: {}", ip, port);
+            logger().Debug("Connection establishment: ip: {}, port: {}", ip, port);
         }
         else {
             auto node_session = msg->connection->get_ptr<NodeSession>();
-            LOG_DEBUG("Disconnection: ip: {}, port: {}, cur_node: {}, target_node : {}", ip, port, node_name_, node_session->info().node_name);
+            logger().Debug("Disconnection: ip: {}, port: {}, cur_node: {}, target_node : {}", ip, port, node_name_, node_session->info().node_name);
             DeleteNodeSession(node_session);
         }
 
@@ -87,7 +87,7 @@ public:
 
         uint32_t header_size = 0;
         if (msg->packet.size() < sizeof(header_size)) {
-            LOG_WARN("Invalid header size: ip: {}, port: {}", ip, port);
+            logger().Warn("Invalid header size: ip: {}, port: {}", ip, port);
             msg->connection->Close();
             co_return;
         }
@@ -96,7 +96,7 @@ public:
 
         Ss::Cluster::ClusterMsg cluster_msg;
         if (!cluster_msg.ParseFromArray(msg->packet.data() + sizeof(header_size), header_size)) {
-            LOG_WARN("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
+            logger().Warn("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
             msg->connection->Close();
             co_return;
         }
@@ -113,7 +113,7 @@ public:
             auto old_node_session = FindNodeSession(req.src_node(), nullptr);
             if (old_node_session) {
                 old_node_session->Close();
-                LOG_INFO("old connection, ip: {}, port: {}, cur_node: {}, req_src_node: {}", ip, port, node_name_, req.src_node());
+                logger().Info("old connection, ip: {}, port: {}, cur_node: {}, req_src_node: {}", ip, port, node_name_, req.src_node());
             }
 
             // 能否匹配都回包
@@ -128,7 +128,7 @@ public:
             node_session->Send(std::move(packet), span, 0);
 
             if (node_name_ != req.target_node()) {
-                LOG_ERR("Src node name mismatch, ip: {}, port: {}, cur_node: {}, req_target_node: {}", ip, port, node_name_, req.target_node());
+                logger().Err("Src node name mismatch, ip: {}, port: {}, cur_node: {}, req_target_node: {}", ip, port, node_name_, req.target_node());
                 node_session->Close();
                 co_return;
             }
@@ -141,7 +141,7 @@ public:
             // 收到握手响应，当前是主动连接方
             auto& res = cluster_msg.handshake_res();
             if (node_session->info().node_name != res.target_node()) {
-                LOG_ERR("Target node name mismatch, ip: {}, port: {}, target_node: {}, res_target_node: {}", ip, port, node_session->info().node_name, res.target_node());
+                logger().Err("Target node name mismatch, ip: {}, port: {}, target_node: {}, res_target_node: {}", ip, port, node_session->info().node_name, res.target_node());
                 msg->connection->Close();
                 co_return;
             }
@@ -187,7 +187,7 @@ public:
         EndPointRes end_point;
         auto node_session = FindNodeSession(msg->target_node, &end_point);
         if (!node_session && end_point.ip.empty()) {
-            LOG_ERR("Node cannot be found: {}.", msg->target_node);
+            logger().Err("Node cannot be found: {}.", msg->target_node);
             co_return;
         }
         if (node_session) {
@@ -201,7 +201,7 @@ public:
             asio::co_spawn(io_context.get_executor(), [this, target_node = msg->target_node, end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
                 auto connection_opt = co_await server_.ConnectTo(end_point.ip, end_point.port);
                 if (!connection_opt) {
-                    LOG_ERR("server_.ConnectTo failed, ip: {}, port: {}.", end_point.ip, end_point.port);
+                    logger().Err("server_.ConnectTo failed, ip: {}, port: {}.", end_point.ip, end_point.port);
                     co_return;
                 }
 
@@ -238,7 +238,7 @@ private:
         auto& target_node_name = node_session->info().node_name;
         auto res = nodes_.emplace(target_node_name, connection);
         if (res.second) {
-            LOG_INFO("CreateNode: {}", target_node_name);
+            logger().Info("CreateNode: {}", target_node_name);
         }
         else {
             // 已存在，比较两边节点名的字典序，选择断开某一条连接
@@ -256,12 +256,12 @@ private:
                 // 断开旧连接，关联新连接
                 res.first->second->Close();
                 res.first->second = connection;
-                LOG_INFO("Duplicate connection, disconnect old connection: {}", target_node_name);
+                logger().Info("Duplicate connection, disconnect old connection: {}", target_node_name);
             }
             else {
                 // 断开新连接
                 connection->Close();
-                LOG_INFO("Duplicate connection, disconnect new connection: {}", target_node_name);
+                logger().Info("Duplicate connection, disconnect new connection: {}", target_node_name);
             }
         }
         return *res.first->second->get_ptr<NodeSession>();
@@ -281,13 +281,13 @@ private:
         const auto& config = imillion_->YamlConfig();
         const auto& cluster_config = config["cluster"];
         if (!cluster_config) {
-            LOG_ERR("cannot find 'cluster'.");
+            logger().Err("cannot find 'cluster'.");
             return nullptr;
         }
 
         const auto& nodes = cluster_config["nodes"];
         if (!nodes) {
-            LOG_ERR("cannot find 'cluster.nodes'.");
+            logger().Err("cannot find 'cluster.nodes'.");
             return nullptr;
         }
 

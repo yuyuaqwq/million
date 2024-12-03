@@ -50,7 +50,7 @@ public:
     MILLION_PROTO_MSG_ID(Ss, SS_MSG_ID_TEST);
 
     MILLION_PROTO_MSG_HANDLE(Ss::Test, SS_SUB_MSG_ID_TEST_REQ, TestReq, req) {
-        LOG_INFO("test, value:{}", req->value());
+        logger().Info("test, value:{}", req->value());
         co_return;
     }
 

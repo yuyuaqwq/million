@@ -52,8 +52,9 @@ public:
     const YAML::Node& YamlConfig() const;
     void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
     asio::io_context& NextIoContext();
-    void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, const std::string& str);
     void EnableSeparateWorker(const ServiceHandle& service);
+
+    Logger& logger();
 
 private:
 
@@ -90,6 +91,10 @@ inline void IService::Timeout(uint32_t tick, MsgUnique msg) {
 
 inline void IService::EnableSeparateWorker() {
     imillion_->EnableSeparateWorker(service_handle());
+}
+
+inline Logger& IService::logger() {
+    return imillion_->logger();
 }
 
 MILLION_FUNC_API void InitMillion();

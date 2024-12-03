@@ -32,12 +32,12 @@ private:
 
         auto res = AgentLogicHandler::Instance().proto_codec_.DecodeMessage(msg->packet);
         if (!res) {
-            LOG_ERR("DecodeMessage failed");
+            logger().Err("DecodeMessage failed");
             co_return;
         }
         auto func = AgentLogicHandler::Instance().GetLogicHandle(ProtoCodec::CalcKey(res->msg_id, res->sub_msg_id));
         if (!func) {
-            LOG_ERR("Agent logic handle not found, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
+            logger().Err("Agent logic handle not found, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
             co_return;
         }
         co_await (*func)(this, std::move(res->proto_msg));
@@ -48,7 +48,7 @@ public:
     void SendProtoMsg(const protobuf::Message& proto_msg) {
         auto res = AgentLogicHandler::Instance().proto_codec_.EncodeMessage(proto_msg);
         if (!res) {
-            LOG_ERR("EncodeMessage failed: type:{}.", typeid(proto_msg).name());
+            logger().Err("EncodeMessage failed: type:{}.", typeid(proto_msg).name());
             return;
         }
         Send<GatewaySendPacketMsg>(gateway_, user_context_id_, *res);
@@ -71,7 +71,7 @@ public:
     MILLION_MSG_HANDLE(NodeMgrNewAgentMsg, msg) {
         auto handle = imillion_->NewService<AgentService>(msg->context_id);
         if (!handle) {
-            LOG_ERR("NewService AgentService failed.");
+            logger().Err("NewService AgentService failed.");
             co_return;
         }
         msg->agent_handle = std::move(*handle);
@@ -90,14 +90,14 @@ public:
     virtual bool OnInit() override {
         auto handle = imillion_->GetServiceByName("GatewayService");
         if (!handle) {
-            LOG_ERR("GatewayService not found.");
+            logger().Err("GatewayService not found.");
             return false;
         }
         gateway_ = *handle;
 
         handle = imillion_->GetServiceByName("NodeMgrService");
         if (!handle) {
-            LOG_ERR("NodeMgrService not found.");
+            logger().Err("NodeMgrService not found.");
             return false;
         }
         node_mgr_ = *handle;
@@ -137,7 +137,7 @@ public:
         , server_(imillion) { }
 
     virtual bool OnInit() override {
-        LOG_INFO("Gateway init start.");
+        logger().Info("Gateway init start.");
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
             Send<GatewayTcpConnectionMsg>(service_handle(), connection);
@@ -150,17 +150,17 @@ public:
         const auto& config = imillion_->YamlConfig();
         const auto& gateway_config = config["gateway"];
         if (!gateway_config) {
-            LOG_ERR("cannot find 'gateway'.");
+            logger().Err("cannot find 'gateway'.");
             return false;
         }
         const auto& port_config = gateway_config["port"];
         if (!port_config)
         {
-            LOG_ERR("cannot find 'gateway.port'.");
+            logger().Err("cannot find 'gateway.port'.");
             return false;
         }
         server_.Start(port_config.as<uint16_t>());
-        LOG_INFO("Gateway init success.");
+        logger().Info("Gateway init success.");
         return true;
     }
 
@@ -178,11 +178,11 @@ public:
             auto user_context_id = ++user_context_id_;
             session->info().user_context_id = user_context_id;
             users_.emplace(session->info().user_context_id, session);
-            LOG_DEBUG("Gateway connection establishment: ip: {}, port: {}", ip, port);
+            logger().Debug("Gateway connection establishment: ip: {}, port: {}", ip, port);
         }
         else {
             users_.erase(session->info().user_context_id);
-            LOG_DEBUG("Gateway Disconnection: ip: {}, port: {}", ip, port);
+            logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
         co_return;
     }

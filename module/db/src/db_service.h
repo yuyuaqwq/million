@@ -104,7 +104,7 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        LOG_DEBUG("DbService Init");
+        logger().Debug("DbService Init");
 
         proto_mgr_.Init();
 

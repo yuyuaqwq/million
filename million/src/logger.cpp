@@ -12,20 +12,19 @@
 #include <million/logger/logger.h>
 
 #include "million.h"
-#include "logger.h"
 
 namespace million {
 
-MILLION_MSG_DEFINE(, LoggerLogMsg, (logger::LogLevel)level, (const char*)file, (int)line, (const char*)function, (std::string)info);
-MILLION_MSG_DEFINE(, LoggerSetLevelMsg, (std::string)level);
+MILLION_MSG_DEFINE(, LoggerLogMsg, (LogLevel) level, (std::source_location) source, (std::string) info);
+MILLION_MSG_DEFINE(, LoggerSetLevelMsg, (std::string) level);
 
-static_assert(logger::LogLevel::kTrace == spdlog::level::level_enum::trace);
-static_assert(logger::LogLevel::kDebug == spdlog::level::level_enum::debug);
-static_assert(logger::LogLevel::kInfo == spdlog::level::level_enum::info);
-static_assert(logger::LogLevel::kWarn == spdlog::level::level_enum::warn);
-static_assert(logger::LogLevel::kErr == spdlog::level::level_enum::err);
-static_assert(logger::LogLevel::kCritical == spdlog::level::level_enum::critical);
-static_assert(logger::LogLevel::kOff == spdlog::level::level_enum::off);
+static_assert(static_cast<uint32_t>(LogLevel::kTrace) == spdlog::level::level_enum::trace);
+static_assert(static_cast<uint32_t>(LogLevel::kDebug) == spdlog::level::level_enum::debug);
+static_assert(static_cast<uint32_t>(LogLevel::kInfo) == spdlog::level::level_enum::info);
+static_assert(static_cast<uint32_t>(LogLevel::kWarn) == spdlog::level::level_enum::warn);
+static_assert(static_cast<uint32_t>(LogLevel::kErr) == spdlog::level::level_enum::err);
+static_assert(static_cast<uint32_t>(LogLevel::kCritical) == spdlog::level::level_enum::critical);
+static_assert(static_cast<uint32_t>(LogLevel::kOff) == spdlog::level::level_enum::off);
 
 class LoggerService : public IService {
 public:
@@ -89,7 +88,7 @@ public:
 
     MILLION_MSG_HANDLE(LoggerLogMsg, msg) {
         auto level = static_cast<spdlog::level::level_enum>(msg->level);
-        logger_->log(spdlog::source_loc{ msg->file, msg->line, msg->function }, level, msg->info);
+        logger_->log(spdlog::source_loc(msg->source.file_name(), msg->source.line(), msg->source.function_name()), level, msg->info);
         co_return;
     }
 
@@ -116,8 +115,8 @@ bool Logger::Init() {
     logger_handle_ = *logger_opt;
 }
 
-void Logger::Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, const std::string& str) {
-    million_->Send<LoggerLogMsg>(sender, logger_handle_, level, file, line, function, str);
+void Logger::Log(const ServiceHandle& sender, const std::source_location& source, LogLevel level, const std::string& str) {
+    million_->Send<LoggerLogMsg>(sender, logger_handle_, level, source, str);
 }
 
 void Logger::SetLevel(const ServiceHandle& sender, const std::string& level) {

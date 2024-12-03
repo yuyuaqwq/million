@@ -31,7 +31,7 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(MsgUnique msg) {
     if (msg_opt) {
         // find找到的task，却未处理，异常情况
         auto million = service_->service_mgr()->million();
-        MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kCritical, "[million] try schedule exception: {}.", id);
+        million->logger().Critical("[million] try schedule exception: {}.", id);
     }
     if (!iter->second.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
@@ -59,10 +59,10 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, MsgUnique msg) 
             task.rethrow_if_exception();
         }
         catch (const std::exception& e) {
-            MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session exception: {}.", e.what());
+            million->logger().Err("[million] session exception: {}.", e.what());
         }
         catch (...) {
-            MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session exception: {}.", "unknown exception");
+            million->logger().Err("[million] session exception: {}.", "unknown exception");
         }
     }
     return std::nullopt;
@@ -76,10 +76,10 @@ void TaskExecutor::AddTask(Task<>&& task) {
             task.rethrow_if_exception();
         }
         catch (const std::exception& e) {
-            MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session exception: {}.", e.what());
+            million->logger().Err("[million] session exception: {}.", e.what());
         }
         catch (...) {
-            MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session exception: {}.", "unknown exception");
+            million->logger().Err("[million] session exception: {}.", "unknown exception");
         }
     }
     if (!task.coroutine.done()) {
@@ -95,7 +95,7 @@ std::optional<Task<>> TaskExecutor::TimeoutCleanup(SessionId id) {
     }
     // 超时，写出日志告警
     auto million = service_->service_mgr()->million();
-    MILLION_LOGGER_CALL(million, service_->service_handle(), logger::kErr, "[million] session timeout {}.", iter->second.coroutine.promise().session_awaiter()->waiting_session());
+    million->logger().Err("[million] session timeout {}.", iter->second.coroutine.promise().session_awaiter()->waiting_session());
     auto task = std::move(iter->second);
     tasks_.erase(iter);
     return task;

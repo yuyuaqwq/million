@@ -13,7 +13,6 @@
 #include "io_context.h"
 #include "io_context_mgr.h"
 #include "timer.h"
-#include "logger.h"
 
 namespace million {
 
@@ -169,10 +168,6 @@ void Million::Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg
 
 asio::io_context& Million::NextIoContext() {
     return io_context_mgr_->NextIoContext().io_context();
-}
-
-void Million::Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, const std::string& str) {
-    logger_->Log(sender, level, file, line, function, str);
 }
 
 void Million::EnableSeparateWorker(const ServiceHandle& service) {

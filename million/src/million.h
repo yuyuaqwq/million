@@ -47,7 +47,6 @@ public:
     const YAML::Node& YamlConfig() const;
     void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
     asio::io_context& NextIoContext();
-    void Log(const ServiceHandle& sender, logger::LogLevel level, const char* file, int line, const char* function, const std::string& str);
     void EnableSeparateWorker(const ServiceHandle& service);
 
     auto imillion() { return imillion_; }
