@@ -47,9 +47,9 @@ extern GATEWAY_OBJECT_API MsgId _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_;
 
 // ‘ –Ì”√ªßºÃ≥–agentservice
 
-#define MILLION_AGENT_LOGIC_MSG_ID(MSG_ID_, PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
+#define MILLION_AGENT_LOGIC_MSG_ID(NAMESPACE_, MSG_ID_, PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
     static million::MsgId _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = 0; \
-    const bool _MILLION_AGENT_LOGIC_HANDLE_SET_MSG_ID_ = \
+    const bool _MILLION_AGENT_LOGIC_HANDLE_SET_MSG_ID_##MSG_ID_ = \
         [] { \
             if (!::million::gateway::g_agent_logic_init) { ::million::gateway::g_agent_logic_init = new std::vector<std::function<void()>>(); } \
                 ::million::gateway::g_agent_logic_init->emplace_back([] { \
@@ -57,10 +57,10 @@ extern GATEWAY_OBJECT_API MsgId _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_;
                     protobuf::DescriptorDatabase* db = pool->internal_generated_database(); \
                     auto file_desc = pool->FindFileByName(PROTO_FILE_NAME); \
                     if (file_desc) { \
-                    ::million::gateway::g_agent_proto_codec->RegisterProto(*file_desc, MSG_EXT_ID_, SUB_MSG_EXT_ID_); \
+                    ::million::gateway::g_agent_proto_codec->RegisterProto(*file_desc, NAMESPACE_::MSG_EXT_ID_, NAMESPACE_::SUB_MSG_EXT_ID_); \
                     } \
                 }); \
-            _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = static_cast<::million::MsgId>(MSG_ID_); \
+            _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = static_cast<::million::MsgId>(NAMESPACE_::MSG_ID_); \
             return true; \
         }() \
 
