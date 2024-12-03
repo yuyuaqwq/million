@@ -246,8 +246,8 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
         }() \
 
 #define MILLION_PROTO_MSG_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)& context_id, ::million::ProtoMsgUnique MILLION_PROTO_MSG_) { \
-        auto msg = ::std::unique_ptr<NAMESPACE_::MSG_TYPE_>(static_cast<NAMESPACE_::MSG_TYPE_*>(MILLION_PROTO_MSG_.release())); \
+    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)& context_id, ::million::ProtoMsgUnique MSG_PTR_NAME_) { \
+        auto msg = ::std::unique_ptr<NAMESPACE_::MSG_TYPE_>(static_cast<NAMESPACE_::MSG_TYPE_*>(MSG_PTR_NAME_.release())); \
         co_await _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(context_id, std::move(msg)); \
         co_return; \
     } \

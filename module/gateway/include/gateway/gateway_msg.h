@@ -38,7 +38,7 @@ MILLION_MSG_DEFINE(GATEWAY_CLASS_API, AgentRecvProtoMsg, (ProtoMsgUnique) proto_
 MILLION_MSG_DEFINE(GATEWAY_CLASS_API, AgentMgrLoginMsg, (UserContextId) context_id, (std::optional<ServiceHandle>) agent_handle);
 
 class AgentService;
-using MsgLogicHandleFunc = Task<>(*)(AgentService* agent, const protobuf::Message& proto_msg);
+using MsgLogicHandleFunc = Task<>(*)(AgentService* agent, ProtoMsgUnique proto_msg);
 
 class AgentLogicHandler {
 public:
@@ -102,10 +102,11 @@ private:
             return true; \
         }() \
 
-#define MILLION_AGENT_LOGIC_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_NAME_) \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::gateway::AgentService* agent, const NAMESPACE_::MSG_TYPE_& MSG_NAME_); \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::gateway::AgentService* agent, const protobuf::Message& MSG_NAME_) { \
-        co_await _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(agent, *static_cast<const NAMESPACE_::MSG_TYPE_*>(&MSG_NAME_)); \
+#define MILLION_AGENT_LOGIC_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::gateway::AgentService* agent, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_NAME_); \
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::gateway::AgentService* agent, ::million::ProtoMsgUnique MSG_PTR_NAME_) { \
+        auto msg = ::std::unique_ptr<NAMESPACE_::MSG_TYPE_>(static_cast<NAMESPACE_::MSG_TYPE_*>(MSG_PTR_NAME_.release())); \
+        co_await _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(agent, std::move(msg)); \
         co_return; \
     } \
     const bool MILLION_AGENT_LOGIC_HANDLE_REGISTER_##MSG_TYPE_ =  \
@@ -114,7 +115,7 @@ private:
                 _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I); \
             return true; \
         }(); \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::gateway::AgentService* agent, const NAMESPACE_::MSG_TYPE_& MSG_NAME_)
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::gateway::AgentService* agent, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
 
 
 //static MsgId s_msg_id = 0;

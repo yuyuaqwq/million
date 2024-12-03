@@ -32,7 +32,7 @@ private:
 
         auto res = AgentLogicHandler::Instance().proto_codec_.DecodeMessage(msg->packet);
         if (!res) {
-            LOG_ERR("DecodeMessage failed, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
+            LOG_ERR("DecodeMessage failed");
             co_return;
         }
         auto func = AgentLogicHandler::Instance().GetLogicHandle(ProtoCodec::CalcKey(res->msg_id, res->sub_msg_id));
@@ -40,7 +40,7 @@ private:
             LOG_ERR("Agent logic handle not found, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
             co_return;
         }
-        co_await (*func)(this, *res->proto_msg);
+        co_await (*func)(this, std::move(res->proto_msg));
         co_return;
     }
 
