@@ -29,23 +29,24 @@ private:
     MILLION_MSG_DISPATCH(AgentService);
 
     MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
-        auto res = g_agent_proto_codec->DecodeMessage(msg->packet);
+
+        auto res = AgentLogicHandler::Instance().proto_codec_.DecodeMessage(msg->packet);
         if (!res) {
             LOG_ERR("DecodeMessage failed, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
             co_return;
         }
-        auto iter = g_agent_logic_handle_map->find(ProtoCodec::CalcKey(res->msg_id, res->sub_msg_id));
-        if (iter == g_agent_logic_handle_map->end()) {
+        auto func = AgentLogicHandler::Instance().GetLogicHandle(ProtoCodec::CalcKey(res->msg_id, res->sub_msg_id));
+        if (!func) {
             LOG_ERR("Agent logic handle not found, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
             co_return;
         }
-        co_await iter->second(this, *res->proto_msg);
+        co_await (*func)(this, *res->proto_msg);
         co_return;
     }
 
 public:
     void SendProtoMsg(const protobuf::Message& proto_msg) {
-        auto res = g_agent_proto_codec->EncodeMessage(proto_msg);
+        auto res = AgentLogicHandler::Instance().proto_codec_.EncodeMessage(proto_msg);
         if (!res) {
             LOG_ERR("EncodeMessage failed: type:{}.", typeid(proto_msg).name());
             return;
