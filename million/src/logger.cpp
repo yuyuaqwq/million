@@ -32,7 +32,7 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        auto& config = imillion_->YamlConfig();
+        auto& config = imillion().YamlConfig();
         auto logger_config = config["logger"];
         if (!logger_config) {
             std::cerr << "[config][error]cannot find 'logger'." << std::endl;

@@ -77,7 +77,7 @@ public:
     Logger& logger();
 
 
-protected:
+private:
     IMillion* imillion_;
     ServiceHandle service_handle_;
 };

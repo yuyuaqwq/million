@@ -30,7 +30,7 @@ public:
     MILLION_MSG_DISPATCH(NodeMgrService);
 
     MILLION_MSG_HANDLE(NodeMgrNewAgentMsg, msg) {
-        auto handle = imillion_->NewService<AgentService>(msg->context_id);
+        auto handle = imillion().NewService<AgentService>(msg->context_id);
         if (!handle) {
             logger().Err("NewService AgentService failed.");
             co_return;
@@ -49,14 +49,14 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        auto handle = imillion_->GetServiceByName("GatewayService");
+        auto handle = imillion().GetServiceByName("GatewayService");
         if (!handle) {
             logger().Err("GatewayService not found.");
             return false;
         }
         gateway_ = *handle;
 
-        handle = imillion_->GetServiceByName("NodeMgrService");
+        handle = imillion().GetServiceByName("NodeMgrService");
         if (!handle) {
             logger().Err("NodeMgrService not found.");
             return false;
@@ -108,7 +108,7 @@ public:
             Send<GatewayTcpRecvPacketMsg>(service_handle(), connection, std::move(packet));
             co_return;
         });
-        const auto& config = imillion_->YamlConfig();
+        const auto& config = imillion().YamlConfig();
         const auto& gateway_config = config["gateway"];
         if (!gateway_config) {
             logger().Err("cannot find 'gateway'.");

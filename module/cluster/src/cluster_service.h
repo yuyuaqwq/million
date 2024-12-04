@@ -34,7 +34,7 @@ public:
             co_return;
         });
 
-        const auto& config = imillion_->YamlConfig();
+        const auto& config = imillion().YamlConfig();
         const auto& cluster_config = config["cluster"];
         if (!cluster_config) {
             logger().Err("cannot find 'cluster'.");
@@ -169,7 +169,7 @@ public:
             auto& header = cluster_msg.forward_header();
             auto& src_service = header.src_service();
             auto& target_service = header.target_service();
-            auto target_service_handle = imillion_->GetServiceByName(target_service);
+            auto target_service_handle = imillion().GetServiceByName(target_service);
             if (target_service_handle) {
                 // 还需要获取下源节点
                 auto span = net::PacketSpan(msg->packet.begin() + sizeof(header_size) + header_size, msg->packet.end());
@@ -197,7 +197,7 @@ public:
 
         if (wait_nodes_.find(msg->target_node) == wait_nodes_.end()) {
             wait_nodes_.emplace(msg->target_node);
-            auto& io_context = imillion_->NextIoContext();
+            auto& io_context = imillion().NextIoContext();
             asio::co_spawn(io_context.get_executor(), [this, target_node = msg->target_node, end_point = std::move(end_point)]() mutable -> asio::awaitable<void> {
                 auto connection_opt = co_await server_.ConnectTo(end_point.ip, end_point.port);
                 if (!connection_opt) {
@@ -278,7 +278,7 @@ private:
         }
 
         // 尝试从配置文件中查找此节点
-        const auto& config = imillion_->YamlConfig();
+        const auto& config = imillion().YamlConfig();
         const auto& cluster_config = config["cluster"];
         if (!cluster_config) {
             logger().Err("cannot find 'cluster'.");

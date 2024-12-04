@@ -24,9 +24,9 @@ public:
     //    , Base(imillion) {}
 
     virtual bool OnInit() override {
-        imillion_->SetServiceName(service_handle(), "TestService");
+        imillion().SetServiceName(service_handle(), "TestService");
 
-        auto handle = imillion_->GetServiceByName("ClusterService");
+        auto handle = imillion().GetServiceByName("ClusterService");
         if (!handle) {
             return false;
         }
