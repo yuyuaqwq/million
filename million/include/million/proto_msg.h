@@ -30,6 +30,13 @@ public:
     bool RegisterProto(const std::string& proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
         const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
         protobuf::DescriptorDatabase* db = pool->internal_generated_database();
+
+        //std::vector<std::string> file_names;
+        //db->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
+        //for (const std::string& filename : file_names) {
+        //    const protobuf::FileDescriptor* file_desc = pool->FindFileByName(filename);
+        //}
+
         auto file_desc = pool->FindFileByName(proto_file_name);
         if (!file_desc) {
             return false;
