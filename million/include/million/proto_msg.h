@@ -1,7 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <string>
 #include <optional>
+#include <functional>
 
 #include <google/protobuf/message.h>
 #include <google/protobuf/descriptor.h>
@@ -23,16 +25,19 @@ using SubMsgId = uint16_t;
 
 class MILLION_CLASS_API ProtoCodec : noncopyable {
 public:
-    void Init() {
-        
-    }
-
     // 注册协议
     template <typename MsgExtIdT, typename SubMsgExtIdT>
-    bool RegisterProto(const protobuf::FileDescriptor& file_desc, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
-        int enum_count = file_desc.enum_type_count();
+    bool RegisterProto(const std::string& proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
+        const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
+        protobuf::DescriptorDatabase* db = pool->internal_generated_database();
+        auto file_desc = pool->FindFileByName(proto_file_name);
+        if (!file_desc) {
+            return false;
+        }
+
+        int enum_count = file_desc->enum_type_count();
         for (int i = 0; i < enum_count; i++) {
-            const protobuf::EnumDescriptor* enum_desc = file_desc.enum_type(i);
+            const protobuf::EnumDescriptor* enum_desc = file_desc->enum_type(i);
             if (!enum_desc) continue;
             auto& enum_opts = enum_desc->options();
             if (!enum_opts.HasExtension(msg_ext_id)) {
@@ -46,9 +51,9 @@ public:
                 return false;
             }
 
-            int message_count = file_desc.message_type_count();
+            int message_count = file_desc->message_type_count();
             for (int j = 0; j < message_count; j++) {
-                const protobuf::Descriptor* desc = file_desc.message_type(j);
+                const protobuf::Descriptor* desc = file_desc->message_type(j);
 
                 // 得加这个才会初始化，不知道具体原因
                 message_factory_ = protobuf::MessageFactory::generated_factory();
@@ -225,6 +230,10 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
 #define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, PROTO_PACKET_MSG_TYPE_, PROTO_CODEC_) \
     using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
     MILLION_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
+        if (!_MILLION_PROTO_MSG_INIT_QUEUE_.empty()) { \
+            for (auto& func : _MILLION_PROTO_MSG_INIT_QUEUE_) func(); \
+            _MILLION_PROTO_MSG_INIT_QUEUE_.clear(); \
+        } \
         auto res = (PROTO_CODEC_)->DecodeMessage(msg->packet); \
         if (!res) { \
             co_return; \
@@ -236,12 +245,16 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
         co_return; \
     } \
     NAMESPACE_::##NAMESPACE_##MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_; \
+    ::std::vector<::std::function<void()>> _MILLION_PROTO_MSG_INIT_QUEUE_; \
     ::std::unordered_map<::million::MsgKey, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)&, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
 
-#define MILLION_PROTO_MSG_ID(NAMESPACE_, MSG_ID_) \
+#define MILLION_PROTO_MSG_ID(NAMESPACE_, MSG_ID_, PROTO_CODEC, PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
     const bool _MILLION_PROTO_MSG_HANDLE_SET_MSG_ID_##MSG_ID_ = \
         [this] { \
-            _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = NAMESPACE_::MSG_ID_; \
+            _MILLION_PROTO_MSG_INIT_QUEUE_.emplace_back([this]{ \
+                (PROTO_CODEC)->RegisterProto(PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_); \
+                _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = NAMESPACE_::MSG_ID_; \
+            }); \
             return true; \
         }() \
 
@@ -253,9 +266,11 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     } \
     const bool MILLION_PROTO_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            _MILLION_PROTO_MSG_HANDLE_MAP_.emplace(::million::ProtoCodec::CalcKey(static_cast<::million::MsgId>(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_), static_cast<::million::SubMsgId>(NAMESPACE_::SUB_MSG_ID_)), \
-                &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I \
-            ); \
+            _MILLION_PROTO_MSG_INIT_QUEUE_.emplace_back([this]{ \
+                _MILLION_PROTO_MSG_HANDLE_MAP_.emplace(::million::ProtoCodec::CalcKey(static_cast<::million::MsgId>(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_), static_cast<::million::SubMsgId>(NAMESPACE_::SUB_MSG_ID_)), \
+                    &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I \
+                ); \
+            }); \
             return true; \
         }(); \
     ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)& context_id, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)

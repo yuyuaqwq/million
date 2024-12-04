@@ -11,7 +11,7 @@
 namespace Ss = Million::Proto::Ss;
 namespace protobuf = google::protobuf;
 
-MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeName)target_node, (Ss::Test::TestReq)req);
+MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeName) target_node, (Ss::Test::TestReq) req);
 
 using ClusterRecvPacketMsg = million::cluster::ClusterRecvPacketMsg;
 
@@ -34,12 +34,6 @@ public:
 
         proto_codec_.Init();
 
-        const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
-        protobuf::DescriptorDatabase* db = pool->internal_generated_database();
-        auto ss_test = pool->FindFileByName("ss/ss_test.proto");
-        if (ss_test) {
-            proto_codec_.RegisterProto(*ss_test, Ss::ss_msg_id, Ss::Test::ss_sub_msg_id_test);
-        }
         return true;
     }
 
@@ -47,7 +41,7 @@ public:
 
     MILLION_PROTO_MSG_DISPATCH(Ss, ClusterRecvPacketMsg, &proto_codec_);
 
-    MILLION_PROTO_MSG_ID(Ss, SS_MSG_ID_TEST);
+    MILLION_PROTO_MSG_ID(Ss, SS_MSG_ID_TEST, &proto_codec_, "ss/ss_test.proto", Ss::ss_msg_id, Ss::Test::ss_sub_msg_id_test);
 
     MILLION_PROTO_MSG_HANDLE(Ss::Test, SS_SUB_MSG_ID_TEST_REQ, TestReq, req) {
         logger().Info("test, value:{}", req->value());
