@@ -32,8 +32,6 @@ public:
         }
         cluster_ = *handle;
 
-        proto_codec_.Init();
-
         return true;
     }
 
