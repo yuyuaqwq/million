@@ -259,7 +259,9 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     const bool _MILLION_PROTO_MSG_HANDLE_SET_MSG_ID_##MSG_ID_ = \
         [this] { \
             _MILLION_PROTO_MSG_INIT_QUEUE_.emplace_back([this]{ \
-                (PROTO_CODEC)->RegisterProto(PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_); \
+                if (!(PROTO_CODEC)->RegisterProto(PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_)) { \
+                    logger().Err("RegisterProto failed: {}", PROTO_FILE_NAME); \
+                } \
                 _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = NAMESPACE_::MSG_ID_; \
             }); \
             return true; \
@@ -274,9 +276,12 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     const bool MILLION_PROTO_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
             _MILLION_PROTO_MSG_INIT_QUEUE_.emplace_back([this]{ \
-                _MILLION_PROTO_MSG_HANDLE_MAP_.emplace(::million::ProtoCodec::CalcKey(static_cast<::million::MsgId>(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_), static_cast<::million::SubMsgId>(NAMESPACE_::SUB_MSG_ID_)), \
+                auto res = _MILLION_PROTO_MSG_HANDLE_MAP_.emplace(::million::ProtoCodec::CalcKey(static_cast<::million::MsgId>(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_), static_cast<::million::SubMsgId>(NAMESPACE_::SUB_MSG_ID_)), \
                     &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I \
                 ); \
+                if (res.second) { \
+                    logger().Err("Duplicate registration of proto msg handle: msg id:{}, sub msg id: {}", static_cast<::million::MsgId>(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_), static_cast<::million::SubMsgId>(NAMESPACE_::SUB_MSG_ID_)); \
+                } \
             }); \
             return true; \
         }(); \

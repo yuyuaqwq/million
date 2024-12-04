@@ -21,7 +21,9 @@ public:
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     void RegisterLogicMsgProto(std::string proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
         logic_init_queue_.emplace_back([this, proto_file_name = std::move(proto_file_name), msg_ext_id, sub_msg_ext_id] {
-            proto_codec_.RegisterProto(proto_file_name, msg_ext_id, sub_msg_ext_id);
+            if (!proto_codec_.RegisterProto(proto_file_name, msg_ext_id, sub_msg_ext_id)) {
+                // ◊¢≤·–≠“È ß∞‹
+            }
         });
     }
 
