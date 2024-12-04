@@ -5,7 +5,8 @@
 #include <million/iservice.h>
 
 #include <gateway/api.h>
-#include <gateway/gateway_msg.h>
+#include <gateway/agent.h>
+#include <gateway/gateway.h>
 
 #include "gateway_server.h"
 
@@ -17,47 +18,6 @@ namespace million {
 namespace gateway {
 
 namespace protobuf = google::protobuf; 
-
-class AgentService : public IService {
-public:
-    using Base = IService;
-    AgentService(IMillion* imillion, uint64_t user_context_id)
-        : Base(imillion)
-        , user_context_id_(user_context_id) {}
-
-private:
-    MILLION_MSG_DISPATCH(AgentService);
-
-    MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
-        auto res = AgentLogicHandler::Instance().proto_codec_.DecodeMessage(msg->packet);
-        if (!res) {
-            logger().Err("DecodeMessage failed");
-            co_return;
-        }
-        auto func = AgentLogicHandler::Instance().GetLogicHandle(ProtoCodec::CalcKey(res->msg_id, res->sub_msg_id));
-        if (!func) {
-            logger().Err("Agent logic handle not found, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
-            co_return;
-        }
-        co_await (*func)(this, std::move(res->proto_msg));
-        co_return;
-    }
-
-public:
-    void SendProtoMsg(const protobuf::Message& proto_msg) {
-        auto res = AgentLogicHandler::Instance().proto_codec_.EncodeMessage(proto_msg);
-        if (!res) {
-            logger().Err("EncodeMessage failed: type:{}.", typeid(proto_msg).name());
-            return;
-        }
-        Send<GatewaySendPacketMsg>(gateway_, user_context_id_, *res);
-    }
-
-private:
-
-    ServiceHandle gateway_;
-    UserContextId user_context_id_;
-};
 
 
 MILLION_MSG_DEFINE(, NodeMgrNewAgentMsg, (uint64_t) context_id, (std::optional<ServiceHandle>) agent_handle);
@@ -190,7 +150,7 @@ public:
 
     MILLION_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto session = static_cast<UserSession*>(msg->connection.get());
-        auto session_handle = UserSessionHandle(session);
+        // auto session_handle = UserSessionHandle(session);
 
         if (session->info().token == kInvaildToken) {
             // 连接没token，但是发来了token，当成断线重连处理

@@ -6,7 +6,7 @@
 #include <million/net/tcp_connection.h>
 #include <million/proto_msg.h>
 
-#include <gateway/gateway_msg.h>
+#include <gateway/gateway.h>
 
 #include "token.h"
 
