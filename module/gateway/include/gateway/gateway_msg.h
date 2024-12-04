@@ -30,11 +30,6 @@ MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewaySendPacketMsg, (UserContextId) cont
 // send
 MILLION_MSG_DEFINE(GATEWAY_CLASS_API, GatewayRecvPacketMsg, (UserContextId) context_id, (net::Packet) packet_raw, (net::PacketSpan) packet)
 
-
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, NodeMgrNewAgentMsg, (uint64_t) context_id, (std::optional<ServiceHandle>) agent_handle);
-
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, AgentRecvProtoMsg, (ProtoMsgUnique) proto_msg);
-
 MILLION_MSG_DEFINE(GATEWAY_CLASS_API, AgentMgrLoginMsg, (UserContextId) context_id, (std::optional<ServiceHandle>) agent_handle);
 
 class AgentService;
@@ -116,20 +111,6 @@ private:
             return true; \
         }(); \
     ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::gateway::AgentService* agent, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
-
-
-//static MsgId s_msg_id = 0;
-//Task<> MsgHandle(AgentService* agent, const protobuf::Message& proto_msg);
-//const bool _MILLION_AGENT_MSG_HANDLE_REGISTER_ = [] { 
-//    auto res = g_agent_logic_handle_map->emplace(g_agent_proto_codec->CalcKey(s_msg_id, 1), MsgHandle);
-//    assert(res.second);
-//    return true;
-//}();
-//Task<> MsgHandle(AgentService* agent, const protobuf::Message& proto_msg) {
-//    AgentSend(agent, proto_msg);
-//    co_return;
-//}
-
 
 } // namespace gateway
 } // namespace million

@@ -29,7 +29,6 @@ private:
     MILLION_MSG_DISPATCH(AgentService);
 
     MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
-
         auto res = AgentLogicHandler::Instance().proto_codec_.DecodeMessage(msg->packet);
         if (!res) {
             logger().Err("DecodeMessage failed");
@@ -60,6 +59,8 @@ private:
     UserContextId user_context_id_;
 };
 
+
+MILLION_MSG_DEFINE(, NodeMgrNewAgentMsg, (uint64_t) context_id, (std::optional<ServiceHandle>) agent_handle);
 
 class NodeMgrService : public IService {
 public:
