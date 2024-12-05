@@ -5,13 +5,15 @@
 
 #include <gateway/gateway.h>
 
+#include <agent/api.h>
+
 namespace million {
-namespace gateway {
+namespace agent {
 
 class AgentService;
 using AgentLogicHandleFunc = Task<>(*)(AgentService* agent, ProtoMsgUnique proto_msg);
 
-class GATEWAY_CLASS_API AgentLogicHandler {
+class AGENT_CLASS_API AgentLogicHandler {
 public:
     static AgentLogicHandler& Instance() {
         static AgentLogicHandler handler;
@@ -22,7 +24,7 @@ public:
     void RegisterLogicMsgProto(std::string proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
         logic_init_queue_.emplace_back([this, proto_file_name = std::move(proto_file_name), msg_ext_id, sub_msg_ext_id] {
             if (!proto_codec_.RegisterProto(proto_file_name, msg_ext_id, sub_msg_ext_id)) {
-                // ◊¢≤·–≠“È ß∞‹
+                // Ê≥®ÂÜåÂçèËÆÆÂ§±Ë¥•
             }
         });
     }
@@ -31,7 +33,7 @@ public:
         logic_init_queue_.emplace_back([this, msg_key, handle] {
             auto res = logic_handle_map_.emplace(msg_key, handle);
             if (res.second) {
-                // ÷ÿ∏¥◊¢≤·
+                // ÈáçÂ§çÊ≥®ÂÜåÊ∂àÊÅØ
             }
         });
     }
@@ -60,9 +62,9 @@ private:
 };
 
 
-MILLION_MSG_DEFINE(GATEWAY_CLASS_API, AgentMgrLoginMsg, (UserContextId) context_id, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MSG_DEFINE(AGENT_CLASS_API, AgentMgrLoginMsg, (gateway::UserContextId) context_id, (std::optional<ServiceHandle>) agent_handle);
 
-class GATEWAY_CLASS_API AgentService : public IService {
+class AGENT_CLASS_API AgentService : public IService {
 public:
     using Base = IService;
     AgentService(IMillion* imillion, uint64_t user_context_id)
@@ -72,6 +74,7 @@ public:
 private:
     MILLION_MSG_DISPATCH(AgentService);
 
+    using GatewayRecvPacketMsg = gateway::GatewayRecvPacketMsg;
     MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
         auto res = AgentLogicHandler::Instance().proto_codec_.DecodeMessage(msg->packet);
         if (!res) {
@@ -94,38 +97,38 @@ public:
             logger().Err("EncodeMessage failed: type:{}.", typeid(proto_msg).name());
             return;
         }
-        Send<GatewaySendPacketMsg>(gateway_, user_context_id_, *res);
+        Send<gateway::GatewaySendPacketMsg>(gateway_, user_context_id_, *res);
     }
 
 private:
     ServiceHandle gateway_;
-    UserContextId user_context_id_;
+    gateway::UserContextId user_context_id_;
 };
 
 #define MILLION_AGENT_LOGIC_MSG_ID(NAMESPACE_, MSG_ID_, PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
     static ::million::MsgId _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = 0; \
     const bool _MILLION_AGENT_LOGIC_HANDLE_SET_MSG_ID_##MSG_ID_ = \
         [] { \
-            ::million::gateway::AgentLogicHandler::Instance().RegisterLogicMsgProto(PROTO_FILE_NAME, NAMESPACE_::MSG_EXT_ID_, NAMESPACE_::SUB_MSG_EXT_ID_); \
+            ::million::agent::AgentLogicHandler::Instance().RegisterLogicMsgProto(PROTO_FILE_NAME, NAMESPACE_::MSG_EXT_ID_, NAMESPACE_::SUB_MSG_EXT_ID_); \
             _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = static_cast<::million::MsgId>(NAMESPACE_::MSG_ID_); \
             return true; \
         }() \
 
 #define MILLION_AGENT_LOGIC_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::gateway::AgentService* agent, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_NAME_); \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::gateway::AgentService* agent, ::million::ProtoMsgUnique MSG_PTR_NAME_) { \
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_NAME_); \
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::agent::AgentService* agent, ::million::ProtoMsgUnique MSG_PTR_NAME_) { \
         auto msg = ::std::unique_ptr<NAMESPACE_::MSG_TYPE_>(static_cast<NAMESPACE_::MSG_TYPE_*>(MSG_PTR_NAME_.release())); \
         co_await _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(agent, std::move(msg)); \
         co_return; \
     } \
     const bool MILLION_AGENT_LOGIC_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [] { \
-            ::million::gateway::AgentLogicHandler::Instance().RegisterLogicMsgHandle(::million::ProtoCodec::CalcKey(_MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
+            ::million::agent::AgentLogicHandler::Instance().RegisterLogicMsgHandle(::million::ProtoCodec::CalcKey(_MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
                 _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I); \
             return true; \
         }(); \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::gateway::AgentService* agent, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
 
 
-} // namespace gateway
+} // namespace agent
 } // namespace million

@@ -22,32 +22,26 @@ struct NodeSessionHandle {
 MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterSendPacketMsg, (ServiceName) src_service, (NodeName) target_node, (ServiceName) target_service, (net::Packet) packet)
 MILLION_MSG_DEFINE(CLUSTER_CLASS_API, ClusterRecvPacketMsg, (NodeSessionHandle) context_id, (net::Packet) raw_packet, (net::PacketSpan) packet)
 
-
-//// MILLION_MSG_DEFINE(GATEWAY_CLASS_API, UnRegisterServiceMsg, (ServiceHandle) service_handle, (Cs::MsgId) cs_msg_id)
-//MILLION_MSG_DEFINE(GATEWAY_CLASS_API, RecvProtoMsg, (UserSessionHandle) session_handle, (ProtoMsgUnique) proto_msg)
-//MILLION_MSG_DEFINE(GATEWAY_CLASS_API, SendProtoMsg, (UserSessionHandle) session_handle, (ProtoMsgUnique) proto_msg)
-
-
-// Cluster.Call·µ»ØÒ»¸öTask<ProtoMsgUnique>£¬Í¨¹ıco_return ½«proto_msg·µ»Ø»ØÀ´
-// Cluster.CallÄÚ²¿£º
+// Cluster.Callè¿”å›ä¸€ä¸ªTask<ProtoMsgUnique>ï¼Œé€šè¿‡co_return å°†proto_msgè¿”å›å›æ¥
+// Cluster.Callå†…éƒ¨ï¼š
 // msg = co_await service.Call<ClusterPacketMsg, ClusterSendMsg>(Cluster.Service, proto_msg);
-// co_return ProtoMsgUnique×ª»»ÎªGoogleProtoMsgUnique;
+// co_return ProtoMsgUniqueè½¬æ¢ä¸ºGoogleProtoMsgUnique;
 // 
-// Cluster·şÎñOnMsg£¬½ÓÊÕµ½ClusterProtoMsg£¬½«proto_msgĞòÁĞ»¯£¬Í·²¿ÔÙ´øsession_id¡¢src_unique_name¡¢target_unique_name£¬·¢ËÍ¸øÆäËû¼¯Èº
-// Cluster·şÎñOnMsg£¬½ÓÊÕµ½ClusterNodeMsg£¬½âÎöÄÃµ½session_id¡¢src_unique_name¡¢target_unique_name£¬ÒÔ¼°·´ĞòÁĞ»¯google_proto_msg£¬´ò°üÎªClusterProtoMsg²¢·¢ËÍ¸øsrc_unique_name·şÎñ
-// ¼´Cluster.CallµÄco_awaitµÈµ½½á¹û
+// ClusteræœåŠ¡OnMsgï¼Œæ¥æ”¶åˆ°ClusterProtoMsgï¼Œå°†proto_msgåºåˆ—åŒ–ï¼Œå¤´éƒ¨å†å¸¦session_idã€src_unique_nameã€target_unique_nameï¼Œå‘é€ç»™å…¶ä»–é›†ç¾¤
+// ClusteræœåŠ¡OnMsgï¼Œæ¥æ”¶åˆ°ClusterNodeMsgï¼Œè§£ææ‹¿åˆ°session_idã€src_unique_nameã€target_unique_nameï¼Œä»¥åŠååºåˆ—åŒ–google_proto_msgï¼Œæ‰“åŒ…ä¸ºClusterProtoMsgå¹¶å‘é€ç»™src_unique_nameæœåŠ¡
+// å³Cluster.Callçš„co_awaitç­‰åˆ°ç»“æœ
 
-// ÆäËû¼¯ÈºÊÕµ½°ü£¬ÏòCluster·şÎñ·¢ËÍClusterRecvMsg
+// å…¶ä»–é›†ç¾¤æ”¶åˆ°åŒ…ï¼Œå‘ClusteræœåŠ¡å‘é€ClusterRecvMsg
 
 // 1. Cluster.Call
-	// 1. ²ÎÊı±ØĞëÊÇnet::Packet£¬Í¨¹ıProtoMgr½øĞĞ±àÂë
-	// 2. ¼¯Èº·şÎñÍ¨¹ıtcp·¢ËÍClusterPacket£¬½«net::Packet´ø³öÈ¥
-	// 3. Ä¿±ê½ÚµãÊÕ°ü£¬·´ĞòÁĞ»¯ÎªClusterPacket
-	// 4. Ä¿±ê½ÚµãÍ¨¹ıProtoMgr½âÎönet::Packet£¬·Ö·¢protoÏûÏ¢
-	// 5. Ä¿±ê´¦ÀíÍê³É£¬ÔÙÍ¨¹ıProtoMgr½øĞĞ±àÂë£¬µ÷ÓÃCluster.Reply£¬·¢»Ø¸øµ±Ç°½Úµã
-	// 6. µ±Ç°½ÚµãÊÕ°ü£¬·µ»Ønet::Packet
-// 2. ÓÅ»¯µã
-	// ClusterPacket¿ÉÒÔ²»Í¨¹ıproto£¬¶øÊÇÖ±½Ó×é°üsend£¬±ÜÃâ¶à´Î¿½±´
+	// 1. å‚æ•°å¿…é¡»æ˜¯net::Packetï¼Œé€šè¿‡ProtoMgrè¿›è¡Œç¼–ç 
+	// 2. é›†ç¾¤æœåŠ¡é€šè¿‡tcpå‘é€ClusterPacketï¼Œå°†net::Packetå¸¦å‡ºå»
+	// 3. ç›®æ ‡èŠ‚ç‚¹æ”¶åŒ…ï¼Œååºåˆ—åŒ–ä¸ºClusterPacket
+	// 4. ç›®æ ‡èŠ‚ç‚¹é€šè¿‡ProtoMgrè§£ænet::Packetï¼Œåˆ†å‘protoæ¶ˆæ¯
+	// 5. ç›®æ ‡å¤„ç†å®Œæˆï¼Œå†é€šè¿‡ProtoMgrè¿›è¡Œç¼–ç ï¼Œè°ƒç”¨Cluster.Replyï¼Œå‘å›ç»™å½“å‰èŠ‚ç‚¹
+	// 6. å½“å‰èŠ‚ç‚¹æ”¶åŒ…ï¼Œè¿”å›net::Packet
+// 2. ä¼˜åŒ–ç‚¹
+	// ClusterPacketå¯ä»¥ä¸é€šè¿‡protoï¼Œè€Œæ˜¯ç›´æ¥ç»„åŒ…sendï¼Œé¿å…å¤šæ¬¡æ‹·è´
 
 //class Cluster {
 //public:

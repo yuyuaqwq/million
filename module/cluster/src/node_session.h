@@ -27,5 +27,5 @@ private:
     NodeSessionInfo info_;
 };
 
-} // namespace gateway
+} // namespace cluster
 } // namespace million

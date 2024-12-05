@@ -4,6 +4,7 @@
 #include <chrono>
 
 namespace million {
+namespace gateway {
 
 using Token = uint64_t;
 
@@ -30,4 +31,5 @@ private:
     std::uniform_int_distribution<uint32_t> dis_;
 };
 
+} // namespace gateway
 } // namespace million

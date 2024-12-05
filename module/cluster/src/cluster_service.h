@@ -24,7 +24,7 @@ public:
         , server_(imillion) { }
 
     virtual bool OnInit() override {
-        // ioÏß³Ì»Øµ÷£¬·¢¸øworkÏß³Ì´¦Àí
+        // ioçº¿ç¨‹å›è°ƒï¼Œå‘ç»™workçº¿ç¨‹å¤„ç†
         server_.set_on_connection([this](const net::TcpConnectionShared& connection) -> asio::awaitable<void> {
             Send<ClusterTcpConnectionMsg>(service_handle(), connection);
             co_return;
@@ -74,8 +74,8 @@ public:
             DeleteNodeSession(node_session);
         }
 
-        // ¿ÉÄÜÊÇÖ÷¶¯·¢Æğ£¬Ò²¿ÉÄÜÊÇ±»¶¯ÊÕµ½Á¬½ÓµÄ£¬Á¬½ÓÈ¥ÖØ²»ÔÚÕâÀï´¦Àí
-        // Á¬½ÓÍ¶µİµ½¶¨Ê±ÈÎÎñ£¬±ÈÈç10s»¹Ã»ÓĞÎÕÊÖ³É¹¦¾Í¶Ï¿ªÁ¬½Ó
+        // å¯èƒ½æ˜¯ä¸»åŠ¨å‘èµ·ï¼Œä¹Ÿå¯èƒ½æ˜¯è¢«åŠ¨æ”¶åˆ°è¿æ¥çš„ï¼Œè¿æ¥å»é‡ä¸åœ¨è¿™é‡Œå¤„ç†
+        // è¿æ¥æŠ•é€’åˆ°å®šæ—¶ä»»åŠ¡ï¼Œæ¯”å¦‚10sè¿˜æ²¡æœ‰æ¡æ‰‹æˆåŠŸå°±æ–­å¼€è¿æ¥
         
         co_return;
     }
@@ -105,18 +105,18 @@ public:
 
         switch (cluster_msg.body_case()) {
         case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeReq: {
-            // ÊÕµ½ÎÕÊÖÇëÇó£¬µ±Ç°ÊÇ±»¶¯Á¬½Ó·½
+            // æ”¶åˆ°æ¡æ‰‹è¯·æ±‚ï¼Œå½“å‰æ˜¯è¢«åŠ¨è¿æ¥æ–¹
             auto& req = cluster_msg.handshake_req();
             node_session->info().node_name = req.src_node();
 
-            // »¹ĞèÒª¼ì²éÊÇ·ñÓëÄ¿±ê½Úµã´æÔÚÁ¬½Ó£¬Èç¹ûÒÑ´æÔÚ£¬ËµÃ÷¸ÃÁ¬½ÓÒÑ¾­Ê§Ğ§£¬ĞèÒª¶Ï¿ª
+            // è¿˜éœ€è¦æ£€æŸ¥æ˜¯å¦ä¸ç›®æ ‡èŠ‚ç‚¹å­˜åœ¨è¿æ¥ï¼Œå¦‚æœå·²å­˜åœ¨ï¼Œè¯´æ˜è¯¥è¿æ¥å·²ç»å¤±æ•ˆï¼Œéœ€è¦æ–­å¼€
             auto old_node_session = FindNodeSession(req.src_node(), nullptr);
             if (old_node_session) {
                 old_node_session->Close();
                 logger().Info("old connection, ip: {}, port: {}, cur_node: {}, req_src_node: {}", ip, port, node_name_, req.src_node());
             }
 
-            // ÄÜ·ñÆ¥Åä¶¼»Ø°ü
+            // èƒ½å¦åŒ¹é…éƒ½å›åŒ…
             Ss::Cluster::ClusterMsg cluster_msg;
             auto* res = cluster_msg.mutable_handshake_res();
             res->set_target_node(node_name_);
@@ -133,12 +133,12 @@ public:
                 co_return;
             }
 
-            // ´´½¨½Úµã
+            // åˆ›å»ºèŠ‚ç‚¹
             CreateNodeSession(std::move(msg->connection), false);
             break;
         }
         case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeRes: {
-            // ÊÕµ½ÎÕÊÖÏìÓ¦£¬µ±Ç°ÊÇÖ÷¶¯Á¬½Ó·½
+            // æ”¶åˆ°æ¡æ‰‹å“åº”ï¼Œå½“å‰æ˜¯ä¸»åŠ¨è¿æ¥æ–¹
             auto& res = cluster_msg.handshake_res();
             if (node_session->info().node_name != res.target_node()) {
                 logger().Err("Target node name mismatch, ip: {}, port: {}, target_node: {}, res_target_node: {}", ip, port, node_session->info().node_name, res.target_node());
@@ -146,10 +146,10 @@ public:
                 co_return;
             }
             
-            // ´´½¨½Úµã
+            // åˆ›å»ºèŠ‚ç‚¹
             auto& node_session_ref = CreateNodeSession(std::move(msg->connection), true);
 
-            // Íê³ÉÁ¬½Ó£¬·¢ËÍËùÓĞ¶ÓÁĞ°ü
+            // å®Œæˆè¿æ¥ï¼Œå‘é€æ‰€æœ‰é˜Ÿåˆ—åŒ…
             for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
                 auto& msg = *iter;
                 if (msg->target_node == res.target_node()) {
@@ -164,14 +164,14 @@ public:
             break;
         }
         case Ss::Cluster::ClusterMsg::BodyCase::kForwardHeader: {
-            // »¹ĞèÒªÅĞ¶ÏÏÂ£¬Á¬½ÓÃ»ÓĞÍê³ÉÎÕÊÖ£¬Ôò²»ÔÊĞí×ª·¢°ü
+            // è¿˜éœ€è¦åˆ¤æ–­ä¸‹ï¼Œè¿æ¥æ²¡æœ‰å®Œæˆæ¡æ‰‹ï¼Œåˆ™ä¸å…è®¸è½¬å‘åŒ…
 
             auto& header = cluster_msg.forward_header();
             auto& src_service = header.src_service();
             auto& target_service = header.target_service();
             auto target_service_handle = imillion().GetServiceByName(target_service);
             if (target_service_handle) {
-                // »¹ĞèÒª»ñÈ¡ÏÂÔ´½Úµã
+                // è¿˜éœ€è¦è·å–ä¸‹æºèŠ‚ç‚¹
                 auto span = net::PacketSpan(msg->packet.begin() + sizeof(header_size) + header_size, msg->packet.end());
                 Send<ClusterRecvPacketMsg>(*target_service_handle, 
                     NodeSessionHandle{ .src_node = node_session->info().node_name, .src_service = src_service},
@@ -205,7 +205,7 @@ public:
                     co_return;
                 }
 
-                // ÎÕÊÖ
+                // æ¡æ‰‹
                 auto connection = *connection_opt;
                 auto node_session = connection->get_ptr<NodeSession>();
 
@@ -224,8 +224,8 @@ public:
                 }, asio::detached);
         }
 
-        // °ÑÕı´¦ÓÚÎÕÊÖ×´Ì¬µÄĞèÒªsendµÄËùÓĞ°ü·Åµ½¶ÓÁĞÀï£¬ÔÚÎÕÊÖÍê³ÉÊ±Í³Ò»·¢°ü
-        // Ê¹ÓÃÒ»¸öÈ«¾Ö¶ÓÁĞ£¬ÒòÎªÕâÖÖÁ¬½ÓÅÅ¶ÓµÄ°üºÜÉÙ£¬Ö±½ÓÉ¨Ãè¾ÍĞĞ
+        // æŠŠæ­£å¤„äºæ¡æ‰‹çŠ¶æ€çš„éœ€è¦sendçš„æ‰€æœ‰åŒ…æ”¾åˆ°é˜Ÿåˆ—é‡Œï¼Œåœ¨æ¡æ‰‹å®Œæˆæ—¶ç»Ÿä¸€å‘åŒ…
+        // ä½¿ç”¨ä¸€ä¸ªå…¨å±€é˜Ÿåˆ—ï¼Œå› ä¸ºè¿™ç§è¿æ¥æ’é˜Ÿçš„åŒ…å¾ˆå°‘ï¼Œç›´æ¥æ‰«æå°±è¡Œ
         send_queue_.emplace_back(std::move(msg));
 
         co_return;
@@ -233,7 +233,7 @@ public:
 
 private:
     NodeSession& CreateNodeSession(net::TcpConnectionShared&& connection, bool active) {
-        // Èç¹û´æÔÚÔòĞèÒª²åÈëÊ§°Ü
+        // å¦‚æœå­˜åœ¨åˆ™éœ€è¦æ’å…¥å¤±è´¥
         auto node_session = connection->get_ptr<NodeSession>();
         auto& target_node_name = node_session->info().node_name;
         auto res = nodes_.emplace(target_node_name, connection);
@@ -241,25 +241,25 @@ private:
             logger().Info("CreateNode: {}", target_node_name);
         }
         else {
-            // ÒÑ´æÔÚ£¬±È½ÏÁ½±ß½ÚµãÃûµÄ×ÖµäĞò£¬Ñ¡Ôñ¶Ï¿ªÄ³Ò»ÌõÁ¬½Ó
+            // å·²å­˜åœ¨ï¼Œæ¯”è¾ƒä¸¤è¾¹èŠ‚ç‚¹åçš„å­—å…¸åºï¼Œé€‰æ‹©æ–­å¼€æŸä¸€æ¡è¿æ¥
             bool disconnect_old;
             if (active) {
-                // Ö÷¶¯½¨Á¢
+                // ä¸»åŠ¨å»ºç«‹
                 disconnect_old = node_name_ > target_node_name;
             }
             else {
-                // ±»¶¯½¨Á¢
+                // è¢«åŠ¨å»ºç«‹
                 disconnect_old = target_node_name > node_name_;
             }
 
             if (disconnect_old) {
-                // ¶Ï¿ª¾ÉÁ¬½Ó£¬¹ØÁªĞÂÁ¬½Ó
+                // æ–­å¼€æ—§è¿æ¥ï¼Œå…³è”æ–°è¿æ¥
                 res.first->second->Close();
                 res.first->second = connection;
                 logger().Info("Duplicate connection, disconnect old connection: {}", target_node_name);
             }
             else {
-                // ¶Ï¿ªĞÂÁ¬½Ó
+                // æ–­å¼€æ–°è¿æ¥
                 connection->Close();
                 logger().Info("Duplicate connection, disconnect new connection: {}", target_node_name);
             }
@@ -277,7 +277,7 @@ private:
             return iter->second->get_ptr<NodeSession>();
         }
 
-        // ³¢ÊÔ´ÓÅäÖÃÎÄ¼şÖĞ²éÕÒ´Ë½Úµã
+        // å°è¯•ä»é…ç½®æ–‡ä»¶ä¸­æŸ¥æ‰¾æ­¤èŠ‚ç‚¹
         const auto& config = imillion().YamlConfig();
         const auto& cluster_config = config["cluster"];
         if (!cluster_config) {
@@ -320,7 +320,7 @@ private:
     }
 
     void ForwardPacket(NodeSession* node_session, std::unique_ptr<ClusterSendPacketMsg> msg) {
-        // ×·¼Ó¼¯ÈºÍ·²¿
+        // è¿½åŠ é›†ç¾¤å¤´éƒ¨
         Ss::Cluster::ClusterMsg cluster_msg;
         auto* header = cluster_msg.mutable_forward_header();
         header->set_src_service(std::move(msg->src_service));
@@ -345,5 +345,5 @@ private:
     std::list<std::unique_ptr<ClusterSendPacketMsg>> send_queue_;
 };
 
-} // namespace gateway
+} // namespace cluster
 } // namespace million

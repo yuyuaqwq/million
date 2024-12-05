@@ -5,7 +5,6 @@
 #include <iostream>
 
 #include <million/imsg.h>
-
 #include <million/logger/logger.h>
 
 #include "service.h"

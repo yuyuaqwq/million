@@ -14,5 +14,5 @@ NodeSession::~NodeSession() = default;
 
 
 
-} // namespace gateway
+} // namespace cluster
 } // namespace million

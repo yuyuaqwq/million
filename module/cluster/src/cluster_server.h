@@ -19,5 +19,5 @@ public:
 
 };
 
-} // namespace gateway
+} // namespace AGENT
 } // namespace million

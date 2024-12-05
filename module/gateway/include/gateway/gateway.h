@@ -12,11 +12,10 @@
 #include <gateway/api.h>
 
 namespace million {
-
 namespace gateway {
 
-// 注册user服务，没有token的消息发往user-n服务
-// user-n服务再通知agentmgr(全局唯一)服务，agentmgr让nodemgr(本机唯一)创建agent-n，然后再关联到gateway，gateway下次就可以直接发给这个agent
+// 娉ㄥ唽user鏈嶅姟锛屾病鏈塼oken鐨勬秷鎭彂寰�user-n鏈嶅姟
+// user-n鏈嶅姟鍐嶉�氱煡agentmgr(鍏ㄥ眬鍞竴)鏈嶅姟锛宎gentmgr璁﹏odemgr(鏈満鍞竴)鍒涘缓agent-n锛岀劧鍚庡啀鍏宠仈鍒癵ateway锛実ateway涓嬫灏卞彲浠ョ洿鎺ュ彂缁欒繖涓猘gent
 
 using UserContextId = uint64_t;
 

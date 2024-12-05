@@ -5,82 +5,18 @@
 #include <million/iservice.h>
 
 #include <gateway/api.h>
-#include <gateway/agent.h>
 #include <gateway/gateway.h>
 
 #include "gateway_server.h"
 
-#define MILLION_CS_PROTO_MSG_DISPATCH() MILLION_PROTO_MSG_DISPATCH(Cs, ::million::gateway::UserSessionHandle)
+#define MILLION_CS_PROTO_MSG_DISPATCH() MILLION_PROTO_MSG_DISPATCH(Cs, ::million::agent::UserSessionHandle)
 #define MILLION_CS_PROTO_MSG_ID(MSG_ID_) MILLION_PROTO_MSG_ID(Cs, MSG_ID_)
-#define MILLION_CS_PROTO_MSG_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) MILLION_PROTO_MSG_HANDLE(Cs::##NAMESPACE_, ::million::gateway::UserSessionHandle, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_)
+#define MILLION_CS_PROTO_MSG_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) MILLION_PROTO_MSG_HANDLE(Cs::##NAMESPACE_, ::million::agent::UserSessionHandle, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_)
 
 namespace million {
 namespace gateway {
 
 namespace protobuf = google::protobuf; 
-
-
-MILLION_MSG_DEFINE(, NodeMgrNewAgentMsg, (uint64_t) context_id, (std::optional<ServiceHandle>) agent_handle);
-
-class NodeMgrService : public IService {
-public:
-    using Base = IService;
-    using Base::Base;
-
-    MILLION_MSG_DISPATCH(NodeMgrService);
-
-    MILLION_MSG_HANDLE(NodeMgrNewAgentMsg, msg) {
-        auto handle = imillion().NewService<AgentService>(msg->context_id);
-        if (!handle) {
-            logger().Err("NewService AgentService failed.");
-            co_return;
-        }
-        msg->agent_handle = std::move(*handle);
-        Reply(std::move(msg));
-        co_return;
-    }
-
-private:
-};
-
-class AgentMgrService : public IService {
-public:
-    using Base = IService;
-    using Base::Base;
-
-    virtual bool OnInit() override {
-        auto handle = imillion().GetServiceByName("GatewayService");
-        if (!handle) {
-            logger().Err("GatewayService not found.");
-            return false;
-        }
-        gateway_ = *handle;
-
-        handle = imillion().GetServiceByName("NodeMgrService");
-        if (!handle) {
-            logger().Err("NodeMgrService not found.");
-            return false;
-        }
-        node_mgr_ = *handle;
-    }
-
-    MILLION_MSG_DISPATCH(AgentMgrService);
-
-    MILLION_MSG_HANDLE(AgentMgrLoginMsg, msg) {
-        auto agent_msg = co_await Call<NodeMgrNewAgentMsg>(node_mgr_, msg->context_id, std::nullopt);
-        msg->agent_handle = std::move(agent_msg->agent_handle);
-
-        Send<GatewaySureAgentMsg>(gateway_, msg->context_id, *msg->agent_handle);
-
-        Reply(std::move(msg));
-        co_return;
-    }
-
-private:
-    ServiceHandle gateway_;
-    ServiceHandle node_mgr_;
-};
-
 
 MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (net::TcpConnectionShared) connection)
 MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)

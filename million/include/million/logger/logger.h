@@ -28,8 +28,7 @@ public:
     bool Init();
 
     template <typename... Args>
-    void Log(const std::source_location& source, LogLevel level, std::string_view fmt, Args&&... args) {
-        std::string str = std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...));
+    void Log(const std::source_location& source, LogLevel level, const std::string& str) {
         Log(logger_handle_, source, level, str);
     }
 
@@ -46,12 +45,12 @@ private:
     ServiceHandle logger_handle_;
 };
 
-#define Trace(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kTrace, fmt, ##__VA_ARGS__)
-#define Debug(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kDebug, fmt, ##__VA_ARGS__)
-#define Info(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kInfo, fmt, ##__VA_ARGS__)
-#define Warn(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kWarn, fmt, ##__VA_ARGS__)
-#define Err(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kErr, fmt, ##__VA_ARGS__)
-#define Critical(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kCritical, fmt, ##__VA_ARGS__)
-#define Off(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kOff, fmt, ##__VA_ARGS__)
+#define Trace(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kTrace, ::std::format(fmt, __VA_ARGS__))
+#define Debug(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kDebug, ::std::format(fmt, __VA_ARGS__))
+#define Info(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kInfo, ::std::format(fmt, __VA_ARGS__))
+#define Warn(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kWarn, ::std::format(fmt, __VA_ARGS__))
+#define Err(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kErr, ::std::format(fmt, __VA_ARGS__))
+#define Critical(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kCritical, ::std::format(fmt, __VA_ARGS__))
+#define Off(fmt, ...) Log(std::source_location::current(), ::million::LogLevel::kOff, ::std::format(fmt, __VA_ARGS__))
 
 } // namespace million
