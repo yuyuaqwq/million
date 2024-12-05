@@ -94,6 +94,8 @@ MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (std::string) table_name, (std::
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowUpdateMsg, (std::string) table_name, (std::string) primary_key, (const protobuf::Message*) proto_msg);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (const protobuf::Message*) proto_msg);
 
+// dbservice不持有实际数据，需要一个队列，query后就把所有权转移出去，因为更新也是外部发消息过来，这个时候再复制一份数据
+// 投递到脏队列里
 
 class DbService : public IService {
 public:
@@ -102,7 +104,7 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        logger().Debug("DbService Init");
+        logger().Info("DbService Init");
 
         proto_codec_.Init();
 
@@ -138,6 +140,7 @@ public:
     MILLION_MSG_HANDLE(DbRowQueryMsg, msg) {
         const protobuf::Descriptor* desc = proto_codec_.GetMsgDesc(msg->table_name);
         if (!desc) {
+            logger().Err("Unregistered table name: {}.", msg->table_name);
             co_return;
         }
 
@@ -157,6 +160,7 @@ public:
 
             auto proto_msg_opt = proto_codec_.NewMessage(*desc);
             if (!proto_msg_opt) {
+                logger().Err("proto_codec_.NewMessage failed.");
                 co_return;
             }
 
@@ -167,9 +171,7 @@ public:
             }
 
             auto res = rows.emplace(std::move(msg->primary_key), std::move(row));
-            if (!res.second) {
-
-            }
+            assert(res.second);
             row_iter = res.first;
         } while (false);
         msg->proto_msg = row_iter->second.proto_msg.get();

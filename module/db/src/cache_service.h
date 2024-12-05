@@ -34,7 +34,7 @@ public:
             redis_.emplace(std::format("tcp://{}:{}", host, port));
         }
         catch (const sw::redis::Error& e) {
-            std::cerr << "Redis error: " << e.what() << std::endl;
+            logger().Err("Redis error:{}", e.what());
         }
 
         EnableSeparateWorker();
@@ -55,7 +55,7 @@ public:
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         const auto& table_name = options.name();
         if (table_name.empty()) {
-            std::cerr << "table_name is empty." << std::endl;
+            logger().Err("table_name is empty.");
             co_return;
         }
 
@@ -91,7 +91,7 @@ public:
         const Db::MessageOptionsTable& options = descriptor->options().GetExtension(Db::table);
         const auto& table_name = options.name();
         if (table_name.empty()) {
-            std::cerr << "table_name is empty." << std::endl;
+            logger().Err("table_name is empty.");
             co_return;
         }
 
@@ -121,10 +121,10 @@ public:
                 const auto& cache_options = options.cache();
                 if (cache_options.index()) {
                     if (!key.empty()) {
-                        std::cerr << "there can only be one index:" << field->name() << std::endl;
+                        logger().Err("there can only be one index:{}", field->name());
                     }
                     if (field->is_repeated()) {
-                        std::cerr << "index cannot be an array:" << field->name() << std::endl;
+                        logger().Err("index cannot be an array:{}", field->name());
                     }
                     else {
                         key = redis_hash[field->name()];
@@ -134,7 +134,7 @@ public:
         }
 
         if (key.empty()) {
-            std::cerr << "index is empty:" << key << std::endl;
+            logger().Err("index is empty:", key);
             co_return;
         }
         auto redis_key = std::format("million_db:{}:{}", table_name, key);
@@ -172,7 +172,7 @@ public:
         const auto& table_name = options.name();
 
         if (field->is_repeated()) {
-            throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
+            logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
         }
         else {
             switch (field->type()) {
@@ -227,7 +227,7 @@ public:
                 break;
             }
             default: {
-                std::cerr << "unsupported field type:" << field->type() << std::endl;
+                logger().Err("Unsupported field type: {}", field->name());
             }
             }
         }
@@ -240,7 +240,7 @@ public:
 
         std::string value;
         if (field->is_repeated()) {
-            throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
+            logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
         }
         else {
             switch (field->type()) {
@@ -294,7 +294,7 @@ public:
                 break;
             }
             default: {
-                std::cerr << "unsupported field type:" << field->type() << std::endl;
+                logger().Err("Unsupported field type: {}", field->name());
             }
             }
         }

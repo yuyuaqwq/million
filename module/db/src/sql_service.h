@@ -40,11 +40,8 @@ public:
             sql_ = soci::session(soci::mysql, std::format("db={} user={} password={} host={}", db, user, password, host));
         }
         catch (const soci::mysql_soci_error& e) {
-            std::cerr << "MySQL error: " << e.what() << std::endl;
+            logger().Err("MySQL error : {}", e.what());
         } 
-        catch (const std::exception& e) {
-            std::cerr << "Error: " << e.what() << std::endl;
-        }
 
         EnableSeparateWorker();
 
@@ -323,7 +320,7 @@ public:
                     break;
                 }
                 default:
-                    std::cerr << "unsupported field type:" << field->type() << std::endl;
+                    logger().Err("unsupported field type:{}", field->name());
                 }
             }
             msg->dirty_bits->operator[](i) = false;
@@ -513,7 +510,7 @@ public:
                     break;
                 }
                 default:
-                    std::cerr << "unsupported field type:" << field->type() << std::endl;
+                    logger().Err("unsupported field type:{}", field->name());
                 }
             }
         }
