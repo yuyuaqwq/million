@@ -94,8 +94,12 @@ MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (std::string) table_name, (std::
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowUpdateMsg, (std::string) table_name, (std::string) primary_key, (const protobuf::Message*) proto_msg);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (const protobuf::Message*) proto_msg);
 
-// dbservice不持有实际数据，需要一个队列，query后就把所有权转移出去，因为更新也是外部发消息过来，这个时候再复制一份数据
-// 投递到脏队列里
+
+// DbService使用lru来淘汰row
+// 可能n秒脏row需要入库
+
+// 查询时，会返回所有权给外部服务，避免lru淘汰导致指针无效
+
 
 class DbService : public IService {
 public:
