@@ -6,7 +6,7 @@
 #include <million/noncopyable.h>
 #include <million/imsg.h>
 #include <million/iservice.h>
-#include <million/logger/logger.h>
+#include <million/logger.h>
 
 namespace YAML {
 

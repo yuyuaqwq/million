@@ -17,8 +17,6 @@
 
 #include <protogen/db/db_options.pb.h>
 
-#include <million/logger/logger.h>
-
 #include <db/api.h>
 
 namespace million {

@@ -9,7 +9,7 @@
 #include <million/service_handle.h>
 #include <million/imsg.h>
 #include <million/task.h>
-#include <million/logger/logger.h>
+#include <million/logger.h>
 
 namespace million {
 

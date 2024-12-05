@@ -9,7 +9,7 @@
 #include <spdlog/sinks/hourly_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-#include <million/logger/logger.h>
+#include <million/logger.h>
 
 #include "million.h"
 
