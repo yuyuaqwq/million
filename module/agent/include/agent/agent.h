@@ -32,7 +32,7 @@ public:
     void RegisterLogicMsgHandle(MsgKey msg_key, AgentLogicHandleFunc handle) {
         logic_init_queue_.emplace_back([this, msg_key, handle] {
             auto res = logic_handle_map_.emplace(msg_key, handle);
-            if (res.second) {
+            if (!res.second) {
                 // 重复注册消息
             }
         });

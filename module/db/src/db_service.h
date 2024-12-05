@@ -23,7 +23,7 @@ namespace million {
 namespace db {
 
 namespace protobuf = google::protobuf;
-class DbProtoMgr : noncopyable{
+class DbProtoCodec : noncopyable{
 public:
     // ³õÊ¼»¯
     void Init() {
@@ -89,10 +89,10 @@ private:
 
 
 MILLION_MSG_DEFINE_EMPTY(DB_CLASS_API, DbSqlInitMsg);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowQueryMsg, (std::string) table_name, (std::string) primary_key, (const google::protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowQueryMsg, (std::string) table_name, (std::string) primary_key, (const protobuf::Message*) proto_msg);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (std::string) table_name, (std::string) primary_key, (bool) exist);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowUpdateMsg, (std::string) table_name, (std::string) primary_key, (const google::protobuf::Message*) proto_msg);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (const google::protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowUpdateMsg, (std::string) table_name, (std::string) primary_key, (const protobuf::Message*) proto_msg);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (const protobuf::Message*) proto_msg);
 
 
 class DbService : public IService {
@@ -104,7 +104,7 @@ public:
     virtual bool OnInit() override {
         logger().Debug("DbService Init");
 
-        proto_mgr_.Init();
+        proto_codec_.Init();
 
         return true;
     }
@@ -117,7 +117,7 @@ public:
 
     MILLION_MSG_HANDLE(DbSqlInitMsg, msg) {
         sql_service_ = msg->sender();
-        for (const auto& table_info : proto_mgr_.table_map()) {
+        for (const auto& table_info : proto_codec_.table_map()) {
             co_await Call<SqlCreateTableMsg>(sql_service_, table_info.second);
         }
 
@@ -136,7 +136,7 @@ public:
     }
 
     MILLION_MSG_HANDLE(DbRowQueryMsg, msg) {
-        const protobuf::Descriptor* desc = proto_mgr_.GetMsgDesc(msg->table_name);
+        const protobuf::Descriptor* desc = proto_codec_.GetMsgDesc(msg->table_name);
         if (!desc) {
             co_return;
         }
@@ -155,7 +155,7 @@ public:
                 break;
             }
 
-            auto proto_msg_opt = proto_mgr_.NewMessage(*desc);
+            auto proto_msg_opt = proto_codec_.NewMessage(*desc);
             if (!proto_msg_opt) {
                 co_return;
             }
@@ -167,7 +167,9 @@ public:
             }
 
             auto res = rows.emplace(std::move(msg->primary_key), std::move(row));
-            assert(res.second);
+            if (!res.second) {
+
+            }
             row_iter = res.first;
         } while (false);
         msg->proto_msg = row_iter->second.proto_msg.get();
@@ -177,7 +179,7 @@ public:
 
 
 private:
-    DbProtoMgr proto_mgr_;
+    DbProtoCodec proto_codec_;
     struct DbRow {
         ProtoMsgUnique proto_msg;
         std::vector<bool> dirty_bits;
