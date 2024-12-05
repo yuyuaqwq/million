@@ -10,10 +10,10 @@
 #include <google/protobuf/compiler/importer.h>
 
 #include <million/imillion.h>
-#include <million/proto_msg.h>
+#include <million/proto.h>
 
-#include <db/cache_msg.h>
-#include <db/sql_msg.h>
+#include <db/cache.h>
+#include <db/sql.h>
 
 #include <protogen/db/db_options.pb.h>
 

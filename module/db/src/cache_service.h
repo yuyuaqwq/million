@@ -12,9 +12,9 @@
 #include <protogen/db/db_options.pb.h>
 
 #include <million/imillion.h>
-#include <million/proto_msg.h>
+#include <million/proto.h>
 
-#include <db/cache_msg.h>
+#include <db/cache.h>
 
 namespace million {
 namespace db {

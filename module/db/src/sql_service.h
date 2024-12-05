@@ -15,9 +15,9 @@
 #include <protogen/db/db_options.pb.h>
 
 #include <million/imillion.h>
-#include <million/proto_msg.h>
+#include <million/proto.h>
 
-#include <db/sql_msg.h>
+#include <db/sql.h>
 
 namespace Db = Million::Proto::Db;
 

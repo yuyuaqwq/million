@@ -4,7 +4,7 @@
 #include <string>
 
 #include <million/imillion.h>
-#include <million/proto_msg.h>
+#include <million/proto.h>
 
 #include <pocketpy/pocketpy.h>
 #include <pybind11/pybind11.h>

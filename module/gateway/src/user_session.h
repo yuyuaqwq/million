@@ -4,7 +4,7 @@
 
 #include <million/noncopyable.h>
 #include <million/net/tcp_connection.h>
-#include <million/proto_msg.h>
+#include <million/proto.h>
 
 #include <gateway/gateway.h>
 

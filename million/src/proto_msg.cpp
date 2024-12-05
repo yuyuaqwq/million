@@ -1,1 +1,1 @@
-#include <million/proto_msg.h>
+#include <million/proto.h>

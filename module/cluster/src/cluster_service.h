@@ -4,7 +4,7 @@
 
 #include <protogen/ss/ss_cluster.pb.h>
 
-#include <cluster/cluster_msg.h>
+#include <cluster/cluster.h>
 
 #include "cluster_server.h"
 

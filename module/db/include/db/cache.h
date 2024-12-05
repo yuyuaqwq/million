@@ -3,7 +3,7 @@
 #include <vector>
 
 #include <million/imillion.h>
-#include <million/proto_msg.h>
+#include <million/proto.h>
 
 #include <db/api.h>
 

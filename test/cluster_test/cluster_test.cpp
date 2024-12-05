@@ -4,7 +4,7 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <cluster/cluster_msg.h>
+#include <cluster/cluster.h>
 
 #include <protogen/ss/ss_test.pb.h>
 

@@ -7,7 +7,7 @@
 #include <utility>
 
 #include <million/imsg.h>
-#include <million/proto_msg.h>
+#include <million/proto.h>
 
 #include <gateway/api.h>
 
