@@ -90,6 +90,7 @@ void TaskExecutor::AddTask(Task<>&& task) {
 std::optional<Task<>> TaskExecutor::TimeoutCleanup(SessionId id) {
     auto iter = tasks_.find(id);
     if (iter == tasks_.end()) {
+        // 正常情况是已经执行完毕了
         return std::nullopt;
     }
     // 超时，写出日志告警

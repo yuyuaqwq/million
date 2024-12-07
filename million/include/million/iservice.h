@@ -69,7 +69,6 @@ public:
     virtual Task<> OnMsg(MsgUnique msg) = 0;
     // virtual Task<> OnStop() { co_return; }
     virtual void OnExit() {}
-    virtual void OnTimeout(Task<>&& task) {}
 
     IMillion& imillion() { return *imillion_; }
     const ServiceHandle& service_handle() const { return service_handle_; }

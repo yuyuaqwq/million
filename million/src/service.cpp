@@ -48,14 +48,14 @@ bool Service::MsgQueueIsEmpty() {
 
 void Service::ProcessMsg(MsgUnique msg) {
     if (msg->type() == MillionServiceStartMsg::type_static()) {
-        task_.emplace(iservice_->OnStart());
-        if (!task_->coroutine.done()) {
+        on_start_task_.emplace(iservice_->OnStart());
+        if (!on_start_task_->coroutine.done()) {
             // OnStart未完成，等待处理完成
-            auto id = task_->coroutine.promise().session_awaiter()->waiting_session();
+            auto id = on_start_task_->coroutine.promise().session_awaiter()->waiting_session();
             service_mgr()->million()->session_monitor().AddSession(service_handle(), id);
         }
         else {
-            task_ = std::nullopt;
+            on_start_task_ = std::nullopt;
             state_ = ServiceState::kRunning;
         }
         return;
@@ -72,19 +72,18 @@ void Service::ProcessMsg(MsgUnique msg) {
     }
 
     if (state_ == ServiceState::kReady) {
-        assert(task_);
+        assert(on_start_task_);
         if (msg->type() == MillionSessionTimeoutMsg::type_static()) {
             auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
             // 超时未完成OnStart，准备销毁服务
-            iservice_->OnTimeout(std::move(*task_));
-            task_ = std::nullopt;
+            on_start_task_ = std::nullopt;
             iservice_->Send<MillionServiceStopMsg>(service_handle());
             return;
         }
         // 只能尝试调度OnStart
-        excutor_.TrySchedule(*task_, std::move(msg));
-        if (task_->coroutine.done()) {
-            task_ = std::nullopt;
+        excutor_.TrySchedule(*on_start_task_, std::move(msg));
+        if (on_start_task_->coroutine.done()) {
+            on_start_task_ = std::nullopt;
             state_ = ServiceState::kRunning;
         }
         return;
@@ -93,9 +92,8 @@ void Service::ProcessMsg(MsgUnique msg) {
     if (msg->type() == MillionSessionTimeoutMsg::type_static()) {
         auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
         auto task_opt = excutor_.TimeoutCleanup(msg_ptr->timeout_id);
-        if (task_opt) {
-            iservice_->OnTimeout(std::move(*task_opt));
-        }
+        // 这里可以考虑实现支持超时返回的SessionAwaiter，co_await返回一个std::optional<>，std::nullopt就表示超时
+
         return;
     }
 

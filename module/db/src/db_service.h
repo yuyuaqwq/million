@@ -173,7 +173,7 @@ public:
 
             auto proto_msg_opt = proto_codec_.NewMessage(*desc);
             if (!proto_msg_opt) {
-                logger().Err("proto_codec_.NewMessage failed.");
+                logger().Err("proto_codec_.NewMessage failed: {}.", msg->table_name);
                 co_return;
             }
             auto proto_msg = std::move(*proto_msg_opt);
