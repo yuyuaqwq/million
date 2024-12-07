@@ -60,7 +60,7 @@ void Service::ProcessMsg(MsgUnique msg) {
         }
         return;
     }
-    else if (msg->type() == MillionServiceStartMsg::type_static()) {
+    else if (msg->type() == MillionServiceStopMsg::type_static()) {
         // if (state_ == ServiceState::kReady) {
             // OnStart未完成，直接退出
         iservice_->OnExit();
