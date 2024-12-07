@@ -31,8 +31,14 @@ public:
     void Resend(const ServiceHandle& target, MsgUnique msg);
 
     template <typename MsgT>
+    SessionAwaiter<MsgT> RecvWithTimeoutOrNull(SessionId session_id, uint32_t timeout_s) {
+        return SessionAwaiter<MsgT>(session_id, timeout_s);
+    }
+
+    template <typename MsgT>
     SessionAwaiter<MsgT> Recv(SessionId session_id) {
-        return SessionAwaiter<MsgT>(session_id);
+        // 0表示默认超时时间
+        return SessionAwaiter<MsgT>(session_id, 0);
     }
 
     void Reply(MsgUnique msg);
@@ -43,6 +49,17 @@ public:
         msg->set_session_id(session_id);
         msg->set_sender(target);
         Reply(std::move(msg));
+    }
+
+    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
+    SessionAwaiter<RecvMsgT> CallWithTimeoutOrNull(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
+        auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
+        return RecvWithTimeoutOrNull<RecvMsgT>(session_id, timeout_s);
+    }
+    template <typename MsgT, typename ...Args>
+    SessionAwaiter<MsgT> CallWithTimeoutOrNull(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
+        auto session_id = Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
+        return RecvWithTimeoutOrNull<MsgT>(session_id, timeout_s);
     }
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>

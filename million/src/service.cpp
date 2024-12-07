@@ -52,7 +52,8 @@ void Service::ProcessMsg(MsgUnique msg) {
         if (!on_start_task_->coroutine.done()) {
             // OnStart未完成，等待处理完成
             auto id = on_start_task_->coroutine.promise().session_awaiter()->waiting_session();
-            service_mgr()->million()->session_monitor().AddSession(service_handle(), id);
+            auto timeout_s = on_start_task_->coroutine.promise().session_awaiter()->timeout_s();
+            service_mgr()->million()->session_monitor().AddSession(service_handle(), id, timeout_s);
         }
         else {
             on_start_task_ = std::nullopt;
@@ -91,9 +92,7 @@ void Service::ProcessMsg(MsgUnique msg) {
 
     if (msg->type() == MillionSessionTimeoutMsg::type_static()) {
         auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
-        auto task_opt = excutor_.TimeoutCleanup(msg_ptr->timeout_id);
-        // 这里可以考虑实现支持超时返回的SessionAwaiter，co_await返回一个std::optional<>，std::nullopt就表示超时
-
+        excutor_.TaskTimeout(msg_ptr->timeout_id);
         return;
     }
 

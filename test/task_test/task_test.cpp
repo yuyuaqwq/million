@@ -34,6 +34,8 @@ class TestService : public million::IService {
             co_return;
         }
 
+        auto res1000 = co_await RecvWithTimeoutOrNull<million::IMsg>(1000, 5);
+
         auto msg_ = static_cast<Test1Msg*> (msg.get());
         std::cout << msg_->session_id() << std::endl;
         std::cout << "1.Test1Msg" << msg_->value1 << msg_->value2 << std::endl;

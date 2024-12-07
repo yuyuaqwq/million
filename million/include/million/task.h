@@ -12,11 +12,12 @@
 #include <utility>
 
 #ifdef MILLION_STACK_TRACE
-#include <stacktrace>
-#include <iostream>
+//#include <stacktrace>
+//#include <iostream>
 #endif
 
 #include <million/api.h>
+#include <million/exception.h>
 
 namespace million {
 
@@ -31,14 +32,16 @@ struct TaskPromise;
 // 会话等待器，等待一条消息
 template <typename MsgT>
 struct SessionAwaiter {
-    explicit SessionAwaiter(SessionId waiting_session_id)
-        : waiting_session_id_(waiting_session_id) {}
+    explicit SessionAwaiter(SessionId waiting_session_id, uint32_t timeout_s)
+        : waiting_session_id_(waiting_session_id)
+        , timeout_s_(timeout_s) {}
 
     SessionAwaiter(SessionAwaiter&& rv) noexcept {
         operator=(std::move(rv));
     }
     void operator=(SessionAwaiter&& rv) noexcept {
         waiting_session_id_ = std::move(rv.waiting_session_id_);
+        timeout_s_ = rv.timeout_s_;
     }
 
     SessionAwaiter(SessionAwaiter&) = delete;
@@ -49,6 +52,9 @@ struct SessionAwaiter {
     }
     SessionId waiting_session() const {
         return waiting_session_id_;
+    }
+    uint32_t timeout_s() const {
+        return timeout_s_;
     }
     std::coroutine_handle<TaskPromiseBase> waiting_coroutine() const {
         return std::coroutine_handle<TaskPromiseBase>::from_address(waiting_coroutine_.address());
@@ -76,13 +82,20 @@ struct SessionAwaiter {
     }
 
     // co_await等待在当前对象中的协程被恢复时调用
-    std::unique_ptr<MsgT> await_resume() noexcept {
-        // 调度器恢复了等待当前awaiter的协程，说明已经等到结果了
+    std::unique_ptr<MsgT> await_resume() {
+
+        // 调度器恢复了等待当前awaiter的协程，说明已经等到结果/超时了
+        if (!result_ && timeout_s_ == 0) {
+            // 超时，且未指定超时时间，不返回nullptr
+            throw TaskAbortException("Session timeout.");
+        }
+
         return std::unique_ptr<MsgT>(static_cast<MsgT*>(result_.release()));
     }
 
 private:
     SessionId waiting_session_id_;
+    uint32_t timeout_s_;
     std::coroutine_handle<> waiting_coroutine_;
     std::unique_ptr<MsgT> result_;
 };
@@ -186,8 +199,8 @@ struct TaskPromiseBase {
     void unhandled_exception() {
         exception_ = std::current_exception();  // 捕获异常并存储
 #ifdef MILLION_STACK_TRACE
-        std::stacktrace stacktrace = std::stacktrace::current();
-        std::cout << stacktrace << std::endl;
+        // std::stacktrace stacktrace = std::stacktrace::current();
+        // std::cout << stacktrace << std::endl;
 #endif
     }
 

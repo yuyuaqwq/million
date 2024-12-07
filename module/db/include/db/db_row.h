@@ -100,7 +100,7 @@ private:
     const google::protobuf::FieldDescriptor& GetFieldByNumber(int32_t field_number) const {
         auto field_desc = desc_->FindFieldByNumber(field_number);
         if (!field_desc) {
-            throw TaskAbortException("msg:{}, desc_.FindFieldByNumber:{}", desc_->name(), field_number);
+            THROW_TaskAbortException("msg:{}, desc_.FindFieldByNumber:{}", desc_->name(), field_number);
         }
         return *field_desc;
     }
@@ -108,7 +108,7 @@ private:
     const google::protobuf::FieldDescriptor& GetFieldByIndex(int32_t field_index) const {
         auto field_desc = desc_->field(field_index);
         if (!field_desc) {
-            throw TaskAbortException("msg:{}, desc_.field:{}", desc_->name(), field_index);
+            THROW_TaskAbortException("msg:{}, desc_.field:{}", desc_->name(), field_index);
         }
         return *field_desc;
     }

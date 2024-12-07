@@ -27,3 +27,4 @@ gateway:
 logger:
     log_file: .\logs\log.txt
     level: debug
+    console_level: debug

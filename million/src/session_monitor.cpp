@@ -34,8 +34,11 @@ void SessionMonitor::Stop() {
     run_ = false;
 }
 
-void SessionMonitor::AddSession(const ServiceHandle& service, SessionId session_id) {
-    tasks_.AddTask(timeout_tick_, { service, session_id });
+void SessionMonitor::AddSession(const ServiceHandle& service, SessionId session_id, uint32_t timeout_s) {
+    if (timeout_s == 0) {
+        timeout_s = timeout_tick_;
+    }
+    tasks_.AddTask(timeout_s, { service, session_id });
 }
 
 

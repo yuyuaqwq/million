@@ -6,6 +6,7 @@
 
 #include <million/imsg.h>
 #include <million/logger.h>
+#include <million/exception.h>
 
 #include "service.h"
 #include "service_mgr.h"
@@ -43,10 +44,12 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(MsgUnique msg) {
 }
 
 std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, MsgUnique msg) {
-    auto id = msg->session_id();
     auto awaiter = task.coroutine.promise().session_awaiter();
-    if (awaiter->waiting_session() != id) {
-        return msg;
+    if (msg) {
+        auto id = msg->session_id();
+        if (awaiter->waiting_session() != id) {
+            return msg;
+        }
     }
     awaiter->set_result(std::move(msg));
     auto waiting_coroutine = awaiter->waiting_coroutine();
@@ -57,11 +60,16 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, MsgUnique msg) 
         try {
             task.rethrow_if_exception();
         }
+#ifdef MILLION_STACK_TRACE
+        catch (const TaskAbortException& e) {
+            million->logger().Err("Session exception: {}\n[Stack trace]\n{}", e.what(), e.stacktrace());
+        }
+#endif
         catch (const std::exception& e) {
-            million->logger().Err("[million] session exception: {}.", e.what());
+            million->logger().Err("Session exception: {}", e.what());
         }
         catch (...) {
-            million->logger().Err("[million] session exception: {}.", "unknown exception");
+            million->logger().Err("Session exception: {}", "unknown exception");
         }
     }
     return std::nullopt;
@@ -75,10 +83,10 @@ void TaskExecutor::AddTask(Task<>&& task) {
             task.rethrow_if_exception();
         }
         catch (const std::exception& e) {
-            million->logger().Err("[million] session exception: {}.", e.what());
+            million->logger().Err("Session exception: {}.", e.what());
         }
         catch (...) {
-            million->logger().Err("[million] session exception: {}.", "unknown exception");
+            million->logger().Err("Session exception: {}.", "unknown exception");
         }
     }
     if (!task.coroutine.done()) {
@@ -87,22 +95,29 @@ void TaskExecutor::AddTask(Task<>&& task) {
     }
 }
 
-std::optional<Task<>> TaskExecutor::TimeoutCleanup(SessionId id) {
+void TaskExecutor::TaskTimeout(SessionId id) {
     auto iter = tasks_.find(id);
     if (iter == tasks_.end()) {
         // 正常情况是已经执行完毕了
-        return std::nullopt;
+        return;
     }
-    // 超时，写出日志告警
+
+    // 超时，唤醒目标协程
     auto million = service_->service_mgr()->million();
-    million->logger().Err("[million] session timeout {}.", iter->second.coroutine.promise().session_awaiter()->waiting_session());
-    auto task = std::move(iter->second);
-    tasks_.erase(iter);
-    return task;
+
+    TrySchedule(iter->second, nullptr);
+
+    if (!iter->second.coroutine.done()) {
+        // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
+        RePush(id, iter->second.coroutine.promise().session_awaiter()->waiting_session());
+    }
+    else {
+        tasks_.erase(iter);
+    }
 }
 
 void TaskExecutor::Push(SessionId id, Task<>&& task) {
-    service_->service_mgr()->million()->session_monitor().AddSession(service_->service_handle(), id);
+    service_->service_mgr()->million()->session_monitor().AddSession(service_->service_handle(), id, task.coroutine.promise().session_awaiter()->timeout_s());
     tasks_.emplace(id, std::move(task));
 }
 

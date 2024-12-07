@@ -27,7 +27,7 @@ public:
     // 将任务添加到调度器
     void AddTask(Task<>&& task);
 
-    std::optional<Task<>> TimeoutCleanup(SessionId id);
+    void TaskTimeout(SessionId id);
 
 private:
     // 加入待调度队列等待调度

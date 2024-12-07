@@ -4,20 +4,21 @@
 #include <format>
 #include <exception>
 
-// #define MILLION_STACK_TRACE
+//#define MILLION_STACK_TRACE
 #ifdef MILLION_STACK_TRACE
 #include <stacktrace>
 #endif
 
+#include <million/api.h>
+
 namespace million {
 
-class TaskAbortException : public std::exception {
+class MILLION_CLASS_API TaskAbortException : public std::exception {
 public:
     // 构造函数，接受格式化的可变参数
-    // 是不是需要改掉？为啥fmt::print可以
-    template <typename... Args>
-    explicit TaskAbortException(const std::string& message, Args&&... args)
-        : message_(std::vformat(message, std::make_format_args(std::forward<Args>(args)...))) {
+
+    explicit TaskAbortException(const std::string& message)
+        : message_(message) {
 
         // 捕获调用栈信息
 #ifdef MILLION_STACK_TRACE
@@ -40,5 +41,7 @@ private:
     std::stacktrace stacktrace_;
 #endif
 };
+
+#define THROW_TaskAbortException(fmt, ...)  throw TaskAbortException(::std::format(fmt, __VA_ARGS__))
 
 } // namespace million
