@@ -8,6 +8,8 @@
 #include "cache_service.h"
 #include "db_service.h"
 
+MILLION_MODULE_INIT();
+
 namespace million {
 namespace db {
 

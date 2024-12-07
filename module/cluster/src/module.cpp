@@ -4,6 +4,8 @@
 
 #include "cluster_service.h"
 
+MILLION_MODULE_INIT();
+
 namespace million {
 namespace cluster {
 

@@ -12,12 +12,13 @@
 #include <million/imillion.h>
 #include <million/proto.h>
 
+#include <db/api.h>
+#include <db/db_row.h>
 #include <db/cache.h>
 #include <db/sql.h>
 
 #include <protogen/db/db_options.pb.h>
-
-#include <db/api.h>
+#include <protogen/db/db_example.pb.h>
 
 namespace million {
 namespace db {
@@ -88,17 +89,20 @@ private:
 };
 
 
-MILLION_MSG_DEFINE_EMPTY(DB_CLASS_API, DbSqlInitMsg);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowQueryMsg, (std::string) table_name, (std::string) primary_key, (const protobuf::Message*) proto_msg);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (std::string) table_name, (std::string) primary_key, (bool) exist);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowUpdateMsg, (std::string) table_name, (std::string) primary_key, (const protobuf::Message*) proto_msg);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (const protobuf::Message*) proto_msg);
-
 
 // DbService使用lru来淘汰row
 // 可能n秒脏row需要入库
 
 // 查询时，会返回所有权给外部服务，避免lru淘汰导致指针无效
+// 外部必须有一份数据，dbservice也可能有一份，但是会通过lru来自动淘汰
+// 外部修改后，通过发送标记脏消息来通知dbservice可以更新此消息
+
+
+MILLION_MSG_DEFINE_EMPTY(DB_CLASS_API, DbSqlInitMsg);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowQueryMsg, (std::string) table_name, (std::string) primary_key, (DbRow) db_row);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (std::string) table_name, (std::string) primary_key, (bool) exist);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowUpdateMsg, (std::string) table_name, (std::string) primary_key, (DbRow*) db_row);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (DbRow*) db_row);
 
 
 class DbService : public IService {
@@ -127,8 +131,13 @@ public:
             co_await Call<SqlCreateTableMsg>(sql_service_, table_info.second);
         }
 
-        //Db::User user;
+        //::Million::Proto::Db::Example::User user;
         //user.set_name("sb");
+        //user.New();
+        // db_row.MarkDirty(user.kNameFieldNumber);
+
+        // user.kEmailFieldNumber;
+
         //user.set_email("fake@qq.com");
         //user.set_phone_number("1234567890");
         //user.set_password_hash("AWDaoDWHGOAUGH");
@@ -167,18 +176,19 @@ public:
                 logger().Err("proto_codec_.NewMessage failed.");
                 co_return;
             }
+            auto proto_msg = std::move(*proto_msg_opt);
 
-            auto row = DbRow(std::move(*proto_msg_opt), std::vector<bool>(desc->field_count()));
-            auto res_msg = co_await Call<CacheQueryMsg>(cache_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
+            auto row = DbRow(*desc, std::move(proto_msg));
+            auto res_msg = co_await Call<CacheQueryMsg>(cache_service_, msg->primary_key, &row, false);
             if (!res_msg->success) {
-                auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, row.proto_msg.get(), &row.dirty_bits, false);
+                auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, &row, false);
             }
 
             auto res = rows.emplace(std::move(msg->primary_key), std::move(row));
             assert(res.second);
             row_iter = res.first;
         } while (false);
-        msg->proto_msg = row_iter->second.proto_msg.get();
+        msg->db_row = row_iter->second;
         Reply(std::move(msg));
         co_return;
     }
@@ -186,11 +196,8 @@ public:
 
 private:
     DbProtoCodec proto_codec_;
-    struct DbRow {
-        ProtoMsgUnique proto_msg;
-        std::vector<bool> dirty_bits;
-        // DbRowMeta meta;
-    };
+
+    // 改用lru
     using DbRows = std::unordered_map<std::string, DbRow>;
     std::unordered_map<const protobuf::Descriptor*, DbRows> tables_;
 

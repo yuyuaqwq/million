@@ -97,6 +97,31 @@ inline Logger& IService::logger() {
     return imillion_->logger();
 }
 
-MILLION_FUNC_API void InitMillion();
+MILLION_FUNC_API void MillionInit();
+
+MILLION_FUNC_API void* MillionMemAlloc(size_t size);
+
+MILLION_FUNC_API void MillionMemFree(void* ptr);
+
+#define MILLION_MODULE_MEM_INIT() \
+    void* operator new(std::size_t size) { \
+        void* ptr = ::million::MillionMemAlloc(size); \
+        if (!ptr) throw std::bad_alloc(); \
+        return ptr; \
+    } \
+    void operator delete(void* ptr) noexcept { \
+        ::million::MillionMemFree(ptr); \
+    } \
+    void* operator new[](std::size_t size) { \
+        void* ptr = ::million::MillionMemAlloc(size); \
+        if (!ptr) throw std::bad_alloc(); \
+        return ptr; \
+    } \
+    void operator delete[](void* ptr) noexcept { \
+        ::million::MillionMemFree(ptr); \
+    } \
+
+#define MILLION_MODULE_INIT() \
+    MILLION_MODULE_MEM_INIT();
 
 } // namespace million

@@ -6,12 +6,13 @@
 #include <million/proto.h>
 
 #include <db/api.h>
+#include <db/db_row.h>
 
 namespace million {
 namespace db {
 
-MILLION_MSG_DEFINE(DB_CLASS_API, CacheQueryMsg, (std::string_view) primary_key, (google::protobuf::Message*) proto_msg, (std::vector<bool>*) dirty_bits, (bool) success)
-MILLION_MSG_DEFINE(DB_CLASS_API, CacheUpdateMsg, (const google::protobuf::Message*) proto_msg, (const std::vector<bool>*) dirty_bits)
+MILLION_MSG_DEFINE(DB_CLASS_API, CacheQueryMsg, (std::string_view) primary_key, (DbRow*) db_row, (bool) success)
+MILLION_MSG_DEFINE(DB_CLASS_API, CacheUpdateMsg, (DbRow*) db_row)
 MILLION_MSG_DEFINE(DB_CLASS_API, CacheGetMsg, (std::string) key_value)
 MILLION_MSG_DEFINE(DB_CLASS_API, CacheSetMsg, (std::string) key, (std::string) value, (bool) success)
 

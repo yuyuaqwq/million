@@ -4,6 +4,8 @@
 
 #include "agent_service.h"
 
+MILLION_MODULE_INIT();
+
 namespace million {
 namespace agent {
 

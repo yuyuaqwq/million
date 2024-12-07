@@ -49,9 +49,15 @@ public:
     MILLION_MSG_DISPATCH(CacheService);
 
     MILLION_MSG_HANDLE(CacheQueryMsg, msg) {
-        auto proto_msg = msg->proto_msg;
-        const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
-        const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
+        auto& proto_msg = msg->db_row->get();
+        const auto* desc = proto_msg.GetDescriptor();
+        if (!desc) {
+
+        }
+        const auto* reflection = proto_msg.GetReflection();
+        if (!reflection) {
+
+        }
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         const auto& table_name = options.name();
         if (table_name.empty()) {
@@ -70,12 +76,13 @@ public:
             // 遍历 Protobuf 字段并设置对应的值
             for (int i = 0; i < desc->field_count(); ++i) {
                 const google::protobuf::FieldDescriptor* field = desc->field(i);
+
                 auto iter = redis_hash.find(field->name());
                 if (iter == redis_hash.end()) {
                     continue;
                 }
-                SetField(proto_msg, field, reflection, iter->second);
-                msg->dirty_bits->operator[](i) = false;
+                SetField(&proto_msg, *field, *reflection, iter->second);
+                msg->db_row->MarkDirtyByFieldIndex(i);
             }
             msg->success = true;
         }
@@ -85,9 +92,9 @@ public:
     }
 
     MILLION_MSG_HANDLE(CacheUpdateMsg, msg) {
-        auto& proto_msg = *msg->proto_msg;
-        const google::protobuf::Descriptor* descriptor = proto_msg.GetDescriptor();
-        const google::protobuf::Reflection* reflection = proto_msg.GetReflection();
+        auto& proto_msg = msg->db_row->get();
+        const auto* descriptor = proto_msg.GetDescriptor();
+        const auto* reflection = proto_msg.GetReflection();
         const Db::MessageOptionsTable& options = descriptor->options().GetExtension(Db::table);
         const auto& table_name = options.name();
         if (table_name.empty()) {
@@ -108,14 +115,14 @@ public:
 
         // 遍历 Protobuf 的所有字段，将字段和值存入 redis_hash 中
         for (int i = 0; i < descriptor->field_count(); ++i) {
-            if (!msg->dirty_bits->operator[](i)) {
+            if (!msg->db_row->IsDirty() && !msg->db_row->IsDirtyFromFIeldIndex(i)) {
                 continue;
             }
 
-            const google::protobuf::FieldDescriptor* field = descriptor->field(i);
+            const auto* field = descriptor->field(i);
             const Db::FieldOptionsColumn& options = field->options().GetExtension(Db::column);
 
-            redis_hash[field->name()] = GetField(proto_msg, field, reflection);
+            redis_hash[field->name()] = GetField(proto_msg, *field, *reflection);
 
             if (options.has_cache()) {
                 const auto& cache_options = options.cache();
@@ -166,135 +173,135 @@ public:
     }
 
 
-    void SetField(google::protobuf::Message* proto_msg, const google::protobuf::FieldDescriptor* field, const google::protobuf::Reflection* reflection, const std::string& value) {
-        const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
+    void SetField(google::protobuf::Message* proto_msg, const google::protobuf::FieldDescriptor& field, const google::protobuf::Reflection& reflection, const std::string& value) {
+        const auto* desc = proto_msg->GetDescriptor();
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         const auto& table_name = options.name();
 
-        if (field->is_repeated()) {
-            logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
+        if (field.is_repeated()) {
+            logger().Err("db repeated fields are not supported: {}.{}", table_name, field.name());
         }
         else {
-            switch (field->type()) {
+            switch (field.type()) {
             case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
-                reflection->SetDouble(proto_msg, field, std::stod(value));
+                reflection.SetDouble(proto_msg, &field, std::stod(value));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-                reflection->SetFloat(proto_msg, field, std::stof(value));
+                reflection.SetFloat(proto_msg, &field, std::stof(value));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_INT64:
             case google::protobuf::FieldDescriptor::TYPE_SINT64:
             case google::protobuf::FieldDescriptor::TYPE_SFIXED64: {
-                reflection->SetInt64(proto_msg, field, std::stoll(value));
+                reflection.SetInt64(proto_msg, &field, std::stoll(value));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_UINT64:
             case google::protobuf::FieldDescriptor::TYPE_FIXED64: {
-                reflection->SetUInt64(proto_msg, field, std::stoull(value));
+                reflection.SetUInt64(proto_msg, &field, std::stoull(value));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_INT32:
             case google::protobuf::FieldDescriptor::TYPE_SINT32:
             case google::protobuf::FieldDescriptor::TYPE_SFIXED32: {
-                reflection->SetInt32(proto_msg, field, std::stoi(value));
+                reflection.SetInt32(proto_msg, &field, std::stoi(value));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_UINT32:
             case google::protobuf::FieldDescriptor::TYPE_FIXED32: {
-                reflection->SetUInt32(proto_msg, field, static_cast<uint32_t>(std::stoul(value)));
+                reflection.SetUInt32(proto_msg, &field, static_cast<uint32_t>(std::stoul(value)));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-                reflection->SetBool(proto_msg, field, value == "1" || value == "true");
+                reflection.SetBool(proto_msg, &field, value == "1" || value == "true");
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_STRING:
             case google::protobuf::FieldDescriptor::TYPE_BYTES: {
-                reflection->SetString(proto_msg, field, value);
+                reflection.SetString(proto_msg, &field, value);
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_ENUM: {
                 const google::protobuf::EnumValueDescriptor* enum_value =
-                    field->enum_type()->FindValueByName(value);
-                reflection->SetEnum(proto_msg, field, enum_value);
+                    field.enum_type()->FindValueByName(value);
+                reflection.SetEnum(proto_msg, &field, enum_value);
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-                google::protobuf::Message* sub_message = reflection->MutableMessage(proto_msg, field);
+                google::protobuf::Message* sub_message = reflection.MutableMessage(proto_msg, &field);
                 sub_message->ParseFromString(value);
                 break;
             }
             default: {
-                logger().Err("Unsupported field type: {}", field->name());
+                logger().Err("Unsupported field type: {}", field.name());
             }
             }
         }
     }
 
-    std::string GetField(const google::protobuf::Message& proto_msg, const google::protobuf::FieldDescriptor* field, const google::protobuf::Reflection* reflection) {
-        const google::protobuf::Descriptor* desc = proto_msg.GetDescriptor();
+    std::string GetField(const google::protobuf::Message& proto_msg, const google::protobuf::FieldDescriptor& field, const google::protobuf::Reflection& reflection) {
+        const auto* desc = proto_msg.GetDescriptor();
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         const auto& table_name = options.name();
 
         std::string value;
-        if (field->is_repeated()) {
-            logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
+        if (field.is_repeated()) {
+            logger().Err("db repeated fields are not supported: {}.{}", table_name, field.name());
         }
         else {
-            switch (field->type()) {
+            switch (field.type()) {
             case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
-                value = std::to_string(reflection->GetDouble(proto_msg, field));
+                value = std::to_string(reflection.GetDouble(proto_msg, &field));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-                value = std::to_string(reflection->GetFloat(proto_msg, field));
+                value = std::to_string(reflection.GetFloat(proto_msg, &field));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_INT64:
             case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
             case google::protobuf::FieldDescriptor::TYPE_SINT64: {
-                value = std::to_string(reflection->GetInt64(proto_msg, field));
+                value = std::to_string(reflection.GetInt64(proto_msg, &field));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_UINT64:
             case google::protobuf::FieldDescriptor::TYPE_FIXED64: {
-                value = std::to_string(reflection->GetUInt64(proto_msg, field));
+                value = std::to_string(reflection.GetUInt64(proto_msg, &field));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_INT32:
             case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
             case google::protobuf::FieldDescriptor::TYPE_SINT32: {
-                value = std::to_string(reflection->GetInt32(proto_msg, field));
+                value = std::to_string(reflection.GetInt32(proto_msg, &field));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_UINT32:
             case google::protobuf::FieldDescriptor::TYPE_FIXED32: {
-                value = std::to_string(reflection->GetUInt32(proto_msg, field));
+                value = std::to_string(reflection.GetUInt32(proto_msg, &field));
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-                value = reflection->GetBool(proto_msg, field) ? "true" : "false";
+                value = reflection.GetBool(proto_msg, &field) ? "true" : "false";
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_STRING:
             case google::protobuf::FieldDescriptor::TYPE_BYTES: {
-                value = reflection->GetString(proto_msg, field);
+                value = reflection.GetString(proto_msg, &field);
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_ENUM: {
-                int enum_value = reflection->GetEnumValue(proto_msg, field);
+                int enum_value = reflection.GetEnumValue(proto_msg, &field);
                 value = std::to_string(enum_value);
                 break;
             }
             case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-                const google::protobuf::Message& sub_message = reflection->GetMessage(proto_msg, field);
+                const google::protobuf::Message& sub_message = reflection.GetMessage(proto_msg, &field);
                 value = sub_message.SerializeAsString();
                 break;
             }
             default: {
-                logger().Err("Unsupported field type: {}", field->name());
+                logger().Err("Unsupported field type: {}", field.name());
             }
             }
         }

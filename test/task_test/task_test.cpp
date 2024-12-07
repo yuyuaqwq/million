@@ -2,6 +2,8 @@
 
 #include <million/imillion.h>
 
+MILLION_MODULE_INIT();
+
 MILLION_MSG_DEFINE(, Test1Msg, (int) value1, (std::string) value2);
 MILLION_MSG_DEFINE(, Test2Msg, (int) value1, (std::string) value2);
 

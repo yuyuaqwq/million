@@ -4,6 +4,8 @@
 
 #include "gateway_service.h"
 
+MILLION_MODULE_INIT();
+
 namespace million {
 namespace gateway {
 

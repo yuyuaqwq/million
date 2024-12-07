@@ -221,9 +221,9 @@ public:
     }
 
     MILLION_MSG_HANDLE(SqlQueryMsg, msg) {
-        google::protobuf::Message* proto_msg = msg->proto_msg;
-        const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
-        const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
+        auto& proto_msg = msg->db_row->get();
+        const google::protobuf::Descriptor* desc = proto_msg.GetDescriptor();
+        const google::protobuf::Reflection* reflection = proto_msg.GetReflection();
 
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         if (options.has_sql()) {
@@ -270,60 +270,60 @@ public:
                 auto type = field->type();
                 switch (type) {
                 case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
-                    reflection->SetDouble(proto_msg, field, row.get<double>(i));
+                    reflection->SetDouble(&proto_msg, field, row.get<double>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-                    reflection->SetFloat(proto_msg, field, static_cast<float>(row.get<double>(i)));
+                    reflection->SetFloat(&proto_msg, field, static_cast<float>(row.get<double>(i)));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_FIXED64:
                 case google::protobuf::FieldDescriptor::TYPE_UINT64: {
-                    reflection->SetUInt64(proto_msg, field, row.get<uint64_t>(i));
+                    reflection->SetUInt64(&proto_msg, field, row.get<uint64_t>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_SINT64:
                 case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
                 case google::protobuf::FieldDescriptor::TYPE_INT64: {
-                    reflection->SetInt64(proto_msg, field, row.get<int64_t>(i));
+                    reflection->SetInt64(&proto_msg, field, row.get<int64_t>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_FIXED32:
                 case google::protobuf::FieldDescriptor::TYPE_UINT32: {
-                    reflection->SetUInt32(proto_msg, field, row.get<uint32_t>(i));
+                    reflection->SetUInt32(&proto_msg, field, row.get<uint32_t>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_SINT32:
                 case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
                 case google::protobuf::FieldDescriptor::TYPE_INT32: {
-                    reflection->SetInt32(proto_msg, field, row.get<int32_t>(i));
+                    reflection->SetInt32(&proto_msg, field, row.get<int32_t>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-                    reflection->SetBool(proto_msg, field, static_cast<bool>(row.get<int8_t>(i)));
+                    reflection->SetBool(&proto_msg, field, static_cast<bool>(row.get<int8_t>(i)));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_BYTES:
                 case google::protobuf::FieldDescriptor::TYPE_STRING: {
-                    reflection->SetString(proto_msg, field, row.get<std::string>(i));
+                    reflection->SetString(&proto_msg, field, row.get<std::string>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-                    google::protobuf::Message* sub_message = reflection->MutableMessage(proto_msg, field);
+                    google::protobuf::Message* sub_message = reflection->MutableMessage(&proto_msg, field);
                     sub_message->ParseFromString(row.get<std::string>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_ENUM: {
                     int enum_value = row.get<int>(i);
                     const google::protobuf::EnumValueDescriptor* enum_desc = field->enum_type()->FindValueByNumber(enum_value);
-                    reflection->SetEnum(proto_msg, field, enum_desc);
+                    reflection->SetEnum(&proto_msg, field, enum_desc);
                     break;
                 }
                 default:
                     logger().Err("unsupported field type:{}", field->name());
                 }
             }
-            msg->dirty_bits->operator[](i) = false;
+            msg->db_row->ClearDirtyByFieldIndex(i);
         }
 
         msg->success = true;
@@ -332,10 +332,10 @@ public:
     }
 
     MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
-        const google::protobuf::Message* proto_msg = msg->proto_msg;
+        const auto& proto_msg = msg->db_row->get();
 
-        const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
-        const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
+        const auto* desc = proto_msg.GetDescriptor();
+        const auto* reflection = proto_msg.GetReflection();
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         if (options.has_sql()) {
             const Db::TableSqlOptions& sql_options = options.sql();
@@ -370,7 +370,7 @@ public:
         stmt.alloc();
         stmt.prepare(sql);
         std::vector<std::any> values;
-        BindValuesToStatement(*proto_msg, &values, stmt);  // 绑定值
+        BindValuesToStatement(proto_msg, &values, stmt);  // 绑定值
         stmt.define_and_bind();
 
         stmt.execute(true);
@@ -380,10 +380,10 @@ public:
     }
 
     MILLION_MSG_HANDLE(SqlUpdateMsg, msg) {
-        const google::protobuf::Message* proto_msg = msg->proto_msg;
+        const auto& proto_msg = msg->db_row->get();
 
-        const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
-        const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
+        const auto* desc = proto_msg.GetDescriptor();
+        const auto* reflection = proto_msg.GetReflection();
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         if (options.has_sql()) {
             const Db::TableSqlOptions& sql_options = options.sql();
@@ -415,7 +415,7 @@ public:
         stmt.alloc();
         stmt.prepare(sql);
         std::vector<std::any> values;
-        BindValuesToStatement(*proto_msg, &values, stmt);  // 绑定值
+        BindValuesToStatement(proto_msg, &values, stmt);  // 绑定值
         stmt.define_and_bind();
 
         try {

@@ -251,7 +251,7 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
         } \
         co_return; \
     } \
-    NAMESPACE_::##NAMESPACE_##MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_; \
+    NAMESPACE_::NAMESPACE_##MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_; \
     ::std::vector<::std::function<void()>> _MILLION_PROTO_MSG_INIT_QUEUE_; \
     ::std::unordered_map<::million::MsgKey, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)&, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
 

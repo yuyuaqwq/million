@@ -100,6 +100,8 @@ public:
         Send<gateway::GatewaySendPacketMsg>(gateway_, user_context_id_, *res);
     }
 
+    gateway::UserContextId user_context_id() const { return user_context_id_; }
+
 private:
     ServiceHandle gateway_;
     gateway::UserContextId user_context_id_;
