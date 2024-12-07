@@ -12,6 +12,7 @@
 #include <million/net/packet.h>
 #include <million/imsg.h>
 #include <million/noncopyable.h>
+#include <million/exception.h>
 
 namespace million {
 
@@ -25,14 +26,14 @@ using SubMsgId = uint16_t;
 
 class MILLION_CLASS_API ProtoCodec : noncopyable {
 public:
-    // ×¢²áĞ­Òé
+    // æ³¨å†Œåè®®
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     bool RegisterProto(const std::string& proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
         const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
         protobuf::DescriptorDatabase* db = pool->internal_generated_database();
 
         //std::vector<std::string> file_names;
-        //db->FindAllFileNames(&file_names);   // ±éÀúµÃµ½ËùÓĞprotoÎÄ¼şÃû
+        //db->FindAllFileNames(&file_names);   // éå†å¾—åˆ°æ‰€æœ‰protoæ–‡ä»¶å
         //for (const std::string& filename : file_names) {
         //    const protobuf::FileDescriptor* file_desc = pool->FindFileByName(filename);
         //}
@@ -54,7 +55,6 @@ public:
             auto msg_id = enum_opts.GetExtension(msg_ext_id);
             auto msg_id_ui = static_cast<MsgId>(msg_id);
             if (msg_id_ui > kMsgIdMax) {
-                // throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{} > kMsgIdMax", msg_id_u32));
                 return false;
             }
 
@@ -62,7 +62,7 @@ public:
             for (int j = 0; j < message_count; j++) {
                 const protobuf::Descriptor* desc = file_desc->message_type(j);
 
-                // µÃ¼ÓÕâ¸ö²Å»á³õÊ¼»¯£¬²»ÖªµÀ¾ßÌåÔ­Òò
+                // å¾—åŠ è¿™ä¸ªæ‰ä¼šåˆå§‹åŒ–ï¼Œä¸çŸ¥é“å…·ä½“åŸå› 
                 message_factory_ = protobuf::MessageFactory::generated_factory();
                 const protobuf::Message* msg = message_factory_->GetPrototype(desc);
                 if (!msg) {
@@ -77,7 +77,6 @@ public:
                 auto sub_msg_id = msg_opts.GetExtension(sub_msg_ext_id);
                 auto sub_msg_id_ui = static_cast<SubMsgId>(sub_msg_id);
                 if (sub_msg_id_ui > kSubMsgIdMax) {
-                    // throw std::runtime_error(std::format("RegistrySubMsgId error: msg_id:{}, sub_msg_id:{} > kMsgIdMax", msg_id_u32, sub_msg_id_u32));
                     return false;
                 }
 
@@ -92,7 +91,7 @@ public:
         return false;
     }
 
-    // ±àÂëÏûÏ¢
+    // ç¼–ç æ¶ˆæ¯
     std::optional<net::Packet> EncodeMessage(const protobuf::Message& message) {
         auto desc = message.GetDescriptor();
         auto msg_key = GetMsgKey(desc);
@@ -115,7 +114,7 @@ public:
         return packet;
     }
 
-    // ½âÂëÏûÏ¢
+    // è§£ç æ¶ˆæ¯
     struct DecodeRes {
         MsgId msg_id;
         SubMsgId sub_msg_id;
@@ -229,7 +228,7 @@ private:
 inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     auto packet = net::Packet(msg.ByteSize());
     if (!msg.SerializeToArray(packet.data(), packet.size())) {
-        throw std::runtime_error("Failed to serialize protobuf message to packet.");
+        throw TaskAbortException("Failed to serialize protobuf message to packet.");
     }
     return packet;
 }

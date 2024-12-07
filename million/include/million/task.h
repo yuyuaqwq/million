@@ -11,6 +11,11 @@
 #include <condition_variable>
 #include <utility>
 
+#ifdef MILLION_STACK_TRACE
+#include <stacktrace>
+#include <iostream>
+#endif
+
 #include <million/api.h>
 
 namespace million {
@@ -180,6 +185,10 @@ struct TaskPromiseBase {
 
     void unhandled_exception() {
         exception_ = std::current_exception();  // 捕获异常并存储
+#ifdef MILLION_STACK_TRACE
+        std::stacktrace stacktrace = std::stacktrace::current();
+        std::cout << stacktrace << std::endl;
+#endif
     }
 
     // 该协程内，可通过co_await进行等待的类型支持

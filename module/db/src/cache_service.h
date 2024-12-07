@@ -48,7 +48,7 @@ public:
 
     MILLION_MSG_DISPATCH(CacheService);
 
-    MILLION_MSG_HANDLE(CacheQueryMsg, msg) {
+    MILLION_MSG_HANDLE(CacheGetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         const auto* desc = proto_msg.GetDescriptor();
         if (!desc) {
@@ -91,7 +91,7 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(CacheUpdateMsg, msg) {
+    MILLION_MSG_HANDLE(CacheSetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         const auto* descriptor = proto_msg.GetDescriptor();
         const auto* reflection = proto_msg.GetReflection();
@@ -156,7 +156,7 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(CacheGetMsg, msg) {
+    MILLION_MSG_HANDLE(CacheGetBytesMsg, msg) {
         auto value =  redis_->get("million_db:" + msg->key_value);
         if (!value) {
             co_return;
@@ -166,7 +166,7 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(CacheSetMsg, msg) {
+    MILLION_MSG_HANDLE(CacheSetBytesMsg, msg) {
         msg->success = redis_->set("million_db:" + msg->key, msg->value);
         Reply(std::move(msg));
         co_return;

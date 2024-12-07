@@ -36,7 +36,6 @@ public:
 
     virtual bool OnInit() override {
         try {
-            // ½¨Á¢Óë MySQL Êı¾İ¿âµÄÁ¬½Ó
             sql_ = soci::session(soci::mysql, std::format("db={} user={} password={} host={}", db, user, password, host));
         }
         catch (const soci::mysql_soci_error& e) {
@@ -68,7 +67,7 @@ public:
             std::string field_type;
 
             if (field->is_repeated()) {
-                throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
+                logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
             }
             else {
                 switch (field->type()) {
@@ -106,7 +105,7 @@ public:
                 }
             }
 
-            // ´¦Àí×Ö¶ÎÑ¡Ïî
+            // å¤„ç†å­—æ®µé€‰é¡¹
             if (field->options().HasExtension(Db::column)) {
                 const Db::FieldOptionsColumn& field_options = field->options().GetExtension(Db::column);
                 if (field_options.has_sql()) {
@@ -201,7 +200,7 @@ public:
 
         sql += "\n) ";
 
-        // Ìí¼Ó×Ö·û¼¯ºÍÒıÇæÑ¡Ïî
+        // æ·»åŠ å­—ç¬¦é›†å’Œå¼•æ“é€‰é¡¹
         if (options.has_sql()) {
             const Db::TableSqlOptions& sql_options = options.sql();
             if (!sql_options.charset().empty()) {
@@ -222,8 +221,8 @@ public:
 
     MILLION_MSG_HANDLE(SqlQueryMsg, msg) {
         auto& proto_msg = msg->db_row->get();
-        const google::protobuf::Descriptor* desc = proto_msg.GetDescriptor();
-        const google::protobuf::Reflection* reflection = proto_msg.GetReflection();
+        const auto* desc = proto_msg.GetDescriptor();
+        const auto* reflection = proto_msg.GetReflection();
 
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         if (options.has_sql()) {
@@ -233,7 +232,7 @@ public:
 
         std::string sql = "SELECT";
         for (int i = 0; i < desc->field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* const field = desc->field(i);
+            const auto* const field = desc->field(i);
             sql += " " + field->name() + ",";
         }
         if (sql.back() == ',') {
@@ -243,8 +242,9 @@ public:
         sql += " FROM ";
         sql += table_name;
 
-        const google::protobuf::FieldDescriptor* field_desc = desc->FindFieldByNumber(options.primary_key());
+        const auto* field_desc = desc->FindFieldByNumber(options.primary_key());
         if (!field_desc) {
+            logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
             co_return;
         }
 
@@ -262,9 +262,9 @@ public:
         }
         const auto& row = *it;
         for (int i = 0; i < desc->field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* const field = desc->field(i);
+            const auto* const field = desc->field(i);
             if (field->is_repeated()) {
-                throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
+                logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
             }
             else {
                 auto type = field->type();
@@ -349,7 +349,7 @@ public:
 
         soci::statement stmt(sql_);
 
-        // ¹¹Ôì SQL Óï¾ä
+        // æ„é€  SQL è¯­å¥
         for (int i = 0; i < desc->field_count(); ++i) {
             const google::protobuf::FieldDescriptor* field = desc->field(i);
             sql += field->name() + ",";
@@ -370,7 +370,7 @@ public:
         stmt.alloc();
         stmt.prepare(sql);
         std::vector<std::any> values;
-        BindValuesToStatement(proto_msg, &values, stmt);  // °ó¶¨Öµ
+        BindValuesToStatement(proto_msg, &values, stmt);
         stmt.define_and_bind();
 
         stmt.execute(true);
@@ -405,7 +405,7 @@ public:
             sql.pop_back();
         }
 
-        // ÕâÀï×Ô¶¯¸ù¾İÖ÷¼üÀ´ÉèÖÃÌõ¼ş½øĞĞUpdate
+        // è¿™é‡Œè‡ªåŠ¨æ ¹æ®ä¸»é”®æ¥è®¾ç½®æ¡ä»¶è¿›è¡ŒUpdate
         //if (!condition.empty()) {
         //    sql += " WHERE ";
         //    sql += condition;
@@ -415,7 +415,7 @@ public:
         stmt.alloc();
         stmt.prepare(sql);
         std::vector<std::any> values;
-        BindValuesToStatement(proto_msg, &values, stmt);  // °ó¶¨Öµ
+        BindValuesToStatement(proto_msg, &values, stmt);  // ï¿½ï¿½Öµ
         stmt.define_and_bind();
 
         try {
@@ -442,10 +442,10 @@ public:
         values->reserve(desc->field_count());
 
         for (int i = 0; i < desc->field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* field = desc->field(i);
+            const auto* field = desc->field(i);
 
             if (field->is_repeated()) {
-                throw std::runtime_error(std::format("db repeated fields are not supported: {}.{}", table_name, field->name()));
+                logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
             }
             else {
                 switch (field->type()) {
@@ -455,7 +455,6 @@ public:
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-                    // ²»Ö±½ÓÖ§³Öfloat
                     values->push_back(static_cast<double>(reflection->GetFloat(msg, field)));
                     stmt.exchange(soci::use(std::any_cast<const double&>(values->back()), field->name()));
                     break;
@@ -487,7 +486,6 @@ public:
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-                    // ²»Ö±½ÓÖ§³Öbool
                     values->push_back(static_cast<int8_t>(reflection->GetBool(msg, field)));
                     stmt.exchange(soci::use(std::any_cast<const int8_t&>(values->back()), field->name()));
                     break;

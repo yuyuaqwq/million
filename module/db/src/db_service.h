@@ -99,9 +99,9 @@ private:
 
 
 MILLION_MSG_DEFINE_EMPTY(DB_CLASS_API, DbSqlInitMsg);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowQueryMsg, (std::string) table_name, (std::string) primary_key, (DbRow) db_row);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (std::string) table_name, (std::string) primary_key, (bool) exist);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowUpdateMsg, (std::string) table_name, (std::string) primary_key, (DbRow*) db_row);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowGetMsg, (std::string) table_name, (std::string) primary_key, (DbRow) db_row);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowSetMsg, (std::string) table_name, (std::string) primary_key, (DbRow*) db_row);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (DbRow*) db_row);
 
 
@@ -150,8 +150,8 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(DbRowQueryMsg, msg) {
-        const protobuf::Descriptor* desc = proto_codec_.GetMsgDesc(msg->table_name);
+    MILLION_MSG_HANDLE(DbRowGetMsg, msg) {
+        const auto* desc = proto_codec_.GetMsgDesc(msg->table_name);
         if (!desc) {
             logger().Err("Unregistered table name: {}.", msg->table_name);
             co_return;
@@ -179,7 +179,7 @@ public:
             auto proto_msg = std::move(*proto_msg_opt);
 
             auto row = DbRow(*desc, std::move(proto_msg));
-            auto res_msg = co_await Call<CacheQueryMsg>(cache_service_, msg->primary_key, &row, false);
+            auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, &row, false);
             if (!res_msg->success) {
                 auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, &row, false);
             }
@@ -193,6 +193,10 @@ public:
         co_return;
     }
 
+    MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
+
+        co_return;
+    }
 
 private:
     DbProtoCodec proto_codec_;

@@ -49,11 +49,11 @@ public:
 
     google::protobuf::Message& get() const { return *proto_msg_.get(); }
 
-    void CopyFrom(const google::protobuf::Message& msg) {
-        proto_msg_->CopyFrom(msg);
-        dirty_ = false;
-        dirty_fields_.clear();
-    }
+    //void CopyFrom(const google::protobuf::Message& msg) {
+    //    proto_msg_->CopyFrom(msg);
+    //    dirty_ = false;
+    //    dirty_fields_.clear();
+    //}
 
     bool IsDirty() const {
         return dirty_;
@@ -92,7 +92,7 @@ public:
     }
 
     Task<> Commit() {
-        // ÏòdbserviceÌá½»µ±Ç°DbRowµÄÐÞ¸Ä
+        // å‘dbserviceæäº¤å½“å‰DbRowçš„ä¿®æ”¹
         co_return;
     }
 
@@ -100,8 +100,7 @@ private:
     const google::protobuf::FieldDescriptor& GetFieldByNumber(int32_t field_number) const {
         auto field_desc = desc_->FindFieldByNumber(field_number);
         if (!field_desc) {
-            // ºóÐøÊ¹ÓÃ×Ô¶¨ÒåÒì³££¬½áºÏstd::stacktrace
-            throw std::runtime_error(std::format("msg:{}, desc_.FindFieldByNumber:{}", desc_->name(), field_number));
+            throw TaskAbortException("msg:{}, desc_.FindFieldByNumber:{}", desc_->name(), field_number);
         }
         return *field_desc;
     }
@@ -109,8 +108,7 @@ private:
     const google::protobuf::FieldDescriptor& GetFieldByIndex(int32_t field_index) const {
         auto field_desc = desc_->field(field_index);
         if (!field_desc) {
-            // ºóÐøÊ¹ÓÃ×Ô¶¨ÒåÒì³££¬½áºÏstd::stacktrace
-            throw std::runtime_error(std::format("msg:{}, desc_.field:{}", desc_->name(), field_index));
+            throw TaskAbortException("msg:{}, desc_.field:{}", desc_->name(), field_index);
         }
         return *field_desc;
     }

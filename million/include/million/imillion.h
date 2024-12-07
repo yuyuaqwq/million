@@ -7,6 +7,7 @@
 #include <million/imsg.h>
 #include <million/iservice.h>
 #include <million/logger.h>
+#include <million/exception.h>
 
 namespace YAML {
 

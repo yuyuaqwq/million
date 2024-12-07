@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <million/imillion.h>
+#include <million/exception.h>
 
 MILLION_MODULE_INIT();
 
@@ -35,17 +36,17 @@ class TestService : public million::IService {
 
         auto msg_ = static_cast<Test1Msg*> (msg.get());
         std::cout << msg_->session_id() << std::endl;
-        std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
+        std::cout << "1.Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
         auto res = co_await Recv<million::IMsg>(4);
         msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << msg_->session_id() << std::endl;
-        std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
+        std::cout << "2.Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
         res = co_await Recv<million::IMsg>(5);
         msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << msg_->session_id() << std::endl;
-        std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
+        std::cout << "3.Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
         co_await On6();
         auto res2 = co_await On8();
@@ -95,11 +96,15 @@ class TestService : public million::IService {
 class TestApp : public million::IMillion {
     //using Base = million::IMillion;
     //using Base::Base;
-
-    
 };
 
+
+
 int main() {
+    // auto a = million::TaskAbortException("sb{}", 21);
+
+    // auto str = std::format("{}", a.stacktrace());
+
     auto test_app = std::make_unique<TestApp>();
     if (!test_app->Init("task_test_config.yaml")) {
         return 0;
