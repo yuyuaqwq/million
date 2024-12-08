@@ -40,12 +40,12 @@ class TestService : public million::IService {
         std::cout << msg_->session_id() << std::endl;
         std::cout << "1.Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
-        auto res = co_await Recv<million::IMsg>(4);
+        auto res = co_await Recv<million::IMsg>(12);
         msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << msg_->session_id() << std::endl;
         std::cout << "2.Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
 
-        res = co_await Recv<million::IMsg>(5);
+        res = co_await Recv<million::IMsg>(13);
         msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << msg_->session_id() << std::endl;
         std::cout << "3.Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
@@ -60,7 +60,7 @@ class TestService : public million::IService {
 
     million::Task<> On6() {
         //throw std::runtime_error("sb");
-        auto res = co_await Recv<million::IMsg>(6);
+        auto res = co_await Recv<million::IMsg>(14);
         //throw std::runtime_error("sb2");
         auto msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << res->session_id() << std::endl;
@@ -71,7 +71,7 @@ class TestService : public million::IService {
     }
 
     million::Task<int> On7() {
-        auto res = co_await Recv<million::IMsg>(7);
+        auto res = co_await Recv<million::IMsg>(15);
         //throw std::runtime_error("sb2");
         auto msg_ = static_cast<Test1Msg*>(res.get());
         std::cout << res->session_id() << std::endl;
@@ -118,20 +118,20 @@ int main() {
     }
     auto service_handle = *service_opt;
 
-    test_app->Send<Test1Msg>(service_handle, service_handle, 3, "sb");
+    test_app->Send<Test1Msg>(service_handle, service_handle, 11, "sb");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    test_app->Send<Test1Msg>(service_handle, service_handle, 4, "6");
+    test_app->Send<Test1Msg>(service_handle, service_handle, 12, "6");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    test_app->Send<Test1Msg>(service_handle, service_handle, 5, "emm");
+    test_app->Send<Test1Msg>(service_handle, service_handle, 13, "emm");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    test_app->Send<Test1Msg>(service_handle, service_handle, 6, "hhh");
+    test_app->Send<Test1Msg>(service_handle, service_handle, 14, "hhh");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    test_app->Send<Test2Msg>(service_handle, service_handle, 7, "hhh");
+    test_app->Send<Test2Msg>(service_handle, service_handle, 15, "hhh");
 
     return 0;
 }
