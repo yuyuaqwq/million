@@ -48,15 +48,9 @@ bool Service::MsgQueueIsEmpty() {
 
 void Service::ProcessMsg(MsgUnique msg) {
     if (msg->type() == MillionServiceStartMsg::type_static()) {
-        on_start_task_.emplace(iservice_->OnStart());
-        if (!on_start_task_->coroutine.done()) {
-            // OnStart未完成，等待处理完成
-            auto id = on_start_task_->coroutine.promise().session_awaiter()->waiting_session();
-            auto timeout_s = on_start_task_->coroutine.promise().session_awaiter()->timeout_s();
-            service_mgr()->million()->session_monitor().AddSession(service_handle(), id, timeout_s);
-        }
-        else {
-            on_start_task_ = std::nullopt;
+        auto task = iservice_->OnStart();
+        if (!excutor_.AddTask(std::move(task))) {
+            // 已完成
             state_ = ServiceState::kRunning;
         }
         return;
@@ -72,27 +66,30 @@ void Service::ProcessMsg(MsgUnique msg) {
         return;
     }
 
-    if (state_ == ServiceState::kReady) {
-        assert(on_start_task_);
-        if (msg->type() == MillionSessionTimeoutMsg::type_static()) {
-            auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
-            // 超时未完成OnStart，准备销毁服务
-            on_start_task_ = std::nullopt;
+    if (msg->type() == MillionSessionTimeoutMsg::type_static()) {
+        auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
+        auto task = excutor_.TaskTimeout(msg_ptr->timeout_id);
+        if (task && state_ == ServiceState::kReady) {
+            if (!task->coroutine.done() || !task->coroutine.promise().exception()) {
+                return;
+            }
+            // 异常退出的OnStart，销毁当前服务
             iservice_->Send<MillionServiceStopMsg>(service_handle());
-            return;
-        }
-        // 只能尝试调度OnStart
-        excutor_.TrySchedule(*on_start_task_, std::move(msg));
-        if (on_start_task_->coroutine.done()) {
-            on_start_task_ = std::nullopt;
-            state_ = ServiceState::kRunning;
         }
         return;
     }
 
-    if (msg->type() == MillionSessionTimeoutMsg::type_static()) {
-        auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
-        excutor_.TaskTimeout(msg_ptr->timeout_id);
+    if (state_ == ServiceState::kReady) {
+        // OnStart未完成，只能尝试调度已有协程
+        bool task_done = true;
+        auto res = excutor_.TrySchedule(std::move(msg));
+        if (!std::holds_alternative<Task<>*>(res)) {
+            return;
+        }
+        auto task = std::get<Task<>*>(res);
+        if (task->coroutine.done()) {
+            state_ = ServiceState::kRunning;
+        }
         return;
     }
 
@@ -100,12 +97,12 @@ void Service::ProcessMsg(MsgUnique msg) {
         return;
     }
 
-    auto msg_opt = excutor_.TrySchedule(std::move(msg));
-    if (!msg_opt) {
+    auto res = excutor_.TrySchedule(std::move(msg));
+    if (std::holds_alternative<Task<>*>(res)) {
         return;
     }
 
-    auto task = iservice_->OnMsg(std::move(*msg_opt));
+    auto task = iservice_->OnMsg(std::move(std::get<MsgUnique>(res)));
     excutor_.AddTask(std::move(task));
 }
 

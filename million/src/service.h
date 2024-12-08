@@ -62,7 +62,7 @@ private:
     ServiceMgr* service_mgr_;
     std::list<std::shared_ptr<Service>>::iterator iter_;
 
-    std::optional<Task<>> on_start_task_;
+    // std::optional<Task<>> on_start_task_;
     ServiceState state_ = ServiceState::kReady;
 
     bool in_queue_ = false;

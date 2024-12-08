@@ -21,7 +21,7 @@ TaskExecutor::TaskExecutor(Service* service)
 TaskExecutor::~TaskExecutor() = default;
 
 // 尝试调度
-std::optional<MsgUnique> TaskExecutor::TrySchedule(MsgUnique msg) {
+std::variant<MsgUnique, Task<>*> TaskExecutor::TrySchedule(MsgUnique msg) {
     auto id = msg->session_id();
     auto iter = tasks_.find(id);
     if (iter == tasks_.end()) {
@@ -35,12 +35,56 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(MsgUnique msg) {
     }
     if (!iter->second.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        RePush(id, iter->second.coroutine.promise().session_awaiter()->waiting_session());
+        return RePush(id, iter->second.coroutine.promise().session_awaiter()->waiting_session());;
     }
     else {
         tasks_.erase(iter);
+        return nullptr;
     }
-    return std::nullopt;
+}
+
+bool TaskExecutor::AddTask(Task<>&& task) {
+    if (task.has_exception()) {
+        auto million = service_->service_mgr()->million();
+        // 记录异常
+        try {
+            task.rethrow_if_exception();
+        }
+        catch (const std::exception& e) {
+            million->logger().Err("Session exception: {}.", e.what());
+        }
+        catch (...) {
+            million->logger().Err("Session exception: {}.", "unknown exception");
+        }
+    }
+    if (!task.coroutine.done()) {
+        assert(task.coroutine.promise().session_awaiter());
+        Push(task.coroutine.promise().session_awaiter()->waiting_session(), std::move(task));
+        return true;
+    }
+    return false;
+}
+
+Task<>* TaskExecutor::TaskTimeout(SessionId id) {
+    auto iter = tasks_.find(id);
+    if (iter == tasks_.end()) {
+        // 正常情况是已经执行完毕了
+        return nullptr;
+    }
+
+    // 超时，唤醒目标协程
+    auto million = service_->service_mgr()->million();
+
+    TrySchedule(iter->second, nullptr);
+
+    if (!iter->second.coroutine.done()) {
+        // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
+        return RePush(id, iter->second.coroutine.promise().session_awaiter()->waiting_session());
+    }
+    else {
+        tasks_.erase(iter);
+        return nullptr;
+    }
 }
 
 std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, MsgUnique msg) {
@@ -75,60 +119,26 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, MsgUnique msg) 
     return std::nullopt;
 }
 
-void TaskExecutor::AddTask(Task<>&& task) {
-    if (task.has_exception()) {
-        auto million = service_->service_mgr()->million();
-        // 记录异常
-        try {
-            task.rethrow_if_exception();
-        }
-        catch (const std::exception& e) {
-            million->logger().Err("Session exception: {}.", e.what());
-        }
-        catch (...) {
-            million->logger().Err("Session exception: {}.", "unknown exception");
-        }
-    }
-    if (!task.coroutine.done()) {
-        assert(task.coroutine.promise().session_awaiter());
-        Push(task.coroutine.promise().session_awaiter()->waiting_session(), std::move(task));
-    }
-}
-
-void TaskExecutor::TaskTimeout(SessionId id) {
-    auto iter = tasks_.find(id);
-    if (iter == tasks_.end()) {
-        // 正常情况是已经执行完毕了
-        return;
-    }
-
-    // 超时，唤醒目标协程
-    auto million = service_->service_mgr()->million();
-
-    TrySchedule(iter->second, nullptr);
-
-    if (!iter->second.coroutine.done()) {
-        // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        RePush(id, iter->second.coroutine.promise().session_awaiter()->waiting_session());
-    }
-    else {
-        tasks_.erase(iter);
-    }
-}
-
-void TaskExecutor::Push(SessionId id, Task<>&& task) {
+Task<>* TaskExecutor::Push(SessionId id, Task<>&& task) {
     service_->service_mgr()->million()->session_monitor().AddSession(service_->service_handle(), id, task.coroutine.promise().session_awaiter()->timeout_s());
-    tasks_.emplace(id, std::move(task));
+    auto res = tasks_.emplace(id, std::move(task));
+    if (!res.second) {
+        // throw std::runtime_error("Duplicate session id.");
+        auto million = service_->service_mgr()->million();
+        million->logger().Err("TaskExecutor::Push: Found duplicate session id: {}", id);
+        return nullptr;
+    }
+    return &res.first->second;
 }
 
-void TaskExecutor::RePush(SessionId old_id, SessionId new_id) {
+Task<>* TaskExecutor::RePush(SessionId old_id, SessionId new_id) {
     auto iter = tasks_.find(old_id);
     if (iter == tasks_.end()) {
-        return;
+        return nullptr;
     }
     auto task = std::move(iter->second);
     tasks_.erase(iter);
-    Push(new_id, std::move(task));
+    return Push(new_id, std::move(task));
 }
 
 } //namespace million

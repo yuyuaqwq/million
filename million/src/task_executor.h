@@ -3,6 +3,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <functional>
+#include <variant>
 #include <thread>
 #include <mutex>
 #include <queue>
@@ -21,20 +22,22 @@ public:
     ~TaskExecutor();
 
     // 尝试调度
-    std::optional<MsgUnique> TrySchedule(MsgUnique msg);
-    std::optional<MsgUnique> TrySchedule(Task<>& task, MsgUnique msg);
+    std::variant<MsgUnique, Task<>*> TrySchedule(MsgUnique msg);
 
     // 将任务添加到调度器
-    void AddTask(Task<>&& task);
+    bool AddTask(Task<>&& task);
 
-    void TaskTimeout(SessionId id);
+    Task<>* TaskTimeout(SessionId id);
 
 private:
+    // 尝试调度指定Task
+    std::optional<MsgUnique> TrySchedule(Task<>& task, MsgUnique msg);
+
     // 加入待调度队列等待调度
-    void Push(SessionId id, Task<>&& task);
+    Task<>* Push(SessionId id, Task<>&& task);
 
     // 更新需要等待的session_id
-    void RePush(SessionId old_id, SessionId new_id);
+    Task<>* RePush(SessionId old_id, SessionId new_id);
 
 private:
     Service* service_;
