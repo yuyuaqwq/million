@@ -32,9 +32,10 @@ struct TaskPromise;
 // 会话等待器，等待一条消息
 template <typename MsgT>
 struct SessionAwaiter {
-    explicit SessionAwaiter(SessionId waiting_session_id, uint32_t timeout_s)
+    explicit SessionAwaiter(SessionId waiting_session_id, uint32_t timeout_s, bool or_null)
         : waiting_session_id_(waiting_session_id)
-        , timeout_s_(timeout_s) {}
+        , timeout_s_(timeout_s)
+        , or_null_(or_null) {}
 
     SessionAwaiter(SessionAwaiter&& rv) noexcept {
         operator=(std::move(rv));
@@ -42,6 +43,7 @@ struct SessionAwaiter {
     void operator=(SessionAwaiter&& rv) noexcept {
         waiting_session_id_ = std::move(rv.waiting_session_id_);
         timeout_s_ = rv.timeout_s_;
+        or_null_ = rv.or_null_;
     }
 
     SessionAwaiter(SessionAwaiter&) = delete;
@@ -50,12 +52,19 @@ struct SessionAwaiter {
     void set_result(std::unique_ptr<MsgT> result) {
         result_ = std::move(result);
     }
+
     SessionId waiting_session() const {
         return waiting_session_id_;
     }
+
     uint32_t timeout_s() const {
         return timeout_s_;
     }
+
+    uint32_t or_null() const {
+        return or_null_;
+    }
+
     std::coroutine_handle<TaskPromiseBase> waiting_coroutine() const {
         return std::coroutine_handle<TaskPromiseBase>::from_address(waiting_coroutine_.address());
     }
@@ -85,8 +94,8 @@ struct SessionAwaiter {
     std::unique_ptr<MsgT> await_resume() {
 
         // 调度器恢复了等待当前awaiter的协程，说明已经等到结果/超时了
-        if (!result_ && timeout_s_ == 0) {
-            // 超时，且未指定超时时间，不返回nullptr
+        if (!result_ && or_null_ == false) {
+            // 超时，不返回nullptr
             throw TaskAbortException("Session timeout.");
         }
 
@@ -96,6 +105,7 @@ struct SessionAwaiter {
 private:
     SessionId waiting_session_id_;
     uint32_t timeout_s_;
+    bool or_null_;
     std::coroutine_handle<> waiting_coroutine_;
     std::unique_ptr<MsgT> result_;
 };

@@ -31,14 +31,25 @@ public:
     void Resend(const ServiceHandle& target, MsgUnique msg);
 
     template <typename MsgT>
-    SessionAwaiter<MsgT> RecvWithTimeoutOrNull(SessionId session_id, uint32_t timeout_s) {
-        return SessionAwaiter<MsgT>(session_id, timeout_s);
+    SessionAwaiter<MsgT> Recv(SessionId session_id) {
+        // 0表示默认超时时间
+        return SessionAwaiter<MsgT>(session_id, 0, false);
     }
 
     template <typename MsgT>
-    SessionAwaiter<MsgT> Recv(SessionId session_id) {
+    SessionAwaiter<MsgT> RecvWithTimeout(SessionId session_id, uint32_t timeout_s) {
+        return SessionAwaiter<MsgT>(session_id, timeout_s, false);
+    }
+
+    template <typename MsgT>
+    SessionAwaiter<MsgT> RecvOrNull(SessionId session_id) {
         // 0表示默认超时时间
-        return SessionAwaiter<MsgT>(session_id, 0);
+        return SessionAwaiter<MsgT>(session_id, 0, true);
+    }
+
+    template <typename MsgT>
+    SessionAwaiter<MsgT> RecvOrNullWithTimeout(SessionId session_id, uint32_t timeout_s) {
+        return SessionAwaiter<MsgT>(session_id, timeout_s, true);
     }
 
     void Reply(MsgUnique msg);
@@ -52,17 +63,6 @@ public:
     }
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
-    SessionAwaiter<RecvMsgT> CallWithTimeoutOrNull(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
-        auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
-        return RecvWithTimeoutOrNull<RecvMsgT>(session_id, timeout_s);
-    }
-    template <typename MsgT, typename ...Args>
-    SessionAwaiter<MsgT> CallWithTimeoutOrNull(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
-        auto session_id = Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
-        return RecvWithTimeoutOrNull<MsgT>(session_id, timeout_s);
-    }
-
-    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
     SessionAwaiter<RecvMsgT> Call(const ServiceHandle& target, Args&&... args) {
         auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
         return Recv<RecvMsgT>(session_id);
@@ -72,6 +72,40 @@ public:
         auto session_id = Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
         return Recv<MsgT>(session_id);
     }
+
+    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
+    SessionAwaiter<RecvMsgT> CallWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
+        auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
+        return RecvWithTimeout<RecvMsgT>(session_id, timeout_s);
+    }
+    template <typename MsgT, typename ...Args>
+    SessionAwaiter<MsgT> CallWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
+        auto session_id = Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
+        return RecvWithTimeout<MsgT>(session_id, timeout_s);
+    }
+
+    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
+    SessionAwaiter<RecvMsgT> CallOrNull(const ServiceHandle& target, Args&&... args) {
+        auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
+        return RecvOrNull<RecvMsgT>(session_id);
+    }
+    template <typename MsgT, typename ...Args>
+    SessionAwaiter<MsgT> CallOrNull(const ServiceHandle& target, Args&&... args) {
+        auto session_id = Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
+        return RecvOrNull<MsgT>(session_id);
+    }
+
+    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
+    SessionAwaiter<RecvMsgT> CallOrNullWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
+        auto session_id = Send(target, std::make_unique<SendMsgT>(std::forward<Args>(args)...));
+        return RecvOrNullWithTimeout<RecvMsgT>(session_id, timeout_s);
+    }
+    template <typename MsgT, typename ...Args>
+    SessionAwaiter<MsgT> CallOrNullWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
+        auto session_id = Send(target, std::make_unique<MsgT>(std::forward<Args>(args)...));
+        return RecvOrNullWithTimeout<MsgT>(session_id, timeout_s);
+    }
+
 
     void Timeout(uint32_t tick, MsgUnique msg);
     template <typename MsgT, typename ...Args>
