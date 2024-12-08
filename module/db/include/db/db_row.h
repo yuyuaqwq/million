@@ -15,7 +15,7 @@ public:
     DbRow(const protobuf::Descriptor& desc, ProtoMsgUnique proto_msg)
         : desc_(&desc)
         , proto_msg_(std::move(proto_msg))
-        , dirty_fields_(desc_->field_count()) {}
+        , dirty_fields_(desc_->field_count(), false) {}
 
     DbRow(const DbRow& rv) {
         operator=(rv);
@@ -33,14 +33,12 @@ public:
         }
         proto_msg->CopyFrom(*rv.proto_msg_);
         proto_msg_.reset(proto_msg);
-        dirty_ = rv.dirty_;
         dirty_fields_ = rv.dirty_fields_;
     }
 
     void operator=(DbRow&& rv) noexcept {
         desc_ = rv.desc_; rv.desc_ = nullptr;
         proto_msg_ = std::move(proto_msg_);
-        dirty_ = rv.dirty_; rv.dirty_ = false;
         dirty_fields_ = std::move(dirty_fields_);
     }
 
@@ -49,6 +47,8 @@ public:
 
     google::protobuf::Message& get() const { return *proto_msg_.get(); }
 
+    const protobuf::Descriptor& desc() const { return *desc_; }
+
     //void CopyFrom(const google::protobuf::Message& msg) {
     //    proto_msg_->CopyFrom(msg);
     //    dirty_ = false;
@@ -56,15 +56,24 @@ public:
     //}
 
     bool IsDirty() const {
-        return dirty_;
+        for (size_t i = 0; i < dirty_fields_.size(); ++i) {
+            if (dirty_fields_[i]) {
+                return true;
+            }
+        }
+        return false;
     }
 
     void MarkDirty() {
-        dirty_ = true;
+        for (size_t i = 0; i < dirty_fields_.size(); ++i) {
+            dirty_fields_[i] = true;
+        }
     }
 
     void ClearDirty() {
-        dirty_ = false;
+        for (size_t i = 0; i < dirty_fields_.size(); ++i) {
+            dirty_fields_[i] = false;
+        }
     }
 
     bool IsDirtyFromFIeldNum(int32_t field_number) const {
@@ -116,7 +125,6 @@ private:
 private:
     const protobuf::Descriptor* desc_;
     ProtoMsgUnique proto_msg_;
-    bool dirty_ = false;
     std::vector<bool> dirty_fields_;
 };
 

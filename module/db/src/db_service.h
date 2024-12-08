@@ -99,6 +99,7 @@ private:
 
 
 MILLION_MSG_DEFINE_EMPTY(DB_CLASS_API, DbSqlInitMsg);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowTickSyncMsg, (int32_t) tick_second, (DbRow*) db_row);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (std::string) table_name, (std::string) primary_key, (bool) exist);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowGetMsg, (std::string) table_name, (std::string) primary_key, (DbRow) db_row);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowSetMsg, (std::string) table_name, (std::string) primary_key, (DbRow*) db_row);
@@ -107,7 +108,6 @@ MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std:
 
 class DbService : public IService {
 public:
-
     using Base = IService;
     using Base::Base;
 
@@ -147,6 +147,19 @@ public:
         //std::vector<bool> dirty_bits(user.GetDescriptor()->field_count());
         //auto res = co_await Call<SqlQueryMsg>(sql_service_, "1", &user, &dirty_bits, false);
 
+        
+        co_return;
+    }
+
+    MILLION_MSG_HANDLE(DbRowTickSyncMsg, msg) {
+        if (msg->db_row->IsDirty()) {
+            // co_await期间可能会有新的DbRowSetMsg消息被处理，所以需要复制一份
+            auto db_row = msg->db_row;
+            msg->db_row->ClearDirty();
+            co_await Call<SqlUpdateMsg>(cache_service_, &db_row);
+            co_await Call<CacheSetMsg>(cache_service_, &db_row);
+        }
+        Timeout(msg->tick_second, std::move(msg));
         co_return;
     }
 
@@ -154,6 +167,10 @@ public:
         const auto* desc = proto_codec_.GetMsgDesc(msg->table_name);
         if (!desc) {
             logger().Err("Unregistered table name: {}.", msg->table_name);
+            co_return;
+        }
+        if (!desc->options().HasExtension(Db::table)) {
+            logger().Err("HasExtension Db::table failed, table name: {}.", msg->table_name);
             co_return;
         }
 
@@ -182,11 +199,22 @@ public:
             auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, &row, false);
             if (!res_msg->success) {
                 auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, &row, false);
+                if (!res_msg->success) {
+                    co_await Call<SqlInsertMsg>(sql_service_, &row);
+                }
+                co_await Call<CacheSetMsg>(cache_service_, &row);
             }
 
             auto res = rows.emplace(std::move(msg->primary_key), std::move(row));
             assert(res.second);
             row_iter = res.first;
+
+            const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+
+            auto tick_second = options.tick_second();
+
+            Timeout<DbRowTickSyncMsg>(tick_second, tick_second, &row_iter->second);
+
         } while (false);
         msg->db_row = row_iter->second;
         Reply(std::move(msg));
@@ -197,6 +225,8 @@ public:
 
         co_return;
     }
+
+
 
 private:
     DbProtoCodec proto_codec_;

@@ -54,7 +54,7 @@ public:
     MILLION_MSG_DISPATCH(SqlService);
 
     MILLION_MSG_HANDLE(SqlCreateTableMsg, msg) {
-        const google::protobuf::Descriptor* desc = msg->desc;
+        const auto* desc = msg->desc;
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         auto& table_name = options.name();
 
@@ -323,7 +323,6 @@ public:
                     logger().Err("unsupported field type:{}", field->name());
                 }
             }
-            msg->db_row->ClearDirtyByFieldIndex(i);
         }
 
         msg->success = true;

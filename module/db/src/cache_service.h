@@ -82,7 +82,6 @@ public:
                     continue;
                 }
                 SetField(&proto_msg, *field, *reflection, iter->second);
-                msg->db_row->MarkDirtyByFieldIndex(i);
             }
             msg->success = true;
         }
@@ -93,9 +92,9 @@ public:
 
     MILLION_MSG_HANDLE(CacheSetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
-        const auto* descriptor = proto_msg.GetDescriptor();
+        const auto* desc = proto_msg.GetDescriptor();
         const auto* reflection = proto_msg.GetReflection();
-        const Db::MessageOptionsTable& options = descriptor->options().GetExtension(Db::table);
+        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         const auto& table_name = options.name();
         if (table_name.empty()) {
             logger().Err("table_name is empty.");
@@ -114,12 +113,12 @@ public:
         std::unordered_map<std::string, std::string> redis_hash;
 
         // 遍历 Protobuf 的所有字段，将字段和值存入 redis_hash 中
-        for (int i = 0; i < descriptor->field_count(); ++i) {
-            if (!msg->db_row->IsDirty() && !msg->db_row->IsDirtyFromFIeldIndex(i)) {
+        for (int i = 0; i < desc->field_count(); ++i) {
+            if (!msg->db_row->IsDirtyFromFIeldIndex(i)) {
                 continue;
             }
 
-            const auto* field = descriptor->field(i);
+            const auto* field = desc->field(i);
             const Db::FieldOptionsColumn& options = field->options().GetExtension(Db::column);
 
             redis_hash[field->name()] = GetField(proto_msg, *field, *reflection);
