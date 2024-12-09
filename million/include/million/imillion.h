@@ -82,10 +82,6 @@ inline void IService::Reply(MsgUnique msg) {
     imillion_->Send(session_id, service_handle_, target, std::move(msg));
 }
 
-inline void IService::Reply(const ServiceHandle& target, SessionId session_id) {
-    Reply<IMsg>(target, session_id);
-}
-
 inline void IService::Timeout(uint32_t tick, MsgUnique msg) {
     imillion_->Timeout(tick, service_handle(), std::move(msg));
 }

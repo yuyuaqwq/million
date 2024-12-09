@@ -7,6 +7,7 @@
 #include <million/api.h>
 #include <million/noncopyable.h>
 #include <million/service_handle.h>
+#include <million/service_lock.h>
 #include <million/imsg.h>
 #include <million/task.h>
 #include <million/logger.h>
@@ -30,6 +31,20 @@ public:
 
     void Resend(const ServiceHandle& target, MsgUnique msg);
 
+    void SendTo(const ServiceHandle& target, SessionId session_id) {
+        SendTo<IMsg>(target, session_id);
+    }
+
+    template <typename MsgT, typename ...Args>
+    void SendTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
+        auto msg = std::make_unique<MsgT>(std::forward<Args>(args)...);
+        msg->set_session_id(session_id);
+        msg->set_sender(target);
+        Reply(std::move(msg));
+    }
+
+    void Reply(MsgUnique msg);
+
     template <typename MsgT>
     SessionAwaiter<MsgT> Recv(SessionId session_id) {
         // 0表示默认超时时间
@@ -50,16 +65,6 @@ public:
     template <typename MsgT>
     SessionAwaiter<MsgT> RecvOrNullWithTimeout(SessionId session_id, uint32_t timeout_s) {
         return SessionAwaiter<MsgT>(session_id, timeout_s, true);
-    }
-
-    void Reply(MsgUnique msg);
-    void Reply(const ServiceHandle& target, SessionId session_id);
-    template <typename MsgT, typename ...Args>
-    void Reply(const ServiceHandle& target, SessionId session_id, Args&&... args) {
-        auto msg = std::make_unique<MsgT>(std::forward<Args>(args)...);
-        msg->set_session_id(session_id);
-        msg->set_sender(target);
-        Reply(std::move(msg));
     }
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
@@ -111,6 +116,10 @@ public:
     template <typename MsgT, typename ...Args>
     void Timeout(uint32_t tick, Args&&... args) {
         Timeout(tick, std::make_unique<MsgT>(std::forward<Args>(args)...));
+    }
+
+    void Lock() {
+
     }
 
     void EnableSeparateWorker();
