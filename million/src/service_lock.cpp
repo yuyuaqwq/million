@@ -18,6 +18,7 @@ Task<> ServiceLock::Lock() {
 	auto session_id = iservice_->AllocSessionId();
 	wait_sessions_.push(session_id);
 	co_await iservice_->Recv<MillionServiceLockMsg>(session_id);
+	locking_ = true;
 }
 
 void ServiceLock::Unlock() {
