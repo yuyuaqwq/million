@@ -73,7 +73,7 @@ public:
         auto expire_time = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(tick * ms_per_tick_);
         {
             auto lock = std::lock_guard(adds_mutex_);
-            adds_.emplace_back(expire_time, std::forward<T>(data));
+            adds_.emplace_back(expire_time, std::move(data));
         }
         bool need_notify = false;
         {

@@ -81,7 +81,7 @@ public:
 
     void AddTask(uint32_t tick, T&& data) {
         auto guard =std::lock_guard(adds_mutex_);
-        adds_.emplace_back(tick, std::forward<T>(data));
+        adds_.emplace_back(tick, std::move(data));
     }
 
 protected:

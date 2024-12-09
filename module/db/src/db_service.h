@@ -100,8 +100,8 @@ private:
 
 MILLION_MSG_DEFINE_EMPTY(DB_CLASS_API, DbSqlInitMsg);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowTickSyncMsg, (int32_t) tick_second, (DbRow*) db_row);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (std::string) table_name, (std::string) primary_key, (bool) exist);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowGetMsg, (std::string) table_name, (std::string) primary_key, (DbRow) db_row);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (const google::protobuf::Descriptor*) table_desc, (std::string) primary_key, (bool) exist);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowGetMsg, (const google::protobuf::Descriptor*) table_desc, (std::string) primary_key, (DbRow) db_row);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowSetMsg, (std::string) table_name, (std::string) primary_key, (DbRow*) db_row);
 MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (DbRow*) db_row);
 
@@ -154,7 +154,7 @@ public:
     MILLION_MSG_HANDLE(DbRowTickSyncMsg, msg) {
         if (msg->db_row->IsDirty()) {
             // co_await期间可能会有新的DbRowSetMsg消息被处理，所以需要复制一份
-            auto db_row = msg->db_row;
+            auto db_row = *msg->db_row;
             msg->db_row->ClearDirty();
             co_await Call<SqlUpdateMsg>(cache_service_, &db_row);
             co_await Call<CacheSetMsg>(cache_service_, &db_row);
@@ -164,13 +164,13 @@ public:
     }
 
     MILLION_MSG_HANDLE(DbRowGetMsg, msg) {
-        const auto* desc = proto_codec_.GetMsgDesc(msg->table_name);
+        const auto* desc = msg->table_desc; // proto_codec_.GetMsgDesc(msg->table_name);
         if (!desc) {
-            logger().Err("Unregistered table name: {}.", msg->table_name);
+            logger().Err("table_desc is null.");
             co_return;
         }
         if (!desc->options().HasExtension(Db::table)) {
-            logger().Err("HasExtension Db::table failed, table name: {}.", msg->table_name);
+            logger().Err("HasExtension Db::table failed.");
             co_return;
         }
 
@@ -222,7 +222,8 @@ public:
     }
 
     MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
-
+        auto& db_row = *msg->db_row;
+        db_row.desc().
         co_return;
     }
 
