@@ -54,15 +54,15 @@ public:
     MILLION_MSG_DISPATCH(SqlService);
 
     MILLION_MSG_HANDLE(SqlCreateTableMsg, msg) {
-        const auto* desc = msg->desc;
-        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        const auto& desc = msg->desc;
+        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
         auto& table_name = options.name();
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
 
         std::vector<const std::string*> primary_keys;
-        for (int i = 0; i < desc->field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* field = desc->field(i);
+        for (int i = 0; i < desc.field_count(); ++i) {
+            const google::protobuf::FieldDescriptor* field = desc.field(i);
             const std::string& field_name = field->name();
             std::string field_type;
 
@@ -175,7 +175,7 @@ public:
                         continue;
                     }
                     for (int i = 0; i < multi_index.field_numbers_size(); ++i) {
-                        const google::protobuf::FieldDescriptor* field = desc->FindFieldByNumber(multi_index.field_numbers(i));
+                        const google::protobuf::FieldDescriptor* field = desc.FindFieldByNumber(multi_index.field_numbers(i));
                         sql += field->name() + ",";
                     }
                     sql.pop_back();
@@ -193,7 +193,7 @@ public:
             sql += "),\n";
         }
 
-        if (desc->field_count() > 0) {
+        if (desc.field_count() > 0) {
             sql.pop_back(); // Remove the last comma
             sql.pop_back(); // Remove the last newline
         }
@@ -221,18 +221,18 @@ public:
 
     MILLION_MSG_HANDLE(SqlQueryMsg, msg) {
         auto& proto_msg = msg->db_row->get();
-        const auto* desc = proto_msg.GetDescriptor();
-        const auto* reflection = proto_msg.GetReflection();
+        const auto& desc = msg->db_row->GetDescriptor();
+        const auto& reflection = msg->db_row->GetReflection();
 
-        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
         if (options.has_sql()) {
             const Db::TableSqlOptions& sql_options = options.sql();
         }
         auto& table_name = options.name();
 
         std::string sql = "SELECT";
-        for (int i = 0; i < desc->field_count(); ++i) {
-            const auto* const field = desc->field(i);
+        for (int i = 0; i < desc.field_count(); ++i) {
+            const auto* const field = desc.field(i);
             sql += " " + field->name() + ",";
         }
         if (sql.back() == ',') {
@@ -242,7 +242,7 @@ public:
         sql += " FROM ";
         sql += table_name;
 
-        const auto* field_desc = desc->FindFieldByNumber(options.primary_key());
+        const auto* field_desc = desc.FindFieldByNumber(options.primary_key());
         if (!field_desc) {
             logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
             co_return;
@@ -261,8 +261,8 @@ public:
             co_return;
         }
         const auto& row = *it;
-        for (int i = 0; i < desc->field_count(); ++i) {
-            const auto* const field = desc->field(i);
+        for (int i = 0; i < desc.field_count(); ++i) {
+            const auto* const field = desc.field(i);
             if (field->is_repeated()) {
                 logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
             }
@@ -270,53 +270,53 @@ public:
                 auto type = field->type();
                 switch (type) {
                 case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
-                    reflection->SetDouble(&proto_msg, field, row.get<double>(i));
+                    reflection.SetDouble(&proto_msg, field, row.get<double>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-                    reflection->SetFloat(&proto_msg, field, static_cast<float>(row.get<double>(i)));
+                    reflection.SetFloat(&proto_msg, field, static_cast<float>(row.get<double>(i)));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_FIXED64:
                 case google::protobuf::FieldDescriptor::TYPE_UINT64: {
-                    reflection->SetUInt64(&proto_msg, field, row.get<uint64_t>(i));
+                    reflection.SetUInt64(&proto_msg, field, row.get<uint64_t>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_SINT64:
                 case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
                 case google::protobuf::FieldDescriptor::TYPE_INT64: {
-                    reflection->SetInt64(&proto_msg, field, row.get<int64_t>(i));
+                    reflection.SetInt64(&proto_msg, field, row.get<int64_t>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_FIXED32:
                 case google::protobuf::FieldDescriptor::TYPE_UINT32: {
-                    reflection->SetUInt32(&proto_msg, field, row.get<uint32_t>(i));
+                    reflection.SetUInt32(&proto_msg, field, row.get<uint32_t>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_SINT32:
                 case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
                 case google::protobuf::FieldDescriptor::TYPE_INT32: {
-                    reflection->SetInt32(&proto_msg, field, row.get<int32_t>(i));
+                    reflection.SetInt32(&proto_msg, field, row.get<int32_t>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-                    reflection->SetBool(&proto_msg, field, static_cast<bool>(row.get<int8_t>(i)));
+                    reflection.SetBool(&proto_msg, field, static_cast<bool>(row.get<int8_t>(i)));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_BYTES:
                 case google::protobuf::FieldDescriptor::TYPE_STRING: {
-                    reflection->SetString(&proto_msg, field, row.get<std::string>(i));
+                    reflection.SetString(&proto_msg, field, row.get<std::string>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-                    google::protobuf::Message* sub_message = reflection->MutableMessage(&proto_msg, field);
+                    google::protobuf::Message* sub_message = reflection.MutableMessage(&proto_msg, field);
                     sub_message->ParseFromString(row.get<std::string>(i));
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_ENUM: {
                     int enum_value = row.get<int>(i);
                     const google::protobuf::EnumValueDescriptor* enum_desc = field->enum_type()->FindValueByNumber(enum_value);
-                    reflection->SetEnum(&proto_msg, field, enum_desc);
+                    reflection.SetEnum(&proto_msg, field, enum_desc);
                     break;
                 }
                 default:
@@ -332,10 +332,13 @@ public:
 
     MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
         const auto& proto_msg = msg->db_row->get();
-
-        const auto* desc = proto_msg.GetDescriptor();
-        const auto* reflection = proto_msg.GetReflection();
-        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        const auto& desc = msg->db_row->GetDescriptor();
+        const auto& reflection = msg->db_row->GetReflection();
+        if (!desc.options().HasExtension(Db::table)) {
+            logger().Err("HasExtension Db::table failed.");
+            co_return;
+        }
+        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
         if (options.has_sql()) {
             const Db::TableSqlOptions& sql_options = options.sql();
         }
@@ -349,8 +352,8 @@ public:
         soci::statement stmt(sql_);
 
         // 构造 SQL 语句
-        for (int i = 0; i < desc->field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* field = desc->field(i);
+        for (int i = 0; i < desc.field_count(); ++i) {
+            const google::protobuf::FieldDescriptor* field = desc.field(i);
             sql += field->name() + ",";
             values_placeholder += ":" + field->name() + ",";
         }
@@ -380,10 +383,13 @@ public:
 
     MILLION_MSG_HANDLE(SqlUpdateMsg, msg) {
         const auto& proto_msg = msg->db_row->get();
-
-        const auto* desc = proto_msg.GetDescriptor();
-        const auto* reflection = proto_msg.GetReflection();
-        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        const auto& desc = msg->db_row->GetDescriptor();
+        const auto& reflection = msg->db_row->GetReflection();
+        if (!desc.options().HasExtension(Db::table)) {
+            logger().Err("HasExtension Db::table failed.");
+            co_return;
+        }
+        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
         if (options.has_sql()) {
             const Db::TableSqlOptions& sql_options = options.sql();
         }
@@ -395,8 +401,8 @@ public:
 
         soci::statement stmt(sql_);
 
-        for (int i = 0; i < desc->field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* field = desc->field(i);
+        for (int i = 0; i < desc.field_count(); ++i) {
+            const google::protobuf::FieldDescriptor* field = desc.field(i);
             sql += field->name() + " = :" + field->name() + ",";
         }
 
@@ -429,6 +435,7 @@ public:
         co_return;
     }
 
+private:
     void BindValuesToStatement(const google::protobuf::Message& msg, std::vector<std::any>* values, soci::statement& stmt) {
         const google::protobuf::Descriptor* desc = msg.GetDescriptor();
         const google::protobuf::Reflection* reflection = msg.GetReflection();

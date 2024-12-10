@@ -99,11 +99,11 @@ private:
 
 
 MILLION_MSG_DEFINE_EMPTY(DB_CLASS_API, DbSqlInitMsg);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowTickSyncMsg, (int32_t) tick_second, (DbRow*) db_row);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (const google::protobuf::Descriptor*) table_desc, (std::string) primary_key, (bool) exist);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowGetMsg, (const google::protobuf::Descriptor*) table_desc, (std::string) primary_key, (DbRow) db_row);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowSetMsg, (std::string) table_name, (std::string) primary_key, (DbRow*) db_row);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (DbRow*) db_row);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowTickSyncMsg, (int32_t) tick_second, (nonnull_ptr<DbRow>) db_row);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (bool) exist);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowGetMsg, (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (DbRow) db_row);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowSetMsg, (std::string) table_name, (std::string) primary_key, (nonnull_ptr<DbRow>) db_row);
+MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (nonnull_ptr<DbRow>) db_row);
 
 
 class DbService : public IService {
@@ -128,7 +128,7 @@ public:
     MILLION_MSG_HANDLE(DbSqlInitMsg, msg) {
         sql_service_ = msg->sender();
         for (const auto& table_info : proto_codec_.table_map()) {
-            co_await Call<SqlCreateTableMsg>(sql_service_, table_info.second);
+            co_await Call<SqlCreateTableMsg>(sql_service_, *table_info.second);
         }
 
         //::Million::Proto::Db::Example::User user;
@@ -156,27 +156,23 @@ public:
             // co_await期间可能会有新的DbRowSetMsg消息被处理，所以需要复制一份
             auto db_row = *msg->db_row;
             msg->db_row->ClearDirty();
-            co_await Call<SqlUpdateMsg>(cache_service_, &db_row);
-            co_await Call<CacheSetMsg>(cache_service_, &db_row);
+            co_await Call<SqlUpdateMsg>(cache_service_, make_nonnull_ptr(&db_row));
+            co_await Call<CacheSetMsg>(cache_service_, make_nonnull_ptr(&db_row));
         }
         Timeout(msg->tick_second, std::move(msg));
         co_return;
     }
 
     MILLION_MSG_HANDLE(DbRowGetMsg, msg) {
-        const auto* desc = msg->table_desc; // proto_codec_.GetMsgDesc(msg->table_name);
-        if (!desc) {
-            logger().Err("table_desc is null.");
-            co_return;
-        }
-        if (!desc->options().HasExtension(Db::table)) {
+        auto& desc = msg->table_desc; // proto_codec_.GetMsgDesc(msg->table_name);
+        if (!desc.options().HasExtension(Db::table)) {
             logger().Err("HasExtension Db::table failed.");
             co_return;
         }
 
-        auto rows_iter = tables_.find(desc);
+        auto rows_iter = tables_.find(&desc);
         if (rows_iter == tables_.end()) {
-            auto res = tables_.emplace(desc, DbRows());
+            auto res = tables_.emplace(&desc, DbRows());
             assert(res.second);
             rows_iter = res.first;
         }
@@ -188,32 +184,32 @@ public:
                 break;
             }
 
-            auto proto_msg_opt = proto_codec_.NewMessage(*desc);
+            auto proto_msg_opt = proto_codec_.NewMessage(desc);
             if (!proto_msg_opt) {
                 logger().Err("proto_codec_.NewMessage failed.");
                 co_return;
             }
             auto proto_msg = std::move(*proto_msg_opt);
 
-            auto row = DbRow(*desc, std::move(proto_msg));
-            auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, &row, false);
+            auto row = DbRow(std::move(proto_msg));
+            auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, make_nonnull_ptr(&row), false);
             if (!res_msg->success) {
-                auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, &row, false);
+                auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, make_nonnull_ptr(&row), false);
                 if (!res_msg->success) {
-                    co_await Call<SqlInsertMsg>(sql_service_, &row);
+                    co_await Call<SqlInsertMsg>(sql_service_, make_nonnull_ptr(&row));
                 }
-                co_await Call<CacheSetMsg>(cache_service_, &row);
+                co_await Call<CacheSetMsg>(cache_service_, make_nonnull_ptr(&row));
             }
 
             auto res = rows.emplace(std::move(msg->primary_key), std::move(row));
             assert(res.second);
             row_iter = res.first;
 
-            const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+            const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
 
             auto tick_second = options.tick_second();
 
-            Timeout<DbRowTickSyncMsg>(tick_second, tick_second, &row_iter->second);
+            Timeout<DbRowTickSyncMsg>(tick_second, tick_second, make_nonnull_ptr(&row_iter->second));
 
         } while (false);
         msg->db_row = row_iter->second;
@@ -224,7 +220,7 @@ public:
     MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
         auto& db_row = *msg->db_row;
 
-        const Db::MessageOptionsTable& options = db_row.desc().options().GetExtension(Db::table);
+        const Db::MessageOptionsTable& options = db_row.GetDescriptor().options().GetExtension(Db::table);
         const auto& table_name = options.name();
         
 

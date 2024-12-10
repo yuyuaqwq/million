@@ -11,10 +11,10 @@
 namespace million {
 namespace db {
 
-MILLION_MSG_DEFINE(DB_CLASS_API, SqlCreateTableMsg, (const google::protobuf::Descriptor*) desc)
-MILLION_MSG_DEFINE(DB_CLASS_API, SqlQueryMsg, (std::string) primary_key, (DbRow*) db_row, (bool) success)
-MILLION_MSG_DEFINE(DB_CLASS_API, SqlUpdateMsg, (DbRow*) db_row)
-MILLION_MSG_DEFINE(DB_CLASS_API, SqlInsertMsg, (DbRow*) db_row)
+MILLION_MSG_DEFINE(DB_CLASS_API, SqlCreateTableMsg, (const google::protobuf::Descriptor&) desc)
+MILLION_MSG_DEFINE(DB_CLASS_API, SqlQueryMsg, (std::string) primary_key, (nonnull_ptr<DbRow>) db_row, (bool) success)
+MILLION_MSG_DEFINE(DB_CLASS_API, SqlUpdateMsg, (nonnull_ptr<DbRow>) db_row)
+MILLION_MSG_DEFINE(DB_CLASS_API, SqlInsertMsg, (nonnull_ptr<DbRow>) db_row)
 
 } // namespace db
 } // namespace million

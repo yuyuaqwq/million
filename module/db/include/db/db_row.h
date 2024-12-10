@@ -12,10 +12,19 @@ namespace db {
 
 class DB_CLASS_API DbRow {
 public:
-    DbRow(const protobuf::Descriptor& desc, ProtoMsgUnique proto_msg)
-        : desc_(&desc)
-        , proto_msg_(std::move(proto_msg))
-        , dirty_fields_(desc_->field_count(), false) {}
+    DbRow(ProtoMsgUnique proto_msg)
+        : proto_msg_(std::move(proto_msg))
+    {
+        auto desc = proto_msg_->GetDescriptor();
+        if (!desc) {
+            throw std::invalid_argument("DbRow GetDescriptor is null.");
+        }
+        auto reflection = proto_msg_->GetReflection();
+        if (!reflection) {
+            throw std::invalid_argument("DbRow GetReflection is null.");
+        }
+        dirty_fields_.resize(desc->field_count(), false);
+    }
 
     DbRow(const DbRow& rv) {
         operator=(rv);
@@ -26,7 +35,6 @@ public:
     }
 
     void operator=(const DbRow& rv) {
-        desc_ = rv.desc_;
         auto* proto_msg = rv.proto_msg_->New();
         if (proto_msg == nullptr) {
             throw std::bad_alloc();
@@ -37,7 +45,6 @@ public:
     }
 
     void operator=(DbRow&& rv) noexcept {
-        desc_ = rv.desc_; rv.desc_ = nullptr;
         proto_msg_ = std::move(proto_msg_);
         dirty_fields_ = std::move(dirty_fields_);
     }
@@ -47,7 +54,9 @@ public:
 
     google::protobuf::Message& get() const { return *proto_msg_.get(); }
 
-    const protobuf::Descriptor& desc() const { return *desc_; }
+    const protobuf::Descriptor& GetDescriptor() const { return *proto_msg_->GetDescriptor(); }
+
+    const protobuf::Reflection& GetReflection() const { return *proto_msg_->GetReflection(); }
 
     //void CopyFrom(const google::protobuf::Message& msg) {
     //    proto_msg_->CopyFrom(msg);
@@ -107,23 +116,22 @@ public:
 
 private:
     const google::protobuf::FieldDescriptor& GetFieldByNumber(int32_t field_number) const {
-        auto field_desc = desc_->FindFieldByNumber(field_number);
+        auto field_desc = GetDescriptor().FindFieldByNumber(field_number);
         if (!field_desc) {
-            THROW_TaskAbortException("msg:{}, desc_.FindFieldByNumber:{}", desc_->name(), field_number);
+            THROW_TaskAbortException("msg:{}, desc_.FindFieldByNumber:{}", GetDescriptor().name(), field_number);
         }
         return *field_desc;
     }
 
     const google::protobuf::FieldDescriptor& GetFieldByIndex(int32_t field_index) const {
-        auto field_desc = desc_->field(field_index);
+        auto field_desc = GetDescriptor().field(field_index);
         if (!field_desc) {
-            THROW_TaskAbortException("msg:{}, desc_.field:{}", desc_->name(), field_index);
+            THROW_TaskAbortException("msg:{}, desc_.field:{}", GetDescriptor().name(), field_index);
         }
         return *field_desc;
     }
 
 private:
-    const protobuf::Descriptor* desc_;
     ProtoMsgUnique proto_msg_;
     std::vector<bool> dirty_fields_;
 };
