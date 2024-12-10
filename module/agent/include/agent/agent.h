@@ -91,7 +91,7 @@ private:
     }
 
 public:
-    void SendProtoMsg(const protobuf::Message& proto_msg) {
+    void SendToClient(const protobuf::Message& proto_msg) {
         auto res = AgentLogicHandler::Instance().proto_codec_.EncodeMessage(proto_msg);
         if (!res) {
             logger().Err("EncodeMessage failed: type:{}.", typeid(proto_msg).name());

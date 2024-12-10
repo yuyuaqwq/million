@@ -190,7 +190,7 @@ public:
 
             auto proto_msg_opt = proto_codec_.NewMessage(*desc);
             if (!proto_msg_opt) {
-                logger().Err("proto_codec_.NewMessage failed: {}.", msg->table_name);
+                logger().Err("proto_codec_.NewMessage failed.");
                 co_return;
             }
             auto proto_msg = std::move(*proto_msg_opt);
@@ -223,7 +223,11 @@ public:
 
     MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
         auto& db_row = *msg->db_row;
-        db_row.desc().
+
+        const Db::MessageOptionsTable& options = db_row.desc().options().GetExtension(Db::table);
+        const auto& table_name = options.name();
+        
+
         co_return;
     }
 
