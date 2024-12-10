@@ -154,10 +154,17 @@ public:
     MILLION_MSG_HANDLE(DbRowTickSyncMsg, msg) {
         if (msg->db_row->IsDirty()) {
             // co_await期间可能会有新的DbRowSetMsg消息被处理，所以需要复制一份
+            // 复制可以优化只复制Dirty
             auto db_row = *msg->db_row;
             msg->db_row->ClearDirty();
-            co_await Call<SqlUpdateMsg>(cache_service_, make_nonnull(&db_row));
-            co_await Call<CacheSetMsg>(cache_service_, make_nonnull(&db_row));
+            auto sql_res = co_await CallOrNull<SqlUpdateMsg>(sql_service_, make_nonnull(&db_row));
+            if (!sql_res) {
+                logger().Err("SqlUpdateMsg Timeout.");
+            }
+            auto cache_res = co_await CallOrNull<CacheSetMsg>(cache_service_, make_nonnull(&db_row));
+            if (!cache_res) {
+                logger().Err("CacheSetMsg Timeout.");
+            }
         }
         Timeout(msg->tick_second, std::move(msg));
         co_return;
@@ -218,11 +225,23 @@ public:
     }
 
     MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
-        auto& db_row = *msg->db_row;
+        auto db_row = msg->db_row;
+        const auto& desc = db_row->GetDescriptor();
 
-        const Db::MessageOptionsTable& options = db_row.GetDescriptor().options().GetExtension(Db::table);
-        const auto& table_name = options.name();
-        
+        auto table_iter = tables_.find(&desc);
+        if (table_iter == tables_.end()) {
+            logger().Err("Table does not exist.");
+            co_return;
+        }
+
+        auto row_iter = table_iter->second.find("");
+        if (row_iter == table_iter->second.end()) {
+            logger().Err("Row does not exist.");
+            co_return;
+        }
+
+        // 复制可以优化只复制Dirty
+        row_iter->second = *msg->db_row;
 
         co_return;
     }
