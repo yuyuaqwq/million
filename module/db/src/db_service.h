@@ -165,13 +165,15 @@ public:
         for (int i = 0; i < message_count; i++) {
             const auto* desc = file_desc->message_type(i);
             if (!desc) continue;
-            co_await Call<SqlCreateTableMsg>(sql_service_, *desc);
-
+            
             const auto& msg_options = desc->options();
             if (!msg_options.HasExtension(Db::table)) {
                 continue;
             }
             const auto& table_options = msg_options.GetExtension(Db::table);
+
+            co_await CallOrNull<SqlCreateTableMsg>(sql_service_, *desc);
+
             const auto& table_name = table_options.name();
             logger().Info("SqlCreateTableMsg: {}", table_name);
         }
