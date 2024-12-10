@@ -176,18 +176,19 @@ public:
             logger().Err("HasExtension Db::table failed.");
             co_return;
         }
+        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
 
-        auto rows_iter = tables_.find(&desc);
-        if (rows_iter == tables_.end()) {
-            auto res = tables_.emplace(&desc, DbRows());
+        auto table_iter = tables_.find(&desc);
+        if (table_iter == tables_.end()) {
+            auto res = tables_.emplace(&desc, DbTable());
             assert(res.second);
-            rows_iter = res.first;
+            table_iter = res.first;
         }
-        auto& rows = rows_iter->second;
+        auto& table = table_iter->second;
 
-        auto row_iter = rows.find(msg->primary_key);
+        auto row_iter = table.find(msg->primary_key);
         do {
-            if (row_iter != rows.end()) {
+            if (row_iter != table.end()) {
                 break;
             }
 
@@ -208,7 +209,7 @@ public:
                 co_await Call<CacheSetMsg>(cache_service_, make_nonnull(&row));
             }
 
-            auto res = rows.emplace(std::move(msg->primary_key), std::move(row));
+            auto res = table.emplace(std::move(msg->primary_key), std::move(row));
             assert(res.second);
             row_iter = res.first;
 
@@ -227,6 +228,13 @@ public:
     MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
         auto db_row = msg->db_row;
         const auto& desc = db_row->GetDescriptor();
+        const auto& reflection = db_row->GetReflection();
+        if (!desc.options().HasExtension(Db::table)) {
+            logger().Err("HasExtension Db::table failed.");
+            co_return;
+        }
+        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
+        auto& table_name = options.name();
 
         auto table_iter = tables_.find(&desc);
         if (table_iter == tables_.end()) {
@@ -234,7 +242,19 @@ public:
             co_return;
         }
 
-        auto row_iter = table_iter->second.find("");
+        const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
+        if (!primary_key_field_desc) {
+            logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
+            co_return;
+        }
+        std::string primary_key;
+        primary_key = reflection.GetStringReference(db_row->get(), primary_key_field_desc, &primary_key);
+        if (primary_key.empty()) {
+            logger().Err("primary_key is empty.");
+            co_return;
+        }
+
+        auto row_iter = table_iter->second.find(primary_key);
         if (row_iter == table_iter->second.end()) {
             logger().Err("Row does not exist.");
             co_return;
@@ -252,8 +272,8 @@ private:
     DbProtoCodec proto_codec_;
 
     // ¸ÄÓÃlru
-    using DbRows = std::unordered_map<std::string, DbRow>;
-    std::unordered_map<const protobuf::Descriptor*, DbRows> tables_;
+    using DbTable = std::unordered_map<std::string, DbRow>;
+    std::unordered_map<const protobuf::Descriptor*, DbTable> tables_;
 
     ServiceHandle cache_service_;
     ServiceHandle sql_service_;

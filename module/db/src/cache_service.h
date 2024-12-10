@@ -110,7 +110,18 @@ public:
         }
         // options.tick_second();
 
-        std::string_view key;
+        const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
+        if (!primary_key_field_desc) {
+            logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
+            co_return;
+        }
+        std::string primary_key;
+        primary_key = reflection.GetStringReference(proto_msg, primary_key_field_desc, &primary_key);
+        if (primary_key.empty()) {
+            logger().Err("primary_key is empty.");
+            co_return;
+        }
+
         // 使用 std::unordered_map 来存储要更新到 Redis 的字段和值
         std::unordered_map<std::string, std::string> redis_hash;
 
@@ -129,27 +140,24 @@ public:
 
             redis_hash[field->name()] = GetField(proto_msg, *field);
 
-            if (options.has_cache()) {
-                const auto& cache_options = options.cache();
-                if (cache_options.index()) {
-                    if (!key.empty()) {
-                        logger().Err("there can only be one index:{}", field->name());
-                    }
-                    if (field->is_repeated()) {
-                        logger().Err("index cannot be an array:{}", field->name());
-                    }
-                    else {
-                        key = redis_hash[field->name()];
-                    }
-                }
-            }
+            // 主键在上面获取
+            //if (options.has_cache()) {
+            //    const auto& cache_options = options.cache();
+            //    if (cache_options.index()) {
+            //        if (!primary_key.empty()) {
+            //            logger().Err("there can only be one index:{}", field->name());
+            //        }
+            //        if (field->is_repeated()) {
+            //            logger().Err("index cannot be an array:{}", field->name());
+            //        }
+            //        else {
+            //            primary_key = redis_hash[field->name()];
+            //        }
+            //    }
+            //}
         }
 
-        if (key.empty()) {
-            logger().Err("index is empty:", key);
-            co_return;
-        }
-        auto redis_key = std::format("million_db:{}:{}", table_name, key);
+        auto redis_key = std::format("million_db:{}:{}", table_name, primary_key);
 
         redis_->hmset(redis_key, redis_hash.begin(), redis_hash.end());
 

@@ -242,17 +242,17 @@ public:
         sql += " FROM ";
         sql += table_name;
 
-        const auto* field_desc = desc.FindFieldByNumber(options.primary_key());
-        if (!field_desc) {
+        const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
+        if (!primary_key_field_desc) {
             logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
             co_return;
         }
 
         sql += " WHERE ";
-        sql += field_desc->name() + " = :" + field_desc->name() + ";";
+        sql += primary_key_field_desc->name() + " = :" + primary_key_field_desc->name() + ";";
 
         // Prepare SQL statement and bind primary key value
-        soci::rowset<soci::row> rs = (sql_.prepare << sql, soci::use(msg->primary_key, field_desc->name()));
+        soci::rowset<soci::row> rs = (sql_.prepare << sql, soci::use(msg->primary_key, primary_key_field_desc->name()));
 
         auto it = rs.begin();
         if (it == rs.end()) {
@@ -402,7 +402,7 @@ public:
         soci::statement stmt(sql_);
 
         for (int i = 0; i < desc.field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* field = desc.field(i);
+            const auto* field = desc.field(i);
             sql += field->name() + " = :" + field->name() + ",";
         }
 
