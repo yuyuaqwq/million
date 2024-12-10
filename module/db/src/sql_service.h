@@ -62,7 +62,11 @@ public:
 
         std::vector<const std::string*> primary_keys;
         for (int i = 0; i < desc.field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* field = desc.field(i);
+            const auto* field = desc.field(i);
+            if (!field) {
+                logger().Err("field({}) is null.", i);
+                continue;
+            }
             const std::string& field_name = field->name();
             std::string field_type;
 

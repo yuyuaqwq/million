@@ -12,8 +12,7 @@
 #include <million/imillion.h>
 #include <million/proto.h>
 
-#include <db/api.h>
-#include <db/db_row.h>
+#include <db/db.h>
 #include <db/cache.h>
 #include <db/sql.h>
 
@@ -89,7 +88,6 @@ private:
 };
 
 
-
 // DbService使用lru来淘汰row
 // 可能n秒脏row需要入库
 
@@ -98,13 +96,8 @@ private:
 // 外部修改后，通过发送标记脏消息来通知dbservice可以更新此消息
 
 
-MILLION_MSG_DEFINE_EMPTY(DB_CLASS_API, DbSqlInitMsg);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowTickSyncMsg, (int32_t) tick_second, (nonnull_ptr<DbRow>) db_row);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (bool) exist);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowGetMsg, (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (DbRow) db_row);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowSetMsg, (std::string) table_name, (std::string) primary_key, (nonnull_ptr<DbRow>) db_row);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (nonnull_ptr<DbRow>) db_row);
 
+MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) tick_second, (nonnull_ptr<DbRow>) db_row);
 
 class DbService : public IService {
 public:
@@ -116,7 +109,21 @@ public:
 
         proto_codec_.Init();
 
+        auto handle = imillion().GetServiceByName("SqlService");
+        if (!handle) {
+            logger().Err("Unable to find SqlService.");
+            return false;
+        }
+        sql_service_ = *handle;
+
         return true;
+    }
+
+    virtual Task<> OnStart() override {
+        for (const auto& table_info : proto_codec_.table_map()) {
+            co_await Call<SqlCreateTableMsg>(sql_service_, *table_info.second);
+        }
+        co_return;
     }
 
     virtual void OnExit() override {
@@ -124,32 +131,6 @@ public:
     }
 
     MILLION_MSG_DISPATCH(DbService);
-
-    MILLION_MSG_HANDLE(DbSqlInitMsg, msg) {
-        sql_service_ = msg->sender();
-        for (const auto& table_info : proto_codec_.table_map()) {
-            co_await Call<SqlCreateTableMsg>(sql_service_, *table_info.second);
-        }
-
-        //::Million::Proto::Db::Example::User user;
-        //user.set_name("sb");
-        //user.New();
-        // db_row.MarkDirty(user.kNameFieldNumber);
-
-        // user.kEmailFieldNumber;
-
-        //user.set_email("fake@qq.com");
-        //user.set_phone_number("1234567890");
-        //user.set_password_hash("AWDaoDWHGOAUGH");
-
-        //co_await Call<SqlInsertMsg>(sql_service_, &user);
-
-        //std::vector<bool> dirty_bits(user.GetDescriptor()->field_count());
-        //auto res = co_await Call<SqlQueryMsg>(sql_service_, "1", &user, &dirty_bits, false);
-
-        
-        co_return;
-    }
 
     MILLION_MSG_HANDLE(DbRowTickSyncMsg, msg) {
         if (msg->db_row->IsDirty()) {

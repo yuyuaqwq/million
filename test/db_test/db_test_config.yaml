@@ -9,7 +9,7 @@ module:
     dirs: 
         - ../../build/lib/Debug
     loads:
-        - cluster
+        - db
 
 timer:
     ms_per_tick: 10
@@ -23,15 +23,3 @@ logger:
     level: debug
     console_level: debug
 
-
-cluster:
-    name: node1
-    ip: 0.0.0.0
-    port: 8101
-    nodes:
-        node2:
-            ip: 127.0.0.1
-            port: 8102
-        node3:
-            ip: 127.0.0.1
-            port: 8103

@@ -17,10 +17,22 @@ MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
 
     auto cache_service_opt = imillion->NewService<CacheService>();
-    auto sql_service_opt = imillion->NewService<SqlService>();
-    auto db_service_opt = imillion->NewService<DbService>();
+    if (!cache_service_opt) {
+        return false;
+    }
+    imillion->SetServiceName(*cache_service_opt, "CacheService");
 
-    imillion->Send<DbSqlInitMsg>(*sql_service_opt, *db_service_opt);
+    auto sql_service_opt = imillion->NewService<SqlService>();
+    if (!sql_service_opt) {
+        return false;
+    }
+    imillion->SetServiceName(*sql_service_opt, "SqlService");
+
+    auto db_service_opt = imillion->NewService<DbService>();
+    if (!db_service_opt) {
+        return false;
+    }
+    imillion->SetServiceName(*db_service_opt, "DbService");
 
     return true;
 }
