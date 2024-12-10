@@ -17,6 +17,8 @@ public:
         ptr_ = ptr;
     }
 
+    nonnull_ptr(std::nullptr_t) = delete;
+
     // Delete default constructor
     nonnull_ptr() = delete;
 
@@ -80,7 +82,7 @@ private:
 
 // Helper function to create nonnull_ptr
 template <typename T>
-nonnull_ptr<T> make_nonnull_ptr(T* ptr) {
+nonnull_ptr<T> make_nonnull(T* ptr) {
     return nonnull_ptr<T>(ptr);
 }
 

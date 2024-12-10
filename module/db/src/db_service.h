@@ -156,8 +156,8 @@ public:
             // co_await期间可能会有新的DbRowSetMsg消息被处理，所以需要复制一份
             auto db_row = *msg->db_row;
             msg->db_row->ClearDirty();
-            co_await Call<SqlUpdateMsg>(cache_service_, make_nonnull_ptr(&db_row));
-            co_await Call<CacheSetMsg>(cache_service_, make_nonnull_ptr(&db_row));
+            co_await Call<SqlUpdateMsg>(cache_service_, make_nonnull(&db_row));
+            co_await Call<CacheSetMsg>(cache_service_, make_nonnull(&db_row));
         }
         Timeout(msg->tick_second, std::move(msg));
         co_return;
@@ -192,13 +192,13 @@ public:
             auto proto_msg = std::move(*proto_msg_opt);
 
             auto row = DbRow(std::move(proto_msg));
-            auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, make_nonnull_ptr(&row), false);
+            auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, make_nonnull(&row), false);
             if (!res_msg->success) {
-                auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, make_nonnull_ptr(&row), false);
+                auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, make_nonnull(&row), false);
                 if (!res_msg->success) {
-                    co_await Call<SqlInsertMsg>(sql_service_, make_nonnull_ptr(&row));
+                    co_await Call<SqlInsertMsg>(sql_service_, make_nonnull(&row));
                 }
-                co_await Call<CacheSetMsg>(cache_service_, make_nonnull_ptr(&row));
+                co_await Call<CacheSetMsg>(cache_service_, make_nonnull(&row));
             }
 
             auto res = rows.emplace(std::move(msg->primary_key), std::move(row));
@@ -209,7 +209,7 @@ public:
 
             auto tick_second = options.tick_second();
 
-            Timeout<DbRowTickSyncMsg>(tick_second, tick_second, make_nonnull_ptr(&row_iter->second));
+            Timeout<DbRowTickSyncMsg>(tick_second, tick_second, make_nonnull(&row_iter->second));
 
         } while (false);
         msg->db_row = row_iter->second;
