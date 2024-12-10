@@ -16,19 +16,26 @@ file(GLOB SRC
     ./**/*.cc)
 
 if(SRC)
-    # 无法生成在windows下会动态导出类的pb.h，选择静态库
-    add_library(${PROTOGEN_LIB} STATIC ${SRC})
+    add_library(${PROTOGEN_LIB} SHARED ${SRC})
     target_include_directories(${PROTOGEN_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
     
     if (WIN32)
         message(STATUS "Compiling on Windows")
         
+        target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_CLASS_API=__declspec\(dllexport\))
+        set(PROTOGEN_COMPILE_DEFINITIONS PROTOGEN_CLASS_API=__declspec\(dllimport\) CACHE STRING "protobuf compile definitions")
+
         target_include_directories(${PROTOGEN_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
         target_link_libraries(${PROTOGEN_LIB} PRIVATE ${PROTOBUF_LIB})
+        
     elseif(UNIX)
         message(STATUS "Compiling on Linux")
 
         find_package(Protobuf REQUIRED)
+        
+        target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_CLASS_API=__attribute__\(\(visibility\(\"default\"\)\)\))
+        set(PROTOGEN_COMPILE_DEFINITIONS PROTOGEN_CLASS_API=__attribute__\(\(visibility\(\"hidden\"\)\)\) CACHE STRING "protobuf compile definitions")
+
         target_include_directories(${PROTOGEN_LIB} PRIVATE ${Protobuf_INCLUDE_DIRS})
         target_link_libraries(${PROTOGEN_LIB} PRIVATE ${Protobuf_LIBRARIES})
     endif()

@@ -15,6 +15,7 @@ target_link_libraries(db_test PRIVATE ${DB_LIB})
 
 target_include_directories(db_test PRIVATE ${PROTOGEN_HEADER_DIR})
 target_link_libraries(db_test PRIVATE ${PROTOGEN_LIB})
+target_compile_definitions(db_test PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
 
 target_include_directories(db_test PRIVATE ${YAML_CPP_HEADER_DIR})
 target_link_libraries(db_test PRIVATE ${YAML_CPP_LIB})

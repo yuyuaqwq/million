@@ -29,8 +29,8 @@ public:
     // 注册协议
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     bool RegisterProto(const std::string& proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
-        const protobuf::DescriptorPool* pool = protobuf::DescriptorPool::generated_pool();
-        protobuf::DescriptorDatabase* db = pool->internal_generated_database();
+        const auto* pool = protobuf::DescriptorPool::generated_pool();
+        auto* db = pool->internal_generated_database();
 
         //std::vector<std::string> file_names;
         //db->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
@@ -44,8 +44,11 @@ public:
         }
 
         int enum_count = file_desc->enum_type_count();
-        for (int i = 0; i < enum_count; i++) {
-            const protobuf::EnumDescriptor* enum_desc = file_desc->enum_type(i);
+        int i = 0;
+
+        MsgId msg_id_ui = 0;
+        for (; i < enum_count; i++) {
+            const auto* enum_desc = file_desc->enum_type(i);
             if (!enum_desc) continue;
             auto& enum_opts = enum_desc->options();
             if (!enum_opts.HasExtension(msg_ext_id)) {
@@ -58,37 +61,39 @@ public:
                 return false;
             }
 
-            int message_count = file_desc->message_type_count();
-            for (int j = 0; j < message_count; j++) {
-                const protobuf::Descriptor* desc = file_desc->message_type(j);
-
-                // 得加这个才会初始化，不知道具体原因
-                message_factory_ = protobuf::MessageFactory::generated_factory();
-                const protobuf::Message* msg = message_factory_->GetPrototype(desc);
-                if (!msg) {
-                    continue;
-                }
-
-                auto& msg_opts = desc->options();
-                if (!msg_opts.HasExtension(sub_msg_ext_id)) {
-                    continue;
-                }
-
-                auto sub_msg_id = msg_opts.GetExtension(sub_msg_ext_id);
-                auto sub_msg_id_ui = static_cast<SubMsgId>(sub_msg_id);
-                if (sub_msg_id_ui > kSubMsgIdMax) {
-                    return false;
-                }
-
-                static_assert(sizeof(msg_id) == sizeof(sub_msg_id), "");
-
-                auto key = CalcKey(msg_id_ui, sub_msg_id_ui);
-                msg_desc_map_.emplace(key, desc);
-                msg_id_map_.emplace(desc, key);
-            }
-            return true;
         }
-        return false;
+        if (i = enum_count) {
+            return false;
+        }
+
+        int message_count = file_desc->message_type_count();
+        for (int j = 0; j < message_count; j++) {
+            const auto* desc = file_desc->message_type(j);
+
+            // 得加这个才会初始化，不知道具体原因
+            message_factory_ = protobuf::MessageFactory::generated_factory();
+            const auto* msg = message_factory_->GetPrototype(desc);
+            if (!msg) {
+                continue;
+            }
+
+            auto& msg_opts = desc->options();
+            if (!msg_opts.HasExtension(sub_msg_ext_id)) {
+                continue;
+            }
+
+            auto sub_msg_id = msg_opts.GetExtension(sub_msg_ext_id);
+            auto sub_msg_id_ui = static_cast<SubMsgId>(sub_msg_id);
+            if (sub_msg_id_ui > kSubMsgIdMax) {
+                return false;
+            }
+
+            auto key = CalcKey(msg_id_ui, sub_msg_id_ui);
+            msg_desc_map_.emplace(key, desc);
+            msg_id_map_.emplace(desc, key);
+        }
+
+        return true;
     }
 
     // 编码消息

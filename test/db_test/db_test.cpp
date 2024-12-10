@@ -4,8 +4,9 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <db/db_row.h>
+#include <db/db.h>
 
+#include <protogen/db/db_options.pb.h>
 #include <protogen/db/db_example.pb.h>
 
 namespace Db = Million::Proto::Db;
@@ -18,15 +19,30 @@ public:
 
     virtual bool OnInit() override {
         
+        auto handle = imillion().GetServiceByName("DbService");
+        if (!handle) {
+            logger().Err("Unable to find SqlService.");
+            return false;
+        }
+        db_service_ = *handle;
 
         return true;
     }
+
+    virtual million::Task<> OnStart() override {
+        auto res = co_await Call<million::db::DbProtoRegisterMsg>(db_service_, "db/db_example.proto", false);
+        if (res->success) {
+            logger().Info("DbProtoRegisterMsg success: {}.", "db/db_example.proto");
+        }
+        co_return;
+    }
+
 
     MILLION_MSG_DISPATCH(TestService);
 
 
 private:
-    million::ServiceHandle db_;
+    million::ServiceHandle db_service_;
 
 };
 

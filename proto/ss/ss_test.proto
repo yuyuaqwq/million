@@ -15,7 +15,7 @@ enum SsSubMsgIdTest {
 }
 
 extend google.protobuf.MessageOptions {
-    SsSubMsgIdTest ss_sub_msg_id_test = 10001;
+    SsSubMsgIdTest ss_sub_msg_id_test = 11001;
 }
 
 message TestReq {
