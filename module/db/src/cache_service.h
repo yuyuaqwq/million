@@ -188,8 +188,8 @@ public:
 
 private:
     void SetField(google::protobuf::Message* proto_msg, const google::protobuf::FieldDescriptor& field, const std::string& value) {
-        const google::protobuf::Descriptor* desc = proto_msg->GetDescriptor();
-        const google::protobuf::Reflection* reflection = proto_msg->GetReflection();
+        const auto* desc = proto_msg->GetDescriptor();
+        const auto* reflection = proto_msg->GetReflection();
 
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         const auto& table_name = options.name();
@@ -257,8 +257,8 @@ private:
     }
 
     std::string GetField(const google::protobuf::Message& proto_msg, const google::protobuf::FieldDescriptor& field) {
-        const google::protobuf::Descriptor* desc = proto_msg.GetDescriptor();
-        const google::protobuf::Reflection* reflection = proto_msg.GetReflection();
+        const auto* desc = proto_msg.GetDescriptor();
+        const auto* reflection = proto_msg.GetReflection();
 
         const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
         const auto& table_name = options.name();

@@ -137,21 +137,14 @@ public:
     MILLION_MSG_DISPATCH(DbService);
 
     MILLION_MSG_HANDLE(DbRowTickSyncMsg, msg) {
+        Timeout(msg->tick_second, std::move(msg));
         if (msg->db_row->IsDirty()) {
             // co_await期间可能会有新的DbRowSetMsg消息被处理，所以需要复制一份
-            // 复制可以优化只复制Dirty
-            auto db_row = *msg->db_row;
+            auto db_row = msg->db_row->CopyDirtyTo();
             msg->db_row->ClearDirty();
-            auto sql_res = co_await CallOrNull<SqlUpdateMsg>(sql_service_, make_nonnull(&db_row));
-            if (!sql_res) {
-                logger().Err("SqlUpdateMsg Timeout.");
-            }
-            auto cache_res = co_await CallOrNull<CacheSetMsg>(cache_service_, make_nonnull(&db_row));
-            if (!cache_res) {
-                logger().Err("CacheSetMsg Timeout.");
-            }
+            co_await Call<SqlUpdateMsg>(sql_service_, make_nonnull(&db_row));
+            co_await Call<CacheSetMsg>(cache_service_, make_nonnull(&db_row));
         }
-        Timeout(msg->tick_second, std::move(msg));
         co_return;
     }
 
@@ -270,7 +263,10 @@ public:
         }
 
         // 复制可以优化只复制Dirty
-        row_iter->second = *msg->db_row;
+        
+
+
+        row_iter->second.CopyFromDirty(*msg->db_row);
 
         co_return;
     }
