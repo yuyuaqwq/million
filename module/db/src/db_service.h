@@ -107,7 +107,6 @@ private:
 // 外部修改后，通过发送标记脏消息来通知dbservice可以更新此消息
 
 
-
 MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) tick_second, (nonnull_ptr<DbRow>) db_row);
 
 class DbService : public IService {
@@ -127,6 +126,13 @@ public:
         }
         sql_service_ = *handle;
 
+        handle = imillion().GetServiceByName("CacheService");
+        if (!handle) {
+            logger().Err("Unable to find SqlService.");
+            return false;
+        }
+        cache_service_ = *handle;
+
         return true;
     }
 
@@ -137,14 +143,22 @@ public:
     MILLION_MSG_DISPATCH(DbService);
 
     MILLION_MSG_HANDLE(DbRowTickSyncMsg, msg) {
-        Timeout(msg->tick_second, std::move(msg));
         if (msg->db_row->IsDirty()) {
             // co_await期间可能会有新的DbRowSetMsg消息被处理，所以需要复制一份
-            auto db_row = msg->db_row->CopyDirtyTo();
-            msg->db_row->ClearDirty();
-            co_await Call<SqlUpdateMsg>(sql_service_, make_nonnull(&db_row));
-            co_await Call<CacheSetMsg>(cache_service_, make_nonnull(&db_row));
+            try {
+                auto db_row = msg->db_row->CopyDirtyTo();
+                msg->db_row->ClearDirty();
+                co_await Call<SqlUpdateMsg>(sql_service_, make_nonnull(&db_row));
+                co_await Call<CacheSetMsg>(cache_service_, make_nonnull(&db_row));
+            }
+            catch (const std::exception& e) {
+                logger().Err("DbRowTickSyncMsg: {}", e.what());
+            }
         }
+        auto tick_second = msg->tick_second;
+
+        // auto msg2 = std::make_unique<DbRowTickSyncMsg>(100, msg->db_row);
+        // Timeout(tick_second, std::move(msg2));
         co_return;
     }
 
@@ -165,10 +179,12 @@ public:
             }
             const auto& table_options = msg_options.GetExtension(Db::table);
 
-            co_await CallOrNull<SqlCreateTableMsg>(sql_service_, *desc);
+            co_await CallOrNull<SqlTableInitMsg>(sql_service_, *desc);
 
             const auto& table_name = table_options.name();
-            logger().Info("SqlCreateTableMsg: {}", table_name);
+            logger().Info("SqlTableInitMsg success: {}", table_name);
+
+            Reply(std::move(msg));
         }
     }
 
@@ -208,7 +224,9 @@ public:
                 if (!res_msg->success) {
                     co_await Call<SqlInsertMsg>(sql_service_, make_nonnull(&row));
                 }
+                row.MarkDirty();
                 co_await Call<CacheSetMsg>(cache_service_, make_nonnull(&row));
+                row.ClearDirty();
             }
 
             auto res = table.emplace(std::move(msg->primary_key), std::move(row));
@@ -223,8 +241,8 @@ public:
 
         } while (false);
         msg->db_row = row_iter->second;
+
         Reply(std::move(msg));
-        co_return;
     }
 
     MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
@@ -262,15 +280,10 @@ public:
             co_return;
         }
 
-        // 复制可以优化只复制Dirty
-        
-
-
         row_iter->second.CopyFromDirty(*msg->db_row);
 
         co_return;
     }
-
 
 
 private:

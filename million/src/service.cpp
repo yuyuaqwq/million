@@ -81,13 +81,12 @@ void Service::ProcessMsg(MsgUnique msg) {
 
     if (state_ == ServiceState::kReady) {
         // OnStart未完成，只能尝试调度已有协程
-        bool task_done = true;
         auto res = excutor_.TrySchedule(std::move(msg));
         if (!std::holds_alternative<Task<>*>(res)) {
             return;
         }
         auto task = std::get<Task<>*>(res);
-        if (task->coroutine.done()) {
+        if (!task) {
             state_ = ServiceState::kRunning;
         }
         return;

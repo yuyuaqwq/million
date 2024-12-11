@@ -36,7 +36,7 @@ public:
 
     void Tick(const std::function<void(DelayTask&&)>& callback) {
         {
-            std::lock_guard guard(adds_mutex_);
+            auto lock = std::lock_guard(adds_mutex_);
             std::swap(backup_adds_, adds_);
         }
         if (!backup_adds_.empty()) {
@@ -80,7 +80,7 @@ public:
     }
 
     void AddTask(uint32_t tick, T&& data) {
-        auto guard =std::lock_guard(adds_mutex_);
+        auto lock = std::lock_guard(adds_mutex_);
         adds_.emplace_back(tick, std::move(data));
     }
 

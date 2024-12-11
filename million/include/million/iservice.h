@@ -135,7 +135,6 @@ public:
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
     Logger& logger();
 
-
 private:
     IMillion* imillion_;
     ServiceHandle service_handle_;

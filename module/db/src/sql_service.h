@@ -53,10 +53,20 @@ public:
 
     MILLION_MSG_DISPATCH(SqlService);
 
-    MILLION_MSG_HANDLE(SqlCreateTableMsg, msg) {
+    MILLION_MSG_HANDLE(SqlTableInitMsg, msg) {
         const auto& desc = msg->desc;
         const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
         auto& table_name = options.name();
+
+        uint32_t count = 0;
+        // Query to check if the table exists in the current database
+        sql_ << "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name",
+            soci::use(table_name), soci::into(count);
+        if (count > 0) {
+            Reply(std::move(msg));
+            co_return;
+        }
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
 
@@ -179,7 +189,12 @@ public:
                         continue;
                     }
                     for (int i = 0; i < multi_index.field_numbers_size(); ++i) {
-                        const google::protobuf::FieldDescriptor* field = desc.FindFieldByNumber(multi_index.field_numbers(i));
+                        const auto* field = desc.FindFieldByNumber(multi_index.field_numbers(i));
+                        if (!field) {
+                            logger().Err("FindFieldByNumber failed: {}.{}", multi_index.field_numbers(i), i);
+                            continue;
+                        }
+
                         sql += field->name() + ",";
                     }
                     sql.pop_back();
@@ -218,7 +233,7 @@ public:
         sql += ";";
 
         sql_ << sql;
-        
+
         Reply(std::move(msg));
         co_return;
     }
@@ -267,6 +282,10 @@ public:
         const auto& row = *it;
         for (int i = 0; i < desc.field_count(); ++i) {
             const auto* const field = desc.field(i);
+            if (!field) {
+                logger().Err("desc.field failed: {}.{}.", table_name, i);
+                continue;
+            }
             if (field->is_repeated()) {
                 logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
             }
@@ -357,7 +376,21 @@ public:
 
         // 构造 SQL 语句
         for (int i = 0; i < desc.field_count(); ++i) {
-            const google::protobuf::FieldDescriptor* field = desc.field(i);
+            const auto* field = desc.field(i);
+            if (!field) {
+                logger().Err("desc.field failed: {}.{}.", table_name, i);
+                continue;
+            }
+            
+            if (field->options().HasExtension(Db::column)) {
+                const Db::FieldOptionsColumn& field_options = field->options().GetExtension(Db::column);
+                if (field_options.has_sql()) {
+                    const Db::ColumnSqlOptions& sql_options = field_options.sql();
+                    if (sql_options.auto_increment()) {
+                        continue;
+                    }
+                }
+            }
             sql += field->name() + ",";
             values_placeholder += ":" + field->name() + ",";
         }
@@ -427,14 +460,8 @@ public:
         BindValuesToStatement(proto_msg, &values, stmt);  // ��ֵ
         stmt.define_and_bind();
 
-        try {
-            stmt.execute(true);
-        }
-        catch (...)
-        {
-            Reply(std::move(msg));
-            throw;
-        }
+        stmt.execute(true);
+
         Reply(std::move(msg));
         co_return;
     }

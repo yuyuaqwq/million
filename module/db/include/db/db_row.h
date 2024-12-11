@@ -45,8 +45,8 @@ public:
     }
 
     void operator=(DbRow&& rv) noexcept {
-        proto_msg_ = std::move(proto_msg_);
-        dirty_fields_ = std::move(dirty_fields_);
+        proto_msg_ = std::move(rv.proto_msg_);
+        dirty_fields_ = std::move(rv.dirty_fields_);
     }
 
     template <typename T>

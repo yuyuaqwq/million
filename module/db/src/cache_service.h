@@ -90,6 +90,11 @@ public:
 
     MILLION_MSG_HANDLE(CacheSetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
+        if (!msg->db_row->IsDirty()) {
+            Reply(std::move(msg));
+            co_return;
+        }
+
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
         if (!desc.options().HasExtension(Db::table)) {
@@ -115,10 +120,9 @@ public:
             logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
             co_return;
         }
-        std::string primary_key;
-        primary_key = reflection.GetStringReference(proto_msg, primary_key_field_desc, &primary_key);
+        std::string primary_key = GetField(proto_msg, *primary_key_field_desc);
         if (primary_key.empty()) {
-            logger().Err("primary_key is empty.");
+            logger().Err("primary_key is empty:{}.{}", table_name, options.primary_key());
             co_return;
         }
 
@@ -133,9 +137,10 @@ public:
 
             const auto* field = desc.field(i);
             if (!field) {
-                logger().Err("field({}) is null.", i);
+                logger().Err("desc.field failed: {}.", i);
                 continue;
             }
+
             const Db::FieldOptionsColumn& options = field->options().GetExtension(Db::column);
 
             redis_hash[field->name()] = GetField(proto_msg, *field);
