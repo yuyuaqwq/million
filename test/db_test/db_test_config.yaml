@@ -1,6 +1,6 @@
 # 0表示按cpu核数创建工作器
 worker_mgr:
-    num: 1
+    num: 0
 
 io_context_mgr:
     num: 1

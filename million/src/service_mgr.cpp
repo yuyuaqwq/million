@@ -18,7 +18,7 @@ void ServiceMgr::Stop() {
         auto lock = std::unique_lock(service_queue_mutex_);
         run_ = false;
     }
-    service_queue_cv_.notify_one();
+    service_queue_cv_.notify_all();
     for (auto& service : services_) {
         service->Stop();
     }
