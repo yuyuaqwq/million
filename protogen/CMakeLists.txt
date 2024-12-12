@@ -23,6 +23,7 @@ if(SRC)
         message(STATUS "Compiling on Windows")
         
         target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_CLASS_API=__declspec\(dllexport\))
+        target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_FUNC_API=__declspec\(dllexport\))
         set(PROTOGEN_COMPILE_DEFINITIONS PROTOGEN_CLASS_API=__declspec\(dllimport\) CACHE STRING "protobuf compile definitions")
 
         target_include_directories(${PROTOGEN_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
@@ -34,7 +35,8 @@ if(SRC)
         find_package(Protobuf REQUIRED)
         
         target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_CLASS_API=__attribute__\(\(visibility\(\"default\"\)\)\))
-        set(PROTOGEN_COMPILE_DEFINITIONS PROTOGEN_CLASS_API=__attribute__\(\(visibility\(\"hidden\"\)\)\) CACHE STRING "protobuf compile definitions")
+        target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_FUNC_API=__attribute__\(\(visibility\(\"hidden\"\)\)\))
+        set(PROTOGEN_COMPILE_DEFINITIONS PROTOGEN_CLASS_API=__attribute__\(\(visibility\(\"hidden\"\)\)\) PROTOGEN_FUNC_API=__attribute__\(\(visibility\(\"hidden\"\)\)\) CACHE STRING "protobuf compile definitions")
 
         target_include_directories(${PROTOGEN_LIB} PRIVATE ${Protobuf_INCLUDE_DIRS})
         target_link_libraries(${PROTOGEN_LIB} PRIVATE ${Protobuf_LIBRARIES})

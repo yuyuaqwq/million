@@ -4,6 +4,8 @@
 
 #include <million/imillion.h>
 
+#include <db/api.h>
+
 #include "sql_service.h"
 #include "cache_service.h"
 #include "db_service.h"
@@ -13,7 +15,7 @@ MILLION_MODULE_INIT();
 namespace million {
 namespace db {
 
-MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
+extern "C" DB_FUNC_API bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
 
     auto cache_service_opt = imillion->NewService<CacheService>();

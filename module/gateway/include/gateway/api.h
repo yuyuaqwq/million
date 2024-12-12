@@ -5,6 +5,7 @@
         #define GATEWAY_CLASS_API __attribute__((visibility("default")))
     #elif defined(_WIN32) || defined(__WIN32__)
         #define GATEWAY_CLASS_API __declspec(dllexport)
+        #define GATEWAY_FUNC_API __declspec(dllexport)
     #else
         #error "Unsupported platform"
     #endif

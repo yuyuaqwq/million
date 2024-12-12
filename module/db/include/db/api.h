@@ -5,6 +5,7 @@
     #ifdef __linux__
         #define DB_CLASS_API __attribute__((visibility("default")))
     #elif defined(_WIN32) || defined(__WIN32__)
+        #define DB_FUNC_API __declspec(dllexport)
         #define DB_CLASS_API __declspec(dllexport)
     #else
         #error "Unsupported platform"

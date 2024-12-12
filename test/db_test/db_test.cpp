@@ -7,6 +7,7 @@
 #include <db/db.h>
 #include <db/sql.h>
 
+#include <protogen/protogen.h>
 #include <protogen/db/db_options.pb.h>
 #include <protogen/db/db_example.pb.h>
 
@@ -45,13 +46,10 @@ public:
 
         auto row = million::db::DbRow(std::move(user));
 
-        const auto* pool = protobuf::DescriptorPool::generated_pool();
-        auto* db = pool->internal_generated_database();
+        const auto& pool = GetDescriptorPool();
+        auto* file_desc = pool.FindFileByName("db/db_example.proto");
 
-        std::vector<std::string> file_names;
-        auto s = db->FindAllFileNames(&file_names);
-
-        auto res = co_await Call<million::db::DbProtoRegisterMsg>(db_service_, "db/db_example.proto", false);
+        auto res = co_await Call<million::db::DbProtoRegisterMsg>(db_service_, *file_desc, false);
         if (res->success) {
             logger().Info("DbProtoRegisterMsg success: {}.", "db/db_example.proto");
         }

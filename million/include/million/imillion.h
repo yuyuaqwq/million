@@ -95,11 +95,11 @@ inline Logger& IService::logger() {
     return imillion_->logger();
 }
 
-MILLION_FUNC_API void MillionInit();
+extern "C" MILLION_FUNC_API void MillionInit();
 
-MILLION_FUNC_API void* MillionMemAlloc(size_t size);
+extern "C" MILLION_FUNC_API void* MillionMemAlloc(size_t size);
 
-MILLION_FUNC_API void MillionMemFree(void* ptr);
+extern "C" MILLION_FUNC_API void MillionMemFree(void* ptr);
 
 #define MILLION_MODULE_MEM_INIT() \
     void* operator new(std::size_t size) { \

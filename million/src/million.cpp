@@ -18,17 +18,17 @@ MILLION_MODULE_INIT();
 
 namespace million {
 
-MILLION_FUNC_API void MillionInit() {
+extern "C" MILLION_FUNC_API void MillionInit() {
     // GOOGLE_PROTOBUF_VERIFY_VERSION;
     // google::protobuf::ShutdownProtobufLibrary();
 }
 
-MILLION_FUNC_API void* MillionMemAlloc(size_t size) {
+extern "C" MILLION_FUNC_API void* MillionMemAlloc(size_t size) {
     // std::cout << "MillionMemAlloc: " << size << " bytes\n";
     return std::malloc(size);
 }
 
-MILLION_FUNC_API void MillionMemFree(void* ptr) {
+extern "C" MILLION_FUNC_API void MillionMemFree(void* ptr) {
     // std::cout << "MillionMemFree: " << ptr << "\n";
     std::free(ptr);
 }

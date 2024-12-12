@@ -2,6 +2,8 @@
 
 #include <million/imillion.h>
 
+#include <agent/api.h>
+
 #include "agent_service.h"
 
 MILLION_MODULE_INIT();
@@ -9,7 +11,7 @@ MILLION_MODULE_INIT();
 namespace million {
 namespace agent {
 
-MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
+extern "C" AGENT_FUNC_API bool MillionModuleInit(IMillion* imillion) {
     AgentLogicHandler::Instance().ExecInitLogicQueue();
 
     auto handle = imillion->NewService<NodeMgrService>();

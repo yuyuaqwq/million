@@ -147,47 +147,47 @@ struct Point {
 
 
 
-MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
-
-    auto handle = imillion->NewService<PyService>();
-    
-    // 支持按full_name查找消息
-    // 收到py的调用后，通过full_name找到ss消息，再new，并通过field_name进行set
-    // 然后调用目标
-
-    // std::make_unique<pkpy::VM>
-    // 对新创建的vm进行pybind11初始化
-    
-
-    
-    // auto guard = py::scoped_interpreter(vm_);
-    // auto mod = vm->new_module("example");
-    //vm->register_user_class<Point>(mod, "Point",
-    //    [](auto vm, auto mod, auto type){
-    //        // wrap field x
-    //        vm->bind_field(type, "x", &Point::x);
-    //        // wrap field y
-    //        vm->bind_field(type, "y", &Point::y);
-
-    //        // __init__ method
-    //        vm->bind(type, "__init__(self, x, y, *sbsb)", [](auto vm, auto args){
-
-    //            auto size = args.size();
-
-    //            Point& self = _py_cast<Point&>(vm, args[0]);
-    //            self.x = py_cast<int>(vm, args[1]);
-    //            self.y = py_cast<int>(vm, args[2]);
-
-    //            // auto sbsb = py_cast<>();
-    //            return vm->None;
-    //        });
-    //    });
-
-    // use the Point class
-
-
-    return true;
-}
+//extern "C" PYSVR_FUNC_API bool MillionModuleInit(IMillion* imillion) {
+//
+//    auto handle = imillion->NewService<PyService>();
+//    
+//    // 支持按full_name查找消息
+//    // 收到py的调用后，通过full_name找到ss消息，再new，并通过field_name进行set
+//    // 然后调用目标
+//
+//    // std::make_unique<pkpy::VM>
+//    // 对新创建的vm进行pybind11初始化
+//    
+//
+//    
+//    // auto guard = py::scoped_interpreter(vm_);
+//    // auto mod = vm->new_module("example");
+//    //vm->register_user_class<Point>(mod, "Point",
+//    //    [](auto vm, auto mod, auto type){
+//    //        // wrap field x
+//    //        vm->bind_field(type, "x", &Point::x);
+//    //        // wrap field y
+//    //        vm->bind_field(type, "y", &Point::y);
+//
+//    //        // __init__ method
+//    //        vm->bind(type, "__init__(self, x, y, *sbsb)", [](auto vm, auto args){
+//
+//    //            auto size = args.size();
+//
+//    //            Point& self = _py_cast<Point&>(vm, args[0]);
+//    //            self.x = py_cast<int>(vm, args[1]);
+//    //            self.y = py_cast<int>(vm, args[2]);
+//
+//    //            // auto sbsb = py_cast<>();
+//    //            return vm->None;
+//    //        });
+//    //    });
+//
+//    // use the Point class
+//
+//
+//    return true;
+//}
 
 } // namespace pysvr
 } // namespace million

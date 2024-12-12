@@ -16,6 +16,7 @@
 #include <db/cache.h>
 #include <db/sql.h>
 
+#include <protogen/protogen.h>
 #include <protogen/db/db_options.pb.h>
 #include <protogen/db/db_example.pb.h>
 
@@ -29,40 +30,42 @@ public:
     void Init() {
     }
 
-    const protobuf::FileDescriptor* RegisterProto(const std::string& proto_file_name) {
-        const auto* pool = protobuf::DescriptorPool::generated_pool();
-        auto* db = pool->internal_generated_database();
+    bool RegisterProto(const google::protobuf::FileDescriptor& file_desc) {
+        //auto& pool = GetDescriptorPool();
+        //auto& db = GetDescriptorDatabase();
 
-        std::vector<std::string> file_names;
-        db->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
-        //for (const std::string& filename : file_names) {
-        //    const auto* file_desc = pool->FindFileByName(filename);
+        //std::vector<std::string> file_names;
+        //db.FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
+        ////for (const std::string& filename : file_names) {
+        ////    const auto* file_desc = pool->FindFileByName(filename);
+        ////}
+
+        //auto file_desc = pool.FindFileByName(proto_file_name);
+        //if (!file_desc) {
+        //    return nullptr;
         //}
 
-        auto file_desc = pool->FindFileByName(proto_file_name);
-        if (!file_desc) {
-            return nullptr;
-        }
-
         // 获取该文件的options，确认是否设置了db
-        const auto& file_options = file_desc->options();
+        const auto& file_options = file_desc.options();
         // 检查 db 是否被设置
         if (!file_options.HasExtension(Db::db)) {
-            return nullptr;
+            return false;
         }
         const auto& db_options = file_options.GetExtension(Db::db);
 
-        int message_count = file_desc->message_type_count();
+        int message_count = file_desc.message_type_count();
         for (int i = 0; i < message_count; i++) {
-            const auto* desc = file_desc->message_type(i);
+            const auto* desc = file_desc.message_type(i);
             if (!desc) continue;
             const auto& msg_options = desc->options();
             if (!msg_options.HasExtension(Db::table)) {
                 continue;
             }
             // 得加这个才会初始化，不知道具体原因
-            message_factory_ = protobuf::MessageFactory::generated_factory();
-            const auto* msg = message_factory_->GetPrototype(desc);
+
+
+            auto& factory = GetMessageFactory();
+            const auto* msg = factory.GetPrototype(desc);
             if (!msg) {
                 continue;
             }
@@ -71,7 +74,7 @@ public:
             const auto& table_name = table_options.name();
             // table_map_.emplace(table_name, desc);
         }
-        return file_desc;
+        return true;
     }
 
     //const protobuf::Descriptor* GetMsgDesc(const std::string& table_name) {
@@ -83,7 +86,8 @@ public:
     //}
 
     std::optional<ProtoMsgUnique> NewMessage(const protobuf::Descriptor& desc) {
-        const auto* proto_msg = message_factory_->GetPrototype(&desc);
+        auto& factory = GetMessageFactory();
+        const auto* proto_msg = factory.GetPrototype(&desc);
         if (proto_msg != nullptr) {
             return ProtoMsgUnique(proto_msg->New());
         }
@@ -93,8 +97,6 @@ public:
     // const auto& table_map() const { return table_map_; }
 
 private:
-    protobuf::MessageFactory* message_factory_;
-
     // std::unordered_map<std::string, const protobuf::Descriptor*> table_map_;
 };
 
@@ -163,14 +165,15 @@ public:
     }
 
     MILLION_MSG_HANDLE(DbProtoRegisterMsg, msg) {
-        const auto* file_desc = proto_codec_.RegisterProto(msg->proto_file_name);
-        if (!file_desc) {
-            logger().Err("DbService RegisterProto failed: {}.", msg->proto_file_name);
+        auto& file_desc = msg->file_desc;
+        auto success = proto_codec_.RegisterProto(file_desc);
+        if (!success) {
+            logger().Err("DbService RegisterProto failed: {}.", msg->file_desc.name());
             co_return;
         }
-        int message_count = file_desc->message_type_count();
+        int message_count = file_desc.message_type_count();
         for (int i = 0; i < message_count; i++) {
-            const auto* desc = file_desc->message_type(i);
+            const auto* desc = file_desc.message_type(i);
             if (!desc) continue;
             
             const auto& msg_options = desc->options();

@@ -2,6 +2,8 @@
 
 #include <million/imillion.h>
 
+#include <cluster/api.h>
+
 #include "cluster_service.h"
 
 MILLION_MODULE_INIT();
@@ -9,7 +11,7 @@ MILLION_MODULE_INIT();
 namespace million {
 namespace cluster {
 
-MILLION_FUNC_API bool MillionModuleInit(IMillion* imillion) {
+extern "C" CLUSTER_FUNC_API bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
     auto handle = imillion->NewService<ClusterService>();
     if (!handle) {
