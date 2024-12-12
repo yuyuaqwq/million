@@ -35,33 +35,35 @@ public:
     }
 
     virtual million::Task<> OnStart() override {
-        //auto res = co_await Call<million::db::DbProtoRegisterMsg>(db_service_, "db/db_example.proto", false);
-        //if (res->success) {
-        //    logger().Info("DbProtoRegisterMsg success: {}.", "db/db_example.proto");
-        //}
+        auto user = std::make_unique<Db::Example::User>();
+        user->set_id(100);
+        user->set_password_hash("sadawd");
+        user->set_is_active(true);
+        user->set_created_at(10000);
+        user->set_updated_at(13123);
+        user->set_email("sb@qq.com");
 
-        //auto handle = imillion().GetServiceByName("SqlService");
+        auto row = million::db::DbRow(std::move(user));
 
-        //auto user = std::make_unique<Db::Example::User>();
-        //user->set_id(100);
-        //user->set_password_hash("sadawd");
-        //user->set_is_active(true);
-        //user->set_created_at(10000);
-        //user->set_updated_at(13123);
-        //user->set_email("sb@qq.com");
+        const auto* pool = protobuf::DescriptorPool::generated_pool();
+        auto* db = pool->internal_generated_database();
 
-        //auto row = million::db::DbRow(std::move(user));
-        //// co_await Call<million::db::SqlInsertMsg>(*handle, million::make_nonnull(&row));
+        std::vector<std::string> file_names;
+        auto s = db->FindAllFileNames(&file_names);
 
-        //auto res2 = co_await Call<million::db::DbRowGetMsg>(db_service_, *Db::Example::User::GetDescriptor(), "103", std::nullopt);
-        //if (!res2->db_row) {
-        //    logger().Info("DbRowGetMsg failed.");
-        //}
+        auto res = co_await Call<million::db::DbProtoRegisterMsg>(db_service_, "db/db_example.proto", false);
+        if (res->success) {
+            logger().Info("DbProtoRegisterMsg success: {}.", "db/db_example.proto");
+        }
+
+        auto handle = imillion().GetServiceByName("SqlService");
 
 
-        for (int i = 0; i < 10000; i++) {
-            auto msg2 = std::make_unique<Test1Msg>();
-            Timeout(1, std::move(msg2));
+        // co_await Call<million::db::SqlInsertMsg>(*handle, million::make_nonnull(&row));
+
+        auto res2 = co_await Call<million::db::DbRowGetMsg>(db_service_, *Db::Example::User::GetDescriptor(), "103", std::nullopt);
+        if (!res2->db_row) {
+            logger().Info("DbRowGetMsg failed.");
         }
 
         co_return;
@@ -106,7 +108,7 @@ int main() {
     //    test_app->Timeout(1, service_handle, std::move(msg2));
     //}
 
-    //std::this_thread::sleep_for(std::chrono::seconds(10000));
+    std::this_thread::sleep_for(std::chrono::seconds(10000));
 
     return 0;
 }

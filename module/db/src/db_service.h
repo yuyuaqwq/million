@@ -35,9 +35,9 @@ public:
 
         std::vector<std::string> file_names;
         db->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
-        for (const std::string& filename : file_names) {
-            const protobuf::FileDescriptor* file_desc = pool->FindFileByName(filename);
-        }
+        //for (const std::string& filename : file_names) {
+        //    const auto* file_desc = pool->FindFileByName(filename);
+        //}
 
         auto file_desc = pool->FindFileByName(proto_file_name);
         if (!file_desc) {
