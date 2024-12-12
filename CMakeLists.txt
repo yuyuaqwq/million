@@ -13,12 +13,17 @@ find_library(PROTOBUF_PROTOC_LIB libprotocd find_library PATHS ${PROTOBUF_LIB_DI
 find_library(PROTOBUF_CORE_LIB libprotobufd find_library PATHS ${PROTOBUF_LIB_DIR})
 set(PROTOBUF_LIB ${PROTOBUF_PROTOC_LIB} ${PROTOBUF_CORE_LIB})
 
-set(PROTOGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protogen CACHE STRING "protobuf header dir")
-set(PROTOGEN_LIB protogen CACHE STRING "protobuf lib")
+if (WIN32)
+set(MILLION_PROTOGEN_COMPILE_DEFINITIONS MILLION_PROTOGEN_CLASS_API=__declspec\(dllimport\) CACHE STRING "protobuf compile definitions")
+elseif(UNIX)
+set(MILLION_PROTOGEN_COMPILE_DEFINITIONS MILLION_PROTOGEN_CLASS_API=__attribute__\(\(visibility\(\"hidden\"\)\)\) CACHE STRING "protobuf compile definitions")
+endif()
+set(MILLION_PROTOGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protogen CACHE STRING "protobuf header dir")
+set(MILLION_PROTOGEN_LIB million_protogen CACHE STRING "protobuf lib")
 
 # desc
-set(DESCGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/descgen/include CACHE STRING "descgen header dir")
-set(DESCGEN_LIB descgen CACHE STRING "descgen lib")
+set(MILLION_DESCGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/descgen/include CACHE STRING "descgen header dir")
+set(MILLION_DESCGEN_LIB million_descgen CACHE STRING "descgen lib")
 
 # third_party
 set(META_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/meta/include)

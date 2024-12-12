@@ -21,9 +21,14 @@ public:
         return handler;
     }
 
-    void SetProtoCodec(nonnull_ptr<ProtoCodec> proto_codec) {
+    void Init(nonnull_ptr<ProtoCodec> proto_codec) {
         proto_codec_ = proto_codec.get();
+        for (auto& func : logic_init_queue_) {
+            func();
+        }
+        logic_init_queue_.clear();
     }
+
 
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     void RegisterLogicMsgProto(std::string proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
@@ -41,13 +46,6 @@ public:
                 // 重复注册消息
             }
         });
-    }
-
-    void ExecInitLogicQueue() {
-        for (auto& func : logic_init_queue_) {
-            func();
-        }
-        logic_init_queue_.clear();
     }
 
     std::optional<AgentLogicHandleFunc> GetLogicHandle(MsgKey msg_key) {

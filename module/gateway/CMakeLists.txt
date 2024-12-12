@@ -34,8 +34,9 @@ target_include_directories(${GATEWAY_LIB} PRIVATE ${ASIO_HEADER_DIR})
 target_include_directories(${GATEWAY_LIB} PRIVATE ${DB_HEADER_DIR})
 target_link_libraries(${GATEWAY_LIB} PRIVATE ${DB_LIB})
 
-target_include_directories(${GATEWAY_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
-target_link_libraries(${GATEWAY_LIB} PRIVATE ${PROTOGEN_LIB})
+target_compile_definitions(${GATEWAY_LIB} PRIVATE ${MILLION_PROTOGEN_COMPILE_DEFINITIONS})
+target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
+target_link_libraries(${GATEWAY_LIB} PRIVATE ${MILLION_PROTOGEN_LIB})
 
 find_package(Threads)
 target_link_libraries(${GATEWAY_LIB} PRIVATE Threads::Threads)

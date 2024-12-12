@@ -29,9 +29,9 @@ target_include_directories(${DB_LIB} PRIVATE ${DB_HEADER_DIR})
 target_include_directories(${DB_LIB} PRIVATE ${MILLION_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${MILLION_LIB})
 
-target_include_directories(${DB_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
-target_link_libraries(${DB_LIB} PRIVATE ${PROTOGEN_LIB})
-target_compile_definitions(${DB_LIB} PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
+target_include_directories(${DB_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
+target_link_libraries(${DB_LIB} PRIVATE ${MILLION_PROTOGEN_LIB})
+target_compile_definitions(${DB_LIB} PRIVATE ${MILLION_PROTOGEN_COMPILE_DEFINITIONS})
 
 target_include_directories(${DB_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${YAML_CPP_LIB})

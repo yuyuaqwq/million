@@ -1,6 +1,6 @@
 :: @echo off
 set OUTPUT_DIR=..\protogen
-set EXPORT_MACRO=PROTOGEN_CLASS_API
+set EXPORT_MACRO=MILLION_PROTOGEN_CLASS_API
 
 :: 创建输出目录，如果已存在则跳过
 mkdir %OUTPUT_DIR% 2>nul
