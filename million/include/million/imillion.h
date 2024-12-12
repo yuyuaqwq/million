@@ -25,7 +25,7 @@ class io_context;
 namespace million {
 
 class Million;
-class MILLION_CLASS_API IMillion : noncopyable {
+class MILLION_API IMillion : noncopyable {
 public:
     IMillion();
     virtual ~IMillion();
@@ -95,11 +95,11 @@ inline Logger& IService::logger() {
     return imillion_->logger();
 }
 
-extern "C" MILLION_FUNC_API void MillionInit();
+extern "C" MILLION_API void MillionInit();
 
-extern "C" MILLION_FUNC_API void* MillionMemAlloc(size_t size);
+extern "C" MILLION_API void* MillionMemAlloc(size_t size);
 
-extern "C" MILLION_FUNC_API void MillionMemFree(void* ptr);
+extern "C" MILLION_API void MillionMemFree(void* ptr);
 
 #define MILLION_MODULE_MEM_INIT() \
     void* operator new(std::size_t size) { \

@@ -10,7 +10,7 @@
 namespace million {
 namespace db {
 
-class DB_CLASS_API DbRow {
+class MILLION_DB_API DbRow {
 public:
     DbRow(ProtoMsgUnique proto_msg)
         : proto_msg_(std::move(proto_msg))

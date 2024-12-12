@@ -4,7 +4,7 @@
 
 namespace million {
 
-class MILLION_CLASS_API noncopyable {
+class MILLION_API noncopyable {
 public:
     noncopyable(const noncopyable&) = delete;
     noncopyable& operator=(const noncopyable&) = delete;

@@ -8,7 +8,7 @@
 namespace million {
 
 class IService;
-class MILLION_CLASS_API ServiceLock {
+class MILLION_API ServiceLock {
 public:
 	ServiceLock(IService* iservice);
 

@@ -24,7 +24,7 @@ using MsgKey = uint32_t;
 using MsgId = uint16_t;
 using SubMsgId = uint16_t;
 
-class MILLION_CLASS_API ProtoCodec : noncopyable {
+class MILLION_API ProtoCodec : noncopyable {
 public:
     ProtoCodec(const protobuf::DescriptorPool& desc_pool, protobuf::DescriptorDatabase& desc_db, protobuf::MessageFactory& message_factory)
        : desc_pool_(desc_pool)

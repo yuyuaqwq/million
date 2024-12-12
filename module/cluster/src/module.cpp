@@ -11,7 +11,7 @@ MILLION_MODULE_INIT();
 namespace million {
 namespace cluster {
 
-extern "C" CLUSTER_FUNC_API bool MillionModuleInit(IMillion* imillion) {
+extern "C" MILLION_CLUSTER_API bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
     auto handle = imillion->NewService<ClusterService>();
     if (!handle) {

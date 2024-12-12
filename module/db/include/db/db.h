@@ -13,11 +13,11 @@ namespace million {
 namespace db {
 
 namespace protobuf = google::protobuf;
-class DB_CLASS_API DbProtoCodec : noncopyable{
+class MILLION_DB_API DbProtoCodec : noncopyable{
 public:
     DbProtoCodec(const protobuf::DescriptorPool& desc_pool, protobuf::DescriptorDatabase& desc_db, protobuf::MessageFactory& message_factory);
 
-    // ≥ı ºªØ
+    // ÂàùÂßãÂåñ
     void Init();
 
     const protobuf::FileDescriptor* RegisterProto(const std::string& proto_file_name);
@@ -36,12 +36,12 @@ private:
 };
 
 
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRegisterProtoCodecMsg, (nonnull_ptr<DbProtoCodec>) proto_codec);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRegisterProtoMsg, (std::string) proto_file_name, (bool) success);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowExistMsg, (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (bool) exist);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowGetMsg, (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (std::optional<million::db::DbRow>) db_row);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowSetMsg, (std::string) table_name, (std::string) primary_key, (nonnull_ptr<DbRow>) db_row);
-MILLION_MSG_DEFINE(DB_CLASS_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (nonnull_ptr<DbRow>) db_row);
+MILLION_MSG_DEFINE(MILLION_DB_API, DbRegisterProtoCodecMsg, (nonnull_ptr<DbProtoCodec>) proto_codec);
+MILLION_MSG_DEFINE(MILLION_DB_API, DbRegisterProtoMsg, (std::string) proto_file_name, (bool) success);
+MILLION_MSG_DEFINE(MILLION_DB_API, DbRowExistMsg, (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (bool) exist);
+MILLION_MSG_DEFINE(MILLION_DB_API, DbRowGetMsg, (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (std::optional<million::db::DbRow>) db_row);
+MILLION_MSG_DEFINE(MILLION_DB_API, DbRowSetMsg, (std::string) table_name, (std::string) primary_key, (nonnull_ptr<DbRow>) db_row);
+MILLION_MSG_DEFINE(MILLION_DB_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key, (nonnull_ptr<DbRow>) db_row);
 
 } // namespace db
 } // namespace million

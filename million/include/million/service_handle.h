@@ -14,7 +14,7 @@ using ServiceId = uint64_t;
 using ServiceName = std::string;
 
 class Service;
-class MILLION_CLASS_API ServiceHandle {
+class MILLION_API ServiceHandle {
 public:
     ServiceHandle() = default;
     explicit ServiceHandle(std::shared_ptr<Service> ptr)

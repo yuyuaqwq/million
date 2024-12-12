@@ -15,7 +15,7 @@
 namespace million {
 namespace net {
 
-class MILLION_CLASS_API TcpServer : noncopyable {
+class MILLION_API TcpServer : noncopyable {
 public:
     using TcpConnectionFunc = std::function<asio::awaitable<void>(const TcpConnectionShared&)>;
     using TcpMsgFunc = std::function<asio::awaitable<void>(const TcpConnectionShared&, Packet&&)>;
@@ -32,7 +32,7 @@ public:
     void Start(uint16_t port);
     void Stop();
     void RemoveConnection(std::list<TcpConnectionShared>::iterator iter);
-    // 主动建立连接，建立连接时不会调用on_connection，断开连接时会调用on_connection
+    // 涓诲姩寤虹珛杩炴帴锛屽缓绔嬭繛鎺ユ椂涓嶄細璋冪敤on_connection锛屾柇寮�杩炴帴鏃朵細璋冪敤on_connection
     asio::awaitable<std::optional<TcpConnectionShared>> ConnectTo(std::string_view host, std::string_view port);
 
     virtual TcpConnectionShared MakeTcpConnectionShared(TcpServer* server, asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor) const;

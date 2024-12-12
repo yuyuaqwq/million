@@ -14,7 +14,7 @@ namespace agent {
 class AgentService;
 using AgentLogicHandleFunc = Task<>(*)(AgentService* agent, ProtoMsgUnique proto_msg);
 
-class AGENT_CLASS_API AgentLogicHandler {
+class MILLION_AGENT_API AgentLogicHandler {
 public:
     static AgentLogicHandler& Instance() {
         static AgentLogicHandler handler;
@@ -66,9 +66,9 @@ private:
 };
 
 
-MILLION_MSG_DEFINE(AGENT_CLASS_API, AgentMgrLoginMsg, (gateway::UserContextId) context_id, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (gateway::UserContextId) context_id, (std::optional<ServiceHandle>) agent_handle);
 
-class AGENT_CLASS_API AgentService : public IService {
+class MILLION_AGENT_API AgentService : public IService {
 public:
     using Base = IService;
     AgentService(IMillion* imillion, uint64_t user_context_id)

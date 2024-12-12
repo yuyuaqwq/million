@@ -20,7 +20,7 @@ enum class LogLevel : int {
 };
 
 class Million;
-class MILLION_CLASS_API Logger {
+class MILLION_API Logger {
 public:
     Logger(Million* million);
     ~Logger();

@@ -15,7 +15,7 @@
 namespace million {
 
 class IMillion;
-class MILLION_CLASS_API IService : noncopyable {
+class MILLION_API IService : noncopyable {
 public:
     IService(IMillion* imillion)
         : imillion_(imillion) {}
@@ -47,7 +47,7 @@ public:
 
     template <typename MsgT>
     SessionAwaiter<MsgT> Recv(SessionId session_id) {
-        // 0表示默认超时时间
+        // 0琛ㄧず榛樿瓒呮椂鏃堕棿
         return SessionAwaiter<MsgT>(session_id, 0, false);
     }
 
@@ -58,7 +58,7 @@ public:
 
     template <typename MsgT>
     SessionAwaiter<MsgT> RecvOrNull(SessionId session_id) {
-        // 0表示默认超时时间
+        // 0琛ㄧず榛樿瓒呮椂鏃堕棿
         return SessionAwaiter<MsgT>(session_id, 0, true);
     }
 

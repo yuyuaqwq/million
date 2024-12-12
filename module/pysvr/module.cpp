@@ -19,17 +19,17 @@ bool set_field(google::protobuf::Message* message, const std::string& field_name
     const google::protobuf::FieldDescriptor* field = descriptor->FindFieldByName(field_name);
     if (!field) {
         py::print("Field", field_name, "not found in message type", descriptor->name());
-        return false;  // ×Ö¶ÎÎ´ÕÒµ½
+        return false;  // å­—æ®µæœªæ‰¾åˆ°
     }
 
-    // ¸ù¾İ×Ö¶ÎÀàĞÍÉèÖÃÏàÓ¦µÄÖµ
+    // æ ¹æ®å­—æ®µç±»å‹è®¾ç½®ç›¸åº”çš„å€¼
     if (field->type() == google::protobuf::FieldDescriptor::TYPE_STRING) {
         reflection->SetString(message, field, value.cast<std::string>());
     }
     else if (field->type() == google::protobuf::FieldDescriptor::TYPE_INT32) {
         reflection->SetInt32(message, field, value.cast<int>());
     }
-    // ¿ÉÒÔ¼ÌĞøÀ©Õ¹¸ü¶àÀàĞÍ£¬ÀıÈç BOOL¡¢FLOAT¡¢DOUBLE µÈ
+    // å¯ä»¥ç»§ç»­æ‰©å±•æ›´å¤šç±»å‹ï¼Œä¾‹å¦‚ BOOLã€FLOATã€DOUBLE ç­‰
 
     return true;
 }
@@ -37,7 +37,7 @@ bool set_field(google::protobuf::Message* message, const std::string& field_name
 void send(const std::string& message_type, pybind11::kwargs kwargs) {
     std::unique_ptr<google::protobuf::Message> message;
 
-    // ¸ù¾İÏûÏ¢ÀàĞÍÃû³Æ´´½¨ÏûÏ¢ÊµÀı
+    // æ ¹æ®æ¶ˆæ¯ç±»å‹åç§°åˆ›å»ºæ¶ˆæ¯å®ä¾‹
     //if (message_type == "test") {
         // message = ;
     //}
@@ -45,14 +45,14 @@ void send(const std::string& message_type, pybind11::kwargs kwargs) {
         // throw std::runtime_error("Unsupported message type: " + message_type);
     //}
 
-    // ±éÀú¹Ø¼ü×Ö²ÎÊı²¢ÉèÖÃÏûÏ¢×Ö¶Î
+    // éå†å…³é”®å­—å‚æ•°å¹¶è®¾ç½®æ¶ˆæ¯å­—æ®µ
     for (auto item : kwargs) {
         std::string field_name = item.first.cast<std::string>();
         py::object value = item.second;
         set_field(message.get(), field_name, value);
     }
 
-    // ½« Protobuf ¶ÔÏóĞòÁĞ»¯Îª×Ö½ÚÁ÷
+    // å°† Protobuf å¯¹è±¡åºåˆ—åŒ–ä¸ºå­—èŠ‚æµ
     std::string serialized_data;
     message->SerializeToString(&serialized_data);
 
@@ -63,7 +63,7 @@ void send(const std::string& message_type, pybind11::kwargs kwargs) {
 //PYBIND11_EMBEDDED_MODULE(million, m) {
 //    m.doc() = "million core module";
 //
-//    // °ó¶¨ send º¯Êı
+//    // ç»‘å®š send å‡½æ•°
 //    m.def("send", &send, "Create a protobuf message by type name and kwargs",
 //        py::arg("message_type"));
 //}
@@ -140,23 +140,23 @@ struct Point {
 //PYBIND11_EMBEDDED_MODULE(example, m) {
 //    // m.doc() = "pybind11 example with dynamic Protobuf message creation";
 //
-//    // °ó¶¨ create_message º¯Êı
+//    // ç»‘å®š create_message å‡½æ•°
 //    //m.def("create_message", &create_message, "Create a protobuf message by type name and kwargs",
 //    //    py::arg("message_type"));
 //}
 
 
 
-//extern "C" PYSVR_FUNC_API bool MillionModuleInit(IMillion* imillion) {
+//extern "C" MILLION_PYSVR_API bool MillionModuleInit(IMillion* imillion) {
 //
 //    auto handle = imillion->NewService<PyService>();
 //    
-//    // Ö§³Ö°´full_name²éÕÒÏûÏ¢
-//    // ÊÕµ½pyµÄµ÷ÓÃºó£¬Í¨¹ıfull_nameÕÒµ½ssÏûÏ¢£¬ÔÙnew£¬²¢Í¨¹ıfield_name½øĞĞset
-//    // È»ºóµ÷ÓÃÄ¿±ê
+//    // æ”¯æŒæŒ‰full_nameæŸ¥æ‰¾æ¶ˆæ¯
+//    // æ”¶åˆ°pyçš„è°ƒç”¨åï¼Œé€šè¿‡full_nameæ‰¾åˆ°ssæ¶ˆæ¯ï¼Œå†newï¼Œå¹¶é€šè¿‡field_nameè¿›è¡Œset
+//    // ç„¶åè°ƒç”¨ç›®æ ‡
 //
 //    // std::make_unique<pkpy::VM>
-//    // ¶ÔĞÂ´´½¨µÄvm½øĞĞpybind11³õÊ¼»¯
+//    // å¯¹æ–°åˆ›å»ºçš„vmè¿›è¡Œpybind11åˆå§‹åŒ–
 //    
 //
 //    

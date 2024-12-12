@@ -14,7 +14,7 @@ namespace million {
 namespace net {
 
 class TcpServer;
-class MILLION_CLASS_API TcpConnection : public std::enable_shared_from_this<TcpConnection> {
+class MILLION_API TcpConnection : public std::enable_shared_from_this<TcpConnection> {
 public:
     TcpConnection(TcpServer* server, asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor);
     virtual ~TcpConnection();
@@ -49,7 +49,7 @@ public:
     struct SendPacket {
         Packet packet;
         PacketSpan span;
-        uint32_t total_size;  // Œ™0±Ì æ≤ª–¥»Îtotal_size
+        uint32_t total_size;  // ‰∏∫0Ë°®Á§∫‰∏çÂÜôÂÖ•total_size
     };
     bool sending_ = false;
     std::queue<SendPacket> send_queue_;

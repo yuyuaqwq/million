@@ -13,20 +13,20 @@
 
 namespace million {
 
-class MILLION_CLASS_API TaskAbortException : public std::exception {
+class MILLION_API TaskAbortException : public std::exception {
 public:
-    // ¹¹Ôìº¯Êý£¬½ÓÊÜ¸ñÊ½»¯µÄ¿É±ä²ÎÊý
+    // ï¿½ï¿½ï¿½ìº¯ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¸ï¿½Ê½ï¿½ï¿½ï¿½Ä¿É±ï¿½ï¿½ï¿½ï¿½
 
     explicit TaskAbortException(const std::string& message)
         : message_(message) {
 
-        // ²¶»ñµ÷ÓÃÕ»ÐÅÏ¢
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½Ï¢
 #ifdef MILLION_STACK_TRACE
         stacktrace_ = std::stacktrace::current();
 #endif
     }
 
-    // »ñÈ¡´íÎóÐÅÏ¢
+    // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
     const char* what() const noexcept override {
         return message_.c_str();
     }

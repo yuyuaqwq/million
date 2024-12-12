@@ -11,7 +11,7 @@ MILLION_MODULE_INIT();
 namespace million {
 namespace gateway {
 
-extern "C" GATEWAY_FUNC_API bool MillionModuleInit(IMillion* imillion) {
+extern "C" MILLION_GATEWAY_API bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
     auto handle = imillion->NewService<GatewayService>();
     if (!handle) {

@@ -11,7 +11,7 @@
 
 namespace million {
 	 
-class MILLION_CLASS_API IMsg : noncopyable {
+class MILLION_API IMsg : noncopyable {
 public:
 	IMsg() = default;
     virtual ~IMsg() = default;
@@ -123,8 +123,8 @@ private:
 #define _MILLION_META_FIELD_DATAS(name, ...) META_FOR(_MILLION_DEF_META_FIELD_DATA_IMPL, 0, META_COUNT(__VA_ARGS__), name, __VA_ARGS__)
 
 // 数据定义的主宏
-#define MILLION_MSG_DEFINE(CLASS_API_, NAME_, ...) \
-    class CLASS_API_ NAME_ : public ::million::IMsg { \
+#define MILLION_MSG_DEFINE(API_, NAME_, ...) \
+    class API_ NAME_ : public ::million::IMsg { \
 	public: \
         NAME_() = delete; \
 		NAME_(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
@@ -137,8 +137,8 @@ private:
 		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
 	};
 
-#define MILLION_MSG_DEFINE_EMPTY(CLASS_API_, NAME_) \
-    class CLASS_API_ NAME_ : public ::million::IMsg { \
+#define MILLION_MSG_DEFINE_EMPTY(API_, NAME_) \
+    class API_ NAME_ : public ::million::IMsg { \
 	public: \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \

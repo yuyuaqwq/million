@@ -15,7 +15,7 @@ MILLION_MODULE_INIT();
 namespace million {
 namespace db {
 
-extern "C" DB_FUNC_API bool MillionModuleInit(IMillion* imillion) {
+extern "C" MILLION_DB_API bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
 
     auto cache_service_opt = imillion->NewService<CacheService>();

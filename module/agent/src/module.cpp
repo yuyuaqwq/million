@@ -11,7 +11,7 @@ MILLION_MODULE_INIT();
 namespace million {
 namespace agent {
 
-extern "C" AGENT_FUNC_API bool MillionModuleInit(IMillion* imillion) {
+extern "C" MILLION_AGENT_API bool MillionModuleInit(IMillion* imillion) {
     auto handle = imillion->NewService<NodeMgrService>();
     if (!handle) {
         return false;
