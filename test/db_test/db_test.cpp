@@ -46,10 +46,7 @@ public:
 
         auto row = million::db::DbRow(std::move(user));
 
-        const auto& pool = GetDescriptorPool();
-        auto* file_desc = pool.FindFileByName("db/db_example.proto");
-
-        auto res = co_await Call<million::db::DbProtoRegisterMsg>(db_service_, *file_desc, false);
+        auto res = co_await Call<million::db::DbRegisterProtoMsg>(db_service_, "db/db_example.proto", false);
         if (res->success) {
             logger().Info("DbProtoRegisterMsg success: {}.", "db/db_example.proto");
         }

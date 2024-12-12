@@ -6,6 +6,7 @@
 
 #include <cluster/cluster.h>
 
+#include <protogen/protogen.h>
 #include <protogen/ss/ss_test.pb.h>
 
 namespace Ss = Million::Proto::Ss;
@@ -18,7 +19,10 @@ using ClusterRecvPacketMsg = million::cluster::ClusterRecvPacketMsg;
 class TestService : public million::IService {
 public:
     using Base = million::IService;
-    using Base::Base;
+    TestService(million::IMillion* imillion)
+        : Base(imillion)
+        , proto_codec_(GetDescriptorPool(), GetDescriptorDatabase(), GetMessageFactory()) {}
+
     //TestService(million::IMillion* imillion)
     //    : proto_codec_(0)
     //    , Base(imillion) {}

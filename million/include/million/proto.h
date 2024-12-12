@@ -26,19 +26,21 @@ using SubMsgId = uint16_t;
 
 class MILLION_CLASS_API ProtoCodec : noncopyable {
 public:
+    ProtoCodec(const protobuf::DescriptorPool& desc_pool, protobuf::DescriptorDatabase& desc_db, protobuf::MessageFactory& message_factory)
+       : desc_pool_(desc_pool)
+       , desc_db_(desc_db)
+       , message_factory_(message_factory) {}
+
     // 注册协议
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     bool RegisterProto(const std::string& proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
-        const auto* pool = protobuf::DescriptorPool::generated_pool();
-        auto* db = pool->internal_generated_database();
-
         //std::vector<std::string> file_names;
-        //db->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
+        //desc_db_.FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
         //for (const std::string& filename : file_names) {
-        //    const protobuf::FileDescriptor* file_desc = pool->FindFileByName(filename);
+        //    const protobuf::FileDescriptor* file_desc = desc_pool.FindFileByName(filename);
         //}
 
-        auto file_desc = pool->FindFileByName(proto_file_name);
+        auto file_desc = desc_pool_.FindFileByName(proto_file_name);
         if (!file_desc) {
             return false;
         }
@@ -70,9 +72,7 @@ public:
         for (int j = 0; j < message_count; j++) {
             const auto* desc = file_desc->message_type(j);
 
-            // 得加这个才会初始化，不知道具体原因
-            message_factory_ = protobuf::MessageFactory::generated_factory();
-            const auto* msg = message_factory_->GetPrototype(desc);
+            const auto* msg = message_factory_.GetPrototype(desc);
             if (!msg) {
                 continue;
             }
@@ -197,7 +197,7 @@ private:
     std::optional<ProtoMsgUnique> NewMessage(MsgId msg_id, SubMsgId sub_msg_id) {
         auto desc = GetMsgDesc(msg_id, sub_msg_id);
         if (!desc) return std::nullopt;
-        const protobuf::Message* proto_msg = message_factory_->GetPrototype(desc);
+        const protobuf::Message* proto_msg = message_factory_.GetPrototype(desc);
         if (proto_msg != nullptr) {
             return ProtoMsgUnique(proto_msg->New());
         }
@@ -223,7 +223,9 @@ private:
     }
 
 private:
-    protobuf::MessageFactory* message_factory_;
+    const protobuf::DescriptorPool& desc_pool_;
+    protobuf::DescriptorDatabase& desc_db_;
+    protobuf::MessageFactory& message_factory_;
 
     std::unordered_map<MsgKey, const protobuf::Descriptor*> msg_desc_map_;
     std::unordered_map<const protobuf::Descriptor*, MsgKey> msg_id_map_;

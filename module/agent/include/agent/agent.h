@@ -1,5 +1,6 @@
 #include <million/api.h>
 
+#include <million/nonnull_ptr.h>
 #include <million/imsg.h>
 #include <million/iservice.h>
 
@@ -20,10 +21,14 @@ public:
         return handler;
     }
 
+    void SetProtoCodec(nonnull_ptr<ProtoCodec> proto_codec) {
+        proto_codec_ = proto_codec.get();
+    }
+
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     void RegisterLogicMsgProto(std::string proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
         logic_init_queue_.emplace_back([this, proto_file_name = std::move(proto_file_name), msg_ext_id, sub_msg_ext_id] {
-            if (!proto_codec_.RegisterProto(proto_file_name, msg_ext_id, sub_msg_ext_id)) {
+            if (!proto_codec_->RegisterProto(proto_file_name, msg_ext_id, sub_msg_ext_id)) {
                 // 注册协议失败
             }
         });
@@ -56,7 +61,8 @@ public:
 private:
     friend class AgentService;
 
-    ProtoCodec proto_codec_;
+    ProtoCodec* proto_codec_;
+
     std::unordered_map<MsgKey, AgentLogicHandleFunc> logic_handle_map_;
     std::vector<std::function<void()>> logic_init_queue_;
 };
@@ -76,7 +82,7 @@ private:
 
     using GatewayRecvPacketMsg = gateway::GatewayRecvPacketMsg;
     MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
-        auto res = AgentLogicHandler::Instance().proto_codec_.DecodeMessage(msg->packet);
+        auto res = AgentLogicHandler::Instance().proto_codec_->DecodeMessage(msg->packet);
         if (!res) {
             logger().Err("DecodeMessage failed");
             co_return;
@@ -92,7 +98,7 @@ private:
 
 public:
     void SendToClient(const protobuf::Message& proto_msg) {
-        auto res = AgentLogicHandler::Instance().proto_codec_.EncodeMessage(proto_msg);
+        auto res = AgentLogicHandler::Instance().proto_codec_->EncodeMessage(proto_msg);
         if (!res) {
             logger().Err("EncodeMessage failed: type:{}.", typeid(proto_msg).name());
             return;

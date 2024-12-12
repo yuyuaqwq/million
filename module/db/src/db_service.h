@@ -23,82 +23,72 @@
 namespace million {
 namespace db {
 
-namespace protobuf = google::protobuf;
-class DbProtoCodec : noncopyable{
-public:
-    // 初始化
-    void Init() {
+DbProtoCodec::DbProtoCodec(const protobuf::DescriptorPool& desc_pool, protobuf::DescriptorDatabase& desc_db, protobuf::MessageFactory& message_factory)
+    : desc_pool_(desc_pool)
+    , desc_db_(desc_db)
+    , message_factory_(message_factory) {}
+
+// 初始化
+void DbProtoCodec::Init() {
+
+}
+
+const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& proto_file_name) {
+    //std::vector<std::string> file_names;
+    //desc_db_->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
+    ////for (const std::string& filename : file_names) {
+    ////    const auto* file_desc = desc_pool_->FindFileByName(filename);
+    ////}
+
+    auto file_desc = desc_pool_.FindFileByName(proto_file_name);
+    if (!file_desc) {
+        return nullptr;
     }
 
-    bool RegisterProto(const google::protobuf::FileDescriptor& file_desc) {
-        //auto& pool = GetDescriptorPool();
-        //auto& db = GetDescriptorDatabase();
-
-        //std::vector<std::string> file_names;
-        //db.FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
-        ////for (const std::string& filename : file_names) {
-        ////    const auto* file_desc = pool->FindFileByName(filename);
-        ////}
-
-        //auto file_desc = pool.FindFileByName(proto_file_name);
-        //if (!file_desc) {
-        //    return nullptr;
-        //}
-
-        // 获取该文件的options，确认是否设置了db
-        const auto& file_options = file_desc.options();
-        // 检查 db 是否被设置
-        if (!file_options.HasExtension(Db::db)) {
-            return false;
-        }
-        const auto& db_options = file_options.GetExtension(Db::db);
-
-        int message_count = file_desc.message_type_count();
-        for (int i = 0; i < message_count; i++) {
-            const auto* desc = file_desc.message_type(i);
-            if (!desc) continue;
-            const auto& msg_options = desc->options();
-            if (!msg_options.HasExtension(Db::table)) {
-                continue;
-            }
-            // 得加这个才会初始化，不知道具体原因
-
-
-            auto& factory = GetMessageFactory();
-            const auto* msg = factory.GetPrototype(desc);
-            if (!msg) {
-                continue;
-            }
-
-            const auto& table_options = msg_options.GetExtension(Db::table);
-            const auto& table_name = table_options.name();
-            // table_map_.emplace(table_name, desc);
-        }
-        return true;
+    // 获取该文件的options，确认是否设置了db
+    const auto& file_options = file_desc->options();
+    // 检查 db 是否被设置
+    if (!file_options.HasExtension(Db::db)) {
+        return nullptr;
     }
+    const auto& db_options = file_options.GetExtension(Db::db);
 
-    //const protobuf::Descriptor* GetMsgDesc(const std::string& table_name) {
-    //    auto iter = table_map_.find(table_name);
-    //    if (iter == table_map_.end()) {
-    //        return nullptr;
-    //    }
-    //    return iter->second;
-    //}
-
-    std::optional<ProtoMsgUnique> NewMessage(const protobuf::Descriptor& desc) {
-        auto& factory = GetMessageFactory();
-        const auto* proto_msg = factory.GetPrototype(&desc);
-        if (proto_msg != nullptr) {
-            return ProtoMsgUnique(proto_msg->New());
+    int message_count = file_desc->message_type_count();
+    for (int i = 0; i < message_count; i++) {
+        const auto* desc = file_desc->message_type(i);
+        if (!desc) continue;
+        const auto& msg_options = desc->options();
+        if (!msg_options.HasExtension(Db::table)) {
+            continue;
         }
-        return std::nullopt;
+
+        const auto* msg = message_factory_.GetPrototype(desc);
+        if (!msg) {
+            continue;
+        }
+
+        const auto& table_options = msg_options.GetExtension(Db::table);
+        const auto& table_name = table_options.name();
+        // table_map_.emplace(table_name, desc);
     }
+    return file_desc;
+}
 
-    // const auto& table_map() const { return table_map_; }
+//const protobuf::Descriptor* DbProtoCodec::GetMsgDesc(const std::string& table_name) {
+//    auto iter = table_map_.find(table_name);
+//    if (iter == table_map_.end()) {
+//        return nullptr;
+//    }
+//    return iter->second;
+//}
 
-private:
-    // std::unordered_map<std::string, const protobuf::Descriptor*> table_map_;
-};
+std::optional<ProtoMsgUnique> DbProtoCodec::NewMessage(const protobuf::Descriptor& desc) {
+    const auto* proto_msg = message_factory_.GetPrototype(&desc);
+    if (proto_msg != nullptr) {
+        return ProtoMsgUnique(proto_msg->New());
+    }
+    return std::nullopt;
+}
 
 
 // DbService使用lru来淘汰row
@@ -114,12 +104,11 @@ MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) tick_second, (nonnull_ptr<DbRow
 class DbService : public IService {
 public:
     using Base = IService;
-    using Base::Base;
+    DbService(IMillion* imillion)
+        : Base(imillion) {}
 
     virtual bool OnInit() override {
         logger().Info("DbService Init");
-
-        proto_codec_.Init();
 
         auto handle = imillion().GetServiceByName("SqlService");
         if (!handle) {
@@ -164,18 +153,23 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(DbProtoRegisterMsg, msg) {
-        auto& file_desc = msg->file_desc;
-        auto success = proto_codec_.RegisterProto(file_desc);
-        if (!success) {
-            logger().Err("DbService RegisterProto failed: {}.", msg->file_desc.name());
+    MILLION_MSG_HANDLE(DbRegisterProtoCodecMsg, msg) {
+        proto_codec_ = msg->proto_codec.get();
+        co_return;
+    }
+
+    MILLION_MSG_HANDLE(DbRegisterProtoMsg, msg) {
+        auto file_desc = proto_codec_->RegisterProto(msg->proto_file_name);
+
+        if (!file_desc) {
+            logger().Err("DbService RegisterProto failed: {}.", msg->proto_file_name);
             co_return;
         }
-        int message_count = file_desc.message_type_count();
+        int message_count = file_desc->message_type_count();
         for (int i = 0; i < message_count; i++) {
-            const auto* desc = file_desc.message_type(i);
+            const auto* desc = file_desc->message_type(i);
             if (!desc) continue;
-            
+
             const auto& msg_options = desc->options();
             if (!msg_options.HasExtension(Db::table)) {
                 continue;
@@ -213,7 +207,7 @@ public:
                 break;
             }
 
-            auto proto_msg_opt = proto_codec_.NewMessage(desc);
+            auto proto_msg_opt = proto_codec_->NewMessage(desc);
             if (!proto_msg_opt) {
                 logger().Err("proto_codec_.NewMessage failed.");
                 co_return;
@@ -290,7 +284,7 @@ public:
 
 
 private:
-    DbProtoCodec proto_codec_;
+    DbProtoCodec* proto_codec_;
 
     // 改用lru
     using DbTable = std::unordered_map<std::string, DbRow>;
