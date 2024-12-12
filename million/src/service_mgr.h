@@ -17,6 +17,8 @@ public:
     ServiceMgr(Million* million);
     ~ServiceMgr();
 
+    void Stop();
+
     ServiceId AllocServiceId();
 
     std::optional<ServiceHandle> AddService(std::unique_ptr<IService> service);
@@ -24,7 +26,7 @@ public:
     void DeleteService(Service* service);
 
     void PushService(Service* service);
-    Service& PopService();
+    Service* PopService();
 
     bool SetServiceName(const ServiceHandle& handle, const ServiceName& name);
     std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
@@ -51,6 +53,7 @@ private:
     std::unordered_map<ServiceId, ServiceHandle> id_map_;
 
     std::mutex service_queue_mutex_;
+    bool run_ = true;
     std::queue<Service*> service_queue_;
     std::condition_variable service_queue_cv_;
 };

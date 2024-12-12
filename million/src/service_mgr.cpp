@@ -11,7 +11,14 @@ namespace million {
 ServiceMgr::ServiceMgr(Million* million)
     : million_(million) {}
 
-ServiceMgr::~ServiceMgr() {
+ServiceMgr::~ServiceMgr() = default;
+
+void ServiceMgr::Stop() {
+    {
+        auto lock = std::unique_lock(service_queue_mutex_);
+        run_ = false;
+    }
+    service_queue_cv_.notify_one();
     for (auto& service : services_) {
         service->Stop();
     }
@@ -55,14 +62,13 @@ void ServiceMgr::DeleteService(Service* service) {
     }
 }
 
-
 void ServiceMgr::PushService(Service* service) {
     if (service->HasSeparateWorker()) {
         return;
     }
     bool has_push = false;
     {
-        std::lock_guard guard(service_queue_mutex_);
+        auto lock = std::lock_guard(service_queue_mutex_);
         if (!service->in_queue()) {
             service_queue_.emplace(service);
             // set为false的时机，在ProcessMsg完成后设置
@@ -76,16 +82,17 @@ void ServiceMgr::PushService(Service* service) {
     }
 }
 
-Service& ServiceMgr::PopService() {
-    std::unique_lock guard(service_queue_mutex_);
-    while (service_queue_.empty()) {
-        service_queue_cv_.wait(guard);
+Service* ServiceMgr::PopService() {
+    auto lock = std::unique_lock(service_queue_mutex_);
+    while (run_ && service_queue_.empty()) {
+        service_queue_cv_.wait(lock);
     }
+    if (!run_) return nullptr;
     // std::cout << "wake up" << std::endl;
     auto* service = service_queue_.front();
     assert(service);
     service_queue_.pop();
-    return *service;
+    return service;
 }
 
 bool ServiceMgr::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {

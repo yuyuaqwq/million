@@ -13,9 +13,7 @@ Timer::Timer(Million* million, uint32_t ms_per_tick)
     : million_(million)
     , tasks_(ms_per_tick) {}
 
-Timer::~Timer() {
-    Stop();
-}
+Timer::~Timer() = default;
 
 void Timer::Start() {
     run_ = true;
@@ -32,6 +30,7 @@ void Timer::Start() {
 
 void Timer::Stop() {
     run_ = false;
+    thread_.reset();
 }
 
 void Timer::AddTask(uint32_t tick, const ServiceHandle& service, MsgUnique msg) {

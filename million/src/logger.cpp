@@ -103,9 +103,8 @@ private:
 };
 
 Logger::Logger(Million* million) : million_(million) {}
-Logger::~Logger() {
 
-}
+Logger::~Logger() = default;
 
 bool Logger::Init() {
     auto logger_opt = million_->NewService<LoggerService>();

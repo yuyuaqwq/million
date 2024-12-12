@@ -18,18 +18,19 @@ void Worker::Start() {
         run_ = true;
         auto& service_mgr = million_->service_mgr();
         while (run_) {
-            auto& service = service_mgr.PopService();
+            auto service = service_mgr.PopService();
+            if (!service) break;
             // std::cout << "workid:" <<  std::this_thread::get_id() << std::endl;
-            service.ProcessMsgs(1);
+            service->ProcessMsgs(1);
             // 可以将service放到队列了
-            service.set_in_queue(false);
-            if (!service.MsgQueueIsEmpty()) {
-                service_mgr.PushService(&service);
+            service->set_in_queue(false);
+            if (!service->MsgQueueIsEmpty()) {
+                service_mgr.PushService(service);
                 continue;
             }
-            if (service.IsStop()) {
+            if (service->IsStop()) {
                 // 销毁服务
-                service_mgr.DeleteService(&service);
+                service_mgr.DeleteService(service);
             }
         }
     });
@@ -37,6 +38,7 @@ void Worker::Start() {
 
 void Worker::Stop() {
     run_ = false;
+    thread_.reset();
 }
 
 } // namespace million

@@ -32,6 +32,7 @@ void SessionMonitor::Start() {
 
 void SessionMonitor::Stop() {
     run_ = false;
+    thread_.reset();
 }
 
 void SessionMonitor::AddSession(const ServiceHandle& service, SessionId session_id, uint32_t timeout_s) {

@@ -139,8 +139,10 @@ void Million::Start() {
 
 void Million::Stop() {
     timer_->Stop();
+    service_mgr_->Stop();
     worker_mgr_->Stop();
     io_context_mgr_->Stop();
+    session_monitor_->Stop();
 }
 
 std::optional<ServiceHandle> Million::AddService(std::unique_ptr<IService> iservice) {
