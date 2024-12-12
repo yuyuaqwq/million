@@ -21,7 +21,9 @@ MILLION_MSG_DEFINE_EMPTY(, Test1Msg)
 class TestService : public million::IService {
 public:
     using Base = million::IService;
-    using Base::Base;
+    TestService(million::IMillion* imillion)
+        : Base(imillion)
+        , proto_codec_(million::GetDescriptorPool(), million::GetDescriptorDatabase(), million::GetMessageFactory()) {}
 
     virtual bool OnInit() override {
         
@@ -45,6 +47,8 @@ public:
         user->set_email("sb@qq.com");
 
         auto row = million::db::DbRow(std::move(user));
+
+        co_await Call<million::db::DbRegisterProtoCodecMsg>(db_service_, million::make_nonnull(&proto_codec_));
 
         auto res = co_await Call<million::db::DbRegisterProtoMsg>(db_service_, "db/db_example.proto", false);
         if (res->success) {
@@ -76,6 +80,7 @@ public:
     }
 
 private:
+    million::db::DbProtoCodec proto_codec_;
     million::ServiceHandle db_service_;
 
 };

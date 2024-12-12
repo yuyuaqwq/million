@@ -52,7 +52,7 @@ message MessageOptionsTable {
     TableSqlOptions sql = 1;
     TableCacheOptions cache = 2;
     string name = 3;  // 表名
-    int32 tick_second = 4;  // Tick入库时间
+    int32 sync_tick = 4;  // Tick入库时间，单位为tick
     int32 primary_key = 5;  // 主键 field_number
 }
 

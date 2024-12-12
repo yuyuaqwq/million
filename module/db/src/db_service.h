@@ -99,7 +99,7 @@ std::optional<ProtoMsgUnique> DbProtoCodec::NewMessage(const protobuf::Descripto
 // 外部修改后，通过发送标记脏消息来通知dbservice可以更新此消息
 
 
-MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) tick_second, (nonnull_ptr<DbRow>) db_row);
+MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (nonnull_ptr<DbRow>) db_row);
 
 class DbService : public IService {
 public:
@@ -146,15 +146,14 @@ public:
                 logger().Err("DbRowTickSyncMsg: {}", e.what());
             }
         }
-        auto tick_second = msg->tick_second;
-
-        // auto msg2 = std::make_unique<DbRowTickSyncMsg>(100, msg->db_row);
-        // Timeout(tick_second, std::move(msg2));
+        auto sync_tick = msg->sync_tick;
+        Timeout(sync_tick, std::move(msg));
         co_return;
     }
 
     MILLION_MSG_HANDLE(DbRegisterProtoCodecMsg, msg) {
         proto_codec_ = msg->proto_codec.get();
+        Reply(std::move(msg));
         co_return;
     }
 
@@ -181,8 +180,11 @@ public:
             const auto& table_name = table_options.name();
             logger().Info("SqlTableInitMsg success: {}", table_name);
 
-            Reply(std::move(msg));
+            msg->success = true;
+            break;
         }
+
+        Reply(std::move(msg));
     }
 
     MILLION_MSG_HANDLE(DbRowGetMsg, msg) {
@@ -232,9 +234,8 @@ public:
 
             const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
 
-            auto tick_second = options.tick_second();
-
-            Timeout<DbRowTickSyncMsg>(tick_second, tick_second, make_nonnull(&row_iter->second));
+            auto sync_tick = options.sync_tick();
+            Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, make_nonnull(&row_iter->second));
 
         } while (false);
         msg->db_row = row_iter->second;

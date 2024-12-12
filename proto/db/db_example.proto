@@ -18,7 +18,7 @@ message UserEx {
 message User {
     option (table) = {
         name: "user"               // 表名
-        tick_second: 60            // Tick入库时间，单位秒
+        sync_tick: 6000            // Tick入库时间，60s
         primary_key: 1
         sql: {
             charset: "utf8mb4"     // MySQL 字符集
