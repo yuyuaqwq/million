@@ -20,7 +20,7 @@ public:
     ServiceId AllocServiceId();
 
     std::optional<ServiceHandle> AddService(std::unique_ptr<IService> service);
-    void DeleteService(ServiceHandle&& handle);
+    void StopService(const ServiceHandle& handle);
     void DeleteService(Service* service);
 
     void PushService(Service* service);
@@ -32,11 +32,9 @@ public:
     bool SetServiceId(const ServiceHandle& handle, ServiceId id);
     std::optional<ServiceHandle> GetServiceById(ServiceId id);
 
-
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     
     Million* million() const { return million_; }
-
 
 private:
     Million* million_;
@@ -51,7 +49,6 @@ private:
 
     std::mutex id_map_mutex_;
     std::unordered_map<ServiceId, ServiceHandle> id_map_;
-
 
     std::mutex service_queue_mutex_;
     std::queue<Service*> service_queue_;

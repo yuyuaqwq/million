@@ -80,7 +80,7 @@ public:
         return true;
     }
 
-    virtual void OnExit() override  {
+    virtual void OnStop() override  {
         logger_->flush();
     }
 

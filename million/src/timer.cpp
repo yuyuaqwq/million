@@ -13,7 +13,9 @@ Timer::Timer(Million* million, uint32_t ms_per_tick)
     : million_(million)
     , tasks_(ms_per_tick) {}
 
-Timer::~Timer() = default;
+Timer::~Timer() {
+    Stop();
+}
 
 void Timer::Start() {
     run_ = true;

@@ -31,6 +31,7 @@ target_link_libraries(${CLUSTER_LIB} PRIVATE ${MILLION_LIB})
 
 target_include_directories(${CLUSTER_LIB} PRIVATE ${ASIO_HEADER_DIR})
 
+target_compile_definitions(${CLUSTER_LIB} PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
 target_include_directories(${CLUSTER_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
 target_link_libraries(${CLUSTER_LIB} PRIVATE ${PROTOGEN_LIB})
 

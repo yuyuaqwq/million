@@ -38,7 +38,9 @@ Million::Million(IMillion* imillion)
     : imillion_(imillion) {
 }
 
-Million::~Million() = default;
+Million::~Million() {
+    Stop();
+}
 
 bool Million::Init(std::string_view config_path) {
     config_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(config_path)));
@@ -136,17 +138,17 @@ void Million::Start() {
 }
 
 void Million::Stop() {
+    timer_->Stop();
     worker_mgr_->Stop();
     io_context_mgr_->Stop();
-    timer_->Stop();
 }
 
 std::optional<ServiceHandle> Million::AddService(std::unique_ptr<IService> iservice) {
     return service_mgr_->AddService(std::move(iservice));
 }
 
-void Million::DeleteService(ServiceHandle&& service_handle) {
-    service_mgr_->DeleteService(std::move(service_handle));
+void Million::StopService(const ServiceHandle& service_handle) {
+    service_mgr_->StopService(service_handle);
 }
 
 bool Million::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {

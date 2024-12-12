@@ -1,3 +1,5 @@
+#include <limits> 
+
 #include "service_mgr.h"
 
 #include "million.h"
@@ -9,12 +11,16 @@ namespace million {
 ServiceMgr::ServiceMgr(Million* million)
     : million_(million) {}
 
-ServiceMgr::~ServiceMgr() = default;
+ServiceMgr::~ServiceMgr() {
+    for (auto& service : services_) {
+        service->Stop();
+    }
+}
 
 ServiceId ServiceMgr::AllocServiceId() {
     auto id = ++service_id_;
-    if (id == 0) {
-        throw std::runtime_error("service id rolled back.");
+    if (id == std::numeric_limits<uint64_t>::max()) {
+        throw std::overflow_error("Service ID overflow: no more IDs available.");
     }
     return id;
 }
@@ -34,12 +40,12 @@ std::optional<ServiceHandle> ServiceMgr::AddService(std::unique_ptr<IService> is
         iter = --services_.end();
     }
     service_ptr->set_iter(iter);
-    million_->Send<MillionServiceStartMsg>(handle, handle);
+    handle.service()->Start();
     return handle;
 }
 
-void ServiceMgr::DeleteService(ServiceHandle&& handle) {
-    million_->Send<MillionServiceStopMsg>(handle, handle);
+void ServiceMgr::StopService(const ServiceHandle& handle) {
+    handle.service()->Stop();
 }
 
 void ServiceMgr::DeleteService(Service* service) {

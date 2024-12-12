@@ -18,14 +18,33 @@ Service::Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
 
 Service::~Service() = default;
 
-bool Service::IsExit() const {
-    return state_ == ServiceState::kExit;
+void Service::Start() {
+    if (state_ != ServiceState::kReady) {
+        return;
+    }
+    iservice_->Send<MillionServiceStartMsg>(service_handle());
+}
+
+void Service::Stop() {
+    if (IsStoping() || IsStop()) {
+        return;
+    }
+    state_ == ServiceState::kStoping;
+    iservice_->Send<MillionServiceStopMsg>(service_handle());
+}
+
+bool Service::IsStoping() const {
+    return state_ == ServiceState::kStoping;
+}
+
+bool Service::IsStop() const {
+    return state_ == ServiceState::kStop;
 }
 
 void Service::PushMsg(MsgUnique msg) {
     {
         auto lock = std::lock_guard(msgs_mutex_);
-        if (IsExit()) {
+        if (IsStoping() || IsStop()) {
             // 服务退出，不再接收消息
             return;
         }
@@ -56,13 +75,8 @@ void Service::ProcessMsg(MsgUnique msg) {
         return;
     }
     else if (msg->type() == MillionServiceStopMsg::type_static()) {
-        // if (state_ == ServiceState::kReady) {
-            // OnStart未完成，直接退出
-        iservice_->OnExit();
-        state_ = ServiceState::kExit;
-        return;
-        // }
-        // 等待OnStop完成
+        iservice_->OnStop();
+        state_ = ServiceState::kStop;
         return;
     }
 
@@ -74,7 +88,7 @@ void Service::ProcessMsg(MsgUnique msg) {
                 return;
             }
             // 异常退出的OnStart，销毁当前服务
-            iservice_->Send<MillionServiceStopMsg>(service_handle());
+            Stop();
         }
         return;
     }
@@ -137,7 +151,7 @@ void Service::SeparateThreadHandle() {
         }
         do {
             ProcessMsg(std::move(*msg));
-            if (IsExit()) {
+            if (IsStop()) {
                 // 销毁服务
                 service_mgr_->DeleteService(this);
                 break;

@@ -59,6 +59,10 @@ public:
         //}
 
 
+        for (int i = 0; i < 10000; i++) {
+            auto msg2 = std::make_unique<Test1Msg>();
+            Timeout(1, std::move(msg2));
+        }
 
         co_return;
     }
@@ -73,7 +77,6 @@ public:
 
         co_return;
     }
-
 
 private:
     million::ServiceHandle db_service_;
@@ -98,11 +101,12 @@ int main() {
     auto service_handle = *service_opt;
 
     //test_app->Send<Test1Msg>(service_handle, service_handle);
+    //for (int i = 0; i < 10000; i++) {
+    //    auto msg2 = std::make_unique<Test1Msg>();
+    //    test_app->Timeout(1, service_handle, std::move(msg2));
+    //}
 
-    for (int i = 0; i < 10000; i++) {
-        auto msg2 = std::make_unique<Test1Msg>();
-        test_app->Timeout(1, service_handle, std::move(msg2));
-    }
+    //std::this_thread::sleep_for(std::chrono::seconds(10000));
 
     return 0;
 }

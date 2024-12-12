@@ -13,6 +13,7 @@ target_link_libraries(cluster_test PRIVATE ${MILLION_LIB})
 target_include_directories(cluster_test PRIVATE ${CLUSTER_HEADER_DIR})
 target_link_libraries(cluster_test PRIVATE ${CLUSTER_LIB})
 
+target_compile_definitions(cluster_test PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
 target_include_directories(cluster_test PRIVATE ${PROTOGEN_HEADER_DIR})
 target_link_libraries(cluster_test PRIVATE ${PROTOGEN_LIB})
 

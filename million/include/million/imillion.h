@@ -38,7 +38,7 @@ public:
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
         return AddService(std::move(iservice));
     }
-    void DeleteService(ServiceHandle&& service_handle);
+    void StopService(const ServiceHandle& service_handle);
     bool SetServiceName(const ServiceHandle& handle, const ServiceName& name);
     std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
 

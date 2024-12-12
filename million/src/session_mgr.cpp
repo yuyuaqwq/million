@@ -13,8 +13,8 @@ SessionMgr::~SessionMgr() = default;
 
 SessionId SessionMgr::AllocSessionId() {
     auto id = ++session_id_;
-    if (id == 0) {
-        throw std::runtime_error("session id rolled back.");
+    if (id == std::numeric_limits<uint64_t>::max()) {
+        throw std::overflow_error("Session ID overflow: no more IDs available.");
     }
     return id;
 }

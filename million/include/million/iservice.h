@@ -118,17 +118,13 @@ public:
         Timeout(tick, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
-    void Lock() {
-
-    }
-
     void EnableSeparateWorker();
 
     virtual bool OnInit() { return true; }
     virtual Task<> OnStart() { co_return; }
     virtual Task<> OnMsg(MsgUnique msg) = 0;
-    // virtual Task<> OnStop() { co_return; }
-    virtual void OnExit() {}
+    virtual void OnStop() { }
+    //virtual void OnExit() { }
 
     IMillion& imillion() { return *imillion_; }
     const ServiceHandle& service_handle() const { return service_handle_; }

@@ -47,7 +47,7 @@ public:
         return true;
     }
 
-    virtual void OnExit() override {
+    virtual void OnStop() override {
         sql_.close();
     }
 

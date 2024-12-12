@@ -26,8 +26,8 @@ std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iser
     return million_->AddService(std::move(iservice));
 }
 
-void IMillion::DeleteService(ServiceHandle&& service_handle) {
-    million_->DeleteService(std::move(service_handle));
+void IMillion::StopService(const ServiceHandle& service_handle) {
+    million_->StopService(service_handle);
 }
 
 bool IMillion::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {

@@ -32,8 +32,8 @@ private:
         ServiceHandle service;
         MsgUnique msg;
     };
-    //detail::HeapTimer<TimedMsg> tasks_;
-    detail::WheelTimer<TimedMsg> tasks_;
+    detail::HeapTimer<TimedMsg> tasks_;
+    //detail::WheelTimer<TimedMsg> tasks_;
     std::atomic_bool run_ = false;
 };
 
