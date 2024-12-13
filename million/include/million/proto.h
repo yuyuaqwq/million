@@ -58,7 +58,7 @@ public:
             }
 
             auto msg_id = enum_opts.GetExtension(msg_ext_id);
-            auto msg_id_ui = static_cast<MsgId>(msg_id);
+            msg_id_ui = static_cast<MsgId>(msg_id);
             if (msg_id_ui > kMsgIdMax) {
                 return false;
             }
