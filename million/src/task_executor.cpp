@@ -120,12 +120,16 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, MsgUnique msg) 
 }
 
 Task<>* TaskExecutor::Push(SessionId id, Task<>&& task) {
+    auto million = service_->service_mgr()->million();
+    if (id == kSessionIdInvalid) {
+        million->logger().Err("Waiting for an invalid session.");
+        return nullptr;
+    }
     service_->service_mgr()->million()->session_monitor().AddSession(service_->service_handle(), id, task.coroutine.promise().session_awaiter()->timeout_s());
     auto res = tasks_.emplace(id, std::move(task));
     if (!res.second) {
         // throw std::runtime_error("Duplicate session id.");
-        auto million = service_->service_mgr()->million();
-        million->logger().Err("TaskExecutor::Push: Found duplicate session id: {}", id);
+        million->logger().Err("Found duplicate session id: {}", id);
         return nullptr;
     }
     return &res.first->second;

@@ -12,7 +12,7 @@
 
 namespace million {
 	 
-class MILLION_API IMsg : noncopyable {
+class MILLION_API IMsg {
 public:
 	IMsg() = default;
     virtual ~IMsg() = default;
@@ -28,8 +28,8 @@ public:
     template<typename MsgT>
     MsgT* get() { return static_cast<MsgT*>(this); }
 
-	// 仅复制数据成员
-	virtual IMsg* Copy() const { throw std::runtime_error("empty msg cannot be copied."); };
+	// 应仅复制数据成员
+	virtual IMsg* Copy() const { return new IMsg(*this); };
 
 private:
     ServiceHandle sender_;
@@ -136,6 +136,7 @@ private:
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \
+		virtual IMsg* Copy() const override { return new NAME_(*this); } \
 		template<size_t index> struct MetaFieldData; \
 		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
 		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
