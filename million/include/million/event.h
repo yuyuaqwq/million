@@ -36,7 +36,6 @@ public:
 		}
 		auto& services = iter->second;
 		for (auto service_iter = services.begin(); service_iter != services.end(); ) {
-			// 这里的move还要改掉
 			auto id = iservice_->Send(*service_iter, MsgUnique(msg->Copy()));
 			if (id == kSessionIdInvalid) {
 				// 已关闭的服务
