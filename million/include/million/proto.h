@@ -62,9 +62,9 @@ public:
             if (msg_id_ui > kMsgIdMax) {
                 return false;
             }
-
+            break;
         }
-        if (i = enum_count) {
+        if (i >= enum_count) {
             return false;
         }
 
