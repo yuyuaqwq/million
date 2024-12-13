@@ -28,8 +28,14 @@ public:
 		iter->second.emplace_back(handle);
 	}
 
-	bool Send(MsgUnique msg) {
-		auto iter = map_.find(&msg->type());
+
+	void Send() {
+
+	}
+
+private:
+	bool Iteration(const std::type_info& type, const std::function<bool(const Service& handle)>& func) {
+		auto iter = map_.find(&type);
 		if (iter == map_.end()) {
 			return false;
 		}
