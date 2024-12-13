@@ -52,11 +52,11 @@ public:
         auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
-        if (!desc.options().HasExtension(Db::table)) {
-            logger().Err("HasExtension Db::table failed.");
+        if (!desc.options().HasExtension(proto::db::table)) {
+            logger().Err("HasExtension proto::db::table failed.");
             co_return;
         }
-        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
+        const proto::db::MessageOptionsTable& options = desc.options().GetExtension(proto::db::table);
         const auto& table_name = options.name();
         if (table_name.empty()) {
             logger().Err("table_name is empty.");
@@ -97,11 +97,11 @@ public:
 
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
-        if (!desc.options().HasExtension(Db::table)) {
-            logger().Err("HasExtension Db::table failed.");
+        if (!desc.options().HasExtension(proto::db::table)) {
+            logger().Err("HasExtension proto::db::table failed.");
             co_return;
         }
-        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
+        const proto::db::MessageOptionsTable& options = desc.options().GetExtension(proto::db::table);
         const auto& table_name = options.name();
         if (table_name.empty()) {
             logger().Err("table_name is empty.");
@@ -110,7 +110,7 @@ public:
 
         int32_t ttl = 0;
         if (options.has_cache()) {
-            const Db::TableCacheOptions& cache_options = options.cache();
+            const proto::db::TableCacheOptions& cache_options = options.cache();
             ttl = cache_options.ttl();
         }
         // options.tick_second();
@@ -141,7 +141,7 @@ public:
                 continue;
             }
 
-            const Db::FieldOptionsColumn& options = field->options().GetExtension(Db::column);
+            const proto::db::FieldOptionsColumn& options = field->options().GetExtension(proto::db::column);
 
             redis_hash[field->name()] = GetField(proto_msg, *field);
 
@@ -196,7 +196,7 @@ private:
         const auto* desc = proto_msg->GetDescriptor();
         const auto* reflection = proto_msg->GetReflection();
 
-        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        const proto::db::MessageOptionsTable& options = desc->options().GetExtension(proto::db::table);
         const auto& table_name = options.name();
 
         if (field.is_repeated()) {
@@ -265,7 +265,7 @@ private:
         const auto* desc = proto_msg.GetDescriptor();
         const auto* reflection = proto_msg.GetReflection();
 
-        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        const proto::db::MessageOptionsTable& options = desc->options().GetExtension(proto::db::table);
         const auto& table_name = options.name();
 
         std::string value;

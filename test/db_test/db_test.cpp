@@ -13,7 +13,6 @@
 
 MILLION_MODULE_INIT();
 
-namespace Db = Million::Proto::Db;
 namespace protobuf = google::protobuf;
 
 MILLION_MSG_DEFINE_EMPTY(, Test1Msg)
@@ -38,7 +37,7 @@ public:
     }
 
     virtual million::Task<> OnStart() override {
-        auto user = std::make_unique<Db::Example::User>();
+        auto user = std::make_unique<million::proto::db::example::User>();
         user->set_id(100);
         user->set_password_hash("sadawd");
         user->set_is_active(true);
@@ -60,7 +59,7 @@ public:
 
         // co_await Call<million::db::SqlInsertMsg>(*handle, million::make_nonnull(&row));
 
-        auto res2 = co_await Call<million::db::DbRowGetMsg>(db_service_, *Db::Example::User::GetDescriptor(), "103", std::nullopt);
+        auto res2 = co_await Call<million::db::DbRowGetMsg>(db_service_, *million::proto::db::example::User::GetDescriptor(), "103", std::nullopt);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");
         }

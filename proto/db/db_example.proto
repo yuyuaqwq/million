@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package Million.Proto.Db.Example;
+package million.proto.db.example;
 
 import "google/protobuf/descriptor.proto";
 import "db/db_options.proto";

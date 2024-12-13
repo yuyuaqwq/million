@@ -19,8 +19,6 @@
 
 #include <db/sql.h>
 
-namespace Db = Million::Proto::Db;
-
 namespace million {
 namespace db {
 
@@ -55,7 +53,7 @@ public:
 
     MILLION_MSG_HANDLE(SqlTableInitMsg, msg) {
         const auto& desc = msg->desc;
-        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
+        const proto::db::MessageOptionsTable& options = desc.options().GetExtension(proto::db::table);
         auto& table_name = options.name();
 
         uint32_t count = 0;
@@ -120,10 +118,10 @@ public:
             }
 
             // 处理字段选项
-            if (field->options().HasExtension(Db::column)) {
-                const Db::FieldOptionsColumn& field_options = field->options().GetExtension(Db::column);
+            if (field->options().HasExtension(proto::db::column)) {
+                const proto::db::FieldOptionsColumn& field_options = field->options().GetExtension(proto::db::column);
                 if (field_options.has_sql()) {
-                    const Db::ColumnSqlOptions& sql_options = field_options.sql();
+                    const proto::db::ColumnSqlOptions& sql_options = field_options.sql();
                     if (sql_options.str_len()) {
                         if (sql_options.str_len() > 0) {
                             field_type = "VARCHAR(";
@@ -135,16 +133,16 @@ public:
                         field_type += ")";
                     }
                     
-                    if (sql_options.index() == Db::ColumnSqlOptionsIndex::PRIMARY_KEY) {
+                    if (sql_options.index() == proto::db::ColumnSqlOptionsIndex::PRIMARY_KEY) {
                         primary_keys.emplace_back(&field_name);
                     }
-                    else if (sql_options.index() == Db::ColumnSqlOptionsIndex::UNIQUE) {
+                    else if (sql_options.index() == proto::db::ColumnSqlOptionsIndex::UNIQUE) {
                         sql += "    UNIQUE (" + field_name + "),\n";
                     }
-                    else if (sql_options.index() == Db::ColumnSqlOptionsIndex::INDEX) {
+                    else if (sql_options.index() == proto::db::ColumnSqlOptionsIndex::INDEX) {
                         sql += "    INDEX (" + field_name + "),\n";
                     }
-                    else if (sql_options.index() == Db::ColumnSqlOptionsIndex::FULLTEXT) {
+                    else if (sql_options.index() == proto::db::ColumnSqlOptionsIndex::FULLTEXT) {
                         sql += "    FULLTEXT (" + field_name + "),\n";
                     }
 
@@ -172,17 +170,17 @@ public:
         }
 
         if (options.has_sql()) {
-            const Db::TableSqlOptions& sql_options = options.sql();
+            const proto::db::TableSqlOptions& sql_options = options.sql();
             if (sql_options.multi_indexs_size() > 0) {
                 for (int i = 0; i < sql_options.multi_indexs_size(); ++i) {
                     const auto& multi_index = sql_options.multi_indexs(i);
-                    if (multi_index.index() == Db::ColumnSqlOptionsIndex::INDEX) {
+                    if (multi_index.index() == proto::db::ColumnSqlOptionsIndex::INDEX) {
                         sql += "    INDEX " + multi_index.index_name() + " (";
                     }
-                    else if (multi_index.index() == Db::ColumnSqlOptionsIndex::UNIQUE) {
+                    else if (multi_index.index() == proto::db::ColumnSqlOptionsIndex::UNIQUE) {
                         sql += "    UNIQUE INDEX " + multi_index.index_name() + " (";
                     }
-                    else if (multi_index.index() == Db::ColumnSqlOptionsIndex::FULLTEXT) {
+                    else if (multi_index.index() == proto::db::ColumnSqlOptionsIndex::FULLTEXT) {
                         sql += "    FULLTEXT INDEX " + multi_index.index_name() + " (";
                     }
                     else {
@@ -221,7 +219,7 @@ public:
 
         // 添加字符集和引擎选项
         if (options.has_sql()) {
-            const Db::TableSqlOptions& sql_options = options.sql();
+            const proto::db::TableSqlOptions& sql_options = options.sql();
             if (!sql_options.charset().empty()) {
                 sql += " DEFAULT CHARSET=" + sql_options.charset();
             }
@@ -243,9 +241,9 @@ public:
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
 
-        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
+        const proto::db::MessageOptionsTable& options = desc.options().GetExtension(proto::db::table);
         if (options.has_sql()) {
-            const Db::TableSqlOptions& sql_options = options.sql();
+            const proto::db::TableSqlOptions& sql_options = options.sql();
         }
         auto& table_name = options.name();
 
@@ -357,13 +355,13 @@ public:
         const auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
-        if (!desc.options().HasExtension(Db::table)) {
-            logger().Err("HasExtension Db::table failed.");
+        if (!desc.options().HasExtension(proto::db::table)) {
+            logger().Err("HasExtension proto::db::table failed.");
             co_return;
         }
-        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
+        const proto::db::MessageOptionsTable& options = desc.options().GetExtension(proto::db::table);
         if (options.has_sql()) {
-            const Db::TableSqlOptions& sql_options = options.sql();
+            const proto::db::TableSqlOptions& sql_options = options.sql();
         }
         auto& table_name = options.name();
 
@@ -382,10 +380,10 @@ public:
                 continue;
             }
             
-            if (field->options().HasExtension(Db::column)) {
-                const Db::FieldOptionsColumn& field_options = field->options().GetExtension(Db::column);
+            if (field->options().HasExtension(proto::db::column)) {
+                const proto::db::FieldOptionsColumn& field_options = field->options().GetExtension(proto::db::column);
                 if (field_options.has_sql()) {
-                    const Db::ColumnSqlOptions& sql_options = field_options.sql();
+                    const proto::db::ColumnSqlOptions& sql_options = field_options.sql();
                     if (sql_options.auto_increment()) {
                         continue;
                     }
@@ -422,13 +420,13 @@ public:
         const auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
-        if (!desc.options().HasExtension(Db::table)) {
-            logger().Err("HasExtension Db::table failed.");
+        if (!desc.options().HasExtension(proto::db::table)) {
+            logger().Err("HasExtension proto::db::table failed.");
             co_return;
         }
-        const Db::MessageOptionsTable& options = desc.options().GetExtension(Db::table);
+        const proto::db::MessageOptionsTable& options = desc.options().GetExtension(proto::db::table);
         if (options.has_sql()) {
-            const Db::TableSqlOptions& sql_options = options.sql();
+            const proto::db::TableSqlOptions& sql_options = options.sql();
         }
         auto& table_name = options.name();
 
@@ -470,9 +468,9 @@ private:
     void BindValuesToStatement(const google::protobuf::Message& msg, std::vector<std::any>* values, soci::statement& stmt) {
         const google::protobuf::Descriptor* desc = msg.GetDescriptor();
         const google::protobuf::Reflection* reflection = msg.GetReflection();
-        const Db::MessageOptionsTable& options = desc->options().GetExtension(Db::table);
+        const proto::db::MessageOptionsTable& options = desc->options().GetExtension(proto::db::table);
         if (options.has_sql()) {
-            const Db::TableSqlOptions& sql_options = options.sql();
+            const proto::db::TableSqlOptions& sql_options = options.sql();
         }
         auto& table_name = options.name();
 

@@ -11,8 +11,6 @@
 namespace million {
 namespace cluster {
 
-namespace Ss = ::Million::Proto::Ss;
-
 MILLION_MSG_DEFINE(, ClusterTcpConnectionMsg, (net::TcpConnectionShared) connection)
 MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
 
@@ -94,8 +92,8 @@ public:
         header_size = *reinterpret_cast<uint32_t*>(msg->packet.data());
         header_size = asio::detail::socket_ops::network_to_host_long(header_size);
 
-        Ss::Cluster::ClusterMsg cluster_msg;
-        if (!cluster_msg.ParseFromArray(msg->packet.data() + sizeof(header_size), header_size)) {
+        proto::ss::cluster::MsgBody msg_body;
+        if (!msg_body.ParseFromArray(msg->packet.data() + sizeof(header_size), header_size)) {
             logger().Warn("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
             msg->connection->Close();
             co_return;
@@ -103,10 +101,10 @@ public:
 
         auto node_session = msg->connection->get_ptr<NodeSession>();
 
-        switch (cluster_msg.body_case()) {
-        case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeReq: {
+        switch (msg_body.body_case()) {
+        case proto::ss::cluster::MsgBody::BodyCase::kHandshakeReq: {
             // 收到握手请求，当前是被动连接方
-            auto& req = cluster_msg.handshake_req();
+            auto& req = msg_body.handshake_req();
             node_session->info().node_name = req.src_node();
 
             // 还需要检查是否与目标节点存在连接，如果已存在，说明该连接已经失效，需要断开
@@ -117,10 +115,10 @@ public:
             }
 
             // 能否匹配都回包
-            Ss::Cluster::ClusterMsg cluster_msg;
-            auto* res = cluster_msg.mutable_handshake_res();
+            proto::ss::cluster::MsgBody msg_body;
+            auto* res = msg_body.mutable_handshake_res();
             res->set_target_node(node_name_);
-            auto packet = ProtoMsgToPacket(cluster_msg);
+            auto packet = ProtoMsgToPacket(msg_body);
 
             SendInit(node_session, packet, net::Packet());
 
@@ -137,9 +135,9 @@ public:
             CreateNodeSession(std::move(msg->connection), false);
             break;
         }
-        case Ss::Cluster::ClusterMsg::BodyCase::kHandshakeRes: {
+        case proto::ss::cluster::MsgBody::BodyCase::kHandshakeRes: {
             // 收到握手响应，当前是主动连接方
-            auto& res = cluster_msg.handshake_res();
+            auto& res = msg_body.handshake_res();
             if (node_session->info().node_name != res.target_node()) {
                 logger().Err("Target node name mismatch, ip: {}, port: {}, target_node: {}, res_target_node: {}", ip, port, node_session->info().node_name, res.target_node());
                 msg->connection->Close();
@@ -163,10 +161,10 @@ public:
             wait_nodes_.erase(res.target_node());
             break;
         }
-        case Ss::Cluster::ClusterMsg::BodyCase::kForwardHeader: {
+        case proto::ss::cluster::MsgBody::BodyCase::kForwardHeader: {
             // 还需要判断下，连接没有完成握手，则不允许转发包
 
-            auto& header = cluster_msg.forward_header();
+            auto& header = msg_body.forward_header();
             auto& src_service = header.src_service();
             auto& target_service = header.target_service();
             auto target_service_handle = imillion().GetServiceByName(target_service);
@@ -209,11 +207,11 @@ public:
                 auto connection = *connection_opt;
                 auto node_session = connection->get_ptr<NodeSession>();
 
-                Ss::Cluster::ClusterMsg cluster_msg;
-                auto* req = cluster_msg.mutable_handshake_req();
+                proto::ss::cluster::MsgBody msg_body;
+                auto* req = msg_body.mutable_handshake_req();
                 req->set_src_node(node_name_);
                 req->set_target_node(target_node);
-                auto packet = ProtoMsgToPacket(cluster_msg);
+                auto packet = ProtoMsgToPacket(msg_body);
 
                 SendInit(node_session, packet, net::Packet());
 
@@ -321,11 +319,11 @@ private:
 
     void ForwardPacket(NodeSession* node_session, std::unique_ptr<ClusterSendPacketMsg> msg) {
         // 追加集群头部
-        Ss::Cluster::ClusterMsg cluster_msg;
-        auto* header = cluster_msg.mutable_forward_header();
+        proto::ss::cluster::MsgBody msg_body;
+        auto* header = msg_body.mutable_forward_header();
         header->set_src_service(std::move(msg->src_service));
         header->set_target_service(std::move(msg->target_service));
-        auto header_packet = ProtoMsgToPacket(cluster_msg);
+        auto header_packet = ProtoMsgToPacket(msg_body);
         
         SendInit(node_session, header_packet, msg->packet);
 

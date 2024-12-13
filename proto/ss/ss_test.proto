@@ -1,29 +1,29 @@
 syntax = "proto3";
 
-package Million.Proto.Ss.Test;
+package million.proto.ss.test;
 
 import "google/protobuf/descriptor.proto";
 import "ss/ss_msgid.proto";
 
-enum SsSubMsgIdTest {
-    option (ss_msg_id) = SS_MSG_ID_TEST;
+enum SubMsgId {
+    option (msg_id) = MSG_ID_TEST;
     
-    SS_SUB_MSG_ID_TEST_INVALID = 0;
-    SS_SUB_MSG_ID_TEST_REQ = 1;
-    SS_SUB_MSG_ID_TEST_RES = 2;
+    SUB_MSG_ID_INVALID = 0;
+    SUB_MSG_ID_LOGIN_REQ = 1;
+    SUB_MSG_ID_LOGIN_RES = 2;
     
 }
 
 extend google.protobuf.MessageOptions {
-    SsSubMsgIdTest ss_sub_msg_id_test = 11001;
+    SubMsgId sub_msg_id = 11001;
 }
 
-message TestReq {
-    option (ss_sub_msg_id_test) = SS_SUB_MSG_ID_TEST_REQ;
+message LoginReq {
+    option (sub_msg_id) = SUB_MSG_ID_LOGIN_REQ;
     string value = 1;
 }
 
-message TestRes {
-    option (ss_sub_msg_id_test) = SS_SUB_MSG_ID_TEST_RES;
+message LoginRes {
+    option (sub_msg_id) = SUB_MSG_ID_LOGIN_RES;
     string value = 1;
 }

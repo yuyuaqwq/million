@@ -9,10 +9,10 @@
 #include <protogen/protogen.h>
 #include <protogen/ss/ss_test.pb.h>
 
-namespace Ss = Million::Proto::Ss;
+namespace ss = million::proto::ss;
 namespace protobuf = google::protobuf;
 
-MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeName) target_node, (Ss::Test::TestReq) req);
+MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeName) target_node, (ss::test::LoginReq) req);
 
 using ClusterRecvPacketMsg = million::cluster::ClusterRecvPacketMsg;
 
@@ -41,11 +41,11 @@ public:
 
     MILLION_MSG_DISPATCH(TestService);
 
-    MILLION_PROTO_MSG_DISPATCH(Ss, ClusterRecvPacketMsg, &proto_codec_);
+    MILLION_PROTO_MSG_DISPATCH(ss, ClusterRecvPacketMsg, &proto_codec_);
 
-    MILLION_PROTO_MSG_ID(Ss, SS_MSG_ID_TEST, &proto_codec_, "ss/ss_test.proto", Ss::ss_msg_id, Ss::Test::ss_sub_msg_id_test);
+    MILLION_PROTO_MSG_ID(ss, MSG_ID_TEST, &proto_codec_, "ss/ss_test.proto", ss::msg_id, ss::test::sub_msg_id);
 
-    MILLION_PROTO_MSG_HANDLE(Ss::Test, SS_SUB_MSG_ID_TEST_REQ, TestReq, req) {
+    MILLION_PROTO_MSG_HANDLE(ss::test, SUB_MSG_ID_LOGIN_REQ, LoginReq, req) {
         logger().Info("test, value:{}", req->value());
         co_return;
     }
@@ -80,7 +80,7 @@ int main() {
 
     getchar();
 
-    Ss::Test::TestReq req;
+    ss::test::LoginReq req;
     req.set_value("sb");
 
     const auto& config = test_app->YamlConfig();

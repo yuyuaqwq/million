@@ -1,14 +1,14 @@
 syntax = "proto3";
 
-package Million.Proto.Cs;
+package million.proto.cs;
 
 import "google/protobuf/descriptor.proto";
 
 extend google.protobuf.EnumOptions {
-    CsMsgId cs_msg_id = 10000;
+    MsgId msg_id = 10000;
 }
 
-enum CsMsgId {
-    CS_MSG_ID_INVALID = 0;
-    CS_MSG_ID_TEST = 1;
+enum MsgId {
+    MSG_ID_INVALID = 0;
+    MSG_ID_TEST = 1;
 }
