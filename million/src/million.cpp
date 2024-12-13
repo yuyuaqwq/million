@@ -156,8 +156,12 @@ bool Million::Init(std::string_view config_path) {
         }
         module_mgr_->Init();
 
+        std::cout << "[million] [info] init success." << std::endl;
         return true;
+
     } while (false);
+
+    std::cout << "[million] [info] init failed." << std::endl;
 
     return false;
 }
