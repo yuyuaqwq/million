@@ -129,7 +129,7 @@ SessionId ServiceMgr::Send(const ServiceHandle& sender, const ServiceHandle& tar
     msg->set_sender(sender);
     auto id = msg->session_id();
     auto service = target.service();
-    if (!service) {
+    if (!service || service->IsStop()) {
         return kSessionIdInvalid;
     }
     service->PushMsg(std::move(msg));
