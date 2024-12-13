@@ -51,7 +51,7 @@ bool Million::Init(std::string_view config_path) {
     logger_ = std::make_unique<Logger>(this);
 
 
-    std::cout << "[worker_mgr] [info] loading 'worker_mgr' config." << std::endl;
+    std::cout << "[worker_mgr] [info] load 'worker_mgr' config." << std::endl;
 
     const auto& worker_mgr_config = config["worker_mgr"];
     if (!worker_mgr_config) {
@@ -66,7 +66,7 @@ bool Million::Init(std::string_view config_path) {
     worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
 
 
-    std::cout << "[io_context_mgr] [info] loading 'io_context_mgr' config." << std::endl;
+    std::cout << "[io_context_mgr] [info] load 'io_context_mgr' config." << std::endl;
 
     const auto& io_context_mgr_config = config["io_context_mgr"];
     if (!io_context_mgr_config) {
@@ -81,7 +81,7 @@ bool Million::Init(std::string_view config_path) {
     io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
 
 
-    std::cout << "[module] [info] loading 'module' config." << std::endl;
+    std::cout << "[module] [info] load 'module' config." << std::endl;
 
     const auto& module_config = config["module"];
     if (!module_config) {
@@ -109,7 +109,7 @@ bool Million::Init(std::string_view config_path) {
     }
 
 
-    std::cout << "[session_monitor] [info] loading 'session_monitor' config." << std::endl;
+    std::cout << "[session_monitor] [info] load 'session_monitor' config." << std::endl;
 
     const auto& session_monitor_config = config["session_monitor"];
     if (!session_monitor_config) {
@@ -129,7 +129,7 @@ bool Million::Init(std::string_view config_path) {
     session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
 
 
-    std::cout << "[timer] [info] loading 'timer' config." << std::endl;
+    std::cout << "[timer] [info] load 'timer' config." << std::endl;
 
     const auto& timer_config = config["timer"];
     if (!timer_config) {

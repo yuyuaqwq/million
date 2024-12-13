@@ -34,7 +34,7 @@ public:
     virtual bool OnInit() override {
         auto& config = imillion().YamlConfig();
 
-        std::cout << "[logger] [info] loading 'logger' config." << std::endl;
+        std::cout << "[logger] [info] load 'logger' config." << std::endl;
 
         auto logger_config = config["logger"];
         if (!logger_config) {
