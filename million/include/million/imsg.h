@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <stdexcept>
 
 #include <meta/macro.hpp>
 
@@ -26,6 +27,9 @@ public:
 
     template<typename MsgT>
     MsgT* get() { return static_cast<MsgT*>(this); }
+
+	// 仅复制数据成员
+	virtual IMsg* Copy() const { throw std::runtime_error("empty msg cannot be copied."); };
 
 private:
     ServiceHandle sender_;

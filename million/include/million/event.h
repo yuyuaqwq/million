@@ -28,21 +28,15 @@ public:
 		iter->second.emplace_back(handle);
 	}
 
-
-	void Send() {
-
-	}
-
-private:
-	bool Iteration(const std::type_info& type, const std::function<bool(const Service& handle)>& func) {
-		auto iter = map_.find(&type);
+	bool Send(MsgUnique msg) {
+		auto iter = map_.find(&msg->type());
 		if (iter == map_.end()) {
 			return false;
 		}
 		auto& services = iter->second;
 		for (auto service_iter = services.begin(); service_iter != services.end(); ) {
 			// 这里的move还要改掉
-			auto id = iservice_->Send(*service_iter, std::move(msg));
+			auto id = iservice_->Send(*service_iter, MsgUnique(msg->Copy()));
 			if (id == kSessionIdInvalid) {
 				// 已关闭的服务
 				services.erase(service_iter++);
