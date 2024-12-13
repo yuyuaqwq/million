@@ -38,7 +38,17 @@ std::optional<ServiceHandle> ServiceMgr::AddService(std::unique_ptr<IService> is
     auto handle = ServiceHandle(service_shared);
     service_shared->iservice().set_service_handle(handle);
     auto service_ptr = service_shared.get();
-    if (!service_shared->iservice().OnInit()) {
+    bool success = false;
+    try {
+        success = service_shared->iservice().OnInit();
+    }
+    catch (const std::exception& e) {
+        million_->logger().Err("Service OnInit exception occurred: {}", e.what());
+    }
+    catch (...) {
+        million_->logger().Err("Service OnInit exception occurred: {}", "unknown exception");
+    }
+    if (!success) {
         return std::nullopt;
     }
     {

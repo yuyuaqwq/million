@@ -30,8 +30,8 @@ std::variant<MsgUnique, Task<>*> TaskExecutor::TrySchedule(MsgUnique msg) {
     auto msg_opt = TrySchedule(iter->second, std::move(msg));
     if (msg_opt) {
         // find找到的task，却未处理，异常情况
-        auto million = service_->service_mgr()->million();
-        million->logger().Critical("[million] try schedule exception: {}.", id);
+        auto& million = service_->service_mgr()->million();
+        million.logger().Critical("[million] try schedule exception: {}.", id);
     }
     if (!iter->second.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
@@ -45,16 +45,16 @@ std::variant<MsgUnique, Task<>*> TaskExecutor::TrySchedule(MsgUnique msg) {
 
 bool TaskExecutor::AddTask(Task<>&& task) {
     if (task.has_exception()) {
-        auto million = service_->service_mgr()->million();
+        auto& million = service_->service_mgr()->million();
         // 记录异常
         try {
             task.rethrow_if_exception();
         }
         catch (const std::exception& e) {
-            million->logger().Err("Session exception: {}.", e.what());
+            million.logger().Err("Session exception: {}.", e.what());
         }
         catch (...) {
-            million->logger().Err("Session exception: {}.", "unknown exception");
+            million.logger().Err("Session exception: {}.", "unknown exception");
         }
     }
     if (!task.coroutine.done()) {
@@ -73,8 +73,6 @@ Task<>* TaskExecutor::TaskTimeout(SessionId id) {
     }
 
     // 超时，唤醒目标协程
-    auto million = service_->service_mgr()->million();
-
     TrySchedule(iter->second, nullptr);
 
     if (!iter->second.coroutine.done()) {
@@ -99,37 +97,37 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, MsgUnique msg) 
     auto waiting_coroutine = awaiter->waiting_coroutine();
     waiting_coroutine.resume();
     if (task.has_exception()) {
-        auto million = service_->service_mgr()->million();
+        auto& million = service_->service_mgr()->million();
         // 记录异常
         try {
             task.rethrow_if_exception();
         }
 #ifdef MILLION_STACK_TRACE
         catch (const TaskAbortException& e) {
-            million->logger().Err("Session exception: {}\n[Stack trace]\n{}", e.what(), e.stacktrace());
+            million.logger().Err("Session exception: {}\n[Stack trace]\n{}", e.what(), e.stacktrace());
         }
 #endif
         catch (const std::exception& e) {
-            million->logger().Err("Session exception: {}", e.what());
+            million.logger().Err("Session exception: {}", e.what());
         }
         catch (...) {
-            million->logger().Err("Session exception: {}", "unknown exception");
+            million.logger().Err("Session exception: {}", "unknown exception");
         }
     }
     return std::nullopt;
 }
 
 Task<>* TaskExecutor::Push(SessionId id, Task<>&& task) {
-    auto million = service_->service_mgr()->million();
+    auto& million = service_->service_mgr()->million();
     if (id == kSessionIdInvalid) {
-        million->logger().Err("Waiting for an invalid session.");
+        million.logger().Err("Waiting for an invalid session.");
         return nullptr;
     }
-    service_->service_mgr()->million()->session_monitor().AddSession(service_->service_handle(), id, task.coroutine.promise().session_awaiter()->timeout_s());
+    million.session_monitor().AddSession(service_->service_handle(), id, task.coroutine.promise().session_awaiter()->timeout_s());
     auto res = tasks_.emplace(id, std::move(task));
     if (!res.second) {
         // throw std::runtime_error("Duplicate session id.");
-        million->logger().Err("Found duplicate session id: {}", id);
+        million.logger().Err("Found duplicate session id: {}", id);
         return nullptr;
     }
     return &res.first->second;

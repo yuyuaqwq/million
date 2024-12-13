@@ -63,7 +63,7 @@ public:
 
         auto console_level = spdlog::level::level_enum::off;;
         if (logger_config["console_level"]) {
-            auto level_str = logger_config["level"].as<std::string>();
+            auto level_str = logger_config["console_level"].as<std::string>();
             console_level = spdlog::level::from_str(level_str);;
         }
 

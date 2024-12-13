@@ -36,7 +36,7 @@ public:
 
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     
-    Million* million() const { return million_; }
+    Million& million() const { return *million_; }
 
 private:
     Million* million_;

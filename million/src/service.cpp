@@ -75,7 +75,15 @@ void Service::ProcessMsg(MsgUnique msg) {
         return;
     }
     else if (msg->type() == MillionServiceStopMsg::type_static()) {
-        iservice_->OnStop();
+        try {
+            iservice_->OnStop();
+        }
+        catch (const std::exception& e) {
+            service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", e.what());
+        }
+        catch (...) {
+            service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", "unknown exception");
+        }
         state_ = ServiceState::kStop;
         return;
     }

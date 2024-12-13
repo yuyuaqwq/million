@@ -87,6 +87,9 @@ public:
     MILLION_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto session = static_cast<UserSession*>(msg->connection.get());
         // auto session_handle = UserSessionHandle(session);
+        auto user_context_id = session->info().user_context_id;
+
+        logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", user_context_id, msg->packet.size());
 
         if (session->info().token == kInvaildToken) {
             // 连接没token，但是发来了token，当成断线重连处理
@@ -94,23 +97,27 @@ public:
 
             // todo: 需要断开原先token指向的连接
         }
-        auto user_context_id = session->info().user_context_id;
         // 没有token
         auto span = net::PacketSpan(msg->packet.begin() + kGatewayHeaderSize, msg->packet.end());
         auto iter = agent_services_.find(session->info().user_context_id);
 
+        
         // if (session->info().token == kInvaildToken) {
         if (iter == agent_services_.end()) {
+            logger().Trace("packet send to user service.");
             Send<GatewayRecvPacketMsg>(user_service_, user_context_id, std::move(msg->packet), span);
         }
         else {
+            logger().Trace("packet send to agent service.");
             Send<GatewayRecvPacketMsg>(iter->second, user_context_id, std::move(msg->packet), span);
         }
         co_return;
     }
 
     MILLION_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
+        logger().Trace("GatewayRegisterUserServiceMsg.");
         user_service_ = msg->user_service;
+        Reply(std::move(msg));
         co_return;
     }
 

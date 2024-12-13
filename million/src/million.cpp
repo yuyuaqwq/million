@@ -52,11 +52,11 @@ bool Million::Init(std::string_view config_path) {
 
     const auto& worker_mgr_config = config["worker_mgr"];
     if (!worker_mgr_config) {
-        std::cerr << "[config][error]cannot find 'worker_mgr'." << std::endl;
+        logger_->Err("cannot find 'worker_mgr'.");
         return false;
     }
     if (!worker_mgr_config["num"]) {
-        std::cerr << "[config][error]cannot find 'worker_mgr.num'." << std::endl;
+        logger_->Err("cannot find 'worker_mgr.num'.");
         return false;
     }
     auto worker_num = worker_mgr_config["num"].as<size_t>();
@@ -64,11 +64,11 @@ bool Million::Init(std::string_view config_path) {
 
     const auto& io_context_mgr_config = config["io_context_mgr"];
     if (!io_context_mgr_config) {
-        std::cerr << "[config][error]cannot find 'io_context_mgr'." << std::endl;
+        logger_->Err("cannot find 'io_context_mgr'.");
         return false;
     }
     if (!io_context_mgr_config["num"]) {
-        std::cerr << "[config][error]cannot find 'io_context_mgr.num'." << std::endl;
+        logger_->Err("cannot find 'io_context_mgr.num'.");
         return false;
     }
     auto io_context_num = io_context_mgr_config["num"].as<size_t>();
@@ -76,11 +76,11 @@ bool Million::Init(std::string_view config_path) {
 
     const auto& module_config = config["module"];
     if (!module_config) {
-        std::cerr << "[config][error]cannot find 'module'." << std::endl;
+        logger_->Err("cannot find 'module'.");
         return false;
     }
     if (!module_config["dirs"]) {
-        std::cerr << "[config][error]cannot find 'module.dirs'." << std::endl;
+        logger_->Err("cannot find 'module.dirs'.");
         return false;
     }
     auto module_dirs = module_config["dirs"].as<std::vector<std::string>>();
@@ -89,7 +89,9 @@ bool Million::Init(std::string_view config_path) {
     if (loads) {
         for (auto name_config : loads) {
             auto name = name_config.as<std::string>();
-            module_mgr_->Load(name);
+            if (!module_mgr_->Load(name)) {
+                logger_->Err("Load M");
+            }
         }
     }
 
