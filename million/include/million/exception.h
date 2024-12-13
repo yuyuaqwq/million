@@ -15,18 +15,14 @@ namespace million {
 
 class MILLION_API TaskAbortException : public std::exception {
 public:
-    // ���캯�������ܸ�ʽ���Ŀɱ����
-
     explicit TaskAbortException(const std::string& message)
         : message_(message) {
 
-        // �������ջ��Ϣ
 #ifdef MILLION_STACK_TRACE
         stacktrace_ = std::stacktrace::current();
 #endif
     }
 
-    // ��ȡ������Ϣ
     const char* what() const noexcept override {
         return message_.c_str();
     }
