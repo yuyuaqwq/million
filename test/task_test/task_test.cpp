@@ -108,7 +108,7 @@ int main() {
     // auto str = std::format("{}", a.stacktrace());
 
     auto test_app = std::make_unique<TestApp>();
-    if (!test_app->Init("task_test_config.yaml")) {
+    if (!test_app->Start("task_test_config.yaml")) {
         return 0;
     }
 

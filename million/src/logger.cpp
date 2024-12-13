@@ -33,19 +33,22 @@ public:
 
     virtual bool OnInit() override {
         auto& config = imillion().YamlConfig();
+
+        std::cout << "[logger] [info] loading 'logger' config." << std::endl;
+
         auto logger_config = config["logger"];
         if (!logger_config) {
-            std::cerr << "[config][error]cannot find 'logger'." << std::endl;
+            std::cerr << "[logger] [error] cannot find 'logger'." << std::endl;
             return false;
         }
         if (!logger_config["log_file"]) {
-            std::cerr << "[config][error]cannot find 'logger.log_file'." << std::endl;
+            std::cerr << "[logger] [error] cannot find 'logger.log_file'." << std::endl;
             return false;
         }
         auto log_file = logger_config["log_file"].as<std::string>();
 
         if (!logger_config["level"]) {
-            std::cerr << "[config][error]cannot find 'logger.level'." << std::endl;
+            std::cerr << "[logger] [error] cannot find 'logger.level'." << std::endl;
             return false;
         }
         auto level_str = logger_config["level"].as<std::string>();

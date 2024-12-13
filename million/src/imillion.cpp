@@ -13,7 +13,7 @@ IMillion::~IMillion() {
     delete million_;
 }
 
-bool IMillion::Init(std::string_view config_path) {
+bool IMillion::Start(std::string_view config_path) {
     auto success = million_->Init(config_path);
     if (!success) {
         return false;

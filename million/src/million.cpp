@@ -50,37 +50,46 @@ bool Million::Init(std::string_view config_path) {
     session_mgr_ = std::make_unique<SessionMgr>(this);
     logger_ = std::make_unique<Logger>(this);
 
+
+    std::cout << "[worker_mgr] [info] loading 'worker_mgr' config." << std::endl;
+
     const auto& worker_mgr_config = config["worker_mgr"];
     if (!worker_mgr_config) {
-        logger_->Err("cannot find 'worker_mgr'.");
+        std::cerr << "[worker_mgr] [error] cannot find 'worker_mgr'." << std::endl;
         return false;
     }
     if (!worker_mgr_config["num"]) {
-        logger_->Err("cannot find 'worker_mgr.num'.");
+        std::cerr << "[worker_mgr] [error] cannot find 'worker_mgr.num'." << std::endl;
         return false;
     }
     auto worker_num = worker_mgr_config["num"].as<size_t>();
     worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
 
+
+    std::cout << "[io_context_mgr] [info] loading 'io_context_mgr' config." << std::endl;
+
     const auto& io_context_mgr_config = config["io_context_mgr"];
     if (!io_context_mgr_config) {
-        logger_->Err("cannot find 'io_context_mgr'.");
+        std::cerr << "[io_context_mgr] [error] cannot find 'io_context_mgr'." << std::endl;
         return false;
     }
     if (!io_context_mgr_config["num"]) {
-        logger_->Err("cannot find 'io_context_mgr.num'.");
+        std::cerr << "[io_context_mgr] [error] cannot find 'io_context_mgr.num'." << std::endl;
         return false;
     }
     auto io_context_num = io_context_mgr_config["num"].as<size_t>();
     io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
 
+
+    std::cout << "[module] [info] loading 'module' config." << std::endl;
+
     const auto& module_config = config["module"];
     if (!module_config) {
-        logger_->Err("cannot find 'module'.");
+        std::cerr << "[module] [error] cannot find 'module'." << std::endl;
         return false;
     }
     if (!module_config["dirs"]) {
-        logger_->Err("cannot find 'module.dirs'.");
+        std::cerr << "[module] [error] cannot find 'module.dirs'." << std::endl;
         return false;
     }
     auto module_dirs = module_config["dirs"].as<std::vector<std::string>>();
@@ -89,36 +98,46 @@ bool Million::Init(std::string_view config_path) {
     if (loads) {
         for (auto name_config : loads) {
             auto name = name_config.as<std::string>();
-            if (!module_mgr_->Load(name)) {
-                logger_->Err("Load M");
+            if (!module_mgr_->Load(name)){
+                std::cerr << "[module] [error] load module '" << name <<  "' failed." << std::endl;
+                return false;
+            }
+            else {
+                std::cout << "[module] [info] load module '" << name << "' success." << std::endl;
             }
         }
     }
 
+
+    std::cout << "[session_monitor] [info] loading 'session_monitor' config." << std::endl;
+
     const auto& session_monitor_config = config["session_monitor"];
     if (!session_monitor_config) {
-        std::cerr << "[config][error]cannot find 'session_monitor_config'." << std::endl;
+        std::cerr << "[session_monitor] [error] cannot find 'session_monitor_config'." << std::endl;
         return false;
     }
     if (!session_monitor_config["s_per_tick"]) {
-        std::cerr << "[config][error]cannot find 'session_monitor_config.s_per_tick'." << std::endl;
+        std::cerr << "[session_monitor] [error] cannot find 'session_monitor_config.s_per_tick'." << std::endl;
         return false;
     }
     auto tick_s = session_monitor_config["s_per_tick"].as<uint32_t>();
     if (!session_monitor_config["timeout_tick"]) {
-        std::cerr << "[config][error]cannot find 'session_monitor_config.timeout_tick'." << std::endl;
+        std::cerr << "[session_monitor] [error] cannot find 'session_monitor_config.timeout_tick'." << std::endl;
         return false;
     }
     auto timeout_s = session_monitor_config["timeout_tick"].as<uint32_t>();
     session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
 
+
+    std::cout << "[timer] [info] loading 'timer' config." << std::endl;
+
     const auto& timer_config = config["timer"];
     if (!timer_config) {
-        std::cerr << "[config][error]cannot find 'timer'." << std::endl;
+        std::cerr << "[timer] [error] cannot find 'timer'." << std::endl;
         return false;
     }
     if (!timer_config["ms_per_tick"]) {
-        std::cerr << "[config][error]cannot find 'timer.ms_per_tick'." << std::endl;
+        std::cerr << "[timer] [error] cannot find 'timer.ms_per_tick'." << std::endl;
         return false;
     }
     auto ms_per_tick = timer_config["ms_per_tick"].as<uint32_t>();
@@ -140,11 +159,11 @@ void Million::Start() {
 }
 
 void Million::Stop() {
-    timer_->Stop();
-    service_mgr_->Stop();
-    worker_mgr_->Stop();
-    io_context_mgr_->Stop();
-    session_monitor_->Stop();
+    if (timer_) timer_->Stop();
+    if (service_mgr_) service_mgr_->Stop();
+    if (worker_mgr_) worker_mgr_->Stop();
+    if (io_context_mgr_) io_context_mgr_->Stop();
+    if (session_monitor_) session_monitor_->Stop();
 }
 
 std::optional<ServiceHandle> Million::AddService(std::unique_ptr<IService> iservice) {
