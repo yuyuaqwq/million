@@ -1,0 +1,25 @@
+# 0表示按cpu核数创建工作器
+worker_mgr:
+    num: 0
+
+io_context_mgr:
+    num: 1
+
+module:
+    dirs: 
+        - ../../build/lib/Debug
+    loads:
+        - pysvr
+
+timer:
+    ms_per_tick: 10
+    
+session_monitor:
+    timeout_tick: 10
+    s_per_tick: 1
+
+logger:
+    log_file: .\logs\log.txt
+    level: debug
+    console_level: debug
+

@@ -14,6 +14,7 @@
 MILLION_MODULE_INIT();
 
 namespace protobuf = google::protobuf;
+namespace db = million::db;
 
 MILLION_MSG_DEFINE_EMPTY(, Test1Msg)
 
@@ -45,11 +46,11 @@ public:
         user->set_updated_at(13123);
         user->set_email("sb@qq.com");
 
-        auto row = million::db::DbRow(std::move(user));
+        auto row = db::DbRow(std::move(user));
 
-        co_await Call<million::db::DbRegisterProtoCodecMsg>(db_service_, million::make_nonnull(&proto_codec_));
+        co_await Call<db::DbRegisterProtoCodecMsg>(db_service_, million::make_nonnull(&proto_codec_));
 
-        auto res = co_await Call<million::db::DbRegisterProtoMsg>(db_service_, "db/db_example.proto", false);
+        auto res = co_await Call<db::DbRegisterProtoMsg>(db_service_, "db/db_example.proto", false);
         if (res->success) {
             logger().Info("DbProtoRegisterMsg success: {}.", "db/db_example.proto");
         }
@@ -57,9 +58,9 @@ public:
         auto handle = imillion().GetServiceByName("SqlService");
 
 
-        // co_await Call<million::db::SqlInsertMsg>(*handle, million::make_nonnull(&row));
+        // co_await Call<db::SqlInsertMsg>(*handle, million::make_nonnull(&row));
 
-        auto res2 = co_await Call<million::db::DbRowGetMsg>(db_service_, *million::proto::db::example::User::GetDescriptor(), "103", std::nullopt);
+        auto res2 = co_await Call<db::DbRowGetMsg>(db_service_, *million::proto::db::example::User::GetDescriptor(), "103", std::nullopt);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");
         }

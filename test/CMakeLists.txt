@@ -3,4 +3,5 @@ project(test)
 
 add_subdirectory(task_test)
 add_subdirectory(db_test)
+add_subdirectory(pysvr_test)
 add_subdirectory(cluster_test)
