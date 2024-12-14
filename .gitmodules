@@ -26,3 +26,6 @@
 [submodule "third_party/meta"]
 	path = third_party/meta
 	url = https://github.com/fuyouawa/meta.git
+[submodule "third_party/quickjs/quickjs"]
+	path = third_party/quickjs/quickjs
+	url = git@github.com:quickjs-ng/quickjs.git
