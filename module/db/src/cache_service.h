@@ -12,14 +12,14 @@
 #include <protogen/db/db_options.pb.h>
 
 #include <million/imillion.h>
-#include <million/proto.h>
+#include <million/msg.h>
 
 #include <db/cache.h>
 
 namespace million {
 namespace db {
 
-// »º´æ·şÎñ
+// ç¼“å­˜æœåŠ¡
 class CacheService : public IService {
 public:
     using Base = IService;
@@ -30,7 +30,7 @@ public:
 
     virtual bool OnInit() override {
         try {
-            // ´´½¨ Redis ¶ÔÏó²¢Á¬½Óµ½ Redis ·şÎñÆ÷
+            // åˆ›å»º Redis å¯¹è±¡å¹¶è¿æ¥åˆ° Redis æœåŠ¡å™¨
             redis_.emplace(std::format("tcp://{}:{}", host, port));
         }
         catch (const sw::redis::Error& e) {
@@ -63,7 +63,7 @@ public:
             co_return;
         }
 
-        // Í¨¹ı Redis ¹şÏ£±í´æÈ¡ Protobuf ×Ö¶Î
+        // é€šè¿‡ Redis å“ˆå¸Œè¡¨å­˜å– Protobuf å­—æ®µ
         std::unordered_map<std::string, std::string> redis_hash;
         auto redis_key = std::format("million_db:{}:{}", table_name, msg->primary_key);
         redis_->hgetall(redis_key, std::inserter(redis_hash, redis_hash.end()));
@@ -71,7 +71,7 @@ public:
             msg->success = false;
         }
         else {
-            // ±éÀú Protobuf ×Ö¶Î²¢ÉèÖÃ¶ÔÓ¦µÄÖµ
+            // éå† Protobuf å­—æ®µå¹¶è®¾ç½®å¯¹åº”çš„å€¼
             for (int i = 0; i < desc.field_count(); ++i) {
                 const google::protobuf::FieldDescriptor* field = desc.field(i);
 
@@ -126,10 +126,10 @@ public:
             co_return;
         }
 
-        // Ê¹ÓÃ std::unordered_map À´´æ´¢Òª¸üĞÂµ½ Redis µÄ×Ö¶ÎºÍÖµ
+        // ä½¿ç”¨ std::unordered_map æ¥å­˜å‚¨è¦æ›´æ–°åˆ° Redis çš„å­—æ®µå’Œå€¼
         std::unordered_map<std::string, std::string> redis_hash;
 
-        // ±éÀú Protobuf µÄËùÓĞ×Ö¶Î£¬½«×Ö¶ÎºÍÖµ´æÈë redis_hash ÖĞ
+        // éå† Protobuf çš„æ‰€æœ‰å­—æ®µï¼Œå°†å­—æ®µå’Œå€¼å­˜å…¥ redis_hash ä¸­
         for (int i = 0; i < desc.field_count(); ++i) {
             if (!msg->db_row->IsDirtyFromFIeldIndex(i)) {
                 continue;
@@ -145,7 +145,7 @@ public:
 
             redis_hash[field->name()] = GetField(proto_msg, *field);
 
-            // Ö÷¼üÔÚÉÏÃæ»ñÈ¡
+            // ä¸»é”®åœ¨ä¸Šé¢è·å–
             //if (options.has_cache()) {
             //    const auto& cache_options = options.cache();
             //    if (cache_options.index()) {

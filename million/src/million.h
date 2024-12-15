@@ -41,7 +41,7 @@ public:
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
-        return Send(sender, target, make_msg<MsgT>(std::forward<Args>(args)...));
+        return Send(sender, target, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
     }
 
     const YAML::Node& YamlConfig() const;

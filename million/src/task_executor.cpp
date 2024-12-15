@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include <million/proto.h>
+#include <million/msg.h>
 #include <million/logger.h>
 #include <million/exception.h>
 

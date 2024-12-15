@@ -5,7 +5,7 @@
 #include <utility>
 
 #include <million/imillion.h>
-#include <million/proto.h>
+#include <million/msg.h>
 
 #include <cluster/api.h>
 

@@ -7,7 +7,7 @@
 #include <million/api.h>
 #include <million/noncopyable.h>
 #include <million/session_def.h>
-#include <million/proto.h>
+#include <million/msg.h>
 #include <million/service_handle.h>
 #include <million/service_lock.h>
 #include <million/task.h>
@@ -27,13 +27,13 @@ public:
     SessionId Send(const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     SessionId Send(const ServiceHandle& target, Args&&... args) {
-        return Send(target, make_msg<MsgT>(std::forward<Args>(args)...));
+        return Send(target, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
     }
 
     bool SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     bool SendTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
-        auto msg = make_msg<MsgT>(std::forward<Args>(args)...);
+        auto msg = MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release());
         return SendTo(target, session_id, std::move(msg));
     }
 
@@ -131,13 +131,13 @@ private:
 #define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_) \
     using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
     virtual ::million::Task<> OnMsg(SessionId session_id, ::million::MsgUnique msg) override { \
-        auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg->GetDescriptor()); \
+        auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg.GetTypeKey()); \
         if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
             co_await (this->*iter->second)(session_id, std::move(msg)); \
         } \
         co_return; \
     } \
-    ::std::unordered_map<const protobuf::Descriptor*, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(SessionId session_id, ::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<MsgTypeKey, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(SessionId session_id, ::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
 
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
@@ -148,7 +148,7 @@ private:
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(MSG_TYPE_::GetDescriptor(), \
+            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(reinterpret_cast<MsgTypeKey>(MSG_TYPE_::GetDescriptor()), \
                 &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
             ); \
             assert(res.second); \

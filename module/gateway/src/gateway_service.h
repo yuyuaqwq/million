@@ -18,8 +18,8 @@ namespace gateway {
 
 namespace protobuf = google::protobuf; 
 
-MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (net::TcpConnectionShared) connection)
-MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
+// MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (net::TcpConnectionShared) connection)
+// MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
 
 // 网关服务有两种模式
 // 集群、非集群

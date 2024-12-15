@@ -15,7 +15,7 @@
 #include <protogen/db/db_options.pb.h>
 
 #include <million/imillion.h>
-#include <million/proto.h>
+#include <million/msg.h>
 
 #include <db/sql.h>
 

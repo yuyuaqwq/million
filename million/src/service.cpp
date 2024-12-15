@@ -69,7 +69,7 @@ bool Service::MsgQueueIsEmpty() {
 void Service::ProcessMsg(MsgElement ele) {
     auto session_id = ele.first;
     auto& msg = ele.second;
-    if (msg->GetDescriptor() == ss::service::ServiceStart::GetDescriptor()) {
+    if (msg.IsType(ss::service::ServiceStart::GetDescriptor())) {
         auto task = iservice_->OnStart();
         if (!excutor_.AddTask(std::move(task))) {
             // ÒÑÍê³É
@@ -77,7 +77,7 @@ void Service::ProcessMsg(MsgElement ele) {
         }
         return;
     }
-    else if (msg->GetDescriptor() == ss::service::ServiceStop::GetDescriptor()) {
+    else if (msg.IsType(ss::service::ServiceStop::GetDescriptor())) {
         try {
             iservice_->OnStop();
         }
@@ -91,8 +91,8 @@ void Service::ProcessMsg(MsgElement ele) {
         return;
     }
 
-    if (msg->GetDescriptor() == ss::service::SessionTimeout::GetDescriptor()) {
-        auto msg_ptr = static_cast<ss::service::SessionTimeout*>(msg.get());
+    if (msg.IsType(ss::service::SessionTimeout::GetDescriptor())) {
+        auto msg_ptr = msg.get<ss::service::SessionTimeout>();
         auto task = excutor_.TaskTimeout(msg_ptr->timeout_id());
         if (task && state_ == ServiceState::kReady) {
             if (!task->coroutine.done() || !task->coroutine.promise().exception()) {

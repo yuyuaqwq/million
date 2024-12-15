@@ -1,166 +1,23 @@
-#pragma once
-
-#include <vector>
-#include <string>
-#include <optional>
-#include <functional>
-
-#include <google/protobuf/message.h>
-#include <google/protobuf/descriptor.h>
-#include <google/protobuf/compiler/importer.h>
-
-#include <million/net/packet.h>
-#include <million/noncopyable.h>
-#include <million/exception.h>
+#include <million/msg.h>
 
 namespace million {
-
-namespace protobuf = google::protobuf;
-
-using Message = protobuf::Message;
-using MsgUnique = std::unique_ptr<protobuf::Message>;
-
-inline const google::protobuf::FieldDescriptor& GetFieldDescriptor(const google::protobuf::Descriptor& desc, int index) {
-    const auto* field_desc = desc.field(index);
-    if (!field_desc) {
-        throw std::runtime_error(std::format("field{} is nullptr.", index));
-    }
-    return *field_desc;
-}
-
-// 函数重载：为每个字段类型实现专门的 SetValue 方法
-inline void SetValue(Message* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, double value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
-    if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_DOUBLE) {
-        throw std::runtime_error("Type mismatch: expected TYPE_DOUBLE");
-    }
-    reflection.SetDouble(msg, &field_desc, value);
-}
-
-inline void SetValue(Message* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, float value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
-    if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_FLOAT) {
-        throw std::runtime_error("Type mismatch: expected TYPE_FLOAT");
-    }
-    reflection.SetFloat(msg, &field_desc, value);
-}
-
-inline void SetValue(Message* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, int64_t value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
-    if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_INT64 &&
-        field_desc.type() != google::protobuf::FieldDescriptor::TYPE_SINT64 &&
-        field_desc.type() != google::protobuf::FieldDescriptor::TYPE_SFIXED64) {
-        throw std::runtime_error("Type mismatch: expected TYPE_INT64, TYPE_SINT64, or TYPE_SFIXED64");
-    }
-    reflection.SetInt64(msg, &field_desc, value);
-}
-
-inline void SetValue(Message* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, uint64_t value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
-    if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_UINT64 &&
-        field_desc.type() != google::protobuf::FieldDescriptor::TYPE_FIXED64) {
-        throw std::runtime_error("Type mismatch: expected TYPE_UINT64 or TYPE_FIXED64");
-    }
-    reflection.SetUInt64(msg, &field_desc, value);
-}
-
-inline void SetValue(Message* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, int32_t value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
-    if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_INT32 &&
-        field_desc.type() != google::protobuf::FieldDescriptor::TYPE_SINT32 &&
-        field_desc.type() != google::protobuf::FieldDescriptor::TYPE_SFIXED32) {
-        throw std::runtime_error("Type mismatch: expected TYPE_INT32, TYPE_SINT32, or TYPE_SFIXED32");
-    }
-    reflection.SetInt32(msg, &field_desc, value);
-}
-
-inline void SetValue(Message* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, uint32_t value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
-    if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_UINT32 &&
-        field_desc.type() != google::protobuf::FieldDescriptor::TYPE_FIXED32) {
-        throw std::runtime_error("Type mismatch: expected TYPE_UINT32 or TYPE_FIXED32");
-    }
-    reflection.SetUInt32(msg, &field_desc, value);
-}
-
-inline void SetValue(Message* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, bool value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
-    if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_BOOL) {
-        throw std::runtime_error("Type mismatch: expected TYPE_BOOL");
-    }
-    reflection.SetBool(msg, &field_desc, value);
-}
-
-inline void SetValue(Message* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, const std::string& value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
-    if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_STRING &&
-        field_desc.type() != google::protobuf::FieldDescriptor::TYPE_BYTES) {
-        throw std::runtime_error("Type mismatch: expected TYPE_STRING or TYPE_BYTES");
-    }
-    reflection.SetString(msg, &field_desc, value);
-}
-
-inline void SetValue(Message* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, const char* value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
-    if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_STRING) {
-        throw std::runtime_error("Type mismatch: expected TYPE_STRING");
-    }
-    reflection.SetString(msg, &field_desc, value);
-}
-
-template <typename T>
-inline void SetValue(Message* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, T&& value) {
-    if constexpr (std::is_enum_v<std::remove_reference_t<T>>) {
-        const auto& field_desc = GetFieldDescriptor(desc, index);
-        if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_ENUM) {
-            throw std::runtime_error("Type mismatch: expected type_enum");
-        }
-        const google::protobuf::EnumValueDescriptor* enum_value =
-            field_desc.enum_type()->FindValueByNumber(value);
-        reflection.SetEnum(msg, &field_desc, enum_value);
-    }
-    else {
-        //static_assert(sizeof(T) == 0, "Type mismatch: no matching SetValue overload found.");
-        std::cerr << "No matching SetValue overload found for type: " << typeid(T).name() << std::endl;
-        throw std::runtime_error(std::format("Type mismatch: no matching SetValue overload found: {}.", typeid(T).name()));
-    }
-}
-
-// 主要的 make_msg 实现，用于递归设置每个字段的值
-template <typename MsgT, typename... Args>
-inline std::unique_ptr<MsgT> make_msg(Args&&... args) {
-    auto msg = std::make_unique<MsgT>();
-    const auto* desc = msg->GetDescriptor();
-    if (!desc) {
-        throw std::runtime_error("GetDescriptor is nullptr.");
-    }
-    const auto* reflection = msg->GetReflection();
-    if (!reflection) {
-        throw std::runtime_error("GetReflection is nullptr.");
-    }
-
-    // 填充字段的辅助函数
-    size_t index = 0;
-    (SetValue(msg.get(), *desc, *reflection, index++, std::forward<decltype(args)>(args)),  ...);
-    return msg;
-}
 
 using MsgKey = uint32_t;
 using MsgId = uint16_t;
 using SubMsgId = uint16_t;
-    
+
 class MILLION_API ProtoCodec : noncopyable {
 public:
     ProtoCodec(const protobuf::DescriptorPool& desc_pool, protobuf::DescriptorDatabase& desc_db, protobuf::MessageFactory& message_factory)
-       : desc_pool_(desc_pool)
-       , desc_db_(desc_db)
-       , message_factory_(message_factory) {}
+        : desc_pool_(desc_pool)
+        , desc_db_(desc_db)
+        , message_factory_(message_factory) {}
 
-    // 注册协议
+    // ע��Э��
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     bool RegisterProto(const std::string& proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
         //std::vector<std::string> file_names;
-        //desc_db_.FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
+        //desc_db_.FindAllFileNames(&file_names);   // �����õ�����proto�ļ���
         //for (const std::string& filename : file_names) {
         //    const protobuf::FileDescriptor* file_desc = desc_pool.FindFileByName(filename);
         //}
@@ -221,7 +78,7 @@ public:
         return true;
     }
 
-    // 编码消息
+    // ������Ϣ
     std::optional<net::Packet> EncodeMessage(const protobuf::Message& message) {
         auto desc = message.GetDescriptor();
         auto msg_key = GetMsgKey(desc);
@@ -244,7 +101,7 @@ public:
         return packet;
     }
 
-    // 解码消息
+    // ������Ϣ
     struct DecodeRes {
         MsgId msg_id;
         SubMsgId sub_msg_id;
@@ -255,7 +112,7 @@ public:
 
         MsgId msg_id_net;
         SubMsgId sub_msg_id_net;
-        if (packet.size() <  sizeof(msg_id_net) + sizeof(sub_msg_id_net)) return std::nullopt;
+        if (packet.size() < sizeof(msg_id_net) + sizeof(sub_msg_id_net)) return std::nullopt;
 
         size_t i = 0;
         std::memcpy(&msg_id_net, packet.data() + i, sizeof(msg_id_net));
@@ -276,7 +133,7 @@ public:
         if (!msg_opt) return {};
         res.msg = std::move(*msg_opt);
 
-        auto success = res.msg->ParseFromArray(packet.data() + i, packet.size() - i);
+        auto success = res.msg.GetProtoMessage()->ParseFromArray(packet.data() + i, packet.size() - i);
         if (!success) {
             return std::nullopt;
         }
@@ -322,7 +179,7 @@ private:
     std::optional<MsgUnique> NewMessage(MsgId msg_id, SubMsgId sub_msg_id) {
         auto desc = GetMsgDesc(msg_id, sub_msg_id);
         if (!desc) return std::nullopt;
-        const Message* msg = message_factory_.GetPrototype(desc);
+        const ProtoMessage* msg = message_factory_.GetPrototype(desc);
         if (msg != nullptr) {
             return MsgUnique(msg->New());
         }
@@ -417,6 +274,5 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
             return true; \
         }(); \
     ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)& context_id, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
-
 
 } // namespace million

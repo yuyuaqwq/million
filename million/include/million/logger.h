@@ -4,7 +4,7 @@
 #include <format>
 #include <source_location>
 
-#include <million/proto.h>
+#include <million/msg.h>
 #include <million/service_handle.h>
 
 #include <protogen/ss/ss_logger.pb.h>

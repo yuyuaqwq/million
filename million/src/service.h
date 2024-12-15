@@ -10,7 +10,7 @@
 #include <million/noncopyable.h>
 #include <million/iservice.h>
 #include <million/service_handle.h>
-#include <million/proto.h>
+#include <million/msg.h>
 
 #include "task_executor.h"
 

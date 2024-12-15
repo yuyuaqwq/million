@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package million.ss.logger;
+
+message TcpConnection {
+    
+}
+
+message SetLevel {
+    
+}

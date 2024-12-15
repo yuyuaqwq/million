@@ -4,7 +4,7 @@
 #include <string>
 
 #include <million/imillion.h>
-#include <million/proto.h>
+#include <million/msg.h>
 
 #include <pysvr/api.h>
 

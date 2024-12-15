@@ -4,7 +4,7 @@
 #include <vector>
 
 #include <million/imillion.h>
-#include <million/proto.h>
+#include <million/msg.h>
 
 #include <db/api.h>
 #include <db/db_row.h>

@@ -19,7 +19,7 @@
 #include <million/api.h>
 #include <million/exception.h>
 #include <million/session_def.h>
-#include <million/proto.h>
+#include <million/msg.h>
 
 namespace million {
 
@@ -31,27 +31,25 @@ struct TaskPromiseBase;
 template <typename T = void>
 struct TaskPromise;
 
-// 会话等待器，等待一条消息
-template <typename MsgT>
-struct SessionAwaiter {
-    explicit SessionAwaiter(SessionId waiting_session_id, uint32_t timeout_s, bool or_null)
+struct SessionAwaiterBase {
+    explicit SessionAwaiterBase(SessionId waiting_session_id, uint32_t timeout_s, bool or_null)
         : waiting_session_id_(waiting_session_id)
         , timeout_s_(timeout_s)
         , or_null_(or_null) {}
 
-    SessionAwaiter(SessionAwaiter&& rv) noexcept {
+    SessionAwaiterBase(SessionAwaiterBase&& rv) noexcept {
         operator=(std::move(rv));
     }
-    void operator=(SessionAwaiter&& rv) noexcept {
+    void operator=(SessionAwaiterBase&& rv) noexcept {
         waiting_session_id_ = std::move(rv.waiting_session_id_);
         timeout_s_ = rv.timeout_s_;
         or_null_ = rv.or_null_;
     }
 
-    SessionAwaiter(SessionAwaiter&) = delete;
-    SessionAwaiter& operator=(SessionAwaiter&) = delete;
+    SessionAwaiterBase(SessionAwaiterBase&) = delete;
+    SessionAwaiterBase& operator=(SessionAwaiterBase&) = delete;
 
-    void set_result(std::unique_ptr<MsgT> result) {
+    void set_result(MsgUnique result) {
         result_ = std::move(result);
     }
 
@@ -87,14 +85,26 @@ struct SessionAwaiter {
         std::coroutine_handle<> parent_coroutine_void = parent_coroutine;
         do {
             auto parent_coroutine_base = std::coroutine_handle<TaskPromiseBase>::from_address(parent_coroutine_void.address());
-            parent_coroutine_base.promise().set_session_awaiter(reinterpret_cast<SessionAwaiter<Message>*>(this));
+            parent_coroutine_base.promise().set_session_awaiter(this);
             parent_coroutine_void = parent_coroutine_base.promise().parent_coroutine();
         } while (parent_coroutine_void);
     }
 
+protected:
+    SessionId waiting_session_id_;
+    uint32_t timeout_s_;
+    bool or_null_;
+    std::coroutine_handle<> waiting_coroutine_;
+    MsgUnique result_;
+};
+
+// 会话等待器，等待一条消息
+template <typename MsgT>
+struct SessionAwaiter : public SessionAwaiterBase {
+    using SessionAwaiterBase::SessionAwaiterBase;
+
     // co_await等待在当前对象中的协程被恢复时调用
     std::unique_ptr<MsgT> await_resume() {
-
         // 调度器恢复了等待当前awaiter的协程，说明已经等到结果/超时了
         if (!result_ && or_null_ == false) {
             // 超时，不返回nullptr
@@ -103,13 +113,6 @@ struct SessionAwaiter {
 
         return std::unique_ptr<MsgT>(static_cast<MsgT*>(result_.release()));
     }
-
-private:
-    SessionId waiting_session_id_;
-    uint32_t timeout_s_;
-    bool or_null_;
-    std::coroutine_handle<> waiting_coroutine_;
-    std::unique_ptr<MsgT> result_;
 };
 
 // 协程的返回值类
@@ -230,11 +233,11 @@ struct TaskPromiseBase {
         return Task<U>(std::move(task));
     }
 
-    void set_session_awaiter(SessionAwaiter<Message>* awaiter) {
-        session_awaiter_ = reinterpret_cast<SessionAwaiter<Message>*>(awaiter);
+    void set_session_awaiter(SessionAwaiterBase* awaiter) {
+        session_awaiter_ = awaiter;
     }
-    SessionAwaiter<Message>* session_awaiter() const {
-        return reinterpret_cast<SessionAwaiter<Message>*>(session_awaiter_);
+    SessionAwaiterBase* session_awaiter() const {
+        return session_awaiter_;
     }
 
     std::coroutine_handle<> parent_coroutine() const { return parent_coroutine_; }
@@ -250,7 +253,7 @@ struct TaskPromiseBase {
 private:
     std::coroutine_handle<> parent_coroutine_;
     std::exception_ptr exception_ = nullptr;
-    SessionAwaiter<Message>* session_awaiter_ = nullptr;  // 最终需要唤醒的等待器
+    SessionAwaiterBase* session_awaiter_ = nullptr;  // 最终需要唤醒的等待器
 };
 
 template <typename T>

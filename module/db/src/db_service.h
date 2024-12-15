@@ -10,7 +10,7 @@
 #include <google/protobuf/compiler/importer.h>
 
 #include <million/imillion.h>
-#include <million/proto.h>
+#include <million/msg.h>
 
 #include <db/db.h>
 #include <db/cache.h>
@@ -28,14 +28,14 @@ DbProtoCodec::DbProtoCodec(const protobuf::DescriptorPool& desc_pool, protobuf::
     , desc_db_(desc_db)
     , message_factory_(message_factory) {}
 
-// ³õÊ¼»¯
+// åˆå§‹åŒ–
 void DbProtoCodec::Init() {
 
 }
 
 const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& proto_file_name) {
     //std::vector<std::string> file_names;
-    //desc_db_->FindAllFileNames(&file_names);   // ±éÀúµÃµ½ËùÓĞprotoÎÄ¼şÃû
+    //desc_db_->FindAllFileNames(&file_names);   // éå†å¾—åˆ°æ‰€æœ‰protoæ–‡ä»¶å
     ////for (const std::string& filename : file_names) {
     ////    const auto* file_desc = desc_pool_->FindFileByName(filename);
     ////}
@@ -45,9 +45,9 @@ const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& p
         return nullptr;
     }
 
-    // »ñÈ¡¸ÃÎÄ¼şµÄoptions£¬È·ÈÏÊÇ·ñÉèÖÃÁËdb
+    // è·å–è¯¥æ–‡ä»¶çš„optionsï¼Œç¡®è®¤æ˜¯å¦è®¾ç½®äº†db
     const auto& file_options = file_desc->options();
-    // ¼ì²é db ÊÇ·ñ±»ÉèÖÃ
+    // æ£€æŸ¥ db æ˜¯å¦è¢«è®¾ç½®
     if (!file_options.HasExtension(proto::db::db)) {
         return nullptr;
     }
@@ -91,12 +91,12 @@ std::optional<ProtoMsgUnique> DbProtoCodec::NewMessage(const protobuf::Descripto
 }
 
 
-// DbServiceÊ¹ÓÃlruÀ´ÌÔÌ­row
-// ¿ÉÄÜnÃëÔàrowĞèÒªÈë¿â
+// DbServiceä½¿ç”¨lruæ¥æ·˜æ±°row
+// å¯èƒ½nç§’è„rowéœ€è¦å…¥åº“
 
-// ²éÑ¯Ê±£¬»á·µ»ØËùÓĞÈ¨¸øÍâ²¿·şÎñ£¬±ÜÃâlruÌÔÌ­µ¼ÖÂÖ¸ÕëÎŞĞ§
-// Íâ²¿±ØĞëÓĞÒ»·İÊı¾İ£¬dbserviceÒ²¿ÉÄÜÓĞÒ»·İ£¬µ«ÊÇ»áÍ¨¹ılruÀ´×Ô¶¯ÌÔÌ­
-// Íâ²¿ĞŞ¸Äºó£¬Í¨¹ı·¢ËÍ±ê¼ÇÔàÏûÏ¢À´Í¨Öªdbservice¿ÉÒÔ¸üĞÂ´ËÏûÏ¢
+// æŸ¥è¯¢æ—¶ï¼Œä¼šè¿”å›æ‰€æœ‰æƒç»™å¤–éƒ¨æœåŠ¡ï¼Œé¿å…lruæ·˜æ±°å¯¼è‡´æŒ‡é’ˆæ— æ•ˆ
+// å¤–éƒ¨å¿…é¡»æœ‰ä¸€ä»½æ•°æ®ï¼Œdbserviceä¹Ÿå¯èƒ½æœ‰ä¸€ä»½ï¼Œä½†æ˜¯ä¼šé€šè¿‡lruæ¥è‡ªåŠ¨æ·˜æ±°
+// å¤–éƒ¨ä¿®æ”¹åï¼Œé€šè¿‡å‘é€æ ‡è®°è„æ¶ˆæ¯æ¥é€šçŸ¥dbserviceå¯ä»¥æ›´æ–°æ­¤æ¶ˆæ¯
 
 
 MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (nonnull_ptr<DbRow>) db_row);
@@ -135,7 +135,7 @@ public:
 
     MILLION_MSG_HANDLE(DbRowTickSyncMsg, msg) {
         if (msg->db_row->IsDirty()) {
-            // co_awaitÆÚ¼ä¿ÉÄÜ»áÓĞĞÂµÄDbRowSetMsgÏûÏ¢±»´¦Àí£¬ËùÒÔĞèÒª¸´ÖÆÒ»·İ
+            // co_awaitæœŸé—´å¯èƒ½ä¼šæœ‰æ–°çš„DbRowSetMsgæ¶ˆæ¯è¢«å¤„ç†ï¼Œæ‰€ä»¥éœ€è¦å¤åˆ¶ä¸€ä»½
             try {
                 auto db_row = msg->db_row->CopyDirtyTo();
                 msg->db_row->ClearDirty();
@@ -287,7 +287,7 @@ public:
 private:
     DbProtoCodec* proto_codec_;
 
-    // ¸ÄÓÃlru
+    // æ”¹ç”¨lru
     using DbTable = std::unordered_map<std::string, DbRow>;
     std::unordered_map<const protobuf::Descriptor*, DbTable> tables_;
 

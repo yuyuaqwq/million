@@ -2,40 +2,31 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <typeinfo>
+#include <memory>
 
 #include <meta/macro.hpp>
 
 #include <million/api.h>
-#include <million/service_handle.h>
-#include <million/msg_def.h>
-#include <million/noncopyable.h>
+#include <million/session_def.h>
 
 namespace million {
 	 
-class MILLION_API IMsg {
+class MILLION_API CppMessage {
 public:
-	IMsg() = default;
-    virtual ~IMsg() = default;
+	CppMessage() = default;
+    virtual ~CppMessage() = default;
 
-	SessionId session_id() const { return session_id_; }
-	void set_session_id(SessionId session_id) { session_id_ = session_id; }
-
-	const ServiceHandle& sender() const { return sender_; }
-	void set_sender(const ServiceHandle& sender) { sender_ = sender; }
-
-	virtual const std::type_info& type() const { return typeid(IMsg); };
+	virtual const std::type_info& type() const { return type_static(); };
+	static const std::type_info& type_static() { return typeid(CppMessage); };
 
     template<typename MsgT>
     MsgT* get() { return static_cast<MsgT*>(this); }
 
-	// 应仅复制数据成员
-	virtual IMsg* Copy() const { return new IMsg(*this); };
-
-private:
-    ServiceHandle sender_;
-    SessionId session_id_ = kSessionIdInvalid;
+	virtual CppMessage* Copy() const { return new CppMessage(*this); };
 };
 
+using CppMsgUnique = std::unique_ptr<CppMessage>;
 
 // 生成一个逗号
 // (由COMMON_IF_NOT_END调用)
@@ -128,7 +119,7 @@ private:
 
 // 数据定义的主宏
 #define MILLION_MSG_DEFINE(API_, NAME_, ...) \
-    class API_ NAME_ : public ::million::IMsg { \
+    class API_ NAME_ : public ::million::CppMessage { \
 	public: \
         NAME_() = delete; \
 		NAME_(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
@@ -136,14 +127,14 @@ private:
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \
-		virtual IMsg* Copy() const override { return new NAME_(*this); } \
+		virtual CppMessage* Copy() const override { return new NAME_(*this); } \
 		template<size_t index> struct MetaFieldData; \
 		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
 		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
 	};
 
 #define MILLION_MSG_DEFINE_EMPTY(API_, NAME_) \
-    class API_ NAME_ : public ::million::IMsg { \
+    class API_ NAME_ : public ::million::CppMessage { \
 	public: \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \

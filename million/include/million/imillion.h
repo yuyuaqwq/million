@@ -5,7 +5,7 @@
 #include <million/api.h>
 #include <million/noncopyable.h>
 #include <million/nonnull_ptr.h>
-#include <million/proto.h>
+#include <million/msg.h>
 #include <million/iservice.h>
 #include <million/logger.h>
 #include <million/exception.h>
