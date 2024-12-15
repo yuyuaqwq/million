@@ -105,11 +105,11 @@ public:
         // if (session->info().token == kInvaildToken) {
         if (iter == agent_services_.end()) {
             logger().Trace("packet send to user service.");
-            SendCppMsg<GatewayRecvPacketMsg>(user_service_, user_context_id, std::move(msg->packet), span);
+            Send<GatewayRecvPacketMsg>(user_service_, user_context_id, std::move(msg->packet), span);
         }
         else {
             logger().Trace("packet send to agent service.");
-            SendCppMsg<GatewayRecvPacketMsg>(iter->second, user_context_id, std::move(msg->packet), span);
+            Send<GatewayRecvPacketMsg>(iter->second, user_context_id, std::move(msg->packet), span);
         }
         co_return;
     }

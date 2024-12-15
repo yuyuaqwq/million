@@ -46,13 +46,19 @@ public:
 
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     SessionId SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
+
     template <typename MsgT, typename ...Args>
-    SessionId SendProtoMsg(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
-        return Send(sender, target, make_proto_msg<MsgT>(std::forward<Args>(args)...));
-    }
-    template <typename MsgT, typename ...Args>
-    SessionId SendCppMsg(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
-        return Send(sender, target, make_cpp_msg<MsgT>(std::forward<Args>(args)...));
+    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
+        if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
+            return Send(sender, target, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
+        }
+        else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
+            return Send(sender, target, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
+        }
+        else {
+            static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
+                "Unsupported message type.");
+        }
     }
 
     const YAML::Node& YamlConfig() const;

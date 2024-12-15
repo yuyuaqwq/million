@@ -19,7 +19,7 @@ Module::~Module() {
     if (!exit_func) {
         return;
     }
-    exit_func(million_->imillion());
+    exit_func(&million_->imillion());
 }
 
 bool Module::Loaded() {
@@ -32,7 +32,7 @@ bool Module::Init() {
     if (!init_func) {
         return false;
     }
-    init_ = init_func(million_->imillion());
+    init_ = init_func(&million_->imillion());
     return init_;
 }
 

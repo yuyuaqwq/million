@@ -4,14 +4,11 @@
 #include <string>
 #include <optional>
 #include <functional>
+#include <format>
 
 #include <google/protobuf/message.h>
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/compiler/importer.h>
-
-#include <million/net/packet.h>
-#include <million/noncopyable.h>
-#include <million/exception.h>
 
 namespace million {
 

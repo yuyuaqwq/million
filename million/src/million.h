@@ -39,17 +39,13 @@ public:
 
     bool Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
-    template <typename MsgT, typename ...Args>
-    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
-        return Send(sender, target, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
-    }
 
     const YAML::Node& YamlConfig() const;
     void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
     asio::io_context& NextIoContext();
     void EnableSeparateWorker(const ServiceHandle& service);
 
-    auto imillion() { return imillion_; }
+    auto& imillion() { assert(imillion_); return *imillion_; }
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& session_mgr() { assert(session_mgr_); return *session_mgr_; }
     auto& session_monitor() { assert(session_monitor_); return *session_monitor_; }

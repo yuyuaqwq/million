@@ -1,4 +1,8 @@
+#include <million/noncopyable.h>
+#include <million/exception.h>
 #include <million/msg.h>
+#include <million/net/packet.h>
+
 
 namespace million {
 

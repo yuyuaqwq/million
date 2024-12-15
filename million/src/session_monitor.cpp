@@ -23,7 +23,7 @@ void SessionMonitor::Start() {
     thread_.emplace([this]() {
         tasks_.Init();
         auto timeout = [this](auto&& task) {
-            million_->Send<ss::service::SessionTimeout>(task.data.service, task.data.service, task.data.session_id);
+            million_->imillion().Send<ss::service::SessionTimeout>(task.data.service, task.data.service, task.data.session_id);
         };
         while (run_) {
             tasks_.Tick(timeout);

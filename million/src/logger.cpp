@@ -119,11 +119,11 @@ bool Logger::Init() {
 }
 
 void Logger::Log(const ServiceHandle& sender, const std::source_location& source, ss::logger::LogLevel level, const std::string& msg) {
-    million_->Send<ss::logger::Log>(sender, logger_handle_, level, source.file_name(), source.function_name(), source.line(), msg);
+    million_->imillion().Send<ss::logger::Log>(sender, logger_handle_, level, source.file_name(), source.function_name(), source.line(), msg);
 }
 
 void Logger::SetLevel(const ServiceHandle& sender, ss::logger::LogLevel level) {
-    million_->Send<ss::logger::SetLevel>(sender, logger_handle_, level);
+    million_->imillion().Send<ss::logger::SetLevel>(sender, logger_handle_, level);
 }
 
 } // namespace million

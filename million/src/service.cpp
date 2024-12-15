@@ -23,7 +23,7 @@ void Service::Start() {
     if (state_ != ServiceState::kReady) {
         return;
     }
-    iservice_->SendProtoMsg<ss::service::ServiceStart>(service_handle());
+    iservice_->Send<ss::service::ServiceStart>(service_handle());
 }
 
 void Service::Stop() {
@@ -31,7 +31,7 @@ void Service::Stop() {
         return;
     }
     state_ == ServiceState::kStoping;
-    iservice_->SendProtoMsg<ss::service::ServiceStop>(service_handle());
+    iservice_->Send<ss::service::ServiceStop>(service_handle());
 }
 
 bool Service::IsStoping() const {

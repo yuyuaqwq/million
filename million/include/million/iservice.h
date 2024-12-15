@@ -28,23 +28,31 @@ public:
     bool SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg);
 
     template <typename MsgT, typename ...Args>
-    SessionId SendProtoMsg(const ServiceHandle& target, Args&&... args) {
-        return Send(target, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
-    }
-    template <typename MsgT, typename ...Args>
-    SessionId SendCppMsg(const ServiceHandle& target, Args&&... args) {
-        return Send(target, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
+    SessionId Send(const ServiceHandle& target, Args&&... args) {
+        if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
+            return Send(target, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
+        }
+        else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
+            return Send(target, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
+        }
+        else {
+            static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
+                "Unsupported message type.");
+        }
     }
 
     template <typename MsgT, typename ...Args>
-    bool SendProtoMsgTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
-        auto msg = MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release());
-        return SendTo(target, session_id, std::move(msg));
-    }
-    template <typename MsgT, typename ...Args>
-    bool SendCppMsgTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
-        auto msg = MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release());
-        return SendTo(target, session_id, std::move(msg));
+    bool SendTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
+        if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
+            return SendTo(target, session_id, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
+        }
+        else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
+            return SendTo(target, session_id, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
+        }
+        else {
+            static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
+                "Unsupported message type.");
+        }
     }
 
     template <typename MsgT>
@@ -71,45 +79,45 @@ public:
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
     SessionAwaiter<RecvMsgT> Call(const ServiceHandle& target, Args&&... args) {
-        auto session_id = Send(target, std::forward<Args>(args)...);
+        auto session_id = Send<SendMsgT>(target, std::forward<Args>(args)...);
         return Recv<RecvMsgT>(session_id);
     }
     template <typename MsgT, typename ...Args>
     SessionAwaiter<MsgT> Call(const ServiceHandle& target, Args&&... args) {
-        auto session_id = Send(target, std::forward<Args>(args)...);
+        auto session_id = Send<MsgT>(target, std::forward<Args>(args)...);
         return Recv<MsgT>(session_id);
     }
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
     SessionAwaiter<RecvMsgT> CallWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
-        auto session_id = Send(target, std::forward<Args>(args)...);
+        auto session_id = Send<SendMsgT>(target, std::forward<Args>(args)...);
         return RecvWithTimeout<RecvMsgT>(session_id, timeout_s);
     }
     template <typename MsgT, typename ...Args>
     SessionAwaiter<MsgT> CallWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
-        auto session_id = Send(target, std::forward<Args>(args)...);
+        auto session_id = Send<MsgT>(target, std::forward<Args>(args)...);
         return RecvWithTimeout<MsgT>(session_id, timeout_s);
     }
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
     SessionAwaiter<RecvMsgT> CallOrNull(const ServiceHandle& target, Args&&... args) {
-        auto session_id = Send(target, std::forward<Args>(args)...);
+        auto session_id = Send<SendMsgT>(target, std::forward<Args>(args)...);
         return RecvOrNull<RecvMsgT>(session_id);
     }
     template <typename MsgT, typename ...Args>
     SessionAwaiter<MsgT> CallOrNull(const ServiceHandle& target, Args&&... args) {
-        auto session_id = Send(target, std::forward<Args>(args)...);
+        auto session_id = Send<MsgT>(target, std::forward<Args>(args)...);
         return RecvOrNull<MsgT>(session_id);
     }
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
     SessionAwaiter<RecvMsgT> CallOrNullWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
-        auto session_id = Send(target, std::forward<Args>(args)...);
+        auto session_id = Send<SendMsgT>(target, std::forward<Args>(args)...);
         return RecvOrNullWithTimeout<RecvMsgT>(session_id, timeout_s);
     }
     template <typename MsgT, typename ...Args>
     SessionAwaiter<MsgT> CallOrNullWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
-        auto session_id = Send(target, std::forward<Args>(args)...);
+        auto session_id = Send<MsgT>(target, std::forward<Args>(args)...);
         return RecvOrNullWithTimeout<MsgT>(session_id, timeout_s);
     }
 
