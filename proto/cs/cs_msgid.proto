@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package million.proto.cs;
+package million.cs;
 
 import "google/protobuf/descriptor.proto";
 

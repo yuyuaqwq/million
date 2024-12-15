@@ -38,16 +38,16 @@ std::optional<ServiceHandle> IMillion::GetServiceByName(const ServiceName& name)
     return million_->GetServiceByName(name);
 }
 
-SessionId IMillion::AllocSessionId() {
-    return million_->AllocSessionId();
+SessionId IMillion::NewSession() {
+    return million_->NewSession();
 }
 
 SessionId IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
     return million_->Send(sender, target, std::move(msg));
 }
 
-SessionId IMillion::Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
-    return million_->Send(session_id, sender, target, std::move(msg));
+SessionId IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+    return million_->Send(sender, target, session_id, std::move(msg));
 }
 
 const YAML::Node& IMillion::YamlConfig() const {

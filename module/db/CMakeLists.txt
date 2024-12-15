@@ -44,15 +44,5 @@ target_link_libraries(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_LIB})
 target_include_directories(${DB_LIB} PRIVATE ${SOCI_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${SOCI_LIB})
 
-if (WIN32)
-    message(STATUS "Compiling on Windows")
-    
-    target_include_directories(${DB_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
-    target_link_libraries(${DB_LIB} PRIVATE ${PROTOBUF_LIB})
-elseif(UNIX)
-    message(STATUS "Compiling on Linux")
-
-    find_package(Protobuf REQUIRED)
-    target_include_directories(${DB_LIB} PRIVATE ${Protobuf_INCLUDE_DIRS})
-    target_link_libraries(${DB_LIB} PRIVATE ${Protobuf_LIBRARIES})
-endif()
+target_include_directories(${DB_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
+target_link_libraries(${DB_LIB} PRIVATE ${PROTOBUF_LIB})

@@ -27,6 +27,10 @@ add_library(${MILLION_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 target_include_directories(${MILLION_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(${MILLION_LIB} PRIVATE ${MILLION_HEADER_DIR})
 
+target_include_directories(${MILLION_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
+target_link_libraries(${MILLION_LIB} PRIVATE ${MILLION_PROTOGEN_LIB})
+target_compile_definitions(${MILLION_LIB} PRIVATE ${MILLION_PROTOGEN_COMPILE_DEFINITIONS})
+
 target_include_directories(${MILLION_LIB} PRIVATE ${SPDLOG_HEADER_DIR})
 target_link_libraries(${MILLION_LIB} PRIVATE ${SPDLOG_LIB})
 
@@ -40,15 +44,5 @@ target_include_directories(${MILLION_LIB} PRIVATE ${ASIO_HEADER_DIR})
 target_include_directories(${MILLION_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
 target_link_libraries(${MILLION_LIB} PRIVATE ${YAML_CPP_LIB})
 
-if (WIN32)
-    message(STATUS "Compiling on Windows")
-    
-    target_include_directories(${MILLION_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
-    target_link_libraries(${MILLION_LIB} PRIVATE ${PROTOBUF_LIB})
-elseif(UNIX)
-    message(STATUS "Compiling on Linux")
-
-    find_package(Protobuf REQUIRED)
-    target_include_directories(${MILLION_LIB} PRIVATE ${Protobuf_INCLUDE_DIRS})
-    target_link_libraries(${MILLION_LIB} PRIVATE ${Protobuf_LIBRARIES})
-endif()
+target_include_directories(${MILLION_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
+target_link_libraries(${MILLION_LIB} PRIVATE ${PROTOBUF_LIB})

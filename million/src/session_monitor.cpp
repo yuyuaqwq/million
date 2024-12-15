@@ -3,10 +3,11 @@
 #include <iostream>
 #include <chrono>
 
+#include <protogen/ss/ss_service.pb.h>
+
 #include "million.h"
 #include "service_mgr.h"
 #include "service.h"
-#include "million_msg.h"
 
 namespace million {
 
@@ -22,7 +23,7 @@ void SessionMonitor::Start() {
     thread_.emplace([this]() {
         tasks_.Init();
         auto timeout = [this](auto&& task) {
-            million_->Send<MillionSessionTimeoutMsg>(task.data.service, task.data.service, task.data.session_id);
+            million_->Send<ss::service::SessionTimeout>(task.data.service, task.data.service, task.data.session_id);
         };
         while (run_) {
             tasks_.Tick(timeout);

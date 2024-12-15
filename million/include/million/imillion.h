@@ -5,7 +5,7 @@
 #include <million/api.h>
 #include <million/noncopyable.h>
 #include <million/nonnull_ptr.h>
-#include <million/imsg.h>
+#include <million/proto.h>
 #include <million/iservice.h>
 #include <million/logger.h>
 #include <million/exception.h>
@@ -42,10 +42,10 @@ public:
     bool SetServiceName(const ServiceHandle& handle, const ServiceName& name);
     std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
 
-    SessionId AllocSessionId();
+    SessionId NewSession();
 
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
-    SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
+    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
         return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
@@ -63,24 +63,16 @@ private:
     Million* million_ = nullptr;
 };
 
-inline SessionId IService::AllocSessionId() {
-    return imillion_->AllocSessionId();
+inline SessionId IService::NewSession() {
+    return imillion_->NewSession();
 }
 
 inline SessionId IService::Send(const ServiceHandle& target, MsgUnique msg) {
     return imillion_->Send(service_handle_, target, std::move(msg));
 }
 
-inline void IService::Resend(const ServiceHandle& target, MsgUnique msg) {
-    auto sender = msg->sender();
-    auto session_id = msg->session_id();
-    imillion_->Send(session_id, sender, target, std::move(msg));
-}
-
-inline void IService::Reply(MsgUnique msg) {
-    auto target = msg->sender();
-    auto session_id = msg->session_id();
-    imillion_->Send(session_id, service_handle_, target, std::move(msg));
+inline bool IService::SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+    return imillion_->Send(service_handle_, target, session_id, std::move(msg)) != kSessionIdInvalid;
 }
 
 inline void IService::Timeout(uint32_t tick, MsgUnique msg) {

@@ -10,7 +10,7 @@
 #include <million/noncopyable.h>
 #include <million/iservice.h>
 #include <million/service_handle.h>
-#include <million/imsg.h>
+#include <million/proto.h>
 
 #include "task_executor.h"
 
@@ -25,6 +25,9 @@ enum class ServiceState {
 class ServiceMgr;
 class Service : noncopyable {
 public:
+    using MsgElement = std::pair<SessionId, MsgUnique>;
+
+public:
     Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
     ~Service();
 
@@ -33,11 +36,11 @@ public:
     bool IsStoping() const;
     bool IsStop() const;
 
-    void PushMsg(MsgUnique msg);
-    std::optional<MsgUnique> PopMsg();
+    void PushMsg(SessionId session_id, MsgUnique msg);
+    std::optional<MsgElement> PopMsg();
     bool MsgQueueIsEmpty();
 
-    void ProcessMsg(MsgUnique msg);
+    void ProcessMsg(MsgElement msg);
     void ProcessMsgs(size_t count);
 
     void EnableSeparateWorker();
@@ -59,7 +62,7 @@ public:
 
 private:
     void SeparateThreadHandle();
-    std::optional<MsgUnique> PopMsgWithLock();
+    std::optional<Service::MsgElement> PopMsgWithLock();
 
 private:
     ServiceMgr* service_mgr_;
@@ -71,7 +74,7 @@ private:
     bool in_queue_ = false;
 
     std::mutex msgs_mutex_;
-    std::queue<MsgUnique> msgs_;
+    std::queue<MsgElement> msgs_;
 
     TaskExecutor excutor_;
 

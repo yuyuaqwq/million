@@ -18,6 +18,8 @@
 
 #include <million/api.h>
 #include <million/exception.h>
+#include <million/session_def.h>
+#include <million/proto.h>
 
 namespace million {
 
@@ -85,7 +87,7 @@ struct SessionAwaiter {
         std::coroutine_handle<> parent_coroutine_void = parent_coroutine;
         do {
             auto parent_coroutine_base = std::coroutine_handle<TaskPromiseBase>::from_address(parent_coroutine_void.address());
-            parent_coroutine_base.promise().set_session_awaiter(reinterpret_cast<SessionAwaiter<IMsg>*>(this));
+            parent_coroutine_base.promise().set_session_awaiter(reinterpret_cast<SessionAwaiter<Message>*>(this));
             parent_coroutine_void = parent_coroutine_base.promise().parent_coroutine();
         } while (parent_coroutine_void);
     }
@@ -228,11 +230,11 @@ struct TaskPromiseBase {
         return Task<U>(std::move(task));
     }
 
-    void set_session_awaiter(SessionAwaiter<IMsg>* awaiter) {
-        session_awaiter_ = reinterpret_cast<SessionAwaiter<IMsg>*>(awaiter);
+    void set_session_awaiter(SessionAwaiter<Message>* awaiter) {
+        session_awaiter_ = reinterpret_cast<SessionAwaiter<Message>*>(awaiter);
     }
-    SessionAwaiter<IMsg>* session_awaiter() const {
-        return reinterpret_cast<SessionAwaiter<IMsg>*>(session_awaiter_);
+    SessionAwaiter<Message>* session_awaiter() const {
+        return reinterpret_cast<SessionAwaiter<Message>*>(session_awaiter_);
     }
 
     std::coroutine_handle<> parent_coroutine() const { return parent_coroutine_; }
@@ -248,7 +250,7 @@ struct TaskPromiseBase {
 private:
     std::coroutine_handle<> parent_coroutine_;
     std::exception_ptr exception_ = nullptr;
-    SessionAwaiter<IMsg>* session_awaiter_ = nullptr;  // 最终需要唤醒的等待器
+    SessionAwaiter<Message>* session_awaiter_ = nullptr;  // 最终需要唤醒的等待器
 };
 
 template <typename T>

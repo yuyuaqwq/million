@@ -34,7 +34,7 @@ public:
     bool SetServiceId(const ServiceHandle& handle, ServiceId id);
     std::optional<ServiceHandle> GetServiceById(ServiceId id);
 
-    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
+    bool Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     
     Million& million() const { return *million_; }
 

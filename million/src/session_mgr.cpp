@@ -11,7 +11,7 @@ SessionMgr::SessionMgr(Million* million)
 
 SessionMgr::~SessionMgr() = default;
 
-SessionId SessionMgr::AllocSessionId() {
+SessionId SessionMgr::NewSession() {
     auto id = ++session_id_;
     if (id == std::numeric_limits<uint64_t>::max()) {
         throw std::overflow_error("Session ID overflow: no more IDs available.");

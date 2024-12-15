@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package million.proto.cs.test;
+package million.cs.test;
 
 import "google/protobuf/descriptor.proto";
 import "cs/cs_msgid.proto";

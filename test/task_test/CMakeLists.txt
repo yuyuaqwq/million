@@ -10,6 +10,10 @@ add_executable(task_test task_test.cpp)
 target_include_directories(task_test PRIVATE ${MILLION_HEADER_DIR})
 target_link_libraries(task_test PRIVATE ${MILLION_LIB})
 
+target_include_directories(task_test PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
+target_link_libraries(task_test PRIVATE ${MILLION_PROTOGEN_LIB})
+target_compile_definitions(task_test PRIVATE ${MILLION_PROTOGEN_COMPILE_DEFINITIONS})
+
 find_package(Threads)
 target_link_libraries(task_test PRIVATE Threads::Threads)
 

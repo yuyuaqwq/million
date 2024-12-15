@@ -28,15 +28,5 @@ if (UNIX)
     target_link_libraries(cluster_test PRIVATE ${DL_LIBRARIES})
 endif()
 
-if (WIN32)
-    message(STATUS "Compiling on Windows")
-    
-    target_include_directories(cluster_test PRIVATE ${PROTOBUF_INCLUDE_DIR})
-    target_link_libraries(cluster_test PRIVATE ${PROTOBUF_LIB})
-elseif(UNIX)
-    message(STATUS "Compiling on Linux")
-
-    find_package(Protobuf REQUIRED)
-    target_include_directories(cluster_test PRIVATE ${Protobuf_INCLUDE_DIRS})
-    target_link_libraries(cluster_test PRIVATE ${Protobuf_LIBRARIES})
-endif()
+target_include_directories(cluster_test PRIVATE ${PROTOBUF_INCLUDE_DIR})
+target_link_libraries(cluster_test PRIVATE ${PROTOBUF_LIB})

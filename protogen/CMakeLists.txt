@@ -15,26 +15,14 @@ file(GLOB SRC
     ./*.cc
     ./**/*.cc)
 
-if(SRC)
-    add_library(${MILLION_PROTOGEN_LIB} SHARED ${SRC})
-    target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
-    
-    if (WIN32)
-        message(STATUS "Compiling on Windows")
-        
-        target_compile_definitions(${MILLION_PROTOGEN_LIB} PRIVATE MILLION_PROTOGEN_API=__declspec\(dllexport\))
-        target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
-        target_link_libraries(${MILLION_PROTOGEN_LIB} PRIVATE ${PROTOBUF_LIB})
-        
-    elseif(UNIX)
-        message(STATUS "Compiling on Linux")
+add_library(${MILLION_PROTOGEN_LIB} SHARED ${SRC})
+target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
 
-        find_package(Protobuf REQUIRED)
-        
-        target_compile_definitions(${MILLION_PROTOGEN_LIB} PRIVATE MILLION_PROTOGEN_API=__attribute__\(\(visibility\(\"default\"\)\)\))
-        target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${Protobuf_INCLUDE_DIRS})
-        target_link_libraries(${MILLION_PROTOGEN_LIB} PRIVATE ${Protobuf_LIBRARIES})
-    endif()
-else()
-    message(WARNING "No source files found in ${MILLION_PROTOGEN_LIB}")
-endif()
+if (WIN32)
+    target_compile_definitions(${MILLION_PROTOGEN_LIB} PRIVATE MILLION_PROTOGEN_API=__declspec\(dllexport\))
+elseif(UNIX)
+    target_compile_definitions(${MILLION_PROTOGEN_LIB} PRIVATE MILLION_PROTOGEN_API=__attribute__\(\(visibility\(\"default\"\)\)\))
+ endif()
+
+target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
+target_link_libraries(${MILLION_PROTOGEN_LIB} PRIVATE ${PROTOBUF_LIB})

@@ -4,7 +4,6 @@
 
 #include "million.h"
 #include "service.h"
-#include "million_msg.h"
 
 namespace million {
 
@@ -135,16 +134,14 @@ std::optional<ServiceHandle> ServiceMgr::GetServiceById(ServiceId id) {
     return iter->second;
 }
 
-SessionId ServiceMgr::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
-    msg->set_sender(sender);
-    auto id = msg->session_id();
+bool ServiceMgr::Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
     auto service = target.service();
     if (!service || service->IsStop()) {
-        return kSessionIdInvalid;
+        return false;
     }
-    service->PushMsg(std::move(msg));
+    service->PushMsg(session_id, std::move(msg));
     PushService(service);
-    return id;
+    return true;
 }
 
 } // namespace million

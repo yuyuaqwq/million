@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package million.ss.logger;
+
+enum LogLevel {
+    LOG_LEVEL_TRACE = 0;
+    LOG_LEVEL_DEBUG = 1;
+    LOG_LEVEL_INFO = 2;
+    LOG_LEVEL_WARN = 3;
+    LOG_LEVEL_ERR = 4;
+    LOG_LEVEL_CRITICAL = 5;
+    LOG_LEVEL_OFF = 6;
+}
+
+message Log {
+    LogLevel level = 1;
+    string file = 2;
+    string function = 3;
+    uint32 line = 4;
+    string msg = 5;
+}
+
+message SetLevel {
+    LogLevel level = 1;
+}

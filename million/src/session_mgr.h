@@ -3,7 +3,7 @@
 #include <atomic>
 
 #include <million/noncopyable.h>
-#include <million/msg_def.h>
+#include <million/session_def.h>
 
 namespace million {
 
@@ -13,7 +13,7 @@ public:
     SessionMgr(Million* million);
     ~SessionMgr();
 
-    SessionId AllocSessionId();
+    SessionId NewSession();
 
 private:
     Million* million_;

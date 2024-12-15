@@ -4,10 +4,11 @@
 
 #include <million/iservice.h>
 
+#include <protogen/ss/ss_service.pb.h>
+
 #include "million.h"
 #include "service_mgr.h"
 #include "session_monitor.h"
-#include "million_msg.h"
 
 namespace million {
 
@@ -22,7 +23,7 @@ void Service::Start() {
     if (state_ != ServiceState::kReady) {
         return;
     }
-    iservice_->Send<MillionServiceStartMsg>(service_handle());
+    iservice_->Send<ss::service::ServiceStart>(service_handle());
 }
 
 void Service::Stop() {
@@ -30,7 +31,7 @@ void Service::Stop() {
         return;
     }
     state_ == ServiceState::kStoping;
-    iservice_->Send<MillionServiceStopMsg>(service_handle());
+    iservice_->Send<ss::service::ServiceStop>(service_handle());
 }
 
 bool Service::IsStoping() const {
@@ -41,21 +42,21 @@ bool Service::IsStop() const {
     return state_ == ServiceState::kStop;
 }
 
-void Service::PushMsg(MsgUnique msg) {
+void Service::PushMsg(SessionId session_id, MsgUnique msg) {
     {
         auto lock = std::lock_guard(msgs_mutex_);
         if (IsStoping() || IsStop()) {
             // 服务退出，不再接收消息
             return;
         }
-        msgs_.emplace(std::move(msg));
+        msgs_.emplace(session_id, std::move(msg));
     }
     if (HasSeparateWorker()) {
         separate_worker_->cv.notify_one();
     }
 }
 
-std::optional<MsgUnique> Service::PopMsg() {
+std::optional<Service::MsgElement> Service::PopMsg() {
     auto lock = std::lock_guard(msgs_mutex_);
     return PopMsgWithLock();
 }
@@ -65,8 +66,10 @@ bool Service::MsgQueueIsEmpty() {
     return msgs_.empty();
 }
 
-void Service::ProcessMsg(MsgUnique msg) {
-    if (msg->type() == MillionServiceStartMsg::type_static()) {
+void Service::ProcessMsg(MsgElement ele) {
+    auto session_id = ele.first;
+    auto& msg = ele.second;
+    if (msg->GetDescriptor() == ss::service::ServiceStart::GetDescriptor()) {
         auto task = iservice_->OnStart();
         if (!excutor_.AddTask(std::move(task))) {
             // 已完成
@@ -74,7 +77,7 @@ void Service::ProcessMsg(MsgUnique msg) {
         }
         return;
     }
-    else if (msg->type() == MillionServiceStopMsg::type_static()) {
+    else if (msg->GetDescriptor() == ss::service::ServiceStop::GetDescriptor()) {
         try {
             iservice_->OnStop();
         }
@@ -88,9 +91,9 @@ void Service::ProcessMsg(MsgUnique msg) {
         return;
     }
 
-    if (msg->type() == MillionSessionTimeoutMsg::type_static()) {
-        auto msg_ptr = static_cast<MillionSessionTimeoutMsg*>(msg.get());
-        auto task = excutor_.TaskTimeout(msg_ptr->timeout_id);
+    if (msg->GetDescriptor() == ss::service::SessionTimeout::GetDescriptor()) {
+        auto msg_ptr = static_cast<ss::service::SessionTimeout*>(msg.get());
+        auto task = excutor_.TaskTimeout(msg_ptr->timeout_id());
         if (task && state_ == ServiceState::kReady) {
             if (!task->coroutine.done() || !task->coroutine.promise().exception()) {
                 return;
@@ -103,7 +106,7 @@ void Service::ProcessMsg(MsgUnique msg) {
 
     if (state_ == ServiceState::kReady) {
         // OnStart未完成，只能尝试调度已有协程
-        auto res = excutor_.TrySchedule(std::move(msg));
+        auto res = excutor_.TrySchedule(session_id, std::move(msg));
         if (!std::holds_alternative<Task<>*>(res)) {
             return;
         }
@@ -118,12 +121,12 @@ void Service::ProcessMsg(MsgUnique msg) {
         return;
     }
 
-    auto res = excutor_.TrySchedule(std::move(msg));
+    auto res = excutor_.TrySchedule(session_id, std::move(msg));
     if (std::holds_alternative<Task<>*>(res)) {
         return;
     }
 
-    auto task = iservice_->OnMsg(std::move(std::get<MsgUnique>(res)));
+    auto task = iservice_->OnMsg(session_id, std::move(std::get<MsgUnique>(res)));
     excutor_.AddTask(std::move(task));
 }
 
@@ -149,7 +152,7 @@ bool Service::HasSeparateWorker() const {
 
 void Service::SeparateThreadHandle() {
     while (true) {
-        std::optional<MsgUnique> msg;
+        std::optional<Service::MsgElement> msg;
         {
             auto lock = std::unique_lock(msgs_mutex_);
             while (msgs_.empty()) {
@@ -168,13 +171,13 @@ void Service::SeparateThreadHandle() {
     }
 }
 
-std::optional<MsgUnique> Service::PopMsgWithLock() {
+std::optional<Service::MsgElement> Service::PopMsgWithLock() {
     if (msgs_.empty()) {
         return std::nullopt;
     }
     auto msg = std::move(msgs_.front());
     msgs_.pop();
-    assert(msg);
+    assert(msg.second);
     return msg;
 }
 

@@ -15,16 +15,13 @@
 
 namespace million {
 
-MILLION_MSG_DEFINE(, LoggerLogMsg, (LogLevel) level, (std::source_location) source, (std::string) info);
-MILLION_MSG_DEFINE(, LoggerSetLevelMsg, (std::string) level);
-
-static_assert(static_cast<uint32_t>(LogLevel::kTrace) == spdlog::level::level_enum::trace);
-static_assert(static_cast<uint32_t>(LogLevel::kDebug) == spdlog::level::level_enum::debug);
-static_assert(static_cast<uint32_t>(LogLevel::kInfo) == spdlog::level::level_enum::info);
-static_assert(static_cast<uint32_t>(LogLevel::kWarn) == spdlog::level::level_enum::warn);
-static_assert(static_cast<uint32_t>(LogLevel::kErr) == spdlog::level::level_enum::err);
-static_assert(static_cast<uint32_t>(LogLevel::kCritical) == spdlog::level::level_enum::critical);
-static_assert(static_cast<uint32_t>(LogLevel::kOff) == spdlog::level::level_enum::off);
+static_assert(static_cast<uint32_t>(ss::logger::LOG_LEVEL_TRACE) == spdlog::level::level_enum::trace);
+static_assert(static_cast<uint32_t>(ss::logger::LOG_LEVEL_DEBUG) == spdlog::level::level_enum::debug);
+static_assert(static_cast<uint32_t>(ss::logger::LOG_LEVEL_INFO) == spdlog::level::level_enum::info);
+static_assert(static_cast<uint32_t>(ss::logger::LOG_LEVEL_WARN) == spdlog::level::level_enum::warn);
+static_assert(static_cast<uint32_t>(ss::logger::LOG_LEVEL_ERR) == spdlog::level::level_enum::err);
+static_assert(static_cast<uint32_t>(ss::logger::LOG_LEVEL_CRITICAL) == spdlog::level::level_enum::critical);
+static_assert(static_cast<uint32_t>(ss::logger::LOG_LEVEL_OFF) == spdlog::level::level_enum::off);
 
 class LoggerService : public IService {
 public:
@@ -54,7 +51,7 @@ public:
         auto level_str = logger_config["level"].as<std::string>();
         auto level = spdlog::level::from_str(level_str);
         
-        std::string pattern = "[%Y-%m-%d %H:%M:%S.%e] [thread %t] [%^%l%$] [%s:%#] [%!] %v";
+        std::string pattern = "[%Y-%m-%d %H:%M:%S.%e] [tid %t] [%^%l%$] [%s:%#] [%!] %v";
         if (logger_config["pattern"]) {
             pattern = logger_config["pattern"].as<std::string>();
         }
@@ -70,12 +67,14 @@ public:
             console_level = spdlog::level::from_str(level_str);;
         }
 
-        logger_ = spdlog::hourly_logger_st("million_logger", log_file, 0, 0);
+        logger_ = spdlog::hourly_logger_st("logger", log_file, 0, 0);
         logger_->set_level(level);
         logger_->set_pattern(pattern);
 
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_st>();
         console_sink->set_level(console_level);
+        console_sink->set_pattern(pattern);
+
         logger_->sinks().push_back(console_sink);
 
         spdlog::flush_every(std::chrono::seconds(flush_every));
@@ -89,14 +88,16 @@ public:
 
     MILLION_MSG_DISPATCH(LoggerService);
 
-    MILLION_MSG_HANDLE(LoggerLogMsg, msg) {
-        auto level = static_cast<spdlog::level::level_enum>(msg->level);
-        logger_->log(spdlog::source_loc(msg->source.file_name(), msg->source.line(), msg->source.function_name()), level, msg->info);
+    using Log = ss::logger::Log;
+    MILLION_MSG_HANDLE(Log, msg) {
+        auto level = static_cast<spdlog::level::level_enum>(msg->level());
+        logger_->log(spdlog::source_loc(msg->file().c_str(), msg->line(), msg->function().c_str()), level, msg->msg());
         co_return;
     }
 
-    MILLION_MSG_HANDLE(LoggerSetLevelMsg, msg) {
-        auto level = spdlog::level::from_str(msg->level);
+    using SetLevel = ss::logger::SetLevel;
+    MILLION_MSG_HANDLE(SetLevel, msg) {
+        auto level = static_cast<spdlog::level::level_enum>(msg->level());
         logger_->set_level(level);
         co_return;
     }
@@ -117,12 +118,12 @@ bool Logger::Init() {
     logger_handle_ = *logger_opt;
 }
 
-void Logger::Log(const ServiceHandle& sender, const std::source_location& source, LogLevel level, const std::string& str) {
-    million_->Send<LoggerLogMsg>(sender, logger_handle_, level, source, str);
+void Logger::Log(const ServiceHandle& sender, const std::source_location& source, ss::logger::LogLevel level, const std::string& msg) {
+    million_->Send<ss::logger::Log>(sender, logger_handle_, level, source.file_name(), source.function_name(), source.line(), msg);
 }
 
-void Logger::SetLevel(const ServiceHandle& sender, const std::string& level) {
-    million_->Send<LoggerSetLevelMsg>(sender, logger_handle_, level);
+void Logger::SetLevel(const ServiceHandle& sender, ss::logger::LogLevel level) {
+    million_->Send<ss::logger::SetLevel>(sender, logger_handle_, level);
 }
 
 } // namespace million

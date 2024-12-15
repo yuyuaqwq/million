@@ -197,17 +197,20 @@ std::optional<ServiceHandle> Million::GetServiceByName(const ServiceName& name) 
     return service_mgr_->GetServiceByName(name);
 }
 
-SessionId Million::AllocSessionId() {
-    return session_mgr_->AllocSessionId();
+SessionId Million::NewSession() {
+    return session_mgr_->NewSession();
 }
 
-SessionId Million::Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
-    msg->set_session_id(session_id);
-    return service_mgr_->Send(sender, target, std::move(msg));
+bool Million::Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+    return service_mgr_->Send(sender, target, session_id, std::move(msg));
 }
 
 SessionId Million::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
-    return Send(session_mgr_->AllocSessionId(), sender, target, std::move(msg));
+    auto session_id = session_mgr_->NewSession();
+    if (Send(sender, target, session_id, std::move(msg))) {
+        return session_id;
+    }
+    return kSessionIdInvalid;
 }
 
 const YAML::Node& Million::YamlConfig() const {

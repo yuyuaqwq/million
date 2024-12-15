@@ -2,7 +2,6 @@
 
 #include <queue>
 #include <million/api.h>
-#include <million/imsg.h>
 #include <million/task.h>
 
 namespace million {

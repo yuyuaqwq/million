@@ -35,13 +35,13 @@ public:
     bool SetServiceName(const ServiceHandle& handle, const ServiceName& name);
     std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
 
-    SessionId AllocSessionId();
+    SessionId NewSession();
 
-    SessionId Send(SessionId session_id, const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
+    bool Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
-        return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
+        return Send(sender, target, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
     const YAML::Node& YamlConfig() const;

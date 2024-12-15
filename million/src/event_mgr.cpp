@@ -7,7 +7,7 @@ namespace million {
 EventMgr::EventMgr(IMillion* imillion)
 	: imillion_(imillion) {}
 
-void EventMgr::Subscribe(const std::type_info& type, const ServiceHandle& handle, uint32_t priority) {
+void EventMgr::Subscribe(const google::protobuf::Descriptor& type, const ServiceHandle& handle, uint32_t priority) {
 	auto iter = services_.find(&type);
 	if (iter == services_.end()) {
 		auto res = services_.emplace(&type, EventMap());
@@ -17,7 +17,7 @@ void EventMgr::Subscribe(const std::type_info& type, const ServiceHandle& handle
 	iter->second.emplace(priority, handle);
 }
 
-bool EventMgr::Unsubscribe(const std::type_info& type, const ServiceHandle& subscriber) {
+bool EventMgr::Unsubscribe(const google::protobuf::Descriptor& type, const ServiceHandle& subscriber) {
 	auto iter = services_.find(&type);
 	if (iter == services_.end()) {
 		return false;
@@ -33,7 +33,7 @@ bool EventMgr::Unsubscribe(const std::type_info& type, const ServiceHandle& subs
 }
 
 void EventMgr::Send(const ServiceHandle& sender, MsgUnique msg) {
-	auto iter = services_.find(&msg->type());
+	auto iter = services_.find(msg->GetDescriptor());
 	if (iter == services_.end()) {
 		// 没有关注此事件的服务
 		return;
@@ -47,7 +47,10 @@ void EventMgr::Send(const ServiceHandle& sender, MsgUnique msg) {
 
 	auto& services = iter->second;
 	for (auto service_iter = services.begin(); service_iter != services.end(); ) {
-		auto id = sender_iservice.Send(service_iter->second, MsgUnique(msg->Copy()));
+		auto new_msg = msg->New();
+		if (!new_msg) continue;
+		new_msg->CopyFrom(*msg);
+		auto id = sender_iservice.Send(service_iter->second, MsgUnique(new_msg));
 		if (id == kSessionIdInvalid) {
 			// 已关闭的服务
 			services.erase(service_iter++);
@@ -59,7 +62,7 @@ void EventMgr::Send(const ServiceHandle& sender, MsgUnique msg) {
 }
 
 Task<> EventMgr::Call(const ServiceHandle& caller, MsgUnique msg, std::function<bool(MsgUnique)> res_handle) {
-	auto iter = services_.find(&msg->type());
+	auto iter = services_.find(msg->GetDescriptor());
 	if (iter == services_.end()) {
 		// 没有关注此事件的服务
 		co_return;
@@ -71,13 +74,16 @@ Task<> EventMgr::Call(const ServiceHandle& caller, MsgUnique msg, std::function<
 	}
 	auto& caller_iservice = caller_service->iservice();
 	for (auto service_iter = services.begin(); service_iter != services.end(); ) {
-		auto id = caller_iservice.Send(service_iter->second, MsgUnique(msg->Copy()));
+		auto new_msg = msg->New();
+		if (!new_msg) continue;
+		new_msg->CopyFrom(*msg);
+		auto id = caller_iservice.Send(service_iter->second, MsgUnique(new_msg));
 		if (id == kSessionIdInvalid) {
 			// 已关闭的服务
 			services.erase(service_iter++);
 		}
 		else {
-			auto res = co_await caller_iservice.RecvOrNull<IMsg>(id);
+			auto res = co_await caller_iservice.RecvOrNull<Message>(id);
 			if (res && !res_handle(std::move(res))) {
 				break;
 			}

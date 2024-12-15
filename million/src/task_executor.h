@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include <million/noncopyable.h>
-#include <million/msg_def.h>
+#include <million/session_def.h>
 #include <million/task.h>
 
 namespace million {
@@ -22,7 +22,7 @@ public:
     ~TaskExecutor();
 
     // 尝试调度
-    std::variant<MsgUnique, Task<>*> TrySchedule(MsgUnique msg);
+    std::variant<MsgUnique, Task<>*> TrySchedule(SessionId session_id, MsgUnique msg);
 
     // 将任务添加到调度器
     bool AddTask(Task<>&& task);
@@ -31,7 +31,7 @@ public:
 
 private:
     // 尝试调度指定Task
-    std::optional<MsgUnique> TrySchedule(Task<>& task, MsgUnique msg);
+    std::optional<MsgUnique> TrySchedule(Task<>& task, SessionId session_id, MsgUnique msg);
 
     // 加入待调度队列等待调度
     Task<>* Push(SessionId id, Task<>&& task);

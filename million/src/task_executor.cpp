@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include <million/imsg.h>
+#include <million/proto.h>
 #include <million/logger.h>
 #include <million/exception.h>
 
@@ -21,21 +21,20 @@ TaskExecutor::TaskExecutor(Service* service)
 TaskExecutor::~TaskExecutor() = default;
 
 // 尝试调度
-std::variant<MsgUnique, Task<>*> TaskExecutor::TrySchedule(MsgUnique msg) {
-    auto id = msg->session_id();
-    auto iter = tasks_.find(id);
+std::variant<MsgUnique, Task<>*> TaskExecutor::TrySchedule(SessionId session_id, MsgUnique msg) {
+    auto iter = tasks_.find(session_id);
     if (iter == tasks_.end()) {
         return msg;
     }
-    auto msg_opt = TrySchedule(iter->second, std::move(msg));
+    auto msg_opt = TrySchedule(iter->second, session_id, std::move(msg));
     if (msg_opt) {
         // find找到的task，却未处理，异常情况
         auto& million = service_->service_mgr()->million();
-        million.logger().Critical("[million] try schedule exception: {}.", id);
+        million.logger().Critical("[million] try schedule exception: {}.", session_id);
     }
     if (!iter->second.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        return RePush(id, iter->second.coroutine.promise().session_awaiter()->waiting_session());;
+        return RePush(session_id, iter->second.coroutine.promise().session_awaiter()->waiting_session());;
     }
     else {
         tasks_.erase(iter);
@@ -65,19 +64,19 @@ bool TaskExecutor::AddTask(Task<>&& task) {
     return false;
 }
 
-Task<>* TaskExecutor::TaskTimeout(SessionId id) {
-    auto iter = tasks_.find(id);
+Task<>* TaskExecutor::TaskTimeout(SessionId session_id) {
+    auto iter = tasks_.find(session_id);
     if (iter == tasks_.end()) {
         // 正常情况是已经执行完毕了
         return nullptr;
     }
 
     // 超时，唤醒目标协程
-    TrySchedule(iter->second, nullptr);
+    TrySchedule(iter->second, session_id, nullptr);
 
     if (!iter->second.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        return RePush(id, iter->second.coroutine.promise().session_awaiter()->waiting_session());
+        return RePush(session_id, iter->second.coroutine.promise().session_awaiter()->waiting_session());
     }
     else {
         tasks_.erase(iter);
@@ -85,11 +84,10 @@ Task<>* TaskExecutor::TaskTimeout(SessionId id) {
     }
 }
 
-std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, MsgUnique msg) {
+std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, SessionId session_id, MsgUnique msg) {
     auto awaiter = task.coroutine.promise().session_awaiter();
     if (msg) {
-        auto id = msg->session_id();
-        if (awaiter->waiting_session() != id) {
+        if (awaiter->waiting_session() != session_id) {
             return msg;
         }
     }

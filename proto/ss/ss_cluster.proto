@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package million.proto.ss.cluster;
+package million.ss.cluster;
 
 message MsgBody {
     oneof body {
