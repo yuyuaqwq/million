@@ -45,10 +45,14 @@ public:
     SessionId NewSession();
 
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
-    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
+    SessionId SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     template <typename MsgT, typename ...Args>
-    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
-        return Send(sender, target, std::make_unique<MsgT>(std::forward<Args>(args)...));
+    SessionId SendProtoMsg(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
+        return Send(sender, target, make_proto_msg<MsgT>(std::forward<Args>(args)...));
+    }
+    template <typename MsgT, typename ...Args>
+    SessionId SendCppMsg(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
+        return Send(sender, target, make_cpp_msg<MsgT>(std::forward<Args>(args)...));
     }
 
     const YAML::Node& YamlConfig() const;
@@ -72,7 +76,7 @@ inline SessionId IService::Send(const ServiceHandle& target, MsgUnique msg) {
 }
 
 inline bool IService::SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
-    return imillion_->Send(service_handle_, target, session_id, std::move(msg)) != kSessionIdInvalid;
+    return imillion_->SendTo(service_handle_, target, session_id, std::move(msg)) != kSessionIdInvalid;
 }
 
 inline void IService::Timeout(uint32_t tick, MsgUnique msg) {

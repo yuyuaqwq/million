@@ -148,4 +148,9 @@ void ForeachMetaFieldData(T&& obj, Func&& cb) {
 	}(std::make_index_sequence<DecayT::kMetaFieldCount>{});
 }
 
+template <typename MsgT, typename... Args>
+inline std::unique_ptr<MsgT> make_cpp_msg(Args&&... args) {
+    return std::make_unique<MsgT>(std::forward<Args>(args)...);
+}
+
 } // namespace million

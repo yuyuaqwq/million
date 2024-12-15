@@ -5,7 +5,6 @@
 
 MILLION_MODULE_INIT();
 
-
 class TestService : public million::IService {
     using Base = million::IService;
     using Base::Base;
@@ -24,7 +23,7 @@ class TestService : public million::IService {
         return true;
     }
 
-    virtual million::Task<> OnMsg(million::SessionId session_id, million::MsgUnique msg) override {
+    virtual million::Task<> OnMsg(const million::ServiceHandle& sender, million::SessionId session_id, million::MsgUnique msg) override {
         //if (msg->type() == Test2Msg::type_static()) {
         //    auto msg_ = static_cast<Test2Msg*> (msg.get());
         //    std::cout << msg_->session_id() << std::endl;
@@ -105,9 +104,6 @@ int main() {
     // auto a = million::TaskAbortException("sb{}", 21);
 
     // auto str = std::format("{}", a.stacktrace());
-
-    
-
 
     auto test_app = std::make_unique<TestApp>();
     if (!test_app->Start("task_test_config.yaml")) {

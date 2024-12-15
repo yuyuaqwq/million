@@ -24,7 +24,7 @@ Task<> ServiceLock::Lock() {
 void ServiceLock::Unlock() {
 	locking_ = false;
 	if (!wait_sessions_.empty()) {
-		iservice_->SendTo<ss::service::ServiceUnlock>(iservice_->service_handle(), wait_sessions_.front());
+		iservice_->SendProtoMsgTo<ss::service::ServiceUnlock>(iservice_->service_handle(), wait_sessions_.front());
 		wait_sessions_.pop();
 	}
 }

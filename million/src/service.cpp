@@ -23,7 +23,7 @@ void Service::Start() {
     if (state_ != ServiceState::kReady) {
         return;
     }
-    iservice_->Send<ss::service::ServiceStart>(service_handle());
+    iservice_->SendProtoMsg<ss::service::ServiceStart>(service_handle());
 }
 
 void Service::Stop() {
@@ -31,7 +31,7 @@ void Service::Stop() {
         return;
     }
     state_ == ServiceState::kStoping;
-    iservice_->Send<ss::service::ServiceStop>(service_handle());
+    iservice_->SendProtoMsg<ss::service::ServiceStop>(service_handle());
 }
 
 bool Service::IsStoping() const {
@@ -42,14 +42,15 @@ bool Service::IsStop() const {
     return state_ == ServiceState::kStop;
 }
 
-void Service::PushMsg(SessionId session_id, MsgUnique msg) {
+void Service::PushMsg(const ServiceHandle& sender, SessionId session_id, MsgUnique msg) {
     {
         auto lock = std::lock_guard(msgs_mutex_);
         if (IsStoping() || IsStop()) {
             // 服务退出，不再接收消息
             return;
         }
-        msgs_.emplace(session_id, std::move(msg));
+        Service::MsgElement ele{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
+        msgs_.emplace(std::move(ele));
     }
     if (HasSeparateWorker()) {
         separate_worker_->cv.notify_one();
@@ -67,8 +68,9 @@ bool Service::MsgQueueIsEmpty() {
 }
 
 void Service::ProcessMsg(MsgElement ele) {
-    auto session_id = ele.first;
-    auto& msg = ele.second;
+    auto& sender = ele.sender;
+    auto session_id = ele.session_id;
+    auto& msg = ele.msg;
     if (msg.IsType(ss::service::ServiceStart::GetDescriptor())) {
         auto task = iservice_->OnStart();
         if (!excutor_.AddTask(std::move(task))) {
@@ -126,7 +128,7 @@ void Service::ProcessMsg(MsgElement ele) {
         return;
     }
 
-    auto task = iservice_->OnMsg(session_id, std::move(std::get<MsgUnique>(res)));
+    auto task = iservice_->OnMsg(sender, session_id, std::move(std::get<MsgUnique>(res)));
     excutor_.AddTask(std::move(task));
 }
 
@@ -177,7 +179,7 @@ std::optional<Service::MsgElement> Service::PopMsgWithLock() {
     }
     auto msg = std::move(msgs_.front());
     msgs_.pop();
-    assert(msg.second);
+    assert(msg.msg);
     return msg;
 }
 

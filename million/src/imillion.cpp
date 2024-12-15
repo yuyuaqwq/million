@@ -46,7 +46,7 @@ SessionId IMillion::Send(const ServiceHandle& sender, const ServiceHandle& targe
     return million_->Send(sender, target, std::move(msg));
 }
 
-SessionId IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+SessionId IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
     return million_->Send(sender, target, session_id, std::move(msg));
 }
 

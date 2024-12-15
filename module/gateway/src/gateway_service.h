@@ -18,8 +18,8 @@ namespace gateway {
 
 namespace protobuf = google::protobuf; 
 
-// MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (net::TcpConnectionShared) connection)
-// MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
+MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (net::TcpConnectionShared) connection)
+MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (net::TcpConnectionShared) connection, (net::Packet) packet)
 
 // 网关服务有两种模式
 // 集群、非集群
@@ -63,7 +63,7 @@ public:
 
     MILLION_MSG_DISPATCH(GatewayService);
 
-    MILLION_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
         auto& connection = msg->connection;
         auto session = static_cast<UserSession*>(msg->connection.get());
 
@@ -84,7 +84,7 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto session = static_cast<UserSession*>(msg->connection.get());
         // auto session_handle = UserSessionHandle(session);
         auto user_context_id = session->info().user_context_id;
@@ -105,28 +105,28 @@ public:
         // if (session->info().token == kInvaildToken) {
         if (iter == agent_services_.end()) {
             logger().Trace("packet send to user service.");
-            Send<GatewayRecvPacketMsg>(user_service_, user_context_id, std::move(msg->packet), span);
+            SendCppMsg<GatewayRecvPacketMsg>(user_service_, user_context_id, std::move(msg->packet), span);
         }
         else {
             logger().Trace("packet send to agent service.");
-            Send<GatewayRecvPacketMsg>(iter->second, user_context_id, std::move(msg->packet), span);
+            SendCppMsg<GatewayRecvPacketMsg>(iter->second, user_context_id, std::move(msg->packet), span);
         }
         co_return;
     }
 
-    MILLION_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
         logger().Trace("GatewayRegisterUserServiceMsg.");
         user_service_ = msg->user_service;
-        Reply(std::move(msg));
+        SendTo(sender, session_id, MsgUnique(msg.release()));
         co_return;
     }
 
-    MILLION_MSG_HANDLE(GatewaySureAgentMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(GatewaySureAgentMsg, msg) {
         agent_services_.emplace(msg->context_id, msg->agent_service);
         co_return;
     }
 
-    MILLION_MSG_HANDLE(GatewaySendPacketMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(GatewaySendPacketMsg, msg) {
         auto iter = users_.find(msg->context_id);
         if (iter == users_.end()) {
             co_return;

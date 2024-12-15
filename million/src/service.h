@@ -25,7 +25,11 @@ enum class ServiceState {
 class ServiceMgr;
 class Service : noncopyable {
 public:
-    using MsgElement = std::pair<SessionId, MsgUnique>;
+    struct MsgElement{
+        ServiceHandle sender;
+        SessionId session_id;
+        MsgUnique msg;
+    };
 
 public:
     Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
@@ -36,7 +40,7 @@ public:
     bool IsStoping() const;
     bool IsStop() const;
 
-    void PushMsg(SessionId session_id, MsgUnique msg);
+    void PushMsg(const ServiceHandle& sender, SessionId session_id, MsgUnique msg);
     std::optional<MsgElement> PopMsg();
     bool MsgQueueIsEmpty();
 

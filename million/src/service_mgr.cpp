@@ -139,7 +139,7 @@ bool ServiceMgr::Send(const ServiceHandle& sender, const ServiceHandle& target, 
     if (!service || service->IsStop()) {
         return false;
     }
-    service->PushMsg(session_id, std::move(msg));
+    service->PushMsg(sender, session_id, std::move(msg));
     PushService(service);
     return true;
 }
