@@ -48,17 +48,17 @@ const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& p
     // 获取该文件的options，确认是否设置了db
     const auto& file_options = file_desc->options();
     // 检查 db 是否被设置
-    if (!file_options.HasExtension(proto::db::db)) {
+    if (!file_options.HasExtension(db)) {
         return nullptr;
     }
-    const auto& db_options = file_options.GetExtension(proto::db::db);
+    const auto& db_options = file_options.GetExtension(db);
 
     int message_count = file_desc->message_type_count();
     for (int i = 0; i < message_count; i++) {
         const auto* desc = file_desc->message_type(i);
         if (!desc) continue;
         const auto& msg_options = desc->options();
-        if (!msg_options.HasExtension(proto::db::table)) {
+        if (!msg_options.HasExtension(table)) {
             continue;
         }
 
@@ -67,7 +67,7 @@ const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& p
             continue;
         }
 
-        const auto& table_options = msg_options.GetExtension(proto::db::table);
+        const auto& table_options = msg_options.GetExtension(table);
         const auto& table_name = table_options.name();
         // table_map_.emplace(table_name, desc);
     }
@@ -133,7 +133,7 @@ public:
 
     MILLION_MSG_DISPATCH(DbService);
 
-    MILLION_MSG_HANDLE(DbRowTickSyncMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(DbRowTickSyncMsg, msg) {
         if (msg->db_row->IsDirty()) {
             // co_await期间可能会有新的DbRowSetMsg消息被处理，所以需要复制一份
             try {
@@ -151,13 +151,13 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(DbRegisterProtoCodecMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(DbRegisterProtoCodecMsg, msg) {
         proto_codec_ = msg->proto_codec.get();
         Reply(std::move(msg));
         co_return;
     }
 
-    MILLION_MSG_HANDLE(DbRegisterProtoMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(DbRegisterProtoMsg, msg) {
         auto file_desc = proto_codec_->RegisterProto(msg->proto_file_name);
 
         if (!file_desc) {
@@ -170,10 +170,10 @@ public:
             if (!desc) continue;
 
             const auto& msg_options = desc->options();
-            if (!msg_options.HasExtension(proto::db::table)) {
+            if (!msg_options.HasExtension(table)) {
                 continue;
             }
-            const auto& table_options = msg_options.GetExtension(proto::db::table);
+            const auto& table_options = msg_options.GetExtension(table);
 
             co_await CallOrNull<SqlTableInitMsg>(sql_service_, *desc);
 
@@ -187,13 +187,13 @@ public:
         Reply(std::move(msg));
     }
 
-    MILLION_MSG_HANDLE(DbRowGetMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(DbRowGetMsg, msg) {
         auto& desc = msg->table_desc; // proto_codec_.GetMsgDesc(msg->table_name);
-        if (!desc.options().HasExtension(proto::db::table)) {
-            logger().Err("HasExtension proto::db::table failed.");
+        if (!desc.options().HasExtension(table)) {
+            logger().Err("HasExtension table failed.");
             co_return;
         }
-        const proto::db::MessageOptionsTable& options = desc.options().GetExtension(proto::db::table);
+        const MessageOptionsTable& options = desc.options().GetExtension(table);
 
         auto table_iter = tables_.find(&desc);
         if (table_iter == tables_.end()) {
@@ -232,7 +232,7 @@ public:
             assert(res.second);
             row_iter = res.first;
 
-            const proto::db::MessageOptionsTable& options = desc.options().GetExtension(proto::db::table);
+            const MessageOptionsTable& options = desc.options().GetExtension(::million::db::table);
 
             auto sync_tick = options.sync_tick();
             Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, make_nonnull(&row_iter->second));
@@ -243,15 +243,15 @@ public:
         Reply(std::move(msg));
     }
 
-    MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(DbRowSetMsg, msg) {
         auto db_row = msg->db_row;
         const auto& desc = db_row->GetDescriptor();
         const auto& reflection = db_row->GetReflection();
-        if (!desc.options().HasExtension(proto::db::table)) {
-            logger().Err("HasExtension proto::db::table failed.");
+        if (!desc.options().HasExtension(table)) {
+            logger().Err("HasExtension table failed.");
             co_return;
         }
-        const proto::db::MessageOptionsTable& options = desc.options().GetExtension(proto::db::table);
+        const MessageOptionsTable& options = desc.options().GetExtension(table);
         auto& table_name = options.name();
 
         auto table_iter = tables_.find(&desc);
