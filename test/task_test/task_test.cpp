@@ -23,7 +23,7 @@ class TestService : public million::IService {
         return true;
     }
 
-    virtual million::Task<> OnMsg(const million::ServiceHandle& sender, million::SessionId session_id, million::MsgUnique msg) override {
+    virtual million::Task<> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique msg) override {
         //if (msg->type() == Test2Msg::type_static()) {
         //    auto msg_ = static_cast<Test2Msg*> (msg.get());
         //    std::cout << msg_->session_id() << std::endl;

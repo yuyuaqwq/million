@@ -111,11 +111,10 @@ private:
     gateway::UserContextId user_context_id_;
 };
 
-#define MILLION_AGENT_LOGIC_MSG_ID(NAMESPACE_, MSG_ID_, PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
-    static ::million::MsgId _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = 0; \
+#define MILLION_AGENT_LOGIC_REGISTER_PROTO(PROTO_FILE_NAME, NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
     const bool _MILLION_AGENT_LOGIC_HANDLE_REGISTER_PROTO_##MSG_ID_ = \
         [] { \
-            ::million::agent::AgentLogicHandler::Instance().RegisterLogicMsgProto(PROTO_FILE_NAME, NAMESPACE_::MSG_EXT_ID_, NAMESPACE_::SUB_MSG_EXT_ID_); \
+            ::million::agent::AgentLogicHandler::Instance().RegisterLogicMsgProto(PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_); \
             return true; \
         }() \
 

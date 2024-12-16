@@ -132,7 +132,7 @@ public:
 
     virtual bool OnInit() { return true; }
     virtual Task<> OnStart() { co_return; }
-    virtual Task<> OnMsg(const ServiceHandle& sender, SessionId session_id, MsgUnique msg) = 0;
+    virtual Task<> OnMsg(ServiceHandle sender, SessionId session_id, MsgUnique msg) = 0;
     virtual void OnStop() { }
     //virtual void OnExit() { }
 
@@ -148,7 +148,7 @@ private:
 
 #define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_) \
     using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
-    virtual ::million::Task<> OnMsg(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique msg) override { \
+    virtual ::million::Task<> OnMsg(::million::ServiceHandle sender, ::million::SessionId session_id, ::million::MsgUnique msg) override { \
         auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg.GetTypeKey()); \
         if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
             co_await (this->*iter->second)(sender, session_id, std::move(msg)); \
