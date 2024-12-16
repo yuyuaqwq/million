@@ -73,163 +73,175 @@ namespace py = pybind11;
 //        py::arg("message_type"));
 //}
 
-//class PyService : public million::IService {
-//public:
-//    using Base = IService;
-//    using Base::Base;
-//
-//    virtual bool OnInit() override {
-//        vm_ = std::make_unique<pkpy::VM>();
-//        py::interpreter::initialize(vm_.get());
-//
-//        // ss_proto_mgr.Init();
-//
-//        // vm_->exec("import million");
-//        // vm_->exec("print('pysvr:')");         // 1
-//        //vm->exec("print(a.x)");         // 1
-//        //vm->exec("print(a.y)");         // 2
-//
-//        // auto r = vm_->exec("def my_generator():\n    yield 1\n    yield 2\n    yield 3");
-//
-//        auto mod = vm_->new_module("module");
-//        // mod->type();
-//        // auto func = mod->attr().try_get("");
-//        // vm_->call(func);
-//
-//        
-//
-//        //pkpy::PyVar obj;
-//        //vm_->bind(obj, "my_generator()", [](auto vm, auto args) {
-//
-//        //    return vm->None;
-//        //});
-//
-//        // vm_->call("my_generator");
-//
-//        // vm_->exec("a = million.send(\"test\", a = 1, b = 2)");
-//
-//
-//        //auto a= vm_->eval();
-//        //
-//        //vm_->ge();
-//
-//        return true;
-//    }
-//
-//    virtual void OnStop() override {
-//
-//    }
-//
-//    virtual million::Task<> OnMsg(million::MsgUnique) override {
-//        co_return;
-//    }
-//
-//
-//private:
-//    struct SsProtoMgrHeader { };
-//    // million::CommProtoMgr<SsProtoMgrHeader> ss_proto_mgr;
-//
-//    std::unique_ptr<pkpy::VM> vm_;
-//};
+
+
+class JsService : public million::IService {
+public:
+    using Base = IService;
+    using Base::Base;
+
+    bool JsCheckException(JSValue value) {
+        if (JS_IsException(value)) {
+            JSValue exception = JS_GetException(js_ctx_);
+            const char* error = JS_ToCString(js_ctx_, exception);
+            // logger().Err("JS Exception: {}.", error);
+            std::cout << error << std::endl;
+            JS_FreeCString(js_ctx_, error);
+            JS_FreeValue(js_ctx_, exception);
+            return false;
+        }
+        return true;
+    }
+
+    static JSModuleDef* JsModuleLoader(JSContext* ctx, const char* module_name, void* opaque) {
+        JsService* service = static_cast<JsService*>(opaque);
+        auto iter = service->js_modules_.find(module_name);
+        if (iter == service->js_modules_.end()) {
+            return nullptr;
+        }
+        return iter->second;
+    }
+
+    bool JsAddModule(std::string_view module_name, JSModuleDef* module) {
+        if (js_modules_.find(module_name.data()) != js_modules_.end()) {
+            logger().Err("Module already exists: {}.", module_name);
+            return false;
+        }
+        auto res = js_modules_.emplace(module_name, module);
+        assert(res.second);
+        return res.first->second;
+    }
+
+    JSModuleDef* JsCreateModule(std::string_view module_name, std::string_view js_script) {
+        JSValue func_val = JS_Eval(js_ctx_, js_script.data(), js_script.size(), module_name.data(), JS_EVAL_TYPE_MODULE);
+        if (!JsCheckException(func_val)) {
+            return nullptr;
+        }
+        auto module = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(func_val));
+        if (!JsAddModule(module_name, module)) {
+            JS_FreeValue(js_ctx_, func_val);
+            return nullptr;
+        }
+        return module;
+    }
+
+    static JSValue ServiceModuleSend(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        return JSValue();
+    }
+
+    static int ServiceModuleInit(JSContext* ctx, JSModuleDef* m) {
+        // 导出函数到模块
+        JSCFunctionListEntry list[] = {
+            JS_CFUNC_DEF("send", 2, ServiceModuleSend),
+        };
+        return JS_SetModuleExportList(ctx, m, list, sizeof(list) / sizeof(JSCFunctionListEntry));
+    }
+
+    JSModuleDef* CreateServiceModule() {
+        JSModuleDef* module = JS_NewCModule(js_ctx_, "service", ServiceModuleInit);
+        if (!module) {
+            logger().Err("JS_NewCModule failed: {}.", "service");
+            return nullptr;
+        }
+        // JS_AddModuleExport(js_ctx_, module, "send");
+        if (!JsAddModule("service", module)) {
+            logger().Err("JsAddModule failed: {}.", "service");
+            // 不释放module，等自动回收
+            return nullptr;
+        }
+        return module;
+    }
+
+
+
+    virtual bool OnInit() override {
+        bool success = false;
+        do {
+            js_rt_ = JS_NewRuntime();
+            if (!js_rt_) {
+                logger().Err("JS_NewRuntime failed.");
+                break;
+            }
+            js_std_init_handlers(js_rt_);
+
+            js_ctx_ = JS_NewContext(js_rt_);
+            if (!js_ctx_) {
+                logger().Err("JS_NewContext failed.");
+                break;
+            }
+
+            js_init_module_std(js_ctx_, "std");
+            js_init_module_os(js_ctx_, "os");
+
+            JS_SetModuleLoaderFunc(js_rt_, nullptr, JsModuleLoader, this);
+
+            if (!CreateServiceModule()) {
+                logger().Err("CreateServiceModule failed.");
+                break;
+            }
+
+            const char* test_val = R"(
+              import * as std from 'std';
+              import * as os from 'os';
+              var console = {};
+              console.log = value => std.printf(value + "\n");
+              console.log('ok')
+              for(var key in globalThis){
+                console.log("--->" + key)
+              }
+              for(var key in std){
+                console.log("--->" + key)
+              }
+              for(var key in os){
+                console.log("--->" + key)
+              }
+              std.printf('hello_world\n');
+              std.printf(globalThis + "\n");
+              var a = false;
+              os.setTimeout(()=>{std.printf('AAB\n')}, 2000)
+              std.printf(a + "\n");
+            )";
+          JSValue result = JS_Eval(js_ctx_, test_val, strlen(test_val), "test", JS_EVAL_TYPE_MODULE);
+          if (!JsCheckException(result)) {
+
+          }
+
+        } while (false);
+       
+        if (!success) {
+            if (js_rt_) {
+                JS_FreeRuntime(js_rt_);
+                js_rt_ = nullptr;
+            }
+            if (js_ctx_) {
+                JS_FreeContext(js_ctx_);
+                js_ctx_ = nullptr;
+            }
+        }
+
+        return success;
+    }
+
+    virtual void OnStop() override {
+
+    }
+
+    virtual million::Task<> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique) override {
+        
+        co_return;
+    }
+
+
+private:
+    JSRuntime* js_rt_ = nullptr;
+    JSContext* js_ctx_ = nullptr;
+
+    std::unordered_map<std::string, JSModuleDef*> js_modules_;
+};
 
 
 namespace million {
 namespace pysvr {
-
-void interact_with_generator() {
-    py::scoped_interpreter guard{};  // 初始化 Python 解释器
-
-    //# example.py
-
-    //def my_generator():
-    //    for i in range(5):
-    //        yield i
-
-    //auto path = sys.attr("path");
-    //py::print(path);
-
-    py::module_ example = py::module_::import("example");
-
-    // 获取生成器函数
-    py::object gen = example.attr("my_generator")();
-    
-    for (py::object value : gen) {
-        // 转换为 C++ 类型
-        int result = value.cast<int>();
-        std::cout << "Generated value: " << result << std::endl;
-    }
-
-}
-
-
-void callGenerator(JSContext* ctx, JSValue generatorFunc, double a, double b, double c) {
-    // 创建生成器实例
-    JSValue iterator = JS_Call(ctx, generatorFunc, JS_UNDEFINED, 0, nullptr);
-    if (JS_IsException(iterator)) {
-        std::cerr << "Failed to create generator iterator!" << std::endl;
-        return;
-    }
-
-    // 获取生成器的返回值，调用 next() 方法
-    // JSValue result = JS_Call(ctx, JS_GetPropertyStr(ctx, iterator, "next"), iterator, 0, nullptr);
-    
-
-    // 第一次调用 next()，传入 a 的值
-    JSValue value = JS_NewFloat64(ctx, a);
-    JSValue result = JS_Call(ctx, JS_GetPropertyStr(ctx, iterator, "next"), iterator, 1, &value);
-    if (JS_IsException(result)) {
-        std::cerr << "Error calling next()" << std::endl;
-        return;
-    }
-    JS_FreeValue(ctx, value);
-
-    // 读取生成器的返回值
-    value = JS_GetPropertyStr(ctx, result, "value");
-    if (!JS_IsUndefined(value)) {
-        double val;
-        if (JS_ToFloat64(ctx, &val, value)) {
-            std::cerr << "Error getting value" << std::endl;
-        }
-        else {
-            std::cout << "Generated value: " << val << std::endl;
-        }
-    }
-    JS_FreeValue(ctx, value);
-
-    
-
-    // 第二次调用 next()，传入 b 的值
-    value = JS_NewFloat64(ctx, b);
-    JS_Call(ctx, JS_GetPropertyStr(ctx, iterator, "next"), iterator, 1, &value);
-    JS_FreeValue(ctx, value);
-
-    // 第三次调用 next()，传入 c 的值
-    value = JS_NewFloat64(ctx, c);
-    JS_Call(ctx, JS_GetPropertyStr(ctx, iterator, "next"), iterator, 1, &value);
-    JS_FreeValue(ctx, value);
-
-    // 清理
-    JS_FreeValue(ctx, result);
-    JS_FreeValue(ctx, iterator);
-}
-
-
-//// 用于保存resolve函数的结构
-//typedef struct {
-//    JSValue resolve_fn;
-//} PromiseControl;
-//
-//// 触发Promise解析，继续执行JS中的代码
-//void trigger_promise_resolution(JSContext* ctx, PromiseControl* control, const char* msg) {
-//    // 调用resolve函数，继续执行JS中的代码
-//    JSValueConst arr[] = {JS_NewString(ctx, msg)};
-//    JS_Call(ctx, control->resolve_fn, JS_UNDEFINED, 1, arr);
-//
-//    // 释放相关资源
-//    JS_FreeValue(ctx, control->resolve_fn);
-//    free(control);
-//}
-//
 
 // C端的Call函数，创建一个Promise并返回
 JSValue Call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -253,17 +265,14 @@ JSValue Call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
 }
 
 
-// C 控制的回调函数，用于唤醒挂起的异步操作
-void wake_up_async(JSContext* ctx, JSValue promise, JSValue resolve_func) {
-    // 调用 resolve 函数，恢复异步操作
-    
-}
-
-
-
 extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
-    // interact_with_generator();
+    imillion->NewService<JsService>();
 
+
+    auto count = 1;
+    for (auto i = 0; i < count; ++i) {
+
+    
     // 创建 JavaScript 引擎实例
     JSRuntime* runtime = JS_NewRuntime();
     if (!runtime) {
@@ -286,18 +295,20 @@ extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
     /* system modules */
     js_init_module_std(ctx, "std");
     js_init_module_os(ctx, "os");
-    const char* str =
-        "import * as std from 'std';\n"
-        "import * as os from 'os';\n"
-        "globalThis.std = std;\n"
-        "globalThis.os = os;\n"
-        "var console = {};\n"
-        "console.log = value => std.printf(value);\n";
-    JSValue init_compile =
-        JS_Eval(ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    //const char* str =
+    //    "import * as std from 'std';\n"
+    //    "import * as os from 'os';\n"
+    //    "globalThis.std = std;\n"
+    //    "globalThis.os = os;\n"
+    //    "var console = {};\n"
+    //    "console.log = value => std.printf(value);\n";
+    //JSValue init_compile =
+    //    JS_Eval(ctx, str, strlen(str), "<main>", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
 
-    js_module_set_import_meta(ctx, init_compile, 1, 1);
-    JSValue init_run = JS_EvalFunction(ctx, init_compile);
+    // js_module_set_import_meta(ctx, init_compile, 1, 1);
+    // JSValue init_run = JS_EvalFunction(ctx, init_compile);
+
+
 
   //  const char* test_val = R"(
   //  var console = {};
@@ -324,10 +335,10 @@ extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
 
 
     // 创建 JavaScript 引擎的执行环境
-    JSValue global = JS_GetGlobalObject(ctx);
+    // JSValue global = JS_GetGlobalObject(ctx);
 
     // 在全局对象上注册 Call 函数
-    JS_SetPropertyStr(ctx, global, "Call", JS_NewCFunction(ctx, Call, "Call", 0));
+    // JS_SetPropertyStr(ctx, global, "Call", JS_NewCFunction(ctx, Call, "Call", 0));
 
     // JavaScript 代码（函数 A）
     const char* js_code =
@@ -410,49 +421,49 @@ extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
     else {
         printf("Script executed successfully!\n");
     }
-
-
-
-    // JavaScript 代码定义生成器函数
-    js_code = R"(
-        function* myGenerator() {
-            var a = yield 1;
-            std.printf('a:' + a);
-            var b = yield 2;
-            var c = yield 3;
-        }
-    )";
-
-    // 执行 JavaScript 代码
-    global = JS_GetGlobalObject(ctx);
-    JSValue eval_result = JS_Eval(ctx, js_code, strlen(js_code), "<input>", JS_EVAL_TYPE_GLOBAL);
-    if (JS_IsException(eval_result)) {
-        // 获取异常值
-        JSValue exception = JS_GetException(ctx);
-        const char* error_str = JS_ToCString(ctx, exception);
-        printf("Script execution failed: %s\n", error_str);
-        JS_FreeCString(ctx, error_str);
-        JS_FreeValue(ctx, exception);
-
-        std::cerr << "Failed to evaluate JavaScript code" << std::endl;
-        return 1;
     }
 
-    // 获取生成器函数
-    JSValue generatorFunc = JS_GetPropertyStr(ctx, global, "myGenerator");
-    if (JS_IsException(generatorFunc)) {
-        std::cerr << "Failed to get myGenerator function" << std::endl;
-        return 1;
-    }
 
-    // 调用生成器函数并传入 C++ 中的值
-    callGenerator(ctx, generatorFunc, 10.5, 20.5, 30.5);
+    //// JavaScript 代码定义生成器函数
+    //js_code = R"(
+    //    function* myGenerator() {
+    //        var a = yield 1;
+    //        std.printf('a:' + a);
+    //        var b = yield 2;
+    //        var c = yield 3;
+    //    }
+    //)";
+
+    //// 执行 JavaScript 代码
+    //global = JS_GetGlobalObject(ctx);
+    //JSValue eval_result = JS_Eval(ctx, js_code, strlen(js_code), "<input>", JS_EVAL_TYPE_GLOBAL);
+    //if (JS_IsException(eval_result)) {
+    //    // 获取异常值
+    //    JSValue exception = JS_GetException(ctx);
+    //    const char* error_str = JS_ToCString(ctx, exception);
+    //    printf("Script execution failed: %s\n", error_str);
+    //    JS_FreeCString(ctx, error_str);
+    //    JS_FreeValue(ctx, exception);
+
+    //    std::cerr << "Failed to evaluate JavaScript code" << std::endl;
+    //    return 1;
+    //}
+
+    //// 获取生成器函数
+    //JSValue generatorFunc = JS_GetPropertyStr(ctx, global, "myGenerator");
+    //if (JS_IsException(generatorFunc)) {
+    //    std::cerr << "Failed to get myGenerator function" << std::endl;
+    //    return 1;
+    //}
+
+    //// 调用生成器函数并传入 C++ 中的值
+    //callGenerator(ctx, generatorFunc, 10.5, 20.5, 30.5);
 
     // 清理资源
-    JS_FreeValue(ctx, eval_result);
-    JS_FreeValue(ctx, generatorFunc);
-    JS_FreeContext(ctx);
-    JS_FreeRuntime(runtime);
+    //JS_FreeValue(ctx, eval_result);
+    //JS_FreeValue(ctx, generatorFunc);
+    //JS_FreeContext(ctx);
+    //JS_FreeRuntime(runtime);
 
     return 0;
 
