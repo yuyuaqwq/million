@@ -1,8 +1,8 @@
 #include <million/api.h>
 
 #include <million/nonnull_ptr.h>
-#include <million/imsg.h>
 #include <million/iservice.h>
+#include <million/proto_codec.h>
 
 #include <gateway/gateway.h>
 

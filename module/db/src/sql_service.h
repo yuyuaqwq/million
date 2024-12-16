@@ -51,9 +51,9 @@ public:
 
     MILLION_MSG_DISPATCH(SqlService);
 
-    MILLION_MSG_HANDLE(SqlTableInitMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(SqlTableInitMsg, msg) {
         const auto& desc = msg->desc;
-        const proto::db::MessageOptionsTable& options = desc.options().GetExtension(proto::db::table);
+        const MessageOptionsTable& options = desc.options().GetExtension(table);
         auto& table_name = options.name();
 
         uint32_t count = 0;
@@ -62,7 +62,7 @@ public:
             "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name",
             soci::use(table_name), soci::into(count);
         if (count > 0) {
-            Reply(std::move(msg));
+            SendTo(sender, session_id, std::move(msg));
             co_return;
         }
 

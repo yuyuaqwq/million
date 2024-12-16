@@ -27,6 +27,15 @@ public:
         msg_unique_ = std::move(rv.msg_unique_);
     }
 
+    template <typename T>
+    MsgUnique(std::unique_ptr<T>&& rv) noexcept
+        : msg_unique_(std::move(MsgUnique(rv.release()).msg_unique_)) {}
+
+    template <typename T>
+    void operator=(std::unique_ptr<T>&& rv) noexcept {
+        msg_unique_ = std::move(MsgUnique(rv.release()).msg_unique_);
+    }
+
     bool IsProtoMessage() const {
         return std::holds_alternative<ProtoMsgUnique>(msg_unique_);
     }

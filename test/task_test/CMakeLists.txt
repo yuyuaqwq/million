@@ -21,3 +21,6 @@ if (UNIX)
     find_library(DL_LIBRARIES dl)
     target_link_libraries(task_test PRIVATE ${DL_LIBRARIES})
 endif()
+
+target_include_directories(task_test PRIVATE ${PROTOBUF_INCLUDE_DIR})
+target_link_libraries(task_test PRIVATE ${PROTOBUF_LIB})

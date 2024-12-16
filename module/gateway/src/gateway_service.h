@@ -117,7 +117,7 @@ public:
     MILLION_CPP_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
         logger().Trace("GatewayRegisterUserServiceMsg.");
         user_service_ = msg->user_service;
-        SendTo(sender, session_id, msg.release());
+        SendTo(sender, session_id, std::move(msg));
         co_return;
     }
 
