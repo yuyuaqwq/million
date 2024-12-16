@@ -48,10 +48,10 @@ const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& p
     // 获取该文件的options，确认是否设置了db
     const auto& file_options = file_desc->options();
     // 检查 db 是否被设置
-    if (!file_options.HasExtension(db)) {
+    if (!file_options.HasExtension(::million::db::db)) {
         return nullptr;
     }
-    const auto& db_options = file_options.GetExtension(db);
+    const auto& db_options = file_options.GetExtension(::million::db::db);
 
     int message_count = file_desc->message_type_count();
     for (int i = 0; i < message_count; i++) {
@@ -153,7 +153,7 @@ public:
 
     MILLION_CPP_MSG_HANDLE(DbRegisterProtoCodecMsg, msg) {
         proto_codec_ = msg->proto_codec.get();
-        Reply(std::move(msg));
+        SendTo(sender, session_id, std::move(msg));
         co_return;
     }
 
@@ -184,7 +184,7 @@ public:
             break;
         }
 
-        Reply(std::move(msg));
+        SendTo(sender, session_id, std::move(msg));
     }
 
     MILLION_CPP_MSG_HANDLE(DbRowGetMsg, msg) {
@@ -240,7 +240,7 @@ public:
         } while (false);
         msg->db_row = row_iter->second;
 
-        Reply(std::move(msg));
+        SendTo(sender, session_id, std::move(msg));
     }
 
     MILLION_CPP_MSG_HANDLE(DbRowSetMsg, msg) {

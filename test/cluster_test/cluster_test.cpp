@@ -6,10 +6,12 @@
 
 #include <cluster/cluster.h>
 
+#include <million/proto_codec.h>
+
 #include <protogen/protogen.h>
 #include <protogen/ss/ss_test.pb.h>
 
-namespace ss = million::proto::ss;
+namespace ss = million::ss;
 namespace protobuf = google::protobuf;
 
 MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeName) target_node, (ss::test::LoginReq) req);
@@ -41,16 +43,13 @@ public:
 
     MILLION_MSG_DISPATCH(TestService);
 
-    MILLION_PROTO_MSG_DISPATCH(ss, ClusterRecvPacketMsg, &proto_codec_);
-
-    MILLION_PROTO_MSG_ID(ss, MSG_ID_TEST, &proto_codec_, "ss/ss_test.proto", ss::msg_id, ss::test::sub_msg_id);
-
-    MILLION_PROTO_MSG_HANDLE(ss::test, SUB_MSG_ID_LOGIN_REQ, LoginReq, req) {
+    using LoginReq = ss::test::LoginReq;
+    MILLION_PROTO_MSG_HANDLE(LoginReq, req) {
         logger().Info("test, value:{}", req->value());
         co_return;
     }
 
-    MILLION_MSG_HANDLE(TestMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(TestMsg, msg) {
         Send<million::cluster::ClusterSendPacketMsg>(cluster_, "TestService", msg->target_node, "TestService", proto_codec_.EncodeMessage(msg->req).value());
         co_return;
     }

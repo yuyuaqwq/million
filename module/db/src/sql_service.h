@@ -232,7 +232,7 @@ public:
 
         sql_ << sql;
 
-        Reply(std::move(msg));
+        SendTo(sender, session_id, std::move(msg));
         co_return;
     }
 
@@ -274,7 +274,7 @@ public:
         auto it = rs.begin();
         if (it == rs.end()) {
             msg->success = false;
-            Reply(std::move(msg));
+            SendTo(sender, session_id, std::move(msg));
             co_return;
         }
         const auto& row = *it;
@@ -347,7 +347,7 @@ public:
         }
 
         msg->success = true;
-        Reply(std::move(msg));
+        SendTo(sender, session_id, std::move(msg));
         co_return;
     }
 
@@ -412,7 +412,7 @@ public:
 
         stmt.execute(true);
 
-        Reply(std::move(msg));
+        SendTo(sender, session_id, std::move(msg));
         co_return;
     }
 
@@ -460,7 +460,7 @@ public:
 
         stmt.execute(true);
 
-        Reply(std::move(msg));
+        SendTo(sender, session_id, std::move(msg));
         co_return;
     }
 

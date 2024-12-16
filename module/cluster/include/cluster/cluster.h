@@ -6,6 +6,7 @@
 
 #include <million/imillion.h>
 #include <million/msg.h>
+#include <million/net/packet.h>
 
 #include <cluster/api.h>
 

@@ -39,17 +39,17 @@ public:
         });
     }
 
-    void RegisterLogicMsgHandle(MsgKey msg_key, AgentLogicHandleFunc handle) {
-        logic_init_queue_.emplace_back([this, msg_key, handle] {
-            auto res = logic_handle_map_.emplace(msg_key, handle);
+    void RegisterLogicMsgHandle(MsgTypeKey msg_type_key, AgentLogicHandleFunc handle) {
+        logic_init_queue_.emplace_back([this, msg_type_key, handle] {
+            auto res = logic_handle_map_.emplace(msg_type_key, handle);
             if (!res.second) {
                 // 重复注册消息
             }
         });
     }
 
-    std::optional<AgentLogicHandleFunc> GetLogicHandle(MsgKey msg_key) {
-        auto iter = logic_handle_map_.find(msg_key);
+    std::optional<AgentLogicHandleFunc> GetLogicHandle(MsgTypeKey msg_type_key) {
+        auto iter = logic_handle_map_.find(msg_type_key);
         if (iter == logic_handle_map_.end()) {
             return std::nullopt;
         }
@@ -61,7 +61,7 @@ private:
 
     ProtoCodec* proto_codec_;
 
-    std::unordered_map<MsgKey, AgentLogicHandleFunc> logic_handle_map_;
+    std::unordered_map<MsgTypeKey, AgentLogicHandleFunc> logic_handle_map_;
     std::vector<std::function<void()>> logic_init_queue_;
 };
 
@@ -85,12 +85,12 @@ private:
             logger().Err("DecodeMessage failed");
             co_return;
         }
-        auto func = AgentLogicHandler::Instance().GetLogicHandle(ProtoCodec::CalcKey(res->msg_id, res->sub_msg_id));
+        auto func = AgentLogicHandler::Instance().GetLogicHandle(res->msg.GetTypeKey());
         if (!func) {
             logger().Err("Agent logic handle not found, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
             co_return;
         }
-        co_await(*func)(this, std::move(res->msg));
+        co_await(*func)(this, std::move(res->msg.GetProtoMessage()));
         co_return;
     }
 
@@ -111,29 +111,20 @@ private:
     gateway::UserContextId user_context_id_;
 };
 
-#define MILLION_AGENT_LOGIC_MSG_ID(NAMESPACE_, MSG_ID_, PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
-    static ::million::MsgId _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = 0; \
-    const bool _MILLION_AGENT_LOGIC_HANDLE_SET_MSG_ID_##MSG_ID_ = \
-        [] { \
-            ::million::agent::AgentLogicHandler::Instance().RegisterLogicMsgProto(PROTO_FILE_NAME, NAMESPACE_::MSG_EXT_ID_, NAMESPACE_::SUB_MSG_EXT_ID_); \
-            _MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_ = static_cast<::million::MsgId>(NAMESPACE_::MSG_ID_); \
-            return true; \
-        }() \
-
-#define MILLION_AGENT_LOGIC_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_NAME_); \
+#define MILLION_AGENT_LOGIC_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<MSG_TYPE_> MSG_NAME_); \
     ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::agent::AgentService* agent, ::million::ProtoMsgUnique MSG_PTR_NAME_) { \
-        auto msg = ::std::unique_ptr<NAMESPACE_::MSG_TYPE_>(static_cast<NAMESPACE_::MSG_TYPE_*>(MSG_PTR_NAME_.release())); \
+        auto msg = ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MSG_PTR_NAME_.release())); \
         co_await _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(agent, std::move(msg)); \
         co_return; \
     } \
     const bool MILLION_AGENT_LOGIC_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [] { \
-            ::million::agent::AgentLogicHandler::Instance().RegisterLogicMsgHandle(::million::ProtoCodec::CalcKey(_MILLION_AGENT_LOGIC_HANDLE_CURRENT_MSG_ID_, NAMESPACE_::SUB_MSG_ID_), \
+            ::million::agent::AgentLogicHandler::Instance().RegisterLogicMsgHandle(reinterpret_cast<::million::MsgTypeKey>(MSG_TYPE_::GetDescriptor()), \
                 _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I); \
             return true; \
         }(); \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
+    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
 
 
 } // namespace agent

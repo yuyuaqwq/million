@@ -38,7 +38,7 @@ public:
     }
 
     virtual million::Task<> OnStart() override {
-        auto user = std::make_unique<million::proto::db::example::User>();
+        auto user = std::make_unique<million::db::example::User>();
         user->set_id(100);
         user->set_password_hash("sadawd");
         user->set_is_active(true);
@@ -60,7 +60,7 @@ public:
 
         // co_await Call<db::SqlInsertMsg>(*handle, million::make_nonnull(&row));
 
-        auto res2 = co_await Call<db::DbRowGetMsg>(db_service_, *million::proto::db::example::User::GetDescriptor(), "103", std::nullopt);
+        auto res2 = co_await Call<db::DbRowGetMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103", std::nullopt);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");
         }
@@ -71,7 +71,7 @@ public:
 
     MILLION_MSG_DISPATCH(TestService);
 
-    MILLION_MSG_HANDLE(Test1Msg, msg) {
+    MILLION_CPP_MSG_HANDLE(Test1Msg, msg) {
         std::printf("?? ");
         //auto msg2 = std::make_unique<Test1Msg>();
         //Timeout(100, std::move(msg2));
