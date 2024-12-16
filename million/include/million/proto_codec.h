@@ -226,57 +226,16 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     return packet;
 }
 
-#define MILLION_PROTO_MSG_DISPATCH(NAMESPACE_, PROTO_PACKET_MSG_TYPE_, PROTO_CODEC_) \
+// 基于该分发的ProtoMsgHandle，session_id为PROTO_PACKET_MSG_TYPE_传入的context_id
+#define MILLION_PROTO_PACKET_DISPATCH(NAMESPACE_, PROTO_PACKET_MSG_TYPE_, PROTO_CODEC_) \
     using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
-    MILLION_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
-        if (!_MILLION_PROTO_MSG_INIT_QUEUE_.empty()) { \
-            for (auto& func : _MILLION_PROTO_MSG_INIT_QUEUE_) func(); \
-            _MILLION_PROTO_MSG_INIT_QUEUE_.clear(); \
-        } \
+    MILLION_CPP_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
         auto res = (PROTO_CODEC_)->DecodeMessage(msg->packet); \
         if (!res) { \
             co_return; \
         } \
-        auto iter = _MILLION_PROTO_MSG_HANDLE_MAP_.find(::million::ProtoCodec::CalcKey(res->msg_id, res->sub_msg_id)); \
-        if (iter != _MILLION_PROTO_MSG_HANDLE_MAP_.end()) { \
-            co_await (this->*iter->second)(msg->context_id, std::move(res->msg)); \
-        } \
+        co_await OnMsg(sender, msg->context_id, std::move(res->msg)); \
         co_return; \
     } \
-    NAMESPACE_::MsgId _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_; \
-    ::std::vector<::std::function<void()>> _MILLION_PROTO_MSG_INIT_QUEUE_; \
-    ::std::unordered_map<::million::MsgKey, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)&, ::million::ProtoMsgUnique)> _MILLION_PROTO_MSG_HANDLE_MAP_ \
-
-#define MILLION_PROTO_MSG_ID(NAMESPACE_, MSG_ID_, PROTO_CODEC, PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
-    const bool _MILLION_PROTO_MSG_HANDLE_SET_MSG_ID_##MSG_ID_ = \
-        [this] { \
-            _MILLION_PROTO_MSG_INIT_QUEUE_.emplace_back([this]{ \
-                if (!(PROTO_CODEC)->RegisterProto(PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_)) { \
-                    logger().Err("RegisterProto failed: {}", PROTO_FILE_NAME); \
-                } \
-                _MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_ = NAMESPACE_::MSG_ID_; \
-            }); \
-            return true; \
-        }() \
-
-//#define MILLION_PROTO_MSG_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) \
-//    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)& context_id, ::million::ProtoMsgUnique MSG_PTR_NAME_) { \
-//        auto msg = ::std::unique_ptr<NAMESPACE_::MSG_TYPE_>(static_cast<NAMESPACE_::MSG_TYPE_*>(MSG_PTR_NAME_.release())); \
-//        co_await _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(context_id, std::move(msg)); \
-//        co_return; \
-//    } \
-//    const bool MILLION_PROTO_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
-//        [this] { \
-//            _MILLION_PROTO_MSG_INIT_QUEUE_.emplace_back([this]{ \
-//                auto res = _MILLION_PROTO_MSG_HANDLE_MAP_.emplace(::million::ProtoCodec::CalcKey(static_cast<::million::MsgId>(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_), static_cast<::million::SubMsgId>(NAMESPACE_::SUB_MSG_ID_)), \
-//                    &_MILLION_SERVICE_TYPE_::_MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_I \
-//                ); \
-//                if (!res.second) { \
-//                    logger().Err("Duplicate registration of proto msg handle: msg id:{}, sub msg id: {}", static_cast<::million::MsgId>(_MILLION_PROTO_MSG_HANDLE_CURRENT_MSG_ID_), static_cast<::million::SubMsgId>(NAMESPACE_::SUB_MSG_ID_)); \
-//                } \
-//            }); \
-//            return true; \
-//        }(); \
-//    ::million::Task<> _MILLION_PROTO_MSG_HANDLE_##MSG_TYPE_##_II(const decltype(_MILLION_PROTO_PACKET_MSG_TYPE_::context_id)& context_id, ::std::unique_ptr<NAMESPACE_::MSG_TYPE_> MSG_PTR_NAME_)
 
 } // namespace million
