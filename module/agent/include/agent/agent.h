@@ -79,7 +79,7 @@ private:
     MILLION_MSG_DISPATCH(AgentService);
 
     using GatewayRecvPacketMsg = gateway::GatewayRecvPacketMsg;
-    MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
         auto res = AgentLogicHandler::Instance().proto_codec_->DecodeMessage(msg->packet);
         if (!res) {
             logger().Err("DecodeMessage failed");
@@ -90,7 +90,7 @@ private:
             logger().Err("Agent logic handle not found, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
             co_return;
         }
-        co_await(*func)(this, std::move(res->proto_msg));
+        co_await(*func)(this, std::move(res->msg));
         co_return;
     }
 

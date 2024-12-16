@@ -1,6 +1,7 @@
 #pragma once
 
 #include <million/iservice.h>
+#include <million/proto_codec.h>
 
 #include <protogen/ss/ss_cluster.pb.h>
 
@@ -59,7 +60,7 @@ public:
 
     MILLION_MSG_DISPATCH(ClusterService);
 
-    MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
         auto& ep = msg->connection->remote_endpoint();
         auto ip = ep.address().to_string();
         auto port = std::to_string(ep.port());
@@ -78,7 +79,7 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
         auto& ep = msg->connection->remote_endpoint();
         auto ip = ep.address().to_string();
         auto port = std::to_string(ep.port());
@@ -92,7 +93,7 @@ public:
         header_size = *reinterpret_cast<uint32_t*>(msg->packet.data());
         header_size = asio::detail::socket_ops::network_to_host_long(header_size);
 
-        proto::ss::cluster::MsgBody msg_body;
+        ss::cluster::MsgBody msg_body;
         if (!msg_body.ParseFromArray(msg->packet.data() + sizeof(header_size), header_size)) {
             logger().Warn("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
             msg->connection->Close();
@@ -102,7 +103,7 @@ public:
         auto node_session = msg->connection->get_ptr<NodeSession>();
 
         switch (msg_body.body_case()) {
-        case proto::ss::cluster::MsgBody::BodyCase::kHandshakeReq: {
+        case ss::cluster::MsgBody::BodyCase::kHandshakeReq: {
             // 收到握手请求，当前是被动连接方
             auto& req = msg_body.handshake_req();
             node_session->info().node_name = req.src_node();
@@ -115,7 +116,7 @@ public:
             }
 
             // 能否匹配都回包
-            proto::ss::cluster::MsgBody msg_body;
+            ss::cluster::MsgBody msg_body;
             auto* res = msg_body.mutable_handshake_res();
             res->set_target_node(node_name_);
             auto packet = ProtoMsgToPacket(msg_body);
@@ -135,7 +136,7 @@ public:
             CreateNodeSession(std::move(msg->connection), false);
             break;
         }
-        case proto::ss::cluster::MsgBody::BodyCase::kHandshakeRes: {
+        case ss::cluster::MsgBody::BodyCase::kHandshakeRes: {
             // 收到握手响应，当前是主动连接方
             auto& res = msg_body.handshake_res();
             if (node_session->info().node_name != res.target_node()) {
@@ -161,7 +162,7 @@ public:
             wait_nodes_.erase(res.target_node());
             break;
         }
-        case proto::ss::cluster::MsgBody::BodyCase::kForwardHeader: {
+        case ss::cluster::MsgBody::BodyCase::kForwardHeader: {
             // 还需要判断下，连接没有完成握手，则不允许转发包
 
             auto& header = msg_body.forward_header();
@@ -181,7 +182,7 @@ public:
         co_return;
     }
 
-    MILLION_MSG_HANDLE(ClusterSendPacketMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(ClusterSendPacketMsg, msg) {
         EndPointRes end_point;
         auto node_session = FindNodeSession(msg->target_node, &end_point);
         if (!node_session && end_point.ip.empty()) {
@@ -207,7 +208,7 @@ public:
                 auto connection = *connection_opt;
                 auto node_session = connection->get_ptr<NodeSession>();
 
-                proto::ss::cluster::MsgBody msg_body;
+                ss::cluster::MsgBody msg_body;
                 auto* req = msg_body.mutable_handshake_req();
                 req->set_src_node(node_name_);
                 req->set_target_node(target_node);
@@ -319,7 +320,7 @@ private:
 
     void ForwardPacket(NodeSession* node_session, std::unique_ptr<ClusterSendPacketMsg> msg) {
         // 追加集群头部
-        proto::ss::cluster::MsgBody msg_body;
+        ss::cluster::MsgBody msg_body;
         auto* header = msg_body.mutable_forward_header();
         header->set_src_service(std::move(msg->src_service));
         header->set_target_service(std::move(msg->target_service));

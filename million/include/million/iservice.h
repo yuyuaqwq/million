@@ -148,14 +148,14 @@ private:
 
 #define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_) \
     using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
-    virtual ::million::Task<> OnMsg(const ServiceHandle& sender, SessionId session_id, ::million::MsgUnique msg) override { \
+    virtual ::million::Task<> OnMsg(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique msg) override { \
         auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg.GetTypeKey()); \
         if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
             co_await (this->*iter->second)(sender, session_id, std::move(msg)); \
         } \
         co_return; \
     } \
-    ::std::unordered_map<MsgTypeKey, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const ServiceHandle& sender, SessionId session_id, ::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<::million::MsgTypeKey, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
 
 
 #define MILLION_PROTO_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
@@ -166,7 +166,7 @@ private:
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(reinterpret_cast<MsgTypeKey>(MSG_TYPE_::GetDescriptor()), \
+            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(reinterpret_cast<::million::MsgTypeKey>(MSG_TYPE_::GetDescriptor()), \
                 &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
             ); \
             assert(res.second); \
@@ -182,7 +182,7 @@ private:
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(reinterpret_cast<MsgTypeKey>(&MSG_TYPE_::type_static()), \
+            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(reinterpret_cast<::million::MsgTypeKey>(&MSG_TYPE_::type_static()), \
                 &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
             ); \
             assert(res.second); \

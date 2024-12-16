@@ -19,7 +19,7 @@ public:
 
     MILLION_MSG_DISPATCH(NodeMgrService);
 
-    MILLION_MSG_HANDLE(NodeMgrNewAgentMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(NodeMgrNewAgentMsg, msg) {
         auto handle = imillion().NewService<AgentService>(msg->context_id);
         if (!handle) {
             logger().Err("NewService AgentService failed.");
@@ -56,7 +56,7 @@ public:
 
     MILLION_MSG_DISPATCH(AgentMgrService);
 
-    MILLION_MSG_HANDLE(AgentMgrLoginMsg, msg) {
+    MILLION_CPP_MSG_HANDLE(AgentMgrLoginMsg, msg) {
         auto agent_msg = co_await Call<NodeMgrNewAgentMsg>(node_mgr_, msg->context_id, std::nullopt);
         msg->agent_handle = std::move(agent_msg->agent_handle);
 
