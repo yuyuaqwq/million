@@ -143,7 +143,7 @@ public:
             logger().Err("JS_NewCModule failed: {}.", "service");
             return nullptr;
         }
-        // JS_AddModuleExport(js_ctx_, module, "send");
+        JS_AddModuleExport(js_ctx_, module, "send");
         if (!JsAddModule("service", module)) {
             logger().Err("JsAddModule failed: {}.", "service");
             // 不释放module，等自动回收
@@ -183,6 +183,8 @@ public:
             const char* test_val = R"(
               import * as std from 'std';
               import * as os from 'os';
+              import { send } from 'service';
+              send();
               var console = {};
               console.log = value => std.printf(value + "\n");
               console.log('ok')
@@ -198,14 +200,12 @@ public:
               std.printf('hello_world\n');
               std.printf(globalThis + "\n");
               var a = false;
-              os.setTimeout(()=>{std.printf('AAB\n')}, 2000)
+              os.setTimeout(()=>{std.printf('AAB\n')}, 2000);
               std.printf(a + "\n");
             )";
-          JSValue result = JS_Eval(js_ctx_, test_val, strlen(test_val), "test", JS_EVAL_TYPE_MODULE);
-          if (!JsCheckException(result)) {
+          if (!JsCreateModule("test", test_val)) break;
 
-          }
-
+          success = true;
         } while (false);
        
         if (!success) {
@@ -464,8 +464,6 @@ extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
     //JS_FreeValue(ctx, generatorFunc);
     //JS_FreeContext(ctx);
     //JS_FreeRuntime(runtime);
-
-    return 0;
 
     return true;
 }
