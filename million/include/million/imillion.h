@@ -9,6 +9,7 @@
 #include <million/iservice.h>
 #include <million/logger.h>
 #include <million/exception.h>
+#include <million/proto_codec.h>
 
 namespace YAML {
 

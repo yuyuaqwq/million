@@ -1,8 +1,9 @@
+#pragma once
+
 #include <million/noncopyable.h>
 #include <million/exception.h>
 #include <million/msg.h>
 #include <million/net/packet.h>
-
 
 namespace million {
 
@@ -215,7 +216,6 @@ private:
 
     std::unordered_map<MsgKey, const protobuf::Descriptor*> msg_desc_map_;
     std::unordered_map<const protobuf::Descriptor*, MsgKey> msg_id_map_;
-
 };
 
 inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
@@ -226,7 +226,7 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     return packet;
 }
 
-// 基于该分发的ProtoMsgHandle，session_id为PROTO_PACKET_MSG_TYPE_传入的context_id
+// 基于该宏分发的ProtoMsgHandle，session_id为PROTO_PACKET_MSG_TYPE_传入的context_id
 #define MILLION_PROTO_PACKET_DISPATCH(PROTO_CODEC_, PROTO_PACKET_MSG_TYPE_) \
     using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
     MILLION_CPP_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
