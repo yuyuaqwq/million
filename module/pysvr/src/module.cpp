@@ -8,15 +8,10 @@
 
 #include <pysvr/api.h>
 
-#include <pocketpy/pocketpy.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-
 #include <quickjs/quickjs.h>
 #include <quickjs/quickjs-libc.h>
 
-namespace py = pybind11;
-//
+
 //bool set_field(google::protobuf::Message* message, const std::string& field_name, const py::object& value) {
 //    const google::protobuf::Descriptor* descriptor = message->GetDescriptor();
 //    const google::protobuf::Reflection* reflection = message->GetReflection();
@@ -126,6 +121,10 @@ public:
     }
 
     static JSValue ServiceModuleSend(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        JsService* service = static_cast<JsService*>(JS_GetContextOpaque(ctx));
+        js_std_eval_binary
+
+        service->Send();
         return JSValue();
     }
 
@@ -169,6 +168,7 @@ public:
                 logger().Err("JS_NewContext failed.");
                 break;
             }
+            JS_SetContextOpaque(js_ctx_, this);
 
             js_init_module_std(js_ctx_, "std");
             js_init_module_os(js_ctx_, "os");
