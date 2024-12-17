@@ -36,6 +36,8 @@ public:
     void ProcessMsg(MsgElement msg);
     void ProcessMsgs(size_t count);
 
+    bool TaskExecutorIsEmpty() const;
+
     void EnableSeparateWorker();
     bool HasSeparateWorker() const;
 
@@ -80,7 +82,7 @@ private:
         kRunning,
         // 关闭后，不会开启新协程，不会调度已有协程，会触发已有协程的超时
         kStop,
-        // 退出后，不会开启新协程，不会调度已有协程，不会触发已有协程的超时(希望执行完所有协程再退出，则需要在Stop状态等待所有消息处理完毕，即使用MsgQueueIsEmpty)
+        // 退出后，不会开启新协程，不会调度已有协程，不会触发已有协程的超时(希望执行完所有协程再退出，则需要在Stop状态等待所有协程处理完毕，即使用TaskExecutorIsEmpty)
         kExit,
     };
     State state_ = kReady;

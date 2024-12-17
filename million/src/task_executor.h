@@ -27,6 +27,8 @@ public:
     // 将任务添加到调度器
     bool AddTask(Task<>&& task);
 
+    bool TaskQueueIsEmpty() const;
+
     Task<>* TaskTimeout(SessionId id);
 
 private:

@@ -64,6 +64,10 @@ bool TaskExecutor::AddTask(Task<>&& task) {
     return false;
 }
 
+bool TaskExecutor::TaskQueueIsEmpty() const {
+    return tasks_.empty();
+}
+
 Task<>* TaskExecutor::TaskTimeout(SessionId session_id) {
     auto iter = tasks_.find(session_id);
     if (iter == tasks_.end()) {

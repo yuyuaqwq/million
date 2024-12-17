@@ -150,6 +150,10 @@ void Service::ProcessMsgs(size_t count) {
     }
 }
 
+bool Service::TaskExecutorIsEmpty() const {
+    return excutor_.TaskQueueIsEmpty();
+}
+
 void Service::EnableSeparateWorker() {
     separate_worker_ = std::make_unique<SeparateWorker>([this] {
         SeparateThreadHandle();
