@@ -4,13 +4,15 @@
 
 #include <million/iservice.h>
 
-#include <protogen/ss/ss_service.pb.h>
-
 #include "million.h"
 #include "service_mgr.h"
 #include "session_monitor.h"
 
 namespace million {
+
+MILLION_MSG_DEFINE_EMPTY(, ServiceStartMsg);
+MILLION_MSG_DEFINE_EMPTY(, ServiceStopMsg);
+
 
 Service::Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
     : service_mgr_(service_mgr)
@@ -23,7 +25,7 @@ void Service::Start() {
     if (state_ != ServiceState::kReady) {
         return;
     }
-    iservice_->Send<ss::service::ServiceStart>(service_handle());
+    iservice_->Send<ServiceStartMsg>(service_handle());
 }
 
 void Service::Stop() {
@@ -31,7 +33,7 @@ void Service::Stop() {
         return;
     }
     state_ == ServiceState::kStoping;
-    iservice_->Send<ss::service::ServiceStop>(service_handle());
+    iservice_->Send<ServiceStopMsg>(service_handle());
 }
 
 bool Service::IsStoping() const {
@@ -71,7 +73,7 @@ void Service::ProcessMsg(MsgElement ele) {
     auto& sender = ele.sender;
     auto session_id = ele.session_id;
     auto& msg = ele.msg;
-    if (msg.IsType(ss::service::ServiceStart::GetDescriptor())) {
+    if (msg.IsType(ServiceStartMsg::type_static())) {
         auto task = iservice_->OnStart();
         if (!excutor_.AddTask(std::move(task))) {
             // ÒÑÍê³É
@@ -79,7 +81,7 @@ void Service::ProcessMsg(MsgElement ele) {
         }
         return;
     }
-    else if (msg.IsType(ss::service::ServiceStop::GetDescriptor())) {
+    else if (msg.IsType(ServiceStopMsg::type_static())) {
         try {
             iservice_->OnStop();
         }
@@ -93,9 +95,9 @@ void Service::ProcessMsg(MsgElement ele) {
         return;
     }
 
-    if (msg.IsType(ss::service::SessionTimeout::GetDescriptor())) {
-        auto msg_ptr = msg.get<ss::service::SessionTimeout>();
-        auto task = excutor_.TaskTimeout(msg_ptr->timeout_id());
+    if (msg.IsType(SessionTimeoutMsg::type_static())) {
+        auto msg_ptr = msg.get<SessionTimeoutMsg>();
+        auto task = excutor_.TaskTimeout(msg_ptr->timeout_id);
         if (task && state_ == ServiceState::kReady) {
             if (!task->coroutine.done() || !task->coroutine.promise().exception()) {
                 return;

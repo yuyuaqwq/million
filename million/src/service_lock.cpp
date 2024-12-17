@@ -1,10 +1,10 @@
 #include <million/service_lock.h>
 
-#include <protogen/ss/ss_service.pb.h>
-
 #include "service.h"
 
 namespace million {
+
+MILLION_MSG_DEFINE_EMPTY(, ServiceLockMsg);
 
 ServiceLock::ServiceLock(IService* iservice)
 	: iservice_(iservice)
@@ -17,14 +17,14 @@ Task<> ServiceLock::Lock() {
 	}
 	auto session_id = iservice_->NewSession();
 	wait_sessions_.push(session_id);
-	co_await iservice_->Recv<ss::service::ServiceUnlock>(session_id);
+	co_await iservice_->Recv<ServiceLockMsg>(session_id);
 	locking_ = true;
 }
 
 void ServiceLock::Unlock() {
 	locking_ = false;
 	if (!wait_sessions_.empty()) {
-		iservice_->SendTo<ss::service::ServiceUnlock>(iservice_->service_handle(), wait_sessions_.front());
+		iservice_->SendTo<ServiceLockMsg>(iservice_->service_handle(), wait_sessions_.front());
 		wait_sessions_.pop();
 	}
 }

@@ -8,10 +8,13 @@
 #include <million/noncopyable.h>
 #include <million/service_handle.h>
 #include <million/session_def.h>
+#include <million/cpp_msg.h>
 
 #include "detail/wheel_timer.hpp"
 
 namespace million {
+
+MILLION_MSG_DEFINE(, SessionTimeoutMsg, (SessionId) timeout_id);
 
 class Million;
 class SessionMonitor : noncopyable {
