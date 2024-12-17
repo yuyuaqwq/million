@@ -93,8 +93,10 @@ void Service::ProcessMsg(MsgElement ele) {
         catch (...) {
             service_mgr_->million().logger().Err("Service OnExit exception occurred: {}", "unknown exception");
         }
+        return;
     }
 
+    // Starting/Stop 都允许处理已有协程的超时
     if (msg.IsType(SessionTimeoutMsg::type_static())) {
         auto msg_ptr = msg.get<SessionTimeoutMsg>();
         auto task = excutor_.TaskTimeout(msg_ptr->timeout_id);
@@ -123,7 +125,7 @@ void Service::ProcessMsg(MsgElement ele) {
         return;
     }
 
-    // 非Running阶段不开启分发消息
+    // 非Running阶段不开启分发消息/恢复等待中的协程
     if (!IsRunning()) {
         return;
     }
@@ -138,7 +140,8 @@ void Service::ProcessMsg(MsgElement ele) {
 }
 
 void Service::ProcessMsgs(size_t count) {
-    for (size_t i = 0; i < count; ++i) {
+    // 如果处理了Exit，则直接抛弃所有消息及未完成的任务(包括未触发超时的任务)
+    for (size_t i = 0; i < count && !IsExit(); ++i) {
         auto msg_opt = PopMsg();
         if (!msg_opt) {
             break;
