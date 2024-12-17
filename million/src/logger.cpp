@@ -82,7 +82,7 @@ public:
         return true;
     }
 
-    virtual void OnStop() override  {
+    virtual void OnStop(ServiceHandle sender, SessionId session_id) override  {
         logger_->flush();
     }
 

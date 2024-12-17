@@ -37,7 +37,7 @@ public:
         return true;
     }
 
-    virtual million::Task<> OnStart() override {
+    virtual million::Task<> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
         auto user = std::make_unique<million::db::example::User>();
         user->set_id(100);
         user->set_password_hash("sadawd");

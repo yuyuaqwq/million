@@ -20,6 +20,7 @@ void ServiceMgr::Stop() {
     service_queue_cv_.notify_all();
     for (auto& service : services_) {
         service->Stop();
+        service->Exit();
     }
 }
 
@@ -31,7 +32,7 @@ ServiceId ServiceMgr::AllocServiceId() {
     return id;
 }
 
-std::optional<ServiceHandle> ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
+std::optional<ServiceHandle> ServiceMgr::AddService(std::unique_ptr<IService> iservice, bool start) {
     decltype(services_)::iterator iter;
     auto service_shared = std::make_shared<Service>(this, std::move(iservice));
     auto handle = ServiceHandle(service_shared);
@@ -56,20 +57,41 @@ std::optional<ServiceHandle> ServiceMgr::AddService(std::unique_ptr<IService> is
         iter = --services_.end();
     }
     service_ptr->set_iter(iter);
-    handle.service()->Start();
+
+    if (start) {
+        StartService(handle);
+    }
+
     return handle;
 }
 
-void ServiceMgr::StopService(const ServiceHandle& handle) {
-    handle.service()->Stop();
+void ServiceMgr::DeleteService(Service* service) {
+    auto lock = std::lock_guard(services_mutex_);
+    services_.erase(service->iter());
 }
 
-void ServiceMgr::DeleteService(Service* service) {
-    {
-        auto lock = std::lock_guard(services_mutex_);
-        services_.erase(service->iter());
+
+SessionId ServiceMgr::StartService(const ServiceHandle& handle) {
+    if (!handle.service()) {
+        return kSessionIdInvalid;
     }
+    return handle.service()->iservice().Send<ServiceStartMsg>(handle);
 }
+
+SessionId ServiceMgr::StopService(const ServiceHandle& handle) {
+    if (!handle.service()) {
+        return kSessionIdInvalid;
+    }
+    return handle.service()->iservice().Send<ServiceStopMsg>(handle);
+}
+
+SessionId ServiceMgr::ExitService(const ServiceHandle& handle) {
+    if (!handle.service()) {
+        return kSessionIdInvalid;
+    }
+    return handle.service()->iservice().Send<ServiceExitMsg>(handle);
+}
+
 
 void ServiceMgr::PushService(Service* service) {
     if (service->HasSeparateWorker()) {
@@ -136,7 +158,7 @@ std::optional<ServiceHandle> ServiceMgr::GetServiceById(ServiceId id) {
 
 bool ServiceMgr::Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
     auto service = target.service();
-    if (!service || service->IsStop()) {
+    if (!service) {
         return false;
     }
     service->PushMsg(sender, session_id, std::move(msg));

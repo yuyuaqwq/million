@@ -33,13 +33,16 @@ public:
 
     bool Start(std::string_view config_path);
 
-    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice);
+    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice, bool start);
     template <typename IServiceT, typename ...Args>
     std::optional<ServiceHandle> NewService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
-        return AddService(std::move(iservice));
+        return AddService(std::move(iservice), true);
     }
-    void StopService(const ServiceHandle& service_handle);
+
+    SessionId StartService(const ServiceHandle& service_handle);
+    SessionId StopService(const ServiceHandle& service_handle);
+
     bool SetServiceName(const ServiceHandle& handle, const ServiceName& name);
     std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
 
@@ -70,7 +73,6 @@ public:
     Logger& logger();
 
 private:
-
     Million* million_ = nullptr;
 };
 

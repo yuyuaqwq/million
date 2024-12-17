@@ -10,9 +10,6 @@
 
 namespace million {
 
-MILLION_MSG_DEFINE_EMPTY(, ServiceStartMsg);
-MILLION_MSG_DEFINE_EMPTY(, ServiceStopMsg);
-
 
 Service::Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
     : service_mgr_(service_mgr)
@@ -21,34 +18,12 @@ Service::Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
 
 Service::~Service() = default;
 
-void Service::Start() {
-    if (state_ != ServiceState::kReady) {
-        return;
-    }
-    iservice_->Send<ServiceStartMsg>(service_handle());
-}
 
-void Service::Stop() {
-    if (IsStoping() || IsStop()) {
-        return;
-    }
-    state_ == ServiceState::kStoping;
-    iservice_->Send<ServiceStopMsg>(service_handle());
-}
-
-bool Service::IsStoping() const {
-    return state_ == ServiceState::kStoping;
-}
-
-bool Service::IsStop() const {
-    return state_ == ServiceState::kStop;
-}
 
 void Service::PushMsg(const ServiceHandle& sender, SessionId session_id, MsgUnique msg) {
     {
         auto lock = std::lock_guard(msgs_mutex_);
-        if (IsStoping() || IsStop()) {
-            // 服务退出，不再接收消息
+        if (!IsReady() && !IsStarting() && !IsRunning()) {
             return;
         }
         Service::MsgElement ele{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
@@ -74,16 +49,26 @@ void Service::ProcessMsg(MsgElement ele) {
     auto session_id = ele.session_id;
     auto& msg = ele.msg;
     if (msg.IsType(ServiceStartMsg::type_static())) {
-        auto task = iservice_->OnStart();
+        if (!IsReady() && !IsStop()) {
+            // 不是可开启服务的状态
+            return;
+        }
+        state_ = kStarting;
+        auto task = iservice_->OnStart(sender, session_id);
         if (!excutor_.AddTask(std::move(task))) {
-            // 已完成
-            state_ = ServiceState::kRunning;
+            // 已完成OnStart
+            state_ = kRunning;
         }
         return;
     }
     else if (msg.IsType(ServiceStopMsg::type_static())) {
+        if (!IsRunning()) {
+            // 不是可关闭服务的状态
+            return;
+        }
+        state_ = kStop;
         try {
-            iservice_->OnStop();
+            iservice_->OnStop(sender, session_id);
         }
         catch (const std::exception& e) {
             service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", e.what());
@@ -91,24 +76,40 @@ void Service::ProcessMsg(MsgElement ele) {
         catch (...) {
             service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", "unknown exception");
         }
-        state_ = ServiceState::kStop;
         return;
+    }
+    else if (msg.IsType(ServiceExitMsg::type_static())) {
+        if (!IsStop()) {
+            // 不是可退出服务的状态
+            return;
+        }
+        state_ = kExit;
+        try {
+            iservice_->OnExit(sender, session_id);
+        }
+        catch (const std::exception& e) {
+            service_mgr_->million().logger().Err("Service OnExit exception occurred: {}", e.what());
+        }
+        catch (...) {
+            service_mgr_->million().logger().Err("Service OnExit exception occurred: {}", "unknown exception");
+        }
     }
 
     if (msg.IsType(SessionTimeoutMsg::type_static())) {
         auto msg_ptr = msg.get<SessionTimeoutMsg>();
         auto task = excutor_.TaskTimeout(msg_ptr->timeout_id);
-        if (task && state_ == ServiceState::kReady) {
+        if (task && IsStarting()) {
             if (!task->coroutine.done() || !task->coroutine.promise().exception()) {
                 return;
             }
-            // 异常退出的OnStart，销毁当前服务
-            Stop();
+            // 异常退出的OnStart，默认回收当前服务
+            state_ = kStop;
+            Exit();
         }
         return;
     }
 
-    if (state_ == ServiceState::kReady) {
+    if (IsReady()) {
         // OnStart未完成，只能尝试调度已有协程
         auto res = excutor_.TrySchedule(session_id, std::move(msg));
         if (!std::holds_alternative<Task<>*>(res)) {
@@ -116,12 +117,14 @@ void Service::ProcessMsg(MsgElement ele) {
         }
         auto task = std::get<Task<>*>(res);
         if (!task) {
-            state_ = ServiceState::kRunning;
+            // 已完成OnStart
+            state_ = kRunning;
         }
         return;
     }
 
-    if (state_ != ServiceState::kRunning) {
+    // 非Running阶段不开启分发消息
+    if (!IsRunning()) {
         return;
     }
 
@@ -166,8 +169,8 @@ void Service::SeparateThreadHandle() {
         }
         do {
             ProcessMsg(std::move(*msg));
-            if (IsStop()) {
-                // 销毁服务
+            if (IsExit()) {
+                // 服务已退出，销毁
                 service_mgr_->DeleteService(this);
                 break;
             }
@@ -184,5 +187,40 @@ std::optional<Service::MsgElement> Service::PopMsgWithLock() {
     assert(msg.msg);
     return msg;
 }
+
+
+SessionId Service::Start() {
+    return iservice_->Send<ServiceStartMsg>(service_handle());
+}
+
+SessionId Service::Stop() {
+    return iservice_->Send<ServiceStopMsg>(service_handle());
+}
+
+SessionId Service::Exit() {
+    return iservice_->Send<ServiceExitMsg>(service_handle());
+}
+
+
+bool Service::IsReady() const {
+    return state_ == kReady;
+}
+
+bool Service::IsStarting() const {
+    return state_ == kStarting;
+}
+
+bool Service::IsRunning() const {
+    return state_ == kRunning;
+}
+
+bool Service::IsStop() const {
+    return state_ == kStop;
+}
+
+bool Service::IsExit() const {
+    return state_ == kExit;
+}
+
 
 } // namespace million

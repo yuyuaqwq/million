@@ -22,13 +22,20 @@ bool IMillion::Start(std::string_view config_path) {
     return true;
 }
 
-std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iservice) {
-    return million_->AddService(std::move(iservice));
+
+std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iservice, bool start) {
+    return million_->AddService(std::move(iservice), start);
 }
 
-void IMillion::StopService(const ServiceHandle& service_handle) {
-    million_->StopService(service_handle);
+
+SessionId IMillion::StartService(const ServiceHandle& service_handle) {
+    return million_->StartService(service_handle);
 }
+
+SessionId IMillion::StopService(const ServiceHandle& service_handle) {
+    return million_->StopService(service_handle);
+}
+
 
 bool IMillion::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {
     return million_->SetServiceName(handle, name);
@@ -38,9 +45,11 @@ std::optional<ServiceHandle> IMillion::GetServiceByName(const ServiceName& name)
     return million_->GetServiceByName(name);
 }
 
+
 SessionId IMillion::NewSession() {
     return million_->NewSession();
 }
+
 
 SessionId IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
     return million_->Send(sender, target, std::move(msg));
@@ -49,6 +58,7 @@ SessionId IMillion::Send(const ServiceHandle& sender, const ServiceHandle& targe
 SessionId IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
     return million_->Send(sender, target, session_id, std::move(msg));
 }
+
 
 const YAML::Node& IMillion::YamlConfig() const {
     return million_->YamlConfig();

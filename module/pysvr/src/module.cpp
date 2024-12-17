@@ -122,9 +122,9 @@ public:
 
     static JSValue ServiceModuleSend(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         JsService* service = static_cast<JsService*>(JS_GetContextOpaque(ctx));
-        js_std_eval_binary
+        //js_std_eval_binary
 
-        service->Send();
+        //service->Send();
         return JSValue();
     }
 
@@ -222,7 +222,7 @@ public:
         return success;
     }
 
-    virtual void OnStop() override {
+    virtual void OnStop(::million::ServiceHandle sender, ::million::SessionId session_id) override {
 
     }
 

@@ -127,7 +127,7 @@ public:
         return true;
     }
 
-    virtual void OnStop() override {
+    virtual void OnStop(::million::ServiceHandle sender, ::million::SessionId session_id) override {
         
     }
 

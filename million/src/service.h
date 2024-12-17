@@ -15,12 +15,6 @@
 #include "task_executor.h"
 
 namespace million {
-enum class ServiceState {
-    kReady,
-    kRunning,
-    kStoping,
-    kStop,
-};
 
 class ServiceMgr;
 class Service : noncopyable {
@@ -34,11 +28,6 @@ public:
 public:
     Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
     ~Service();
-
-    void Start();
-    void Stop();
-    bool IsStoping() const;
-    bool IsStop() const;
 
     void PushMsg(const ServiceHandle& sender, SessionId session_id, MsgUnique msg);
     std::optional<MsgElement> PopMsg();
@@ -55,14 +44,23 @@ public:
     auto iter() const { return iter_; }
     void set_iter(std::list<std::shared_ptr<Service>>::iterator iter) { iter_ = iter; }
 
-    ServiceState state() { return state_; }
-
     bool in_queue() const { return in_queue_; }
     void set_in_queue(bool in_queue) { in_queue_ = in_queue; }
 
     IService& iservice() const { assert(iservice_); return *iservice_; }
 
     const ServiceHandle& service_handle() const { return iservice_->service_handle(); }
+
+    // ‘›«“≤ª π”√
+    SessionId Start();
+    SessionId Stop();
+    SessionId Exit();
+
+    bool IsReady() const;
+    bool IsStarting() const;
+    bool IsRunning() const;
+    bool IsStop() const;
+    bool IsExit() const;
 
 private:
     void SeparateThreadHandle();
@@ -73,7 +71,14 @@ private:
     std::list<std::shared_ptr<Service>>::iterator iter_;
 
     // std::optional<Task<>> on_start_task_;
-    ServiceState state_ = ServiceState::kReady;
+    enum State {
+        kReady,
+        kStarting,
+        kRunning,
+        kStop,
+        kExit,
+    };
+    State state_ = kReady;
 
     bool in_queue_ = false;
 

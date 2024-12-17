@@ -11,6 +11,10 @@
 
 namespace million {
 
+MILLION_MSG_DEFINE_EMPTY(, ServiceStartMsg);
+MILLION_MSG_DEFINE_EMPTY(, ServiceStopMsg);
+MILLION_MSG_DEFINE_EMPTY(, ServiceExitMsg);
+
 class Million;
 class ServiceMgr {
 public:
@@ -21,9 +25,12 @@ public:
 
     ServiceId AllocServiceId();
 
-    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> service);
-    void StopService(const ServiceHandle& handle);
+    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> service, bool start);
     void DeleteService(Service* service);
+
+    SessionId StartService(const ServiceHandle& handle);
+    SessionId StopService(const ServiceHandle& handle);
+    SessionId ExitService(const ServiceHandle& handle);
 
     void PushService(Service* service);
     Service* PopService();

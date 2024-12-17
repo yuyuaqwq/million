@@ -131,10 +131,10 @@ public:
     void EnableSeparateWorker();
 
     virtual bool OnInit() { return true; }
-    virtual Task<> OnStart() { co_return; }
+    virtual Task<> OnStart(ServiceHandle sender, SessionId session_id) { co_return; }
     virtual Task<> OnMsg(ServiceHandle sender, SessionId session_id, MsgUnique msg) = 0;
-    virtual void OnStop() { }
-    //virtual void OnExit() { }
+    virtual void OnStop(ServiceHandle sender, SessionId session_id) { }
+    virtual void OnExit(ServiceHandle sender, SessionId session_id) { }
 
     IMillion& imillion() { return *imillion_; }
     const ServiceHandle& service_handle() const { return service_handle_; }

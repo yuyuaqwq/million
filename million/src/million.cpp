@@ -181,13 +181,21 @@ void Million::Stop() {
     if (session_monitor_) session_monitor_->Stop();
 }
 
-std::optional<ServiceHandle> Million::AddService(std::unique_ptr<IService> iservice) {
-    return service_mgr_->AddService(std::move(iservice));
+
+std::optional<ServiceHandle> Million::AddService(std::unique_ptr<IService> iservice, bool start) {
+    return service_mgr_->AddService(std::move(iservice), start);
 }
 
-void Million::StopService(const ServiceHandle& service_handle) {
-    service_mgr_->StopService(service_handle);
+
+#undef StartService
+SessionId Million::StartService(const ServiceHandle& service_handle) {
+    return service_mgr_->StartService(service_handle);
 }
+
+SessionId Million::StopService(const ServiceHandle& service_handle) {
+    return service_mgr_->StopService(service_handle);
+}
+
 
 bool Million::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {
     return service_mgr_->SetServiceName(handle, name);
@@ -197,9 +205,11 @@ std::optional<ServiceHandle> Million::GetServiceByName(const ServiceName& name) 
     return service_mgr_->GetServiceByName(name);
 }
 
+
 SessionId Million::NewSession() {
     return session_mgr_->NewSession();
 }
+
 
 bool Million::Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
     return service_mgr_->Send(sender, target, session_id, std::move(msg));
@@ -212,6 +222,7 @@ SessionId Million::Send(const ServiceHandle& sender, const ServiceHandle& target
     }
     return kSessionIdInvalid;
 }
+
 
 const YAML::Node& Million::YamlConfig() const {
     return *config_;

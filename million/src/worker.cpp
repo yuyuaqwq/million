@@ -28,8 +28,8 @@ void Worker::Start() {
                 service_mgr.PushService(service);
                 continue;
             }
-            if (service->IsStop()) {
-                // 销毁服务
+            if (service->IsExit()) {
+                // 服务已退出，销毁
                 service_mgr.DeleteService(service);
             }
         }
