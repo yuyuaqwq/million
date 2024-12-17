@@ -23,7 +23,7 @@ Service::~Service() = default;
 void Service::PushMsg(const ServiceHandle& sender, SessionId session_id, MsgUnique msg) {
     {
         auto lock = std::lock_guard(msgs_mutex_);
-        if (!IsReady() && !IsStarting() && !IsRunning()) {
+        if (!IsReady() && !IsStarting() && !IsRunning() && !msg.IsType(ServiceExitMsg::type_static())) {
             return;
         }
         Service::MsgElement ele{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
