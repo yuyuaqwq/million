@@ -74,7 +74,7 @@ private:
 
     // std::optional<Task<>> on_start_task_;
     enum State {
-        // 就绪中，可以开启服务
+        // 已就绪，可以开启服务
         kReady,
         // 开启中，只能处理OnStart相关的消息及调度OnStart协程
         kStarting,
