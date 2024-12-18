@@ -75,21 +75,21 @@ SessionId ServiceMgr::StartService(const ServiceHandle& handle) {
     if (!handle.service()) {
         return kSessionIdInvalid;
     }
-    return handle.service()->iservice().Send<ServiceStartMsg>(handle);
+    return handle.service()->Start();
 }
 
 SessionId ServiceMgr::StopService(const ServiceHandle& handle) {
     if (!handle.service()) {
         return kSessionIdInvalid;
     }
-    return handle.service()->iservice().Send<ServiceStopMsg>(handle);
+    return handle.service()->Stop();
 }
 
 SessionId ServiceMgr::ExitService(const ServiceHandle& handle) {
     if (!handle.service()) {
         return kSessionIdInvalid;
     }
-    return handle.service()->iservice().Send<ServiceExitMsg>(handle);
+    return handle.service()->Exit();
 }
 
 
