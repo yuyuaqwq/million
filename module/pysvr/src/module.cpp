@@ -279,7 +279,7 @@ private:
         return obj;
     }
 
-    void SetProtoMsgRepeatedFieldByJsValue(million::ProtoMessage* msg
+    void SetProtoMsgRepeatedFieldFromJsValue(million::ProtoMessage* msg
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
         , JSValue repeated_value
@@ -405,7 +405,7 @@ private:
         
     }
 
-    void SetProtoMsgFieldByJsValue(million::ProtoMessage* msg
+    void SetProtoMsgFieldFromJsValue(million::ProtoMessage* msg
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
         , JSValue repeated_value) {
@@ -544,11 +544,11 @@ private:
             if (field_desc->is_repeated()) {
                 for (size_t j = 0; j < reflection->FieldSize(*msg, field_desc); ++j) {
                     JSValue repeated_value = JS_GetPropertyUint32(js_ctx_, field_value, j);
-                    SetProtoMsgRepeatedFieldByJsValue(msg, *reflection, *field_desc, repeated_value, j);
+                    SetProtoMsgRepeatedFieldFromJsValue(msg, *reflection, *field_desc, repeated_value, j);
                 }
             }
             else {
-                SetProtoMsgFieldByJsValue(msg, *reflection, *field_desc, field_value);
+                SetProtoMsgFieldFromJsValue(msg, *reflection, *field_desc, field_value);
             }
         }
     }
