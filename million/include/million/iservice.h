@@ -25,8 +25,6 @@ public:
     SessionId NewSession();
 
     SessionId Send(const ServiceHandle& target, MsgUnique msg);
-    bool SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg);
-
     template <typename MsgT, typename ...Args>
     SessionId Send(const ServiceHandle& target, Args&&... args) {
         if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
@@ -41,6 +39,7 @@ public:
         }
     }
 
+    bool SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     bool SendTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
         if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
