@@ -66,10 +66,12 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
 }
 
 void ServiceMgr::DeleteService(Service* service) {
+    {
+        // todo: 如果存在，先从name_map_和id_map_中移除
+    }
+
     auto lock = std::lock_guard(services_mutex_);
     services_.erase(service->iter());
-
-    // todo: 如果存在，从name_map_和id_map_中移除
 }
 
 
