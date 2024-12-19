@@ -53,7 +53,7 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
     }
     {
         auto lock = std::lock_guard(services_mutex_);
-        services_.emplace_back(std::move(service_shared));
+        services_.emplace_back(service_shared);
         iter = --services_.end();
     }
     service_ptr->set_iter(iter);
