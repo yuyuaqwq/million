@@ -32,7 +32,7 @@ ServiceId ServiceMgr::AllocServiceId() {
     return id;
 }
 
-std::optional<ServiceHandle> ServiceMgr::AddService(std::unique_ptr<IService> iservice, bool start) {
+std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> iservice, bool start) {
     decltype(services_)::iterator iter;
     auto service_shared = std::make_shared<Service>(this, std::move(iservice));
     auto handle = ServiceHandle(service_shared);
@@ -59,37 +59,30 @@ std::optional<ServiceHandle> ServiceMgr::AddService(std::unique_ptr<IService> is
     service_ptr->set_iter(iter);
 
     if (start) {
-        StartService(handle);
+        StartService(service_shared);
     }
 
-    return handle;
+    return service_shared;
 }
 
 void ServiceMgr::DeleteService(Service* service) {
     auto lock = std::lock_guard(services_mutex_);
     services_.erase(service->iter());
+
+    // todo: 如果存在，从name_map_和id_map_中移除
 }
 
 
-SessionId ServiceMgr::StartService(const ServiceHandle& handle) {
-    if (!handle.impl()) {
-        return kSessionIdInvalid;
-    }
-    return handle.impl()->Start();
+SessionId ServiceMgr::StartService(const ServiceShared& service) {
+    return service->Start();
 }
 
-SessionId ServiceMgr::StopService(const ServiceHandle& handle) {
-    if (!handle.impl()) {
-        return kSessionIdInvalid;
-    }
-    return handle.impl()->Stop();
+SessionId ServiceMgr::StopService(const ServiceShared& service) {
+    return service->Stop();
 }
 
-SessionId ServiceMgr::ExitService(const ServiceHandle& handle) {
-    if (!handle.impl()) {
-        return kSessionIdInvalid;
-    }
-    return handle.impl()->Exit();
+SessionId ServiceMgr::ExitService(const ServiceShared& service) {
+    return service->Exit();
 }
 
 
@@ -126,43 +119,39 @@ Service* ServiceMgr::PopService() {
     return service;
 }
 
-bool ServiceMgr::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {
+bool ServiceMgr::SetServiceName(const ServiceShared& service, const ServiceName& name) {
     auto lock = std::lock_guard(name_map_mutex_);
-    auto res = name_map_.emplace(name, handle);
+    auto res = name_map_.emplace(name, service->iter());
     return res.second;
 }
 
-std::optional<ServiceHandle> ServiceMgr::GetServiceByName(const ServiceName& name) {
+std::optional<ServiceShared> ServiceMgr::GetServiceByName(const ServiceName& name) {
     auto lock = std::lock_guard(name_map_mutex_);
     auto iter = name_map_.find(name);
     if (iter == name_map_.end()) {
         return std::nullopt;
     }
-    return iter->second;
+    return *iter->second;
 }
 
-bool ServiceMgr::SetServiceId(const ServiceHandle& handle, ServiceId id) {
+bool ServiceMgr::SetServiceId(const ServiceShared& service, ServiceId id) {
     auto lock = std::lock_guard(id_map_mutex_);
-    auto res = id_map_.emplace(id, handle);
+    auto res = id_map_.emplace(id, service->iter());
     return res.second;
 }
 
-std::optional<ServiceHandle> ServiceMgr::GetServiceById(ServiceId id) {
+std::optional<ServiceShared> ServiceMgr::GetServiceById(ServiceId id) {
     auto lock = std::lock_guard(id_map_mutex_);
     auto iter = id_map_.find(id);
     if (iter == id_map_.end()) {
         return std::nullopt;
     }
-    return iter->second;
+    return *iter->second;
 }
 
-bool ServiceMgr::Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
-    auto service = target.impl();
-    if (!service) {
-        return false;
-    }
-    service->PushMsg(sender, session_id, std::move(msg));
-    PushService(service);
+bool ServiceMgr::Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgUnique msg) {
+    target->PushMsg(sender, session_id, std::move(msg));
+    PushService(target.get());
     return true;
 }
 

@@ -25,14 +25,14 @@ public:
     void Start();
     void Stop();
 
-    void AddSession(const ServiceHandle& service, SessionId session_id, uint32_t timeout_s);
+    void AddSession(const ServiceShared& service, SessionId session_id, uint32_t timeout_s);
 private:
     Million* million_;
     uint32_t timeout_tick_;
 
     std::optional<std::jthread> thread_;
     struct TimedMsg {
-        ServiceHandle service;
+        ServiceShared service;
         SessionId session_id;
     };
     detail::WheelTimer<TimedMsg> tasks_;

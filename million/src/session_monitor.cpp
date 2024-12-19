@@ -21,7 +21,7 @@ void SessionMonitor::Start() {
     thread_.emplace([this]() {
         tasks_.Init();
         auto timeout = [this](auto&& task) {
-            million_->imillion().Send<SessionTimeoutMsg>(task.data.service, task.data.service, task.data.session_id);
+            million_->Send<SessionTimeoutMsg>(task.data.service, task.data.service, task.data.session_id);
         };
         while (run_) {
             tasks_.Tick(timeout);
@@ -34,7 +34,7 @@ void SessionMonitor::Stop() {
     thread_.reset();
 }
 
-void SessionMonitor::AddSession(const ServiceHandle& service, SessionId session_id, uint32_t timeout_s) {
+void SessionMonitor::AddSession(const ServiceShared& service, SessionId session_id, uint32_t timeout_s) {
     if (timeout_s == 0) {
         timeout_s = timeout_tick_;
     }

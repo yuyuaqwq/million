@@ -182,26 +182,26 @@ void Million::Stop() {
 }
 
 
-std::optional<ServiceHandle> Million::AddService(std::unique_ptr<IService> iservice, bool start) {
+std::optional<ServiceShared> Million::AddService(std::unique_ptr<IService> iservice, bool start) {
     return service_mgr_->AddService(std::move(iservice), start);
 }
 
 
 #undef StartService
-SessionId Million::StartService(const ServiceHandle& service_handle) {
-    return service_mgr_->StartService(service_handle);
+SessionId Million::StartService(const ServiceShared& service) {
+    return service_mgr_->StartService(service);
 }
 
-SessionId Million::StopService(const ServiceHandle& service_handle) {
-    return service_mgr_->StopService(service_handle);
+SessionId Million::StopService(const ServiceShared& service) {
+    return service_mgr_->StopService(service);
 }
 
 
-bool Million::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {
-    return service_mgr_->SetServiceName(handle, name);
+bool Million::SetServiceName(const ServiceShared& service, const ServiceName& name) {
+    return service_mgr_->SetServiceName(service, name);
 }
 
-std::optional<ServiceHandle> Million::GetServiceByName(const ServiceName& name) {
+std::optional<ServiceShared> Million::GetServiceByName(const ServiceName& name) {
     return service_mgr_->GetServiceByName(name);
 }
 
@@ -211,13 +211,13 @@ SessionId Million::NewSession() {
 }
 
 
-bool Million::Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+bool Million::SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgUnique msg) {
     return service_mgr_->Send(sender, target, session_id, std::move(msg));
 }
 
-SessionId Million::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
+SessionId Million::Send(const ServiceShared& sender, const ServiceShared& target, MsgUnique msg) {
     auto session_id = session_mgr_->NewSession();
-    if (Send(sender, target, session_id, std::move(msg))) {
+    if (SendTo(sender, target, session_id, std::move(msg))) {
         return session_id;
     }
     return kSessionIdInvalid;
@@ -228,7 +228,7 @@ const YAML::Node& Million::YamlConfig() const {
     return *config_;
 }
 
-void Million::Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) {
+void Million::Timeout(uint32_t tick, const ServiceShared& service, MsgUnique msg) {
     timer_->AddTask(tick, service, std::move(msg));
 }
 
@@ -236,9 +236,8 @@ asio::io_context& Million::NextIoContext() {
     return io_context_mgr_->NextIoContext().io_context();
 }
 
-void Million::EnableSeparateWorker(const ServiceHandle& service) {
-    assert(service.impl());
-    service.impl()->EnableSeparateWorker();
+void Million::EnableSeparateWorker(const ServiceShared& service) {
+    service->EnableSeparateWorker();
 }
 
 } //namespace million

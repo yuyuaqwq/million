@@ -13,35 +13,34 @@ namespace million {
 using ServiceId = uint64_t;
 using ServiceName = std::string;
 
-class Service;
 class IService;
+class Service;
+using ServiceShared = std::shared_ptr<Service>;
+using ServiceWeak = std::weak_ptr<Service>;
+
 class MILLION_API ServiceHandle {
 public:
     ServiceHandle() = default;
-    explicit ServiceHandle(std::shared_ptr<Service> ptr)
-        : impl_(ptr) {}
+    explicit ServiceHandle(ServiceShared shared)
+        : weak_(shared) {}
     ~ServiceHandle() = default;
 
     ServiceHandle(const ServiceHandle&) = default;
     void operator=(const ServiceHandle& v) {
-        impl_ = v.impl_;
+        weak_ = v.weak_;
     }
     ServiceHandle(ServiceHandle&&) = default;
     void operator=(ServiceHandle&& v) noexcept {
-        impl_ = std::move(v.impl_);
+        weak_ = std::move(v.weak_);
     }
 
-    Service* impl() const { return impl_.get(); }
-
-    template<typename ServiceT>
-    ServiceT* get() const {
-        return static_cast<ServiceT*>(get());
+    ServiceShared lock() const { 
+        auto shared = weak_.lock();
+        return shared;
     }
-
-    IService* get() const;
 
 private:
-    std::shared_ptr<Service> impl_;
+    ServiceWeak weak_;
 };
 
 } // namespace million

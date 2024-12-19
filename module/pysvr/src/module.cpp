@@ -96,8 +96,9 @@ private:
 class JsService : public million::IService {
 public:
     using Base = IService;
-    JsService(million::IMillion* imillion)
-        : Base(imillion) {}
+    JsService(million::IMillion* imillion, JsModuleService* module_service)
+        : Base(imillion)
+        , module_service_(module_service) {}
 
     using Base::Base;
 
@@ -159,8 +160,10 @@ public:
 
           // js_main_module_ = ;
 
-
+            auto module = 
             
+            JS_EvalFunction(js_ctx_, );
+
 
 
           success = true;
@@ -759,6 +762,8 @@ private:
     
 
 private:
+    JsModuleService* module_service_;
+
     JSRuntime* js_rt_ = nullptr;
     JSContext* js_ctx_ = nullptr;
     JSValue js_main_module_ = JS_UNDEFINED;
@@ -775,8 +780,7 @@ namespace pysvr {
 extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
     auto service = imillion->NewService<JsModuleService>();
 
-
-    imillion->NewService<JsService>();
+    imillion->NewService<JsService>(service->get<JsModuleService*>());
     return true;
 }
 

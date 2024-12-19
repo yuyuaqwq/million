@@ -115,7 +115,7 @@ bool Logger::Init() {
     if (!logger_opt) {
         return false;
     }
-    logger_handle_ = *logger_opt;
+    logger_handle_ = ServiceHandle(*logger_opt);
 }
 
 void Logger::Log(const ServiceHandle& sender, const std::source_location& source, ss::logger::LogLevel level, const std::string& msg) {

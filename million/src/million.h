@@ -25,28 +25,42 @@ public:
     void Start();
     void Stop();
 
-    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice, bool start);
+    std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice, bool start);
     template <typename IServiceT, typename ...Args>
-    std::optional<ServiceHandle> NewService(Args&&... args) {
+    std::optional<ServiceShared> NewService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(imillion_, std::forward<Args>(args)...);
         return AddService(std::move(iservice), true);
     }
 
-    SessionId StartService(const ServiceHandle& service_handle);
-    SessionId StopService(const ServiceHandle& service_handle);
+    SessionId StartService(const ServiceShared& service);
+    SessionId StopService(const ServiceShared& service);
 
-    bool SetServiceName(const ServiceHandle& handle, const ServiceName& name);
-    std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
+    bool SetServiceName(const ServiceShared& service, const ServiceName& name);
+    std::optional<ServiceShared> GetServiceByName(const ServiceName& name);
 
     SessionId NewSession();
 
-    bool Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
-    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
+    bool SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgUnique msg);
+    SessionId Send(const ServiceShared& sender, const ServiceShared& target, MsgUnique msg);
+    
+    template <typename MsgT, typename ...Args>
+    SessionId Send(const ServiceShared& sender, const ServiceShared& target, Args&&... args) {
+        if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
+            return Send(sender, target, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
+        }
+        else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
+            return Send(sender, target, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
+        }
+        else {
+            static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
+                "Unsupported message type.");
+        }
+    }
 
     const YAML::Node& YamlConfig() const;
-    void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
+    void Timeout(uint32_t tick, const ServiceShared& service, MsgUnique msg);
     asio::io_context& NextIoContext();
-    void EnableSeparateWorker(const ServiceHandle& service);
+    void EnableSeparateWorker(const ServiceShared& service);
 
     auto& imillion() { assert(imillion_); return *imillion_; }
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }

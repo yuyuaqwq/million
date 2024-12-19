@@ -125,7 +125,7 @@ Task<>* TaskExecutor::Push(SessionId id, Task<>&& task) {
         million.logger().Err("Waiting for an invalid session.");
         return nullptr;
     }
-    million.session_monitor().AddSession(service_->service_handle(), id, task.coroutine.promise().session_awaiter()->timeout_s());
+    million.session_monitor().AddSession(service_->shared(), id, task.coroutine.promise().session_awaiter()->timeout_s());
     auto res = tasks_.emplace(id, std::move(task));
     if (!res.second) {
         // throw std::runtime_error("Duplicate session id.");

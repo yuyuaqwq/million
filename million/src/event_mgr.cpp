@@ -23,8 +23,9 @@ bool EventMgr::Unsubscribe(MsgTypeKey key, const ServiceHandle& subscriber) {
 		return false;
 	}
 	auto& services = iter->second;
+	auto lock = subscriber.lock();
 	for (auto service_iter = services.begin(); service_iter != services.end(); ) {
-		if (service_iter->second.impl() == subscriber.impl()) {
+		if (service_iter->second.lock() == lock) {
 			services.erase(service_iter);
 			return true;
 		}
@@ -35,46 +36,46 @@ bool EventMgr::Unsubscribe(MsgTypeKey key, const ServiceHandle& subscriber) {
 void EventMgr::Send(const ServiceHandle& sender, MsgUnique msg) {
 	auto iter = services_.find(msg.GetTypeKey());
 	if (iter == services_.end()) {
-		// 没有关注此事件的服务
+		// 娌℃湁鍏虫敞姝や簨浠剁殑鏈嶅姟
 		return;
 	}
 	
-	auto sender_service = sender.impl();
-	if (!sender_service) {
+	auto sender_lock = sender.lock();
+	if (!sender_lock) {
 		return;
 	}
-	auto& sender_iservice = sender_service->iservice();
+	auto& sender_iservice = sender_lock->iservice();
 
 	auto& services = iter->second;
 	for (auto service_iter = services.begin(); service_iter != services.end(); ) {
-		auto id = sender_iservice.Send(service_iter->second, MsgUnique(msg.Copy()));
-		if (id == kSessionIdInvalid) {
-			// 已关闭的服务
+		auto target_lock = service_iter->second.lock();
+		if (!target_lock) {
+			// 宸插叧闂殑鏈嶅姟
 			services.erase(service_iter++);
+			continue;
 		}
-		else {
-			++service_iter;
-		}
+	    sender_iservice.Send(service_iter->second, MsgUnique(msg.Copy()));
+		++service_iter;
 	}
 }
 
 Task<> EventMgr::Call(const ServiceHandle& caller, MsgUnique msg, std::function<bool(MsgUnique)> res_handle) {
 	auto iter = services_.find(msg.GetTypeKey());
 	if (iter == services_.end()) {
-		// 没有关注此事件的服务
+		// 娌℃湁鍏虫敞姝や簨浠剁殑鏈嶅姟
 		co_return;
 	}
 	auto& services = iter->second;
-	auto caller_service = caller.impl();
-	if (!caller_service) {
+	auto caller_lock = caller.lock();
+	if (!caller_lock) {
 		co_return;
 	}
-	auto& caller_iservice = caller_service->iservice();
+	auto& caller_iservice = caller_lock->iservice();
 	for (auto service_iter = services.begin(); service_iter != services.end(); ) {
 		 SessionId session_id = caller_iservice.Send(service_iter->second, msg.Copy());
 
 		if (session_id == kSessionIdInvalid) {
-			// 已关闭的服务
+			// 宸插叧闂殑鏈嶅姟
 			services.erase(service_iter++);
 		}
 		else {

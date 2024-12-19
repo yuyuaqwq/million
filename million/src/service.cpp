@@ -20,7 +20,7 @@ Service::~Service() = default;
 
 
 
-void Service::PushMsg(const ServiceHandle& sender, SessionId session_id, MsgUnique msg) {
+void Service::PushMsg(const ServiceShared& sender, SessionId session_id, MsgUnique msg) {
     {
         auto lock = std::lock_guard(msgs_mutex_);
         if (!IsReady() && !IsStarting() && !IsRunning() && !msg.IsType(ServiceExitMsg::type_static())) {
@@ -50,25 +50,25 @@ void Service::ProcessMsg(MsgElement ele) {
     auto& msg = ele.msg;
     if (msg.IsType(ServiceStartMsg::type_static())) {
         if (!IsReady() && !IsStop()) {
-            // ²»ÊÇ¿É¿ªÆô·şÎñµÄ×´Ì¬
+            // ä¸æ˜¯å¯å¼€å¯æœåŠ¡çš„çŠ¶æ€
             return;
         }
         state_ = kStarting;
-        auto task = iservice_->OnStart(sender, session_id);
+        auto task = iservice_->OnStart(ServiceHandle(sender), session_id);
         if (!excutor_.AddTask(std::move(task))) {
-            // ÒÑÍê³ÉOnStart
+            // å·²å®ŒæˆOnStart
             state_ = kRunning;
         }
         return;
     }
     else if (msg.IsType(ServiceStopMsg::type_static())) {
         if (!IsRunning()) {
-            // ²»ÊÇ¿É¹Ø±Õ·şÎñµÄ×´Ì¬
+            // ä¸æ˜¯å¯å…³é—­æœåŠ¡çš„çŠ¶æ€
             return;
         }
         state_ = kStop;
         try {
-            iservice_->OnStop(sender, session_id);
+            iservice_->OnStop(ServiceHandle(sender), session_id);
         }
         catch (const std::exception& e) {
             service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", e.what());
@@ -80,12 +80,12 @@ void Service::ProcessMsg(MsgElement ele) {
     }
     else if (msg.IsType(ServiceExitMsg::type_static())) {
         if (!IsStop()) {
-            // ²»ÊÇ¿ÉÍË³ö·şÎñµÄ×´Ì¬
+            // ä¸æ˜¯å¯é€€å‡ºæœåŠ¡çš„çŠ¶æ€
             return;
         }
         state_ = kExit;
         try {
-            iservice_->OnExit(sender, session_id);
+            iservice_->OnExit(ServiceHandle(sender), session_id);
         }
         catch (const std::exception& e) {
             service_mgr_->million().logger().Err("Service OnExit exception occurred: {}", e.what());
@@ -96,7 +96,7 @@ void Service::ProcessMsg(MsgElement ele) {
         return;
     }
 
-    // Starting/Stop ¶¼ÔÊĞí´¦ÀíÒÑÓĞĞ­³ÌµÄ³¬Ê±
+    // Starting/Stop éƒ½å…è®¸å¤„ç†å·²æœ‰åç¨‹çš„è¶…æ—¶
     if (msg.IsType(SessionTimeoutMsg::type_static())) {
         auto msg_ptr = msg.get<SessionTimeoutMsg>();
         auto task = excutor_.TaskTimeout(msg_ptr->timeout_id);
@@ -104,7 +104,7 @@ void Service::ProcessMsg(MsgElement ele) {
             if (!task->coroutine.done() || !task->coroutine.promise().exception()) {
                 return;
             }
-            // Òì³£ÍË³öµÄOnStart£¬Ä¬ÈÏ»ØÊÕµ±Ç°·şÎñ
+            // å¼‚å¸¸é€€å‡ºçš„OnStartï¼Œé»˜è®¤å›æ”¶å½“å‰æœåŠ¡
             state_ = kStop;
             Exit();
         }
@@ -112,20 +112,20 @@ void Service::ProcessMsg(MsgElement ele) {
     }
 
     if (IsReady()) {
-        // OnStartÎ´Íê³É£¬Ö»ÄÜ³¢ÊÔµ÷¶ÈÒÑÓĞĞ­³Ì
+        // OnStartæœªå®Œæˆï¼Œåªèƒ½å°è¯•è°ƒåº¦å·²æœ‰åç¨‹
         auto res = excutor_.TrySchedule(session_id, std::move(msg));
         if (!std::holds_alternative<Task<>*>(res)) {
             return;
         }
         auto task = std::get<Task<>*>(res);
         if (!task) {
-            // ÒÑÍê³ÉOnStart
+            // å·²å®ŒæˆOnStart
             state_ = kRunning;
         }
         return;
     }
 
-    // ·ÇRunning½×¶Î²»¿ªÆô·Ö·¢ÏûÏ¢/»Ö¸´µÈ´ıÖĞµÄĞ­³Ì
+    // éRunningé˜¶æ®µä¸å¼€å¯åˆ†å‘æ¶ˆæ¯/æ¢å¤ç­‰å¾…ä¸­çš„åç¨‹
     if (!IsRunning()) {
         return;
     }
@@ -135,12 +135,12 @@ void Service::ProcessMsg(MsgElement ele) {
         return;
     }
 
-    auto task = iservice_->OnMsg(sender, session_id, std::move(std::get<MsgUnique>(res)));
+    auto task = iservice_->OnMsg(ServiceHandle(sender), session_id, std::move(std::get<MsgUnique>(res)));
     excutor_.AddTask(std::move(task));
 }
 
 void Service::ProcessMsgs(size_t count) {
-    // Èç¹û´¦ÀíÁËExit£¬ÔòÖ±½ÓÅ×ÆúËùÓĞÏûÏ¢¼°Î´Íê³ÉµÄÈÎÎñ(°üÀ¨Î´´¥·¢³¬Ê±µÄÈÎÎñ)
+    // å¦‚æœå¤„ç†äº†Exitï¼Œåˆ™ç›´æ¥æŠ›å¼ƒæ‰€æœ‰æ¶ˆæ¯åŠæœªå®Œæˆçš„ä»»åŠ¡(åŒ…æ‹¬æœªè§¦å‘è¶…æ—¶çš„ä»»åŠ¡)
     for (size_t i = 0; i < count && !IsExit(); ++i) {
         auto msg_opt = PopMsg();
         if (!msg_opt) {
@@ -177,7 +177,7 @@ void Service::SeparateThreadHandle() {
         do {
             ProcessMsg(std::move(*msg));
             if (IsExit()) {
-                // ·şÎñÒÑÍË³ö£¬Ïú»Ù
+                // æœåŠ¡å·²é€€å‡ºï¼Œé”€æ¯
                 service_mgr_->DeleteService(this);
                 break;
             }
@@ -197,15 +197,15 @@ std::optional<Service::MsgElement> Service::PopMsgWithLock() {
 
 
 SessionId Service::Start() {
-    return iservice_->Send<ServiceStartMsg>(service_handle());
+    return iservice_->Send<ServiceStartMsg>(iservice_->service_handle());
 }
 
 SessionId Service::Stop() {
-    return iservice_->Send<ServiceStopMsg>(service_handle());
+    return iservice_->Send<ServiceStopMsg>(iservice_->service_handle());
 }
 
 SessionId Service::Exit() {
-    return iservice_->Send<ServiceExitMsg>(service_handle());
+    return iservice_->Send<ServiceExitMsg>(iservice_->service_handle());
 }
 
 

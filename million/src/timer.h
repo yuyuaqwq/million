@@ -24,13 +24,13 @@ public:
     void Start();
     void Stop();
 
-    void AddTask(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
+    void AddTask(uint32_t tick, const ServiceShared& service, MsgUnique msg);
 
 private:
     Million* million_;
     std::optional<std::jthread> thread_;
     struct TimedMsg {
-        ServiceHandle service;
+        ServiceShared service;
         MsgUnique msg;
     };
     detail::HeapTimer<TimedMsg> tasks_;

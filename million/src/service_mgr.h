@@ -25,23 +25,23 @@ public:
 
     ServiceId AllocServiceId();
 
-    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> service, bool start);
+    std::optional<ServiceShared> AddService(std::unique_ptr<IService> service, bool start);
     void DeleteService(Service* service);
 
-    SessionId StartService(const ServiceHandle& handle);
-    SessionId StopService(const ServiceHandle& handle);
-    SessionId ExitService(const ServiceHandle& handle);
+    SessionId StartService(const ServiceShared& service);
+    SessionId StopService(const ServiceShared& service);
+    SessionId ExitService(const ServiceShared& service);
 
     void PushService(Service* service);
     Service* PopService();
 
-    bool SetServiceName(const ServiceHandle& handle, const ServiceName& name);
-    std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
+    bool SetServiceName(const ServiceShared& handle, const ServiceName& name);
+    std::optional<ServiceShared> GetServiceByName(const ServiceName& name);
 
-    bool SetServiceId(const ServiceHandle& handle, ServiceId id);
-    std::optional<ServiceHandle> GetServiceById(ServiceId id);
+    bool SetServiceId(const ServiceShared& handle, ServiceId id);
+    std::optional<ServiceShared> GetServiceById(ServiceId id);
 
-    bool Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
+    bool Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgUnique msg);
     
     Million& million() const { return *million_; }
 
@@ -51,13 +51,13 @@ private:
     std::atomic<ServiceId> service_id_ = 0;
 
     std::mutex services_mutex_;
-    std::list<std::shared_ptr<Service>> services_;
+    std::list<ServiceShared> services_;
     
     std::mutex name_map_mutex_;
-    std::unordered_map<ServiceName, ServiceHandle> name_map_;
+    std::unordered_map<ServiceName, std::list<ServiceShared>::iterator> name_map_;
 
     std::mutex id_map_mutex_;
-    std::unordered_map<ServiceId, ServiceHandle> id_map_;
+    std::unordered_map<ServiceId, std::list<ServiceShared>::iterator> id_map_;
 
     std::mutex service_queue_mutex_;
     bool run_ = true;

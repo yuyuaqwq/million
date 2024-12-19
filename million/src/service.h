@@ -20,7 +20,7 @@ class ServiceMgr;
 class Service : noncopyable {
 public:
     struct MsgElement{
-        ServiceHandle sender;
+        ServiceShared sender;
         SessionId session_id;
         MsgUnique msg;
     };
@@ -29,7 +29,7 @@ public:
     Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
     ~Service();
 
-    void PushMsg(const ServiceHandle& sender, SessionId session_id, MsgUnique msg);
+    void PushMsg(const ServiceShared& sender, SessionId session_id, MsgUnique msg);
     std::optional<MsgElement> PopMsg();
     bool MsgQueueIsEmpty();
 
@@ -43,6 +43,8 @@ public:
 
     ServiceMgr* service_mgr() const { return service_mgr_; }
     
+    ServiceShared shared() const { return *iter_; }
+
     auto iter() const { return iter_; }
     void set_iter(std::list<std::shared_ptr<Service>>::iterator iter) { iter_ = iter; }
 
@@ -51,9 +53,7 @@ public:
 
     IService& iservice() const { assert(iservice_); return *iservice_; }
 
-    const ServiceHandle& service_handle() const { return iservice_->service_handle(); }
-
-    // ÔİÇÒ²»Ê¹ÓÃ
+    // æš‚ä¸”ä¸ä½¿ç”¨
     SessionId Start();
     SessionId Stop();
     SessionId Exit();
@@ -74,15 +74,15 @@ private:
 
     // std::optional<Task<>> on_start_task_;
     enum State {
-        // ÒÑ¾ÍĞ÷£¬¿ÉÒÔ¿ªÆô·şÎñ
+        // å·²å°±ç»ªï¼Œå¯ä»¥å¼€å¯æœåŠ¡
         kReady,
-        // ¿ªÆôÖĞ£¬Ö»ÄÜ´¦ÀíOnStartÏà¹ØµÄÏûÏ¢¼°µ÷¶ÈOnStartĞ­³Ì
+        // å¼€å¯ä¸­ï¼Œåªèƒ½å¤„ç†OnStartç›¸å…³çš„æ¶ˆæ¯åŠè°ƒåº¦OnStartåç¨‹
         kStarting,
-        // ÔËĞĞÖĞ£¬¿ÉÒÔ½ÓÊÕ¼°´¦ÀíÈÎºÎÏûÏ¢¡¢µ÷¶ÈÒÑÓĞĞ­³Ì
+        // è¿è¡Œä¸­ï¼Œå¯ä»¥æ¥æ”¶åŠå¤„ç†ä»»ä½•æ¶ˆæ¯ã€è°ƒåº¦å·²æœ‰åç¨‹
         kRunning,
-        // ¹Ø±Õºó£¬²»»á¿ªÆôĞÂĞ­³Ì£¬²»»áµ÷¶ÈÒÑÓĞĞ­³Ì£¬»á´¥·¢ÒÑÓĞĞ­³ÌµÄ³¬Ê±
+        // å…³é—­åï¼Œä¸ä¼šå¼€å¯æ–°åç¨‹ï¼Œä¸ä¼šè°ƒåº¦å·²æœ‰åç¨‹ï¼Œä¼šè§¦å‘å·²æœ‰åç¨‹çš„è¶…æ—¶
         kStop,
-        // ÍË³öºó£¬²»»á¿ªÆôĞÂĞ­³Ì£¬²»»áµ÷¶ÈÒÑÓĞĞ­³Ì£¬²»»á´¥·¢ÒÑÓĞĞ­³ÌµÄ³¬Ê±(Ï£ÍûÖ´ĞĞÍêËùÓĞĞ­³ÌÔÙÍË³ö£¬ÔòĞèÒªÔÚStop×´Ì¬µÈ´ıËùÓĞĞ­³Ì´¦ÀíÍê±Ï£¬¼´Ê¹ÓÃTaskExecutorIsEmpty)
+        // é€€å‡ºåï¼Œä¸ä¼šå¼€å¯æ–°åç¨‹ï¼Œä¸ä¼šè°ƒåº¦å·²æœ‰åç¨‹ï¼Œä¸ä¼šè§¦å‘å·²æœ‰åç¨‹çš„è¶…æ—¶(å¸Œæœ›æ‰§è¡Œå®Œæ‰€æœ‰åç¨‹å†é€€å‡ºï¼Œåˆ™éœ€è¦åœ¨StopçŠ¶æ€ç­‰å¾…æ‰€æœ‰åç¨‹å¤„ç†å®Œæ¯•ï¼Œå³ä½¿ç”¨TaskExecutorIsEmpty)
         kExit,
     };
     State state_ = kReady;
