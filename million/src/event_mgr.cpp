@@ -1,5 +1,6 @@
 #include <million/event_mgr.h>
 
+#include "million.h"
 #include "service.h"
 
 namespace million {
@@ -44,7 +45,6 @@ void EventMgr::Send(const ServiceHandle& sender, MsgUnique msg) {
 	if (!sender_lock) {
 		return;
 	}
-	auto& sender_iservice = sender_lock->iservice();
 
 	auto& services = iter->second;
 	for (auto service_iter = services.begin(); service_iter != services.end(); ) {
@@ -54,7 +54,7 @@ void EventMgr::Send(const ServiceHandle& sender, MsgUnique msg) {
 			services.erase(service_iter++);
 			continue;
 		}
-	    sender_iservice.Send(service_iter->second, MsgUnique(msg.Copy()));
+		imillion_->impl().Send(sender_lock, target_lock, MsgUnique(msg.Copy()));
 		++service_iter;
 	}
 }
@@ -70,29 +70,30 @@ Task<> EventMgr::Call(const ServiceHandle& caller, MsgUnique msg, std::function<
 	if (!caller_lock) {
 		co_return;
 	}
-	auto& caller_iservice = caller_lock->iservice();
 	for (auto service_iter = services.begin(); service_iter != services.end(); ) {
-		 SessionId session_id = caller_iservice.Send(service_iter->second, msg.Copy());
-
-		if (session_id == kSessionIdInvalid) {
+		auto target_lock = service_iter->second.lock();
+		if (!target_lock) {
 			// 已关闭的服务
 			services.erase(service_iter++);
+			continue;
 		}
-		else {
-			if (msg.IsProtoMessage()) {
-				auto res = co_await caller_iservice.RecvOrNull<ProtoMessage>(session_id);
-				if (res && !res_handle(MsgUnique(res.release()))) {
-					break;
-				}
+
+		auto session_id = imillion_->impl().Send(caller_lock, target_lock, MsgUnique(msg.Copy()));
+
+		if (msg.IsProtoMessage()) {
+			auto res = co_await imillion_->RecvOrNull<ProtoMessage>(session_id);
+			if (res && !res_handle(MsgUnique(res.release()))) {
+				break;
 			}
-			else if (msg.IsCppMessage()) {
-				auto res = co_await caller_iservice.RecvOrNull<CppMessage>(session_id);
-				if (res && !res_handle(MsgUnique(res.release()))) {
-					break;
-				}
-			}
-			++service_iter;
 		}
+		else if (msg.IsCppMessage()) {
+			auto res = co_await imillion_->RecvOrNull<CppMessage>(session_id);
+			if (res && !res_handle(MsgUnique(res.release()))) {
+				break;
+			}
+		}
+		++service_iter;
+		
 	}
 }
 

@@ -26,11 +26,6 @@ public:
     void Stop();
 
     std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice, bool start);
-    template <typename IServiceT, typename ...Args>
-    std::optional<ServiceShared> NewService(Args&&... args) {
-        auto iservice = std::make_unique<IServiceT>(imillion_, std::forward<Args>(args)...);
-        return AddService(std::move(iservice), true);
-    }
 
     SessionId StartService(const ServiceShared& service);
     SessionId StopService(const ServiceShared& service);
@@ -42,20 +37,6 @@ public:
 
     bool SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgUnique msg);
     SessionId Send(const ServiceShared& sender, const ServiceShared& target, MsgUnique msg);
-    
-    template <typename MsgT, typename ...Args>
-    SessionId Send(const ServiceShared& sender, const ServiceShared& target, Args&&... args) {
-        if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
-            return Send(sender, target, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
-        }
-        else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
-            return Send(sender, target, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
-        }
-        else {
-            static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
-                "Unsupported message type.");
-        }
-    }
 
     const YAML::Node& YamlConfig() const;
     void Timeout(uint32_t tick, const ServiceShared& service, MsgUnique msg);

@@ -21,7 +21,7 @@ void SessionMonitor::Start() {
     thread_.emplace([this]() {
         tasks_.Init();
         auto timeout = [this](auto&& task) {
-            million_->Send<SessionTimeoutMsg>(task.data.service, task.data.service, task.data.session_id);
+            million_->Send(task.data.service, task.data.service, make_cpp_msg<SessionTimeoutMsg>(task.data.session_id));
         };
         while (run_) {
             tasks_.Tick(timeout);

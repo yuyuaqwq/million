@@ -22,6 +22,7 @@ public:
         : imillion_(imillion) {}
     virtual ~IService() = default;
 
+protected:
     SessionId NewSession();
 
     SessionId Send(const ServiceHandle& target, MsgUnique msg);
@@ -75,6 +76,7 @@ public:
     SessionAwaiter<MsgT> RecvOrNullWithTimeout(SessionId session_id, uint32_t timeout_s) {
         return SessionAwaiter<MsgT>(session_id, timeout_s, true);
     }
+
 
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
     SessionAwaiter<RecvMsgT> Call(const ServiceHandle& target, Args&&... args) {
@@ -135,12 +137,18 @@ public:
     virtual void OnStop(ServiceHandle sender, SessionId session_id) { }
     virtual void OnExit(ServiceHandle sender, SessionId session_id) { }
 
+private:
+    void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
+
+public:
     IMillion& imillion() { return *imillion_; }
     const ServiceHandle& service_handle() const { return service_handle_; }
-    void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
     Logger& logger();
 
 private:
+    friend class Service;
+    friend class ServiceMgr;
+
     IMillion* imillion_;
     ServiceHandle service_handle_;
 };

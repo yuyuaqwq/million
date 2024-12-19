@@ -49,8 +49,6 @@ public:
     SessionId NewSession();
 
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
-    SessionId SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
-
     template <typename MsgT, typename ...Args>
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
         if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
@@ -65,15 +63,53 @@ public:
         }
     }
 
+    SessionId SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
+    template <typename MsgT, typename ...Args>
+    SessionId SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, Args&&... args) {
+        if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
+            return SendTo(sender, target, session_id, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
+        }
+        else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
+            return SendTo(sender, target, session_id, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
+        }
+        else {
+            static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
+                "Unsupported message type.");
+        }
+    }
+
+    template <typename MsgT>
+    SessionAwaiter<MsgT> Recv(SessionId session_id) {
+        // 0表示默认超时时间
+        return SessionAwaiter<MsgT>(session_id, 0, false);
+    }
+
+    template <typename MsgT>
+    SessionAwaiter<MsgT> RecvWithTimeout(SessionId session_id, uint32_t timeout_s) {
+        return SessionAwaiter<MsgT>(session_id, timeout_s, false);
+    }
+
+    template <typename MsgT>
+    SessionAwaiter<MsgT> RecvOrNull(SessionId session_id) {
+        // 0表示默认超时时间
+        return SessionAwaiter<MsgT>(session_id, 0, true);
+    }
+
+    template <typename MsgT>
+    SessionAwaiter<MsgT> RecvOrNullWithTimeout(SessionId session_id, uint32_t timeout_s) {
+        return SessionAwaiter<MsgT>(session_id, timeout_s, true);
+    }
+
     const YAML::Node& YamlConfig() const;
     void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
     asio::io_context& NextIoContext();
     void EnableSeparateWorker(const ServiceHandle& service);
 
     Logger& logger();
+    Million& impl() const { return *impl_; }
 
 private:
-    Million* impl_ = nullptr;
+    Million* impl_;
 };
 
 inline SessionId IService::NewSession() {

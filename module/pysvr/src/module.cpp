@@ -96,9 +96,9 @@ private:
 class JsService : public million::IService {
 public:
     using Base = IService;
-    JsService(million::IMillion* imillion, JsModuleService* module_service)
+    JsService(million::IMillion* imillion, JsModuleService* js_module_service)
         : Base(imillion)
-        , module_service_(module_service) {}
+        , js_module_service_(js_module_service) {}
 
     using Base::Base;
 
@@ -160,9 +160,9 @@ public:
 
           // js_main_module_ = ;
 
-            auto module = 
+            // auto module = js_module_service_.
             
-            JS_EvalFunction(js_ctx_, );
+            // JS_EvalFunction(js_ctx_, );
 
             
 
@@ -762,7 +762,7 @@ private:
     
 
 private:
-    JsModuleService* module_service_;
+    JsModuleService* js_module_service_;
 
     JSRuntime* js_rt_ = nullptr;
     JSContext* js_ctx_ = nullptr;

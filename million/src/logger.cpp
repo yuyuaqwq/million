@@ -111,7 +111,7 @@ Logger::Logger(Million* million) : million_(million) {}
 Logger::~Logger() = default;
 
 bool Logger::Init() {
-    auto logger_opt = million_->NewService<LoggerService>();
+    auto logger_opt = million_->imillion().NewService<LoggerService>();
     if (!logger_opt) {
         return false;
     }
