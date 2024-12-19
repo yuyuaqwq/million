@@ -39,6 +39,11 @@ public:
         return shared;
     }
 
+    IService* get_ptr(const ServiceShared& lock) const;
+
+    template <typename IServiceT>
+    IServiceT* get_ptr(const ServiceShared& lock) const { return static_cast<IServiceT*>(get_ptr(lock)); }
+
 private:
     ServiceWeak weak_;
 };

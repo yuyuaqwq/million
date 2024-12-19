@@ -164,7 +164,7 @@ public:
             
             JS_EvalFunction(js_ctx_, );
 
-
+            
 
           success = true;
         } while (false);
@@ -780,7 +780,7 @@ namespace pysvr {
 extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
     auto service = imillion->NewService<JsModuleService>();
 
-    imillion->NewService<JsService>(service->get<JsModuleService*>());
+    imillion->NewService<JsService>(service->get_ptr<JsModuleService>(service->lock()));
     return true;
 }
 
