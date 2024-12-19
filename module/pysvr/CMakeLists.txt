@@ -39,5 +39,8 @@ target_link_libraries(${PYSVR_LIB} PRIVATE ${POCKET_PY_LIB})
 target_include_directories(${PYSVR_LIB} PRIVATE ${QUICK_JS_HEADER_DIR})
 target_link_libraries(${PYSVR_LIB} PRIVATE ${QUICK_JS_LIB})
 
+target_include_directories(${PYSVR_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
+target_link_libraries(${PYSVR_LIB} PRIVATE ${YAML_CPP_LIB})
+
 target_include_directories(${PYSVR_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
 target_link_libraries(${PYSVR_LIB} PRIVATE ${PROTOBUF_LIB})

@@ -1,4 +1,8 @@
-#include "iostream"
+#include <iostream>
+#include <fstream>
+#include <filesystem>
+
+#include <yaml-cpp/yaml.h>
 
 #include <google/protobuf/message.h>
 #include <string>
@@ -11,6 +15,83 @@
 #include <quickjs/quickjs.h>
 #include <quickjs/quickjs-libc.h>
 
+class JsModuleService : public million::IService {
+public:
+    using Base = IService;
+    using Base::Base;
+
+    virtual bool OnInit() override {
+        const auto& config = imillion().YamlConfig();
+
+        const auto& jssvr_config = config["jssvr"];
+        if (!jssvr_config) {
+            logger().Err("cannot find 'jssvr'.");
+            return false;
+        }
+        if (!jssvr_config["dirs"]) {
+            logger().Err("cannot find 'jssvr.dirs'.");
+            return false;
+        }
+        jssvr_dirs_ = jssvr_config["dirs"].as<std::vector<std::string>>();
+
+        return true;
+    }
+
+    JSValue LoadModule(JSContext* js_ctx, const std::string& module_name) {
+        auto iter = module_bytecodes_map_.find(module_name);
+        if (iter == module_bytecodes_map_.end()) {
+            auto script = ReadModuleScript(module_name);
+            if (!script) {
+                return JS_UNDEFINED;
+            }
+            
+            JSValue module = JS_Eval(js_ctx, script->data(), script->size(), module_name.data(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+            
+            uint8_t* out_buf;
+            size_t out_buf_len;
+            int flags = JS_WRITE_OBJ_BYTECODE;
+
+            out_buf = JS_WriteObject(js_ctx, &out_buf_len, module, flags);
+            if (!out_buf) {
+                JS_FreeValue(js_ctx, module);
+                return JS_UNDEFINED;
+            }
+            auto bytecodes = std::vector<uint8_t>(out_buf_len);
+            std::memcpy(bytecodes.data(), out_buf, out_buf_len);
+            js_free(js_ctx, out_buf);
+
+            auto res = module_bytecodes_map_.emplace(module_name, std::move(bytecodes));
+            assert(res.second);
+
+            return module;
+        }
+
+        int flags = JS_READ_OBJ_BYTECODE;
+        JSValue module = JS_ReadObject(js_ctx, iter->second.data(), iter->second.size(), flags);
+        return module;
+    }
+
+private:
+    std::optional<std::string> ReadModuleScript(const std::string& module_name) {
+        for (const auto& dir : jssvr_dirs_) {
+            std::filesystem::path path = dir;
+            path /= module_name;
+            path /= "main.js";
+            auto file = std::ifstream(path);
+            if (!file) {
+                continue;
+            }
+            auto content = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            file.close();
+            return content;
+        }
+        return std::nullopt;
+    }
+
+private:
+    std::vector<std::string> jssvr_dirs_;
+    std::unordered_map<std::string, std::vector<uint8_t>> module_bytecodes_map_;
+};
 
 class JsService : public million::IService {
 public:
@@ -19,8 +100,6 @@ public:
         : Base(imillion) {}
 
     using Base::Base;
-
-
 
     virtual bool OnInit() override {
         bool success = false;
@@ -50,35 +129,39 @@ public:
                 break;
             }
 
-            const char* test_val = R"(
-              import * as std from 'std';
-              import * as os from 'os';
-              import * as service from 'service';
-              service.send();
-              var console = {};
-              console.log = value => std.printf(value + "\n");
-              console.log('ok')
-              for(var key in globalThis){
-                console.log("--->" + key)
-              }
-              for(var key in std){
-                console.log("--->" + key)
-              }
-              for(var key in os){
-                console.log("--->" + key)
-              }
-              std.printf('hello_world\n');
-              std.printf(globalThis + "\n");
-              var a = false;
-              os.setTimeout(()=>{std.printf('AAB\n')}, 2000);
-              std.printf(a + "\n");
-            )";
-          if (!JsCreateModule("test", test_val)) break;
+          //  const char* test_val = R"(
+          //    import * as std from 'std';
+          //    import * as os from 'os';
+          //    import * as service from 'service';
+          //    service.send();
+          //    var console = {};
+          //    console.log = value => std.printf(value + "\n");
+          //    console.log('ok')
+          //    for(var key in globalThis){
+          //      console.log("--->" + key)
+          //    }
+          //    for(var key in std){
+          //      console.log("--->" + key)
+          //    }
+          //    for(var key in os){
+          //      console.log("--->" + key)
+          //    }
+          //    std.printf('hello_world\n');
+          //    std.printf(globalThis + "\n");
+          //    var a = false;
+          //    os.setTimeout(()=>{std.printf('AAB\n')}, 2000);
+          //    std.printf(a + "\n");
+          //  )";
+          //if (!JsCreateModule("main", main_script)) break;
 
           //result = JS_Call(js_ctx_, init, JS_UNDEFINED, 0, nullptr);  // 调用异步函数
           //if (!JsCheckException(result)) break;
 
           // js_main_module_ = ;
+
+
+            
+
 
           success = true;
         } while (false);
@@ -105,10 +188,10 @@ public:
         JSValue resolving_funcs[2];
         JSValue promise = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
         JSValue resolve_func = resolving_funcs[0];
+        JSValue result;
 
         JSValue on_msg = JS_GetPropertyStr(js_ctx_, js_main_module_, "on_msg");
-
-        JSValue result;
+        if (!JsCheckException(on_msg)) co_return;
 
         ServiceFuncContext func_ctx;
         JS_SetContextOpaque(js_ctx_, &func_ctx);
@@ -117,14 +200,20 @@ public:
         result = JS_Call(js_ctx_, on_msg, JS_UNDEFINED, 0, nullptr);  // 调用异步函数
         if (!JsCheckException(result)) co_return;
 
-        if (func_ctx.waiting_session_id != million::kSessionIdInvalid) {
+        while (func_ctx.waiting_session_id != million::kSessionIdInvalid) {
             auto res_msg = co_await Recv<million::ProtoMessage>(func_ctx.waiting_session_id);
 
             // res_msg转js对象，传入
-            // result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &);
+            // result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &obj);
             if (!JsCheckException(result)) co_return;
 
+            func_ctx.waiting_session_id = million::kSessionIdInvalid;
 
+            // 手动触发事件循环，确保异步操作继续执行
+            JSContext* ctx_ = nullptr;
+            while (JS_ExecutePendingJob(js_rt_, &ctx_)) {
+                // 执行事件循环，直到没有更多的异步任务
+            }
         }
 
         co_return;
@@ -632,7 +721,7 @@ private:
         }
 
         // 发送消息，并将session_id传回
-        func_ctx->waiting_session_id = service->Send<million::ProtoMessage>(*target);
+        //func_ctx->waiting_session_id = service->Send<million::ProtoMessage>(*target);
 
         JSValue* promise = static_cast<JSValue*>(JS_GetContextOpaque(ctx));
         return *promise;
@@ -666,6 +755,9 @@ private:
         return module;
     }
 
+
+    
+
 private:
     JSRuntime* js_rt_ = nullptr;
     JSContext* js_ctx_ = nullptr;
@@ -679,212 +771,12 @@ namespace million {
 namespace pysvr {
 
 // C端的Call函数，创建一个Promise并返回
-JSValue Call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    // 判断传递进来的参数类型
-    if (argc < 1 || !JS_IsObject(argv[0])) {
-        printf("Error: Expected an object as argument.\n");
-        return JS_EXCEPTION;  // 返回异常
-    }
-
-    // 复用一个Promise？
-    return argv[0];
-
-    // 创建一个新的Promise
-    //JSValue resolving_funcs[2];
-    //JSValue cap = JS_NewPromiseCapability(ctx, resolving_funcs);
-
-    //JS_SetPropertyStr(ctx, argv[0], "resolve", resolving_funcs[0]);  // 设置 resolve 函数
-    //JS_SetPropertyStr(ctx, argv[0], "reject", resolving_funcs[1]);   // 设置 reject 函数
-
-    // return cap;
-}
-
 
 extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
-    //imillion->NewService<JsService>();
+    auto service = imillion->NewService<JsModuleService>();
 
 
-    auto count = 1;
-    for (auto i = 0; i < count; ++i) {
-
-    
-    // 创建 JavaScript 引擎实例
-    JSRuntime* runtime = JS_NewRuntime();
-    if (!runtime) {
-        fprintf(stderr, "无法创建 JavaScript 引擎\n");
-        return 1;
-    }
-
-    js_std_init_handlers(runtime);
-
-    // 创建新的执行环境
-    JSContext* ctx = JS_NewContext(runtime);
-    if (!ctx) {
-        fprintf(stderr, "无法创建 JavaScript 上下文\n");
-        JS_FreeRuntime(runtime);
-        return 1;
-    }
-
-    JSValue result;
-
-    /* system modules */
-    js_init_module_std(ctx, "std");
-    js_init_module_os(ctx, "os");
-    const char* str =
-        "import * as std from 'std';\n"
-        "import * as os from 'os';\n"
-        "globalThis.std = std;\n"
-        "globalThis.os = os;\n"
-        "var console = {};\n"
-        "console.log = value => std.printf(value);\n";
-    JSValue init_compile =
-        JS_Eval(ctx, str, strlen(str), "<main>", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
-
-     js_module_set_import_meta(ctx, init_compile, 1, 1);
-     JSValue init_run = JS_EvalFunction(ctx, init_compile);
-
-
-
-    const char* test_val = R"(
-    var console = {};
-    console.log = value => globalThis.std.printf(value + "\n");
-    console.log('ok')
-    for(var key in globalThis){
-      console.log("--->" + key)
-    }
-    for(var key in std){
-      console.log("--->" + key)
-    }
-    for(var key in os){
-      console.log("--->" + key)
-    }
-    globalThis.std.printf('hello_world\n');
-    globalThis.std.printf(globalThis + "\n");
-    var a = false;
-    os.setTimeout(()=>{std.printf('AAB\n')}, 2000)
-    globalThis.std.printf(a + "\n");
-  )";
-    result = JS_Eval(ctx, test_val, strlen(test_val), "test", JS_EVAL_TYPE_MODULE);
-
-    // 创建 JavaScript 引擎的执行环境
-    JSValue global = JS_GetGlobalObject(ctx);
-
-    // 在全局对象上注册 Call 函数
-    JS_SetPropertyStr(ctx, global, "Call", JS_NewCFunction(ctx, Call, "Call", 0));
-
-    // JavaScript 代码（函数 A）
-    const char* js_code =
-        "async function asyncFunction(obj) {"
-        "    std.printf('!!!start!!!');"
-        "    let result = await Call(obj);"  // 暴露全局的 resolve 函数
-        "    std.printf(result);"
-        "    return result;"
-        "}";
-
-    // 执行 JavaScript 代码
-    result = JS_Eval(ctx, js_code, strlen(js_code), "<eval>", JS_EVAL_TYPE_GLOBAL);
-    if (JS_IsException(result)) {
-        // 获取异常值
-        JSValue exception = JS_GetException(ctx);
-        const char* error_str = JS_ToCString(ctx, exception);
-        printf("Script execution failed: %s\n", error_str);
-        JS_FreeCString(ctx, error_str);
-        JS_FreeValue(ctx, exception);
-    }
-
-    JSValue async_func = JS_GetPropertyStr(ctx, JS_GetGlobalObject(ctx), "asyncFunction");
-
-    // JSValue obj = JS_NewObject(ctx);
-    JSValue resolving_funcs[2];
-    JSValue cap = JS_NewPromiseCapability(ctx, resolving_funcs);
-    JSValue resolve_func = resolving_funcs[0];
-
-    result = JS_Call(ctx, async_func, JS_UNDEFINED, 1, &cap);  // 调用异步函数
-    if (JS_IsException(result)) {
-        // 获取异常值
-        JSValue exception = JS_GetException(ctx);
-        const char* error_str = JS_ToCString(ctx, exception);
-        printf("Script execution failed: %s\n", error_str);
-        JS_FreeCString(ctx, error_str);
-        JS_FreeValue(ctx, exception);
-    }
-
-    JSValue obj = JS_NewString(ctx, "!!!end!!!");
-    result = JS_Call(ctx, resolve_func, JS_UNDEFINED, 1, &obj);
-    if (JS_IsException(result)) {
-        // 获取异常值
-        JSValue exception = JS_GetException(ctx);
-        const char* error_str = JS_ToCString(ctx, exception);
-        printf("Script execution failed: %s\n", error_str);
-        JS_FreeCString(ctx, error_str);
-        JS_FreeValue(ctx, exception);
-    }
-
-
-    // 手动触发事件循环，确保异步操作继续执行
-    JSContext* ctx_ = nullptr;
-    while (JS_ExecutePendingJob(runtime, &ctx_)) {
-        // 执行事件循环，直到没有更多的异步任务
-    }
-
-    const char* script = "std.printf('Hello, World!');";
-    result = JS_Eval(ctx, script, strlen(script), "<input>", JS_EVAL_TYPE_GLOBAL);
-    // 判断是否执行成功
-    if (JS_IsException(result)) {
-        // 获取异常值
-        JSValue exception = JS_GetException(ctx);
-        const char* error_str = JS_ToCString(ctx, exception);
-        printf("Script execution failed: %s\n", error_str);
-        JS_FreeCString(ctx, error_str);
-        JS_FreeValue(ctx, exception);
-    }
-    else {
-        printf("Script executed successfully!\n");
-    }
-    }
-
-
-    //// JavaScript 代码定义生成器函数
-    //js_code = R"(
-    //    function* myGenerator() {
-    //        var a = yield 1;
-    //        std.printf('a:' + a);
-    //        var b = yield 2;
-    //        var c = yield 3;
-    //    }
-    //)";
-
-    //// 执行 JavaScript 代码
-    //global = JS_GetGlobalObject(ctx);
-    //JSValue eval_result = JS_Eval(ctx, js_code, strlen(js_code), "<input>", JS_EVAL_TYPE_GLOBAL);
-    //if (JS_IsException(eval_result)) {
-    //    // 获取异常值
-    //    JSValue exception = JS_GetException(ctx);
-    //    const char* error_str = JS_ToCString(ctx, exception);
-    //    printf("Script execution failed: %s\n", error_str);
-    //    JS_FreeCString(ctx, error_str);
-    //    JS_FreeValue(ctx, exception);
-
-    //    std::cerr << "Failed to evaluate JavaScript code" << std::endl;
-    //    return 1;
-    //}
-
-    //// 获取生成器函数
-    //JSValue generatorFunc = JS_GetPropertyStr(ctx, global, "myGenerator");
-    //if (JS_IsException(generatorFunc)) {
-    //    std::cerr << "Failed to get myGenerator function" << std::endl;
-    //    return 1;
-    //}
-
-    //// 调用生成器函数并传入 C++ 中的值
-    //callGenerator(ctx, generatorFunc, 10.5, 20.5, 30.5);
-
-    // 清理资源
-    //JS_FreeValue(ctx, eval_result);
-    //JS_FreeValue(ctx, generatorFunc);
-    //JS_FreeContext(ctx);
-    //JS_FreeRuntime(runtime);
-
+    imillion->NewService<JsService>();
     return true;
 }
 

@@ -72,24 +72,24 @@ void ServiceMgr::DeleteService(Service* service) {
 
 
 SessionId ServiceMgr::StartService(const ServiceHandle& handle) {
-    if (!handle.service()) {
+    if (!handle.impl()) {
         return kSessionIdInvalid;
     }
-    return handle.service()->Start();
+    return handle.impl()->Start();
 }
 
 SessionId ServiceMgr::StopService(const ServiceHandle& handle) {
-    if (!handle.service()) {
+    if (!handle.impl()) {
         return kSessionIdInvalid;
     }
-    return handle.service()->Stop();
+    return handle.impl()->Stop();
 }
 
 SessionId ServiceMgr::ExitService(const ServiceHandle& handle) {
-    if (!handle.service()) {
+    if (!handle.impl()) {
         return kSessionIdInvalid;
     }
-    return handle.service()->Exit();
+    return handle.impl()->Exit();
 }
 
 
@@ -157,7 +157,7 @@ std::optional<ServiceHandle> ServiceMgr::GetServiceById(ServiceId id) {
 }
 
 bool ServiceMgr::Send(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
-    auto service = target.service();
+    auto service = target.impl();
     if (!service) {
         return false;
     }

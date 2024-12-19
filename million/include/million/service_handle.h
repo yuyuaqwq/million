@@ -14,26 +14,34 @@ using ServiceId = uint64_t;
 using ServiceName = std::string;
 
 class Service;
+class IService;
 class MILLION_API ServiceHandle {
 public:
     ServiceHandle() = default;
     explicit ServiceHandle(std::shared_ptr<Service> ptr)
-        : shared_(ptr) {}
+        : impl_(ptr) {}
     ~ServiceHandle() = default;
 
     ServiceHandle(const ServiceHandle&) = default;
     void operator=(const ServiceHandle& v) {
-        shared_ = v.shared_;
+        impl_ = v.impl_;
     }
     ServiceHandle(ServiceHandle&&) = default;
     void operator=(ServiceHandle&& v) noexcept {
-        shared_ = std::move(v.shared_);
+        impl_ = std::move(v.impl_);
     }
 
-    Service* service() const { return shared_.get(); }
+    Service* impl() const { return impl_.get(); }
+
+    template<typename ServiceT>
+    ServiceT* get() const {
+        return static_cast<ServiceT*>(get());
+    }
+
+    IService* get() const;
 
 private:
-    std::shared_ptr<Service> shared_;
+    std::shared_ptr<Service> impl_;
 };
 
 } // namespace million

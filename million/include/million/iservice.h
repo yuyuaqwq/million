@@ -132,7 +132,7 @@ public:
 
     virtual bool OnInit() { return true; }
     virtual Task<> OnStart(ServiceHandle sender, SessionId session_id) { co_return; }
-    virtual Task<> OnMsg(ServiceHandle sender, SessionId session_id, MsgUnique msg) = 0;
+    virtual Task<> OnMsg(ServiceHandle sender, SessionId session_id, MsgUnique msg) { co_return; }
     virtual void OnStop(ServiceHandle sender, SessionId session_id) { }
     virtual void OnExit(ServiceHandle sender, SessionId session_id) { }
 

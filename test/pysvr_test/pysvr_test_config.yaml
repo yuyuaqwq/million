@@ -23,3 +23,6 @@ logger:
     level: debug
     console_level: debug
 
+jssvr:
+    dirs: 
+        - .\jssvr

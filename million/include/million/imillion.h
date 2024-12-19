@@ -73,7 +73,7 @@ public:
     Logger& logger();
 
 private:
-    Million* million_ = nullptr;
+    Million* impl_ = nullptr;
 };
 
 inline SessionId IService::NewSession() {

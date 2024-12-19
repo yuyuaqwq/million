@@ -24,7 +24,7 @@ bool EventMgr::Unsubscribe(MsgTypeKey key, const ServiceHandle& subscriber) {
 	}
 	auto& services = iter->second;
 	for (auto service_iter = services.begin(); service_iter != services.end(); ) {
-		if (service_iter->second.service() == subscriber.service()) {
+		if (service_iter->second.impl() == subscriber.impl()) {
 			services.erase(service_iter);
 			return true;
 		}
@@ -39,7 +39,7 @@ void EventMgr::Send(const ServiceHandle& sender, MsgUnique msg) {
 		return;
 	}
 	
-	auto sender_service = sender.service();
+	auto sender_service = sender.impl();
 	if (!sender_service) {
 		return;
 	}
@@ -65,7 +65,7 @@ Task<> EventMgr::Call(const ServiceHandle& caller, MsgUnique msg, std::function<
 		co_return;
 	}
 	auto& services = iter->second;
-	auto caller_service = caller.service();
+	auto caller_service = caller.impl();
 	if (!caller_service) {
 		co_return;
 	}

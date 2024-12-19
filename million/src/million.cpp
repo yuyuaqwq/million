@@ -237,8 +237,8 @@ asio::io_context& Million::NextIoContext() {
 }
 
 void Million::EnableSeparateWorker(const ServiceHandle& service) {
-    assert(service.service());
-    service.service()->EnableSeparateWorker();
+    assert(service.impl());
+    service.impl()->EnableSeparateWorker();
 }
 
 } //namespace million
