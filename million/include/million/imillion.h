@@ -40,10 +40,10 @@ public:
         return AddService(std::move(iservice), true);
     }
 
-    SessionId StartService(const ServiceHandle& handle);
-    SessionId StopService(const ServiceHandle& handle);
+    SessionId StartService(const ServiceHandle& service);
+    SessionId StopService(const ServiceHandle& service);
 
-    bool SetServiceName(const ServiceHandle& handle, const ServiceName& name);
+    bool SetServiceName(const ServiceHandle& service, const ServiceName& name);
     std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
 
     SessionId NewSession();

@@ -32,16 +32,16 @@ std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iser
 }
 
 
-SessionId IMillion::StartService(const ServiceHandle& handle) {
-    auto lock = handle.lock();
+SessionId IMillion::StartService(const ServiceHandle& service) {
+    auto lock = service.lock();
     if (!lock) {
         return kSessionIdInvalid;
     }
     return impl_->StartService(lock);
 }
 
-SessionId IMillion::StopService(const ServiceHandle& handle) {
-    auto lock = handle.lock();
+SessionId IMillion::StopService(const ServiceHandle& service) {
+    auto lock = service.lock();
     if (!lock) {
         return kSessionIdInvalid;
     }
@@ -49,8 +49,8 @@ SessionId IMillion::StopService(const ServiceHandle& handle) {
 }
 
 
-bool IMillion::SetServiceName(const ServiceHandle& handle, const ServiceName& name) {
-    auto lock = handle.lock();
+bool IMillion::SetServiceName(const ServiceHandle& service, const ServiceName& name) {
+    auto lock = service.lock();
     if (!lock) {
         return kSessionIdInvalid;
     }
@@ -101,8 +101,8 @@ const YAML::Node& IMillion::YamlConfig() const {
     return impl_->YamlConfig();
 }
 
-void IMillion::Timeout(uint32_t tick, const ServiceHandle& handle, MsgUnique msg) {
-    auto lock = handle.lock();
+void IMillion::Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) {
+    auto lock = service.lock();
     if (!lock) {
         return;
     }
