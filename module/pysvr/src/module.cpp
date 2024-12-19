@@ -20,23 +20,6 @@ public:
     using Base = IService;
     using Base::Base;
 
-    virtual bool OnInit() override {
-        const auto& config = imillion().YamlConfig();
-
-        const auto& jssvr_config = config["jssvr"];
-        if (!jssvr_config) {
-            logger().Err("cannot find 'jssvr'.");
-            return false;
-        }
-        if (!jssvr_config["dirs"]) {
-            logger().Err("cannot find 'jssvr.dirs'.");
-            return false;
-        }
-        jssvr_dirs_ = jssvr_config["dirs"].as<std::vector<std::string>>();
-
-        return true;
-    }
-
     JSValue LoadModule(JSContext* js_ctx, const std::string& module_name) {
         auto iter = module_bytecodes_map_.find(module_name);
         if (iter == module_bytecodes_map_.end()) {
@@ -44,9 +27,10 @@ public:
             if (!script) {
                 return JS_UNDEFINED;
             }
-            
+
             JSValue module = JS_Eval(js_ctx, script->data(), script->size(), module_name.data(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
-            
+            if (!JsCheckException(js_ctx, module)) return JS_UNDEFINED;
+
             uint8_t* out_buf;
             size_t out_buf_len;
             int flags = JS_WRITE_OBJ_BYTECODE;
@@ -72,6 +56,39 @@ public:
     }
 
 private:
+    virtual bool OnInit() override {
+        const auto& config = imillion().YamlConfig();
+
+        const auto& jssvr_config = config["jssvr"];
+        if (!jssvr_config) {
+            logger().Err("cannot find 'jssvr'.");
+            return false;
+        }
+        if (!jssvr_config["dirs"]) {
+            logger().Err("cannot find 'jssvr.dirs'.");
+            return false;
+        }
+        jssvr_dirs_ = jssvr_config["dirs"].as<std::vector<std::string>>();
+
+        return true;
+    }
+
+
+private:
+    bool JsCheckException(JSContext* js_ctx, JSValue value) {
+        if (JS_IsException(value)) {
+            JSValue exception = JS_GetException(js_ctx);
+            const char* error = JS_ToCString(js_ctx, exception);
+            // logger().Err("JS Exception: {}.", error);
+            std::cout << error << std::endl;
+            JS_FreeCString(js_ctx, error);
+            JS_FreeValue(js_ctx, exception);
+            return false;
+        }
+        return true;
+    }
+
+
     std::optional<std::string> ReadModuleScript(const std::string& module_name) {
         for (const auto& dir : jssvr_dirs_) {
             std::filesystem::path path = dir;
@@ -130,53 +147,29 @@ public:
                 break;
             }
 
-          //  const char* test_val = R"(
-          //    import * as std from 'std';
-          //    import * as os from 'os';
-          //    import * as service from 'service';
-          //    service.send();
-          //    var console = {};
-          //    console.log = value => std.printf(value + "\n");
-          //    console.log('ok')
-          //    for(var key in globalThis){
-          //      console.log("--->" + key)
-          //    }
-          //    for(var key in std){
-          //      console.log("--->" + key)
-          //    }
-          //    for(var key in os){
-          //      console.log("--->" + key)
-          //    }
-          //    std.printf('hello_world\n');
-          //    std.printf(globalThis + "\n");
-          //    var a = false;
-          //    os.setTimeout(()=>{std.printf('AAB\n')}, 2000);
-          //    std.printf(a + "\n");
-          //  )";
-          //if (!JsCreateModule("main", main_script)) break;
-
           //result = JS_Call(js_ctx_, init, JS_UNDEFINED, 0, nullptr);  // 调用异步函数
-          //if (!JsCheckException(result)) break;
+          //
 
-          // js_main_module_ = ;
+            // js_main_module_ = ;
 
-            // auto module = js_module_service_.
+            js_main_module_ = js_module_service_->LoadModule(js_ctx_, "test");
+            auto result = JS_EvalFunction(js_ctx_, js_main_module_);
+            if (!JsCheckException(result)) break;
             
-            // JS_EvalFunction(js_ctx_, );
-
-            
-
           success = true;
         } while (false);
        
         if (!success) {
-            if (js_rt_) {
-                JS_FreeRuntime(js_rt_);
-                js_rt_ = nullptr;
+            if (!JS_IsUndefined(js_main_module_)) {
+                JS_FreeValue(js_ctx_, js_main_module_);
             }
             if (js_ctx_) {
                 JS_FreeContext(js_ctx_);
                 js_ctx_ = nullptr;
+            }
+            if (js_rt_) {
+                JS_FreeRuntime(js_rt_);
+                js_rt_ = nullptr;
             }
         }
 

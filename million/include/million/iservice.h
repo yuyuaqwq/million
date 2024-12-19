@@ -137,14 +137,15 @@ protected:
     virtual void OnStop(ServiceHandle sender, SessionId session_id) { }
     virtual void OnExit(ServiceHandle sender, SessionId session_id) { }
 
+    Logger& logger();
+
 private:
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
 
 public:
     IMillion& imillion() { return *imillion_; }
     const ServiceHandle& service_handle() const { return service_handle_; }
-    Logger& logger();
-
+    
 private:
     friend class Service;
     friend class ServiceMgr;
