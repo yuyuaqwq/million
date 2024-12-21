@@ -50,9 +50,6 @@ set(NLOHMANN_JSON_LIB nlohmann_json::nlohmann_json)
 set(SPDLOG_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog/include)
 set(SPDLOG_LIB spdlog::spdlog)
 
-set(POCKET_PY_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/pocketpy/include)
-set(POCKET_PY_LIB pocketpy)
-
 set(QUICK_JS_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/quickjs)
 set(QUICK_JS_LIB qjs)
 
@@ -79,7 +76,6 @@ set(YAML_BUILD_SHARED_LIBS ON)
 add_subdirectory(third_party/yaml-cpp)
 add_subdirectory(third_party/nlohmann_json)
 add_subdirectory(third_party/spdlog)
-add_subdirectory(third_party/pocketpy)
 add_subdirectory(third_party/quickjs/quickjs)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
 add_subdirectory(third_party/hiredis/hiredis)

@@ -48,8 +48,23 @@ private:
         if (iter == module_bytecodes_map_.end()) {
             return JS_UNDEFINED;
         }
+
+        // js_std_eval_binary;
+
         int flags = JS_READ_OBJ_BYTECODE;
         JSValue module = JS_ReadObject(js_ctx, iter->second.data(), iter->second.size(), flags);
+        if (JS_VALUE_GET_TAG(module) == JS_TAG_MODULE) {
+            if (JS_ResolveModule(js_ctx, module) < 0) {
+                JS_FreeValue(js_ctx, module);
+                return  JS_ThrowTypeError(js_ctx, "JS_ResolveModule < 0.");
+            }
+            js_module_set_import_meta(js_ctx, module, false, true);
+            auto result = JS_EvalFunction(js_ctx, module);
+            if (JS_IsException(result)) {
+                return result;
+            }
+            // result = js_std_await(ctx, result);
+        }
         return module;
     }
 
@@ -137,11 +152,11 @@ public:
         uint8_t* out_buf;
         size_t out_buf_len;
         int flags = JS_WRITE_OBJ_BYTECODE;
-
         out_buf = JS_WriteObject(js_ctx, &out_buf_len, module, flags);
         if (!out_buf) {
             return JS_ThrowTypeError(js_ctx, "JS_WriteObject failed: %s.", module_name.c_str());
         }
+
         auto bytecodes = std::vector<uint8_t>(out_buf_len);
         std::memcpy(bytecodes.data(), out_buf, out_buf_len);
         js_free(js_ctx, out_buf);
@@ -176,6 +191,8 @@ public:
         bool success = false;
         do {
             js_rt_ = JS_NewRuntime();
+            // JS_SetDumpFlags(js_rt_, 1);
+
             if (!js_rt_) {
                 logger().Err("JS_NewRuntime failed.");
                 break;
@@ -202,6 +219,8 @@ public:
             }
 
             js_main_module_ = js_module_service_->LoadModule(js_ctx_, "", "test/main");
+            js_main_module_ = js_module_service_->LoadModule(js_ctx_, "", "test/main");
+            // js_byte_code_dump
             if (!JsCheckException(js_main_module_)) break;
             
           success = true;

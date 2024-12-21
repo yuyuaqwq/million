@@ -33,9 +33,6 @@ target_include_directories(${PYSVR_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
 target_link_libraries(${PYSVR_LIB} PRIVATE ${MILLION_PROTOGEN_LIB})
 target_compile_definitions(${PYSVR_LIB} PRIVATE ${MILLION_PROTOGEN_COMPILE_DEFINITIONS})
 
-target_include_directories(${PYSVR_LIB} PRIVATE ${POCKET_PY_HEADER_DIR})
-target_link_libraries(${PYSVR_LIB} PRIVATE ${POCKET_PY_LIB})
-
 target_include_directories(${PYSVR_LIB} PRIVATE ${QUICK_JS_HEADER_DIR})
 target_link_libraries(${PYSVR_LIB} PRIVATE ${QUICK_JS_LIB})
 
