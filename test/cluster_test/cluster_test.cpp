@@ -29,7 +29,7 @@ public:
     //    : proto_codec_(0)
     //    , Base(imillion) {}
 
-    virtual bool OnInit() override {
+    virtual bool OnInit(million::MsgUnique msg) override {
         imillion().SetServiceName(service_handle(), "TestService");
 
         auto handle = imillion().GetServiceByName("ClusterService");

@@ -25,7 +25,7 @@ public:
     void Start();
     void Stop();
 
-    std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice, bool start);
+    std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice, MsgUnique init_msg);
 
     SessionId StartService(const ServiceShared& service);
     SessionId StopService(const ServiceShared& service);

@@ -32,7 +32,7 @@ ServiceId ServiceMgr::AllocServiceId() {
     return id;
 }
 
-std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> iservice, bool start) {
+std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> iservice, MsgUnique init_msg) {
     decltype(services_)::iterator iter;
     auto service_shared = std::make_shared<Service>(this, std::move(iservice));
     auto handle = ServiceHandle(service_shared);
@@ -40,7 +40,7 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
     auto service_ptr = service_shared.get();
     bool success = false;
     try {
-        success = service_shared->iservice().OnInit();
+        success = service_shared->iservice().OnInit(std::move(init_msg));
     }
     catch (const std::exception& e) {
         million_->logger().Err("Service OnInit exception occurred: {}", e.what());
@@ -57,10 +57,6 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
         iter = --services_.end();
     }
     service_ptr->set_iter(iter);
-
-    if (start) {
-        StartService(service_shared);
-    }
 
     return service_shared;
 }

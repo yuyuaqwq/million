@@ -28,31 +28,13 @@ protected:
     SessionId Send(const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     SessionId Send(const ServiceHandle& target, Args&&... args) {
-        if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
-            return Send(target, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
-        }
-        else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
-            return Send(target, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
-        }
-        else {
-            static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
-                "Unsupported message type.");
-        }
+        return Send(target, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
     bool SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     bool SendTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
-        if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
-            return SendTo(target, session_id, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
-        }
-        else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
-            return SendTo(target, session_id, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
-        }
-        else {
-            static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
-                "Unsupported message type.");
-        }
+        return SendTo(target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
     template <typename MsgT>
@@ -131,7 +113,7 @@ protected:
 
     void EnableSeparateWorker();
 
-    virtual bool OnInit() { return true; }
+    virtual bool OnInit(MsgUnique init_msg) { return true; }
     virtual Task<> OnStart(ServiceHandle sender, SessionId session_id) { co_return; }
     virtual Task<> OnMsg(ServiceHandle sender, SessionId session_id, MsgUnique msg) { co_return; }
     virtual void OnStop(ServiceHandle sender, SessionId session_id) { }

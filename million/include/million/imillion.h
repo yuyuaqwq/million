@@ -33,11 +33,22 @@ public:
 
     bool Start(std::string_view config_path);
 
-    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice, bool start);
+    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice, MsgUnique init_msg);
+    template <typename IServiceT, typename ...Args>
+    std::optional<ServiceHandle> NewServiceWithMsg(MsgUnique init_msg, Args&&... args) {
+        auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
+        auto handle = AddService(std::move(iservice), std::move(init_msg));
+        if (!handle) return std::nullopt;
+        StartService(*handle);
+        return handle;
+    }
     template <typename IServiceT, typename ...Args>
     std::optional<ServiceHandle> NewService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
-        return AddService(std::move(iservice), true);
+        auto handle = AddService(std::move(iservice), MsgUnique());
+        if (!handle) return std::nullopt;
+        StartService(*handle);
+        return handle;
     }
 
     SessionId StartService(const ServiceHandle& service);
@@ -51,31 +62,13 @@ public:
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
-        if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
-            return Send(sender, target, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
-        }
-        else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
-            return Send(sender, target, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
-        }
-        else {
-            static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
-                "Unsupported message type.");
-        }
+        return Send(sender, target, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
     SessionId SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     SessionId SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, Args&&... args) {
-        if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
-            return SendTo(sender, target, session_id, MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release()));
-        }
-        else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
-            return SendTo(sender, target, session_id, MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release()));
-        }
-        else {
-            static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
-                "Unsupported message type.");
-        }
+        return SendTo(sender, target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
     template <typename MsgT>

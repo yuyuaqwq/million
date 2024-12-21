@@ -38,7 +38,7 @@ public:
     using Base = IService;
     using Base::Base;
 
-    virtual bool OnInit() override {
+    virtual bool OnInit(million::MsgUnique msg) override {
         auto handle = imillion().GetServiceByName("GatewayService");
         if (!handle) {
             logger().Err("GatewayService not found.");

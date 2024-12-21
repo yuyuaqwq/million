@@ -25,7 +25,7 @@ public:
     using Base::Base;
 
 private:
-    virtual bool OnInit() override {
+    virtual bool OnInit(million::MsgUnique msg) override {
         const auto& config = imillion().YamlConfig();
 
         const auto& jssvr_config = config["jssvr"];
@@ -187,7 +187,7 @@ public:
 
     using Base::Base;
 
-    virtual bool OnInit() override {
+    virtual bool OnInit(million::MsgUnique msg) override {
         bool success = false;
         do {
             js_rt_ = JS_NewRuntime();

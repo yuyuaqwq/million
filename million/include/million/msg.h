@@ -2,6 +2,7 @@
 
 #include <variant>
 
+#include <million/api.h>
 #include <million/proto_msg.h>
 #include <million/cpp_msg.h>
 
@@ -9,7 +10,7 @@ namespace million {
 
 using MsgTypeKey = uintptr_t;
 
-class MsgUnique {
+class MILLION_API MsgUnique {
 public:
     MsgUnique() = default;
 
@@ -130,5 +131,19 @@ public:
 private:
     std::variant<ProtoMsgUnique, CppMsgUnique> msg_unique_;
 };
+
+template <typename MsgT, typename... Args>
+inline MsgUnique make_msg(Args&&... args) {
+    if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
+        return MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release());
+    }
+    else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
+        return MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release());
+    }
+    else {
+        static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
+            "Unsupported message type.");
+    }
+}
 
 }// namespace million

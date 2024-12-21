@@ -28,7 +28,7 @@ public:
     static inline const std::string_view host = "127.0.0.1";
     static inline const std::string_view port = "6379";
 
-    virtual bool OnInit() override {
+    virtual bool OnInit(million::MsgUnique msg) override {
         try {
             // 创建 Redis 对象并连接到 Redis 服务器
             redis_.emplace(std::format("tcp://{}:{}", host, port));

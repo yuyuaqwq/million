@@ -25,7 +25,7 @@ public:
         : Base(imillion)
         , proto_codec_(million::GetDescriptorPool(), million::GetDescriptorDatabase(), million::GetMessageFactory()) {}
 
-    virtual bool OnInit() override {
+    virtual bool OnInit(million::MsgUnique msg) override {
         
         auto handle = imillion().GetServiceByName("DbService");
         if (!handle) {

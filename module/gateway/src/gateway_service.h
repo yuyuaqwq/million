@@ -33,7 +33,7 @@ public:
         : Base(imillion)
         , server_(imillion) { }
 
-    virtual bool OnInit() override {
+    virtual bool OnInit(million::MsgUnique msg) override {
         logger().Info("Gateway init start.");
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
