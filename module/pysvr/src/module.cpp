@@ -219,7 +219,7 @@ public:
             }
 
             js_main_module_ = js_module_service_->LoadModule(js_ctx_, "", "test/main");
-            js_main_module_ = js_module_service_->LoadModule(js_ctx_, "", "test/main");
+            // js_main_module_ = js_module_service_->LoadModule(js_ctx_, "", "test/main");
             // js_byte_code_dump
             if (!JsCheckException(js_main_module_)) break;
             
