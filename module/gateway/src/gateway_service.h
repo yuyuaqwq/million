@@ -73,12 +73,12 @@ public:
 
         if (connection->Connected()) {
             auto user_context_id = ++user_context_id_;
-            session->info().user_context_id = user_context_id;
-            users_.emplace(session->info().user_context_id, session);
+            session->info().user_session_id = user_context_id;
+            users_.emplace(session->info().user_session_id, session);
             logger().Debug("Gateway connection establishment: ip: {}, port: {}", ip, port);
         }
         else {
-            users_.erase(session->info().user_context_id);
+            users_.erase(session->info().user_session_id);
             logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
         co_return;
@@ -87,7 +87,7 @@ public:
     MILLION_CPP_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto session = static_cast<UserSession*>(msg->connection.get());
         // auto session_handle = UserSessionHandle(session);
-        auto user_context_id = session->info().user_context_id;
+        auto user_context_id = session->info().user_session_id;
 
         logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", user_context_id, msg->packet.size());
 
@@ -99,7 +99,7 @@ public:
         }
         // 没有token
         auto span = net::PacketSpan(msg->packet.begin() + kGatewayHeaderSize, msg->packet.end());
-        auto iter = agent_services_.find(session->info().user_context_id);
+        auto iter = agent_services_.find(session->info().user_session_id);
 
         
         // if (session->info().token == kInvaildToken) {
@@ -122,12 +122,12 @@ public:
     }
 
     MILLION_CPP_MSG_HANDLE(GatewaySureAgentMsg, msg) {
-        agent_services_.emplace(msg->context_id, msg->agent_service);
+        agent_services_.emplace(msg->session_id, msg->agent_service);
         co_return;
     }
 
     MILLION_CPP_MSG_HANDLE(GatewaySendPacketMsg, msg) {
-        auto iter = users_.find(msg->context_id);
+        auto iter = users_.find(msg->session_id);
         if (iter == users_.end()) {
             co_return;
         }
@@ -143,9 +143,9 @@ private:
     TokenGenerator token_generator_;
     ServiceHandle user_service_;
     // 需要改掉UserSession*
-    std::atomic<UserContextId> user_context_id_ = 0;
-    std::unordered_map<UserContextId, UserSession*> users_;
-    std::unordered_map<UserContextId, ServiceHandle> agent_services_;
+    std::atomic<UserSessionId> user_context_id_ = 0;
+    std::unordered_map<UserSessionId, UserSession*> users_;
+    std::unordered_map<UserSessionId, ServiceHandle> agent_services_;
 
     static constexpr uint32_t kGatewayHeaderSize = 8;
 };

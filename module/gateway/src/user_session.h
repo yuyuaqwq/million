@@ -15,7 +15,7 @@ namespace gateway {
 
 struct UserSessionInfo {
     Token token = kInvaildToken;
-    UserContextId user_context_id = 0;
+    UserSessionId user_session_id = 0;
 };
 
 class UserSession : public net::TcpConnection {

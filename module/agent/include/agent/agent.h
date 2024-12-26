@@ -68,7 +68,7 @@ private:
 };
 
 
-MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (gateway::UserContextId) context_id, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (gateway::UserSessionId) context_id, (std::optional<ServiceHandle>) agent_handle);
 
 class MILLION_AGENT_API AgentService : public IService {
 public:
@@ -108,11 +108,11 @@ public:
 
     million::Logger& logger() { return logger(); }
 
-    gateway::UserContextId user_context_id() const { return user_context_id_; }
+    gateway::UserSessionId user_context_id() const { return user_context_id_; }
 
 private:
     ServiceHandle gateway_;
-    gateway::UserContextId user_context_id_;
+    gateway::UserSessionId user_context_id_;
 };
 
 #define MILLION_AGENT_LOGIC_REGISTER_PROTO(PROTO_FILE_NAME, NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \

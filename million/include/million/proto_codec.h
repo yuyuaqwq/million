@@ -226,7 +226,7 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     return packet;
 }
 
-// 基于该宏分发的ProtoMsgHandle，session_id为PROTO_PACKET_MSG_TYPE_传入的context_id
+// 基于该宏分发的ProtoMsgHandle，session_id为PROTO_PACKET_MSG_TYPE_传入的session_id
 #define MILLION_PROTO_PACKET_DISPATCH(PROTO_CODEC_, PROTO_PACKET_MSG_TYPE_) \
     using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
     MILLION_CPP_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
@@ -234,7 +234,7 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
         if (!res) { \
             co_return; \
         } \
-        co_await OnMsg(sender, msg->context_id, std::move(res->msg)); \
+        co_await OnMsg(sender, msg->session_id, std::move(res->msg)); \
         co_return; \
     } \
 
