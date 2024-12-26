@@ -39,6 +39,12 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
     service_shared->iservice().set_service_handle(handle);
     auto service_ptr = service_shared.get();
     bool success = false;
+    {
+        auto lock = std::lock_guard(services_mutex_);
+        services_.emplace_back(service_shared);
+        iter = --services_.end();
+    }
+    service_ptr->set_iter(iter);
     try {
         success = service_shared->iservice().OnInit(std::move(init_msg));
     }
@@ -49,15 +55,12 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
         million_->logger().Err("Service OnInit exception occurred: {}", "unknown exception");
     }
     if (!success) {
+        {
+            auto lock = std::lock_guard(services_mutex_);
+            services_.erase(iter);
+        }
         return std::nullopt;
     }
-    {
-        auto lock = std::lock_guard(services_mutex_);
-        services_.emplace_back(service_shared);
-        iter = --services_.end();
-    }
-    service_ptr->set_iter(iter);
-
     return service_shared;
 }
 

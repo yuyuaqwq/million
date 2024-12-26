@@ -21,7 +21,7 @@ struct NodeSessionHandle {
 };
 
 MILLION_MSG_DEFINE(MILLION_CLUSTER_API, ClusterSendPacketMsg, (ServiceName) src_service, (NodeName) target_node, (ServiceName) target_service, (net::Packet) packet)
-MILLION_MSG_DEFINE(MILLION_CLUSTER_API, ClusterRecvPacketMsg, (NodeSessionHandle) context_id, (net::Packet) raw_packet, (net::PacketSpan) packet)
+MILLION_MSG_DEFINE(MILLION_CLUSTER_API, ClusterRecvPacketMsg, (SessionId) context_id, (net::Packet) raw_packet, (net::PacketSpan) packet)
 
 // Cluster.Call返回一个Task<ProtoMsgUnique>，通过co_return 将proto_msg返回回来
 // Cluster.Call内部：

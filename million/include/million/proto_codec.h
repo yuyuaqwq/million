@@ -24,7 +24,7 @@ public:
         //std::vector<std::string> file_names;
         //desc_db_.FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
         //for (const std::string& filename : file_names) {
-        //    const protobuf::FileDescriptor* file_desc = desc_pool.FindFileByName(filename);
+        //    const protobuf::FileDescriptor* file_desc = desc_pool_.FindFileByName(filename);
         //}
 
         auto file_desc = desc_pool_.FindFileByName(proto_file_name);

@@ -38,10 +38,14 @@ public:
         }
         cluster_ = *handle;
 
+        proto_codec_.RegisterProto("ss/ss_test.proto", ss::msg_id, ss::test::sub_msg_id);
+
         return true;
     }
 
     MILLION_MSG_DISPATCH(TestService);
+
+    MILLION_PROTO_PACKET_DISPATCH(&proto_codec_, ClusterRecvPacketMsg);
 
     using LoginReq = ss::test::LoginReq;
     MILLION_PROTO_MSG_HANDLE(LoginReq, req) {
