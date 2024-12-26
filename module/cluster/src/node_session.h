@@ -13,7 +13,8 @@ namespace cluster {
 
 struct NodeSessionInfo {
     NodeName node_name;
-
+    
+    // 正在等待远程节点的消息的会话，NodeServiceSessionId表示一条虚拟会话，映射两个节点之间的服务之间的session的id
     std::unordered_map<ServiceName, std::vector<NodeServiceSessionId>> services_;
 };
 

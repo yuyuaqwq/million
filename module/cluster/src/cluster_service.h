@@ -176,7 +176,6 @@ public:
             auto target_service_handle = imillion().GetServiceByName(target_service);
             if (target_service_handle) {
                 // 还需要获取下源节点
-                // 需要维护一个通过context找具体集群两端虚拟连接(两端的service，之间的sessionid会话)的map
                 auto span = net::PacketSpan(msg->packet.begin() + sizeof(header_size) + header_size, msg->packet.end());
                 Send<ClusterRecvPacketMsg>(*target_service_handle, 
                     NodeSessionHandle{ .src_node = node_session->info().node_name, .src_service = src_service},
