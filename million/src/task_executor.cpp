@@ -120,6 +120,7 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, SessionId sessi
 }
 
 Task<>* TaskExecutor::Push(SessionId id, Task<>&& task) {
+    assert(!SessionIsReplyId(id));
     auto& million = service_->service_mgr()->million();
     if (id == kSessionIdInvalid) {
         million.logger().Err("Waiting for an invalid session.");
