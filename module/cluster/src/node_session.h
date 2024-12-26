@@ -12,6 +12,7 @@ namespace million {
 namespace cluster {
 
 struct NodeSessionInfo {
+    NodeContextId node_context_id;
     NodeName node_name;
 };
 

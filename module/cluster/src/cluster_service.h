@@ -17,6 +17,11 @@ MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (net::TcpConnectionShared) connect
 
 // SessionId部分，必须是a只能等待自己节点alloc的SessionId，想等待b的消息，必须是a把sessionid发给b，b再发回这个sessionid
 
+struct NodeSessionHandle {
+    NodeName src_node;
+    NodeName src_service;
+};
+
 class ClusterService : public IService {
 public:
     using Base = IService;
@@ -173,6 +178,7 @@ public:
             auto target_service_handle = imillion().GetServiceByName(target_service);
             if (target_service_handle) {
                 // 还需要获取下源节点
+                // 需要维护一个通过context找具体集群两端虚拟连接(两端的service，之间的sessionid会话)的map
                 auto span = net::PacketSpan(msg->packet.begin() + sizeof(header_size) + header_size, msg->packet.end());
                 Send<ClusterRecvPacketMsg>(*target_service_handle, 
                     NodeSessionHandle{ .src_node = node_session->info().node_name, .src_service = src_service},
@@ -237,7 +243,7 @@ private:
         // 如果存在则需要插入失败
         auto node_session = connection->get_ptr<NodeSession>();
         auto& target_node_name = node_session->info().node_name;
-        auto res = nodes_.emplace(target_node_name, connection);
+        auto res = name_map_.emplace(target_node_name, connection);
         if (res.second) {
             logger().Info("CreateNode: {}", target_node_name);
         }
@@ -273,8 +279,8 @@ private:
         std::string port;
     };
     NodeSession* FindNodeSession(NodeName node_name, EndPointRes* end_point) {
-        auto iter = nodes_.find(node_name);
-        if (iter != nodes_.end()) {
+        auto iter = name_map_.find(node_name);
+        if (iter != name_map_.end()) {
             return iter->second->get_ptr<NodeSession>();
         }
 
@@ -307,7 +313,7 @@ private:
     }
 
     void DeleteNodeSession(NodeSession* node_session) {
-        nodes_.erase(node_session->info().node_name);
+        name_map_.erase(node_session->info().node_name);
     }
 
     void SendInit(NodeSession* node_session, const net::Packet& header_packet, const net::Packet& forward_packet) {
@@ -340,10 +346,17 @@ private:
 private:
     ClusterServer server_;
     NodeName node_name_;
-    std::unordered_map<NodeName, net::TcpConnectionShared> nodes_;
+
+    std::atomic<NodeContextId> node_context_id_ = 0;
+
+    std::unordered_map<NodeName, net::TcpConnectionShared> name_map_;
+
+
 
     std::set<std::string> wait_nodes_;
     std::list<std::unique_ptr<ClusterSendPacketMsg>> send_queue_;
+
+
 };
 
 } // namespace cluster
