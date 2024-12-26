@@ -45,7 +45,7 @@ public:
 
     MILLION_MSG_DISPATCH(TestService);
 
-    MILLION_PROTO_PACKET_DISPATCH(&proto_codec_, ClusterRecvPacketMsg);
+    // MILLION_PROTO_PACKET_DISPATCH(&proto_codec_, ClusterRecvPacketMsg);
 
     using LoginReq = ss::test::LoginReq;
     MILLION_PROTO_MSG_HANDLE(LoginReq, req) {

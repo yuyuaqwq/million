@@ -7,6 +7,8 @@
 namespace million {
 namespace cluster {
 
+using NodeSessionShared = std::shared_ptr<NodeSession>;
+
 class ClusterServer : public net::TcpServer {
 public:
     using TcpServer = net::TcpServer;

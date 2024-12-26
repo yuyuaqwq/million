@@ -22,11 +22,11 @@ using UserSessionId = uint64_t;
 
 // recv
 MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayRegisterUserServiceMsg, (ServiceHandle) user_service);
-MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySureAgentMsg, (UserSessionId) session_id, (ServiceHandle) agent_service);
-MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySendPacketMsg, (UserSessionId) session_id, (net::Packet) packet);
+MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySureAgentMsg, (UserSessionId) user_session_id, (ServiceHandle) agent_service);
+MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySendPacketMsg, (UserSessionId) user_session_id, (net::Packet) packet);
 
 // send
-MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayRecvPacketMsg, (UserSessionId) session_id, (net::Packet) packet_raw, (net::PacketSpan) packet);
+MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayRecvPacketMsg, (UserSessionId) user_session_id, (net::Packet) packet_raw, (net::PacketSpan) packet);
 
 } // namespace gateway
 } // namespace million

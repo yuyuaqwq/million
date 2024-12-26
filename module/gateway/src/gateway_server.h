@@ -7,6 +7,8 @@
 namespace million {
 namespace gateway {
 
+using UserSessionShared = std::shared_ptr<UserSession>;
+
 class GatewayServer : public net::TcpServer {
 public:
     using TcpServer = net::TcpServer;

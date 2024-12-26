@@ -29,12 +29,12 @@ public:
 
     virtual bool OnInit(million::MsgUnique msg) override {
         // io线程回调，发给work线程处理
-        server_.set_on_connection([this](const net::TcpConnectionShared& connection) -> asio::awaitable<void> {
-            Send<ClusterTcpConnectionMsg>(service_handle(), connection);
+        server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
+            Send<ClusterTcpConnectionMsg>(service_handle(), std::move(connection));
             co_return;
         });
         server_.set_on_msg([this](auto&& connection, auto&& packet) -> asio::awaitable<void> {
-            Send<ClusterTcpRecvPacketMsg>(service_handle(), connection, std::move(packet));
+            Send<ClusterTcpRecvPacketMsg>(service_handle(), std::move(connection), std::move(packet));
             co_return;
         });
 
@@ -240,7 +240,7 @@ private:
         // 如果存在则需要插入失败
         auto node_session = connection->get_ptr<NodeSession>();
         auto& target_node_name = node_session->info().node_name;
-        auto res = name_map_.emplace(target_node_name, connection);
+        auto res = nodes_.emplace(target_node_name, connection);
         if (res.second) {
             logger().Info("CreateNode: {}", target_node_name);
         }
@@ -259,7 +259,7 @@ private:
             if (disconnect_old) {
                 // 断开旧连接，关联新连接
                 res.first->second->Close();
-                res.first->second = connection;
+                res.first->second = std::move(std::static_pointer_cast<NodeSession>(connection));
                 logger().Info("Duplicate connection, disconnect old connection: {}", target_node_name);
             }
             else {
@@ -276,8 +276,8 @@ private:
         std::string port;
     };
     NodeSession* FindNodeSession(NodeName node_name, EndPointRes* end_point) {
-        auto iter = name_map_.find(node_name);
-        if (iter != name_map_.end()) {
+        auto iter = nodes_.find(node_name);
+        if (iter != nodes_.end()) {
             return iter->second->get_ptr<NodeSession>();
         }
 
@@ -310,7 +310,7 @@ private:
     }
 
     void DeleteNodeSession(NodeSession* node_session) {
-        name_map_.erase(node_session->info().node_name);
+        nodes_.erase(node_session->info().node_name);
     }
 
     void SendInit(NodeSession* node_session, const net::Packet& header_packet, const net::Packet& forward_packet) {
@@ -344,9 +344,9 @@ private:
     ClusterServer server_;
     NodeName node_name_;
 
-    std::unordered_map<NodeName, net::TcpConnectionShared> name_map_;
+    std::unordered_map<NodeName, NodeSessionShared> nodes_;
 
-    std::set<std::string> wait_nodes_;
+    std::set<NodeName> wait_nodes_;
     std::list<std::unique_ptr<ClusterSendPacketMsg>> send_queue_;
 
 

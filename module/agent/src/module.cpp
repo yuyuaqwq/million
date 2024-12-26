@@ -13,17 +13,7 @@ namespace agent {
 
 extern "C" MILLION_AGENT_API bool MillionModuleInit(IMillion* imillion) {
     auto handle = imillion->NewService<NodeMgrService>();
-    if (!handle) {
-        return false;
-    }
-    imillion->SetServiceName(*handle, "NodeMgrService");
-
     handle = imillion->NewService<AgentMgrService>();
-    if (!handle) {
-        return false;
-    }
-    imillion->SetServiceName(*handle, "AgentMgrService");
-
     return true;
 }
 
