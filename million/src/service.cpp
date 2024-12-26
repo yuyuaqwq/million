@@ -54,6 +54,7 @@ void Service::ProcessMsg(MsgElement ele) {
             return;
         }
         state_ = kStarting;
+        assert(SessionIsSendId(session_id));
         auto task = iservice_->OnStart(ServiceHandle(sender), session_id);
         if (!excutor_.AddTask(std::move(task))) {
             // 已完成OnStart
@@ -68,6 +69,7 @@ void Service::ProcessMsg(MsgElement ele) {
         }
         state_ = kStop;
         try {
+            assert(SessionIsSendId(session_id));
             iservice_->OnStop(ServiceHandle(sender), session_id);
         }
         catch (const std::exception& e) {
@@ -85,6 +87,7 @@ void Service::ProcessMsg(MsgElement ele) {
         }
         state_ = kExit;
         try {
+            assert(SessionIsSendId(session_id));
             iservice_->OnExit(ServiceHandle(sender), session_id);
         }
         catch (const std::exception& e) {
