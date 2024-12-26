@@ -84,14 +84,14 @@ public:
             msg->success = true;
         }
 
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
     MILLION_CPP_MSG_HANDLE(CacheSetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         if (!msg->db_row->IsDirty()) {
-            SendTo(sender, session_id, std::move(msg));
+            Reply(sender, session_id, std::move(msg));
             co_return;
         }
 
@@ -170,7 +170,7 @@ public:
             redis_->expire(redis_key.data(), ttl);
         }
 
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
@@ -180,13 +180,13 @@ public:
             co_return;
         }
         msg->key_value = std::move(*value);
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
     MILLION_CPP_MSG_HANDLE(CacheSetBytesMsg, msg) {
         msg->success = redis_->set("million_db:" + msg->key, msg->value);
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 

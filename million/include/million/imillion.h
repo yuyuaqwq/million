@@ -113,8 +113,12 @@ inline SessionId IService::Send(const ServiceHandle& target, MsgUnique msg) {
     return imillion_->Send(service_handle_, target, std::move(msg));
 }
 
-inline bool IService::SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
-    return imillion_->SendTo(service_handle_, target, session_id, std::move(msg)) != kSessionIdInvalid;
+//inline bool IService::SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+//    return imillion_->SendTo(service_handle_, target, session_id, std::move(msg)) != kSessionIdInvalid;
+//}
+
+inline bool IService::Reply(const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+    return imillion_->SendTo(service_handle_, target, SessionSendToReplyId(session_id), std::move(msg)) != kSessionIdInvalid;
 }
 
 inline void IService::Timeout(uint32_t tick, MsgUnique msg) {

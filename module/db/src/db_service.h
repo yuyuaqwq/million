@@ -153,7 +153,7 @@ public:
 
     MILLION_CPP_MSG_HANDLE(DbRegisterProtoCodecMsg, msg) {
         proto_codec_ = msg->proto_codec.get();
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
@@ -184,7 +184,7 @@ public:
             break;
         }
 
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
     }
 
     MILLION_CPP_MSG_HANDLE(DbRowGetMsg, msg) {
@@ -240,7 +240,7 @@ public:
         } while (false);
         msg->db_row = row_iter->second;
 
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
     }
 
     MILLION_CPP_MSG_HANDLE(DbRowSetMsg, msg) {

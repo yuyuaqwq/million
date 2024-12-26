@@ -62,7 +62,7 @@ public:
             "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name",
             soci::use(table_name), soci::into(count);
         if (count > 0) {
-            SendTo(sender, session_id, std::move(msg));
+            Reply(sender, session_id, std::move(msg));
             co_return;
         }
 
@@ -232,7 +232,7 @@ public:
 
         sql_ << sql;
 
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
@@ -274,7 +274,7 @@ public:
         auto it = rs.begin();
         if (it == rs.end()) {
             msg->success = false;
-            SendTo(sender, session_id, std::move(msg));
+            Reply(sender, session_id, std::move(msg));
             co_return;
         }
         const auto& row = *it;
@@ -347,7 +347,7 @@ public:
         }
 
         msg->success = true;
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
@@ -412,7 +412,7 @@ public:
 
         stmt.execute(true);
 
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
@@ -460,7 +460,7 @@ public:
 
         stmt.execute(true);
 
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 

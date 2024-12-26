@@ -26,7 +26,7 @@ public:
             co_return;
         }
         msg->agent_handle = std::move(*handle);
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
@@ -62,7 +62,7 @@ public:
 
         Send<gateway::GatewaySureAgentMsg>(gateway_, msg->context_id, *msg->agent_handle);
 
-        SendTo(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));
         co_return;
     }
 

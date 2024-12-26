@@ -113,6 +113,10 @@ void Service::ProcessMsg(MsgElement ele) {
 
     if (IsReady()) {
         // OnStart未完成，只能尝试调度已有协程
+        if (!SessionIsReplyId(session_id)) {
+            return;
+        }
+        session_id = SessionReplyToSendId(session_id);
         auto res = excutor_.TrySchedule(session_id, std::move(msg));
         if (!std::holds_alternative<Task<>*>(res)) {
             return;
@@ -130,13 +134,14 @@ void Service::ProcessMsg(MsgElement ele) {
         return;
     }
 
-    auto res = excutor_.TrySchedule(session_id, std::move(msg));
-    if (std::holds_alternative<Task<>*>(res)) {
-        return;
+    if (SessionIsReplyId(session_id)) {
+        session_id = SessionReplyToSendId(session_id);
+        excutor_.TrySchedule(session_id, std::move(msg));
     }
-
-    auto task = iservice_->OnMsg(ServiceHandle(sender), session_id, std::move(std::get<MsgUnique>(res)));
-    excutor_.AddTask(std::move(task));
+    else if (SessionIsSendId(session_id)) {
+        auto task = iservice_->OnMsg(ServiceHandle(sender), session_id, std::move(msg));
+        excutor_.AddTask(std::move(task));
+    }
 }
 
 void Service::ProcessMsgs(size_t count) {

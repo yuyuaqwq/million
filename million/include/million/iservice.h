@@ -31,10 +31,16 @@ protected:
         return Send(target, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
-    bool SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg);
+    //bool SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg);
+    //template <typename MsgT, typename ...Args>
+    //bool SendTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
+    //    return SendTo(target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
+    //}
+
+    bool Reply(const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     template <typename MsgT, typename ...Args>
-    bool SendTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
-        return SendTo(target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
+    bool Reply(const ServiceHandle& target, SessionId session_id, Args&&... args) {
+        return Reply(target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
     template <typename MsgT>
