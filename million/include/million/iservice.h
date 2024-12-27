@@ -186,5 +186,16 @@ private:
         }(); \
     ::million::Task<> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
 
+#define MILLION_PERSISTENT_SESSION_MSG_DISPATCH(START_TYPE_, START_MSG_TYPE_, STOP_MSG_TYPE_KEY_) \
+    MILLION_##START_TYPE_##_MSG_HANDLE(START_MSG_TYPE_, msg) { \
+        do { \
+            auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false); \
+            if (recv_msg.GetTypeKey() == reinterpret_cast<::million::MsgTypeKey>(STOP_MSG_TYPE_KEY_)) { \
+                break; \
+            } \
+            co_await OnMsg(sender, session_id, std::move(recv_msg)); \
+        } while (true);\
+        co_return; \
+    }
 
 } // namespace million

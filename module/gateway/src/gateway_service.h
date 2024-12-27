@@ -9,10 +9,6 @@
 
 #include "gateway_server.h"
 
-#define MILLION_CS_PROTO_MSG_DISPATCH() MILLION_PROTO_MSG_DISPATCH(Cs, ::million::agent::UserSessionHandle)
-#define MILLION_CS_PROTO_MSG_ID(MSG_ID_) MILLION_PROTO_MSG_ID(Cs, MSG_ID_)
-#define MILLION_CS_PROTO_MSG_HANDLE(NAMESPACE_, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_) MILLION_PROTO_MSG_HANDLE(Cs::##NAMESPACE_, ::million::agent::UserSessionHandle, SUB_MSG_ID_, MSG_TYPE_, MSG_PTR_NAME_)
-
 namespace million {
 namespace gateway {
 
@@ -62,6 +58,8 @@ public:
     }
 
     MILLION_MSG_DISPATCH(GatewayService);
+
+    MILLION_PERSISTENT_SESSION_MSG_DISPATCH(CPP, GatewayRegisterUserServiceMsg, &GatewaySureAgentMsg::type_static());
 
     MILLION_CPP_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
         auto& connection = msg->connection;

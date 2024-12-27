@@ -90,6 +90,17 @@ struct SessionAwaiterBase {
         } while (parent_coroutine_void);
     }
 
+    // co_await等待在当前对象中的协程被恢复时调用
+    MsgUnique await_resume() {
+        // 调度器恢复了等待当前awaiter的协程，说明已经等到结果/超时了
+        if (!result_ && or_null_ == false) {
+            // 超时，不返回nullptr
+            throw TaskAbortException("Session timeout.");
+        }
+
+        return std::move(result_);
+    }
+
 protected:
     SessionId waiting_session_id_;
     uint32_t timeout_s_;
@@ -103,15 +114,8 @@ template <typename MsgT>
 struct SessionAwaiter : public SessionAwaiterBase {
     using SessionAwaiterBase::SessionAwaiterBase;
 
-    // co_await等待在当前对象中的协程被恢复时调用
     std::unique_ptr<MsgT> await_resume() {
-        // 调度器恢复了等待当前awaiter的协程，说明已经等到结果/超时了
-        if (!result_ && or_null_ == false) {
-            // 超时，不返回nullptr
-            throw TaskAbortException("Session timeout.");
-        }
-
-        return std::unique_ptr<MsgT>(static_cast<MsgT*>(result_.release()));
+        return std::unique_ptr<MsgT>(static_cast<MsgT*>(await_resume().release()));
     }
 };
 
@@ -220,6 +224,10 @@ struct TaskPromiseBase {
     }
 
     // 该协程内，可通过co_await进行等待的类型支持
+    SessionAwaiterBase await_transform(SessionAwaiterBase&& awaiter) {
+        return SessionAwaiterBase(std::move(awaiter));
+    }
+
     template <typename U>
     SessionAwaiter<U> await_transform(SessionAwaiter<U>&& awaiter) {
         return SessionAwaiter<U>(std::move(awaiter));

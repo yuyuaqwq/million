@@ -7,6 +7,8 @@ namespace million {
 using SessionId = uint64_t;
 constexpr SessionId kSessionIdInvalid = 0;
 
+constexpr uint32_t kSessionNeverTimeout = 0xffffffff;
+
 inline SessionId SessionSendToReplyId(SessionId session_id) {
 	return session_id | 0x8000000000000000;
 }
