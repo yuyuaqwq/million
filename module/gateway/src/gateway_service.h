@@ -71,12 +71,12 @@ public:
         auto port = std::to_string(ep.port());
 
         if (connection->Connected()) {
-            session->info().persistent_session_id = NewSession();
-            users_.emplace(session->info().persistent_session_id, std::move(std::static_pointer_cast<UserSession>(connection)));
+            session->info().user_session_id = NewSession();
+            users_.emplace(session->info().user_session_id, std::move(std::static_pointer_cast<UserSession>(connection)));
             logger().Debug("Gateway connection establishment: ip: {}, port: {}", ip, port);
         }
         else {
-            users_.erase(session->info().persistent_session_id);
+            users_.erase(session->info().user_session_id);
             logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
         co_return;
@@ -85,7 +85,7 @@ public:
     MILLION_CPP_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto session = static_cast<UserSession*>(msg->connection.get());
         // auto session_handle = UserSessionHandle(session);
-        auto persistent_session_id = session->info().persistent_session_id;
+        auto persistent_session_id = session->info().user_session_id;
 
         logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", persistent_session_id, msg->packet.size());
 
@@ -97,7 +97,7 @@ public:
         }
         // 没有token
         auto span = net::PacketSpan(msg->packet.begin() + kGatewayHeaderSize, msg->packet.end());
-        auto iter = users_.find(session->info().persistent_session_id);
+        auto iter = users_.find(session->info().user_session_id);
         if (iter == users_.end()) {
             logger().Err("Session does not exist.");
             co_return;

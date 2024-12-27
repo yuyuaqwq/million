@@ -186,8 +186,12 @@ private:
         }(); \
     ::million::Task<> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
 
-// 不使用OnMsg，而是再次给自己发送消息，触发MSG_HANDLE，直接OnMsg不能co_await(会导致当前协程被阻塞，无法处理新的长会话消息)
-// SendTo可以替换成Service::ProcessMsg，但是是私有类
+// 使用长会话有些需要注意的地方：
+// 一个服务可以创建多个长会话，创建后相当于对外提供一个持续性的，针对某个SessionId的服务端(服务协程)
+// 其他连接到此长会话的客户端(服务协程)，同一个服务，同一时间只能存在一个协程
+
+// 不使用OnMsg，而是再次给自己发送消息，触发MSG_HANDLE，直接OnMsg不能co_await(会导致当前长会话协程被阻塞，无法处理新的长会话消息)
+// SendTo如果考虑性能可以直接替换成当前服务的Service::ProcessMsg，但是是私有类
 #define MILLION_PERSISTENT_SESSION_MSG_LOOP(START_TYPE_, START_MSG_TYPE_, STOP_MSG_TYPE_KEY_) \
     MILLION_##START_TYPE_##_MSG_HANDLE(START_MSG_TYPE_, msg) { \
         do { \
