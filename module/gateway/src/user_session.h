@@ -15,7 +15,7 @@ namespace gateway {
 
 struct UserSessionInfo {
     Token token = kInvaildToken;
-    UserSessionId user_session_id = 0;
+    million::SessionId persistent_session_id = 0;
     ServiceHandle agent_;
 };
 

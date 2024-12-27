@@ -59,7 +59,8 @@ public:
 
     MILLION_MSG_DISPATCH(GatewayService);
 
-    MILLION_PERSISTENT_SESSION_MSG_LOOP(CPP, GatewayRegisterUserServiceMsg, &GatewaySureAgentMsg::type_static());
+    //MILLION_PERSISTENT_SESSION_MSG_LOOP(CPP, GatewayServiceSessionCreateMsg, &GatewayServiceSessionCreateMsg::type_static());
+
 
     MILLION_CPP_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
         auto& connection = msg->connection;
@@ -70,13 +71,12 @@ public:
         auto port = std::to_string(ep.port());
 
         if (connection->Connected()) {
-            auto user_context_id = ++user_context_id_;
-            session->info().user_session_id = user_context_id;
-            users_.emplace(session->info().user_session_id, std::move(std::static_pointer_cast<UserSession>(connection)));
+            session->info().persistent_session_id = NewSession();
+            users_.emplace(session->info().persistent_session_id, std::move(std::static_pointer_cast<UserSession>(connection)));
             logger().Debug("Gateway connection establishment: ip: {}, port: {}", ip, port);
         }
         else {
-            users_.erase(session->info().user_session_id);
+            users_.erase(session->info().persistent_session_id);
             logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
         co_return;
@@ -85,9 +85,9 @@ public:
     MILLION_CPP_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto session = static_cast<UserSession*>(msg->connection.get());
         // auto session_handle = UserSessionHandle(session);
-        auto user_session_id = session->info().user_session_id;
+        auto persistent_session_id = session->info().persistent_session_id;
 
-        logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", user_session_id, msg->packet.size());
+        logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", persistent_session_id, msg->packet.size());
 
         if (session->info().token == kInvaildToken) {
             // 连接没token，但是发来了token，当成断线重连处理
@@ -97,7 +97,7 @@ public:
         }
         // 没有token
         auto span = net::PacketSpan(msg->packet.begin() + kGatewayHeaderSize, msg->packet.end());
-        auto iter = users_.find(session->info().user_session_id);
+        auto iter = users_.find(session->info().persistent_session_id);
         if (iter == users_.end()) {
             logger().Err("Session does not exist.");
             co_return;
@@ -107,11 +107,11 @@ public:
         auto agent = iter->second->info().agent_.lock();
         if (!agent) {
             logger().Trace("packet send to user service.");
-            Send<GatewayRecvPacketMsg>(user_service_, user_session_id, std::move(msg->packet), span);
+            SendTo<GatewayRecvPacketMsg>(user_service_, persistent_session_id, std::move(msg->packet), span);
         }
         else {
             logger().Trace("packet send to agent service.");
-            Send<GatewayRecvPacketMsg>(iter->second->info().agent_, user_session_id, std::move(msg->packet), span);
+            Send<GatewayRecvPacketMsg>(iter->second->info().agent_, std::move(msg->packet), span);
         }
         co_return;
     }
@@ -124,7 +124,7 @@ public:
     }
 
     MILLION_CPP_MSG_HANDLE(GatewaySureAgentMsg, msg) {
-        auto iter = users_.find(msg->user_session_id);
+        auto iter = users_.find(session_id);
         if (iter == users_.end()) {
             logger().Err("Session does not exist.");
             co_return;
@@ -134,7 +134,7 @@ public:
     }
 
     MILLION_CPP_MSG_HANDLE(GatewaySendPacketMsg, msg) {
-        auto iter = users_.find(msg->user_session_id);
+        auto iter = users_.find(session_id);
         if (iter == users_.end()) {
             co_return;
         }
@@ -149,8 +149,7 @@ private:
     TokenGenerator token_generator_;
     ServiceHandle user_service_;
 
-    std::atomic<UserSessionId> user_context_id_ = 0;
-    std::unordered_map<UserSessionId, UserSessionShared> users_;
+    std::unordered_map<SessionId, UserSessionShared> users_;
 
     static constexpr uint32_t kGatewayHeaderSize = 8;
 };
