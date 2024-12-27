@@ -50,6 +50,9 @@ public:
     using LoginReq = ss::test::LoginReq;
     MILLION_PROTO_MSG_HANDLE(LoginReq, req) {
         logger().Info("test, value:{}", req->value());
+
+        // »ØÒ»¸öLoginRes
+
         co_return;
     }
 

@@ -9,6 +9,7 @@ module:
     dirs: 
         - ../../lib/Debug
     loads:
+        - gateway
 
 timer:
     ms_per_tick: 10
@@ -18,8 +19,7 @@ session_monitor:
     s_per_tick: 1
     
 gateway:
-    services:
-        - port:10086
+    port: 10086
 
 logger:
     log_file: .\logs\log.txt

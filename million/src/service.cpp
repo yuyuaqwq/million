@@ -114,7 +114,7 @@ void Service::ProcessMsg(MsgElement ele) {
         return;
     }
 
-    if (IsReady()) {
+    if (IsStarting()) {
         // OnStart未完成，只能尝试调度已有协程
         if (!SessionIsReplyId(session_id)) {
             return;

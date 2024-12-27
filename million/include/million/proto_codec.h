@@ -226,15 +226,15 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     return packet;
 }
 
-//#define MILLION_PROTO_PACKET_DISPATCH(PROTO_CODEC_, PROTO_PACKET_MSG_TYPE_) \
-//    using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
-//    MILLION_CPP_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
-//        auto res = (PROTO_CODEC_)->DecodeMessage(msg->packet); \
-//        if (!res) { \
-//            co_return; \
-//        } \
-//        co_await OnMsg(sender, session_id, std::move(res->msg)); \
-//        co_return; \
-//    } \
+#define MILLION_PROTO_PACKET_DISPATCH(PROTO_CODEC_, PROTO_PACKET_MSG_TYPE_) \
+    using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
+    MILLION_CPP_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
+        auto res = (PROTO_CODEC_)->DecodeMessage(msg->packet); \
+        if (!res) { \
+            co_return; \
+        } \
+        co_await OnMsg(sender, session_id, std::move(res->msg)); \
+        co_return; \
+    } \
 
 } // namespace million

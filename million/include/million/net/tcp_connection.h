@@ -25,9 +25,6 @@ public:
     void Send(Packet&& packet, PacketSpan span, uint32_t total_size);
     bool Connected() const;
 
-    template<typename T>
-    T* get_ptr() { return static_cast<T*>(this); }
-
     auto iter() const { return iter_; }
     void set_iter(std::list<TcpConnectionShared>::iterator iter) { iter_ = iter; }
 

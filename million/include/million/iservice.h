@@ -196,8 +196,9 @@ private:
     MILLION_##START_TYPE_##_MSG_HANDLE(START_MSG_TYPE_, msg) { \
         do { \
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false); \
+            auto msg_type_key = recv_msg.GetTypeKey(); \
             imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg)); \
-            if (recv_msg.GetTypeKey() == reinterpret_cast<::million::MsgTypeKey>(STOP_MSG_TYPE_KEY_)) { \
+            if (msg_type_key == reinterpret_cast<::million::MsgTypeKey>(STOP_MSG_TYPE_KEY_)) { \
                 break; \
             } \
         } while (true);\

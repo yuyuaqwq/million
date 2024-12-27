@@ -38,7 +38,7 @@ std::variant<MsgUnique, Task<>*> TaskExecutor::TrySchedule(SessionId session_id,
     }
     else {
         tasks_.erase(iter);
-        return nullptr;
+        return static_cast<Task<>*>(nullptr);
     }
 }
 
@@ -106,14 +106,14 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<>& task, SessionId sessi
         }
 #ifdef MILLION_STACK_TRACE
         catch (const TaskAbortException& e) {
-            million.logger().Err("Session exception: {}\n[Stack trace]\n{}", e.what(), e.stacktrace());
+            million.logger().Err("Session {} exception: {}\n[Stack trace]\n{}", session_id, e.what(), e.stacktrace());
         }
 #endif
         catch (const std::exception& e) {
-            million.logger().Err("Session exception: {}", e.what());
+            million.logger().Err("Session {} exception: {}", session_id, e.what());
         }
         catch (...) {
-            million.logger().Err("Session exception: {}", "unknown exception");
+            million.logger().Err("Session {} exception: {}", session_id, "unknown exception");
         }
     }
     return std::nullopt;

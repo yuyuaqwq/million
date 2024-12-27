@@ -2,7 +2,7 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <million/iservice.h>
+#include <million/imillion.h>
 
 #include <agent/api.h>
 #include <agent/agent.h>
@@ -17,7 +17,7 @@ public:
     using Base = IService;
     using Base::Base;
 
-    virtual bool OnInit(million::MsgUnique) override {
+    virtual bool OnInit(::million::MsgUnique) override {
         imillion().SetServiceName(service_handle(), "NodeMgrService");
         return true;
     }
@@ -43,7 +43,7 @@ public:
     using Base = IService;
     using Base::Base;
 
-    virtual bool OnInit(million::MsgUnique msg) override {
+    virtual bool OnInit(::million::MsgUnique msg) override {
         imillion().SetServiceName(service_handle(), "AgentMgrService");
 
         auto handle = imillion().GetServiceByName("GatewayService");

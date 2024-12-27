@@ -11,23 +11,20 @@
 namespace million {
 namespace cluster {
 
-struct NodeSessionInfo {
-    NodeName node_name;
-    
-    // 正在等待远程节点的消息的会话，NodeServiceSessionId表示一条虚拟会话，映射两个节点之间的服务之间的session的id
-    std::unordered_map<ServiceName, std::vector<NodeServiceSessionId>> services_;
-};
-
 class NodeSession : public net::TcpConnection {
 public:
-    NodeSession(net::TcpServer* server, asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor);
-    ~NodeSession();
+    using Base = net::TcpConnection;
+    using Base::Base;
 
-    const NodeSessionInfo& info() const { return info_; }
-    NodeSessionInfo& info() { return info_; }
+    const NodeName& node_name() const { return node_name_; }
+    void set_node_name(const NodeName& node_name) { node_name_ = node_name; }
+
+    SessionId node_session_id() const { return node_session_id_; }
+    void set_node_session_id(SessionId node_session_id) { node_session_id_ = node_session_id; }
 
 private:
-    NodeSessionInfo info_;
+    NodeName node_name_;
+    SessionId node_session_id_ = kSessionIdInvalid;
 };
 
 } // namespace cluster

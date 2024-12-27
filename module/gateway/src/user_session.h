@@ -21,14 +21,22 @@ struct UserSessionInfo {
 
 class UserSession : public net::TcpConnection {
 public:
-    UserSession(net::TcpServer* server, asio::ip::tcp::socket&& socket, asio::any_io_executor&& executor);
-    ~UserSession();
+    using Base = net::TcpConnection;
+    using Base::Base;
 
-    const UserSessionInfo& info() const { return info_; }
-    UserSessionInfo& info() { return info_; }
+    const Token& token() const { return token_; }
+    void set_token(const Token& token) { token_ = token; }
+
+    SessionId user_session_id() const { return user_session_id_; }
+    void set_user_session_id(SessionId user_session_id) { user_session_id_ = user_session_id; }
+
+    const ServiceHandle& agent() const { return agent_; }
+    void set_agent(const ServiceHandle& agent) { agent_ = agent; }
 
 private:
-    UserSessionInfo info_;
+    Token token_ = kInvaildToken;
+    million::SessionId user_session_id_ = kSessionIdInvalid;
+    ServiceHandle agent_;
 };
 
 } // namespace gateway
