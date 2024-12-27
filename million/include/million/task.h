@@ -115,7 +115,7 @@ struct SessionAwaiter : public SessionAwaiterBase {
     using SessionAwaiterBase::SessionAwaiterBase;
 
     std::unique_ptr<MsgT> await_resume() {
-        return std::unique_ptr<MsgT>(static_cast<MsgT*>(await_resume().release()));
+        return std::unique_ptr<MsgT>(static_cast<MsgT*>(SessionAwaiterBase::await_resume().release()));
     }
 };
 
