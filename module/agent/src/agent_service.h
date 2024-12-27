@@ -10,7 +10,7 @@
 namespace million {
 namespace agent {
 
-MILLION_MSG_DEFINE(, NodeMgrNewAgentMsg, (gateway::UserSessionId) user_session_id, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MSG_DEFINE(, NodeMgrNewAgentMsg, (SessionId) user_session_id, (std::optional<ServiceHandle>) agent_handle);
 
 class NodeMgrService : public IService {
 public:
@@ -64,10 +64,10 @@ public:
     MILLION_MSG_DISPATCH(AgentMgrService);
 
     MILLION_CPP_MSG_HANDLE(AgentMgrLoginMsg, msg) {
-        auto agent_msg = co_await Call<NodeMgrNewAgentMsg>(node_mgr_, msg->user_session_id, std::nullopt);
+        auto agent_msg = co_await Call<NodeMgrNewAgentMsg>(node_mgr_, session_id, std::nullopt);
         msg->agent_handle = std::move(agent_msg->agent_handle);
 
-        Send<gateway::GatewaySureAgentMsg>(gateway_, msg->user_session_id, *msg->agent_handle);
+        Reply<gateway::GatewaySureAgentMsg>(gateway_, session_id, *msg->agent_handle);
 
         Reply(sender, session_id, std::move(msg));
         co_return;

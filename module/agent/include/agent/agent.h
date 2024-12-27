@@ -68,7 +68,7 @@ private:
 };
 
 
-MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (gateway::UserSessionId) user_session_id, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (std::optional<ServiceHandle>) agent_handle);
 
 class MILLION_AGENT_API AgentService : public IService {
 public:
@@ -103,16 +103,16 @@ public:
             logger().Err("EncodeMessage failed: type:{}.", typeid(proto_msg).name());
             return;
         }
-        Send<gateway::GatewaySendPacketMsg>(gateway_, user_session_id_, *res);
+        Reply<gateway::GatewaySendPacketMsg>(gateway_, user_session_id_, *res);
     }
 
-    million::Logger& logger() { return logger(); }
+    Logger& logger() { return logger(); }
 
-    gateway::UserSessionId user_session_id() const { return user_session_id_; }
+    SessionId user_session_id() const { return user_session_id_; }
 
 private:
     ServiceHandle gateway_;
-    gateway::UserSessionId user_session_id_;
+    SessionId user_session_id_;
 };
 
 #define MILLION_AGENT_LOGIC_REGISTER_PROTO(PROTO_FILE_NAME, NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
