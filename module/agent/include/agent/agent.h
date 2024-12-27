@@ -68,7 +68,7 @@ private:
 };
 
 
-MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (SessionId) user_session_id, (std::optional<ServiceHandle>) agent_handle);
 
 class MILLION_AGENT_API AgentService : public IService {
 public:
