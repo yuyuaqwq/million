@@ -17,7 +17,7 @@ namespace protobuf = google::protobuf;
 MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (UserSessionShared) user_session)
 MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (UserSessionShared) user_session, (net::Packet) packet)
 
-MILLION_MSG_DEFINE_EMPTY(, ClusterPersistentUserSessionMsg);
+MILLION_MSG_DEFINE(, ClusterPersistentUserSessionMsg, (UserSessionShared) user_session);
 
 // 网关服务有两种模式
 // 集群、非集群
@@ -61,20 +61,29 @@ public:
 
     MILLION_MSG_DISPATCH(GatewayService);
 
-    ::million::Task<> _MILLION_MSG_HANDLE_ClusterPersistentUserSessionMsg_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique MILLION_MSG_) {
-        auto msg = ::std::unique_ptr<ClusterPersistentUserSessionMsg>(static_cast<ClusterPersistentUserSessionMsg*>(MILLION_MSG_.release())); co_await _MILLION_MSG_HANDLE_ClusterPersistentUserSessionMsg_II(sender, session_id, std::move(msg)); co_return;
-    } const bool _MILLION_MSG_HANDLE_REGISTER_ClusterPersistentUserSessionMsg = [this] { auto res = _MILLION_MSG_HANDLE_MAP_.emplace(reinterpret_cast<::million::MsgTypeKey>(&ClusterPersistentUserSessionMsg::type_static()), &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_ClusterPersistentUserSessionMsg_I); (void)((!!(res.second)) || (_wassert(L"res.second", L"C:\\Users\\yuyu\\Desktop\\mmo-pokemon-server2\\million\\module\\gateway\\src\\gateway_service.h", (unsigned)(64)), 0)); return true; }(); ::million::Task<> _MILLION_MSG_HANDLE_ClusterPersistentUserSessionMsg_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::std::unique_ptr<ClusterPersistentUserSessionMsg> msg) {
+    MILLION_CPP_MSG_HANDLE(ClusterPersistentUserSessionMsg, msg) {
+        auto& user_session = *msg->user_session;
         do {
-            logger().Info("Fake! {}", session_id);
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
-            logger().Info("Await success!");
             auto msg_type_key = recv_msg.GetTypeKey();
-            imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
-            if (msg_type_key == reinterpret_cast<::million::MsgTypeKey>(&ClusterPersistentUserSessionMsg::type_static())) {
+            // imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
+            if (recv_msg.IsType(GatewaySendPacketMsg::type_static())) {
+                logger().Trace("GatewaySendPacketMsg: {}.", session_id);
+                auto header_packet = net::Packet(kGatewayHeaderSize);
+                auto msg = recv_msg.get<GatewaySendPacketMsg>();
+                user_session.Send(std::move(header_packet), net::PacketSpan(header_packet.begin(), header_packet.end()), header_packet.size() + msg->packet.size());
+                user_session.Send(std::move(msg->packet), net::PacketSpan(msg->packet.begin(), msg->packet.end()), 0);
+            }
+            else if (recv_msg.IsType(GatewaySureAgentMsg::type_static())) {
+                auto msg = recv_msg.get<GatewaySureAgentMsg>();
+                user_session.set_agent(std::move(msg->agent_service));
+            }
+            else if (recv_msg.IsType(ClusterPersistentUserSessionMsg::type_static())) {
                 break;
             }
-        } while (true); co_return;
-    };
+        } while (true);
+        co_return;
+    }
 
     MILLION_CPP_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
         auto& user_session = *msg->user_session;
@@ -85,16 +94,14 @@ public:
 
         if (user_session.Connected()) {
             // 开启持久会话
-            auto user_session_id = Send<ClusterPersistentUserSessionMsg>(service_handle());
+            auto user_session_id = Send<ClusterPersistentUserSessionMsg>(service_handle(), msg->user_session);
             user_session.set_user_session_id(user_session_id);
-            users_.emplace(user_session_id, std::move(msg->user_session));
 
             logger().Debug("Gateway connection establishment, user_session_id:{}, ip: {}, port: {}", user_session_id, ip, port);
         }
         else {
             // 停止持久会话
             Reply<ClusterPersistentUserSessionMsg>(service_handle(), user_session.user_session_id());
-            users_.erase(user_session.user_session_id());
 
             logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
@@ -116,21 +123,15 @@ public:
         }
         // 没有token
         auto span = net::PacketSpan(msg->packet.begin() + kGatewayHeaderSize, msg->packet.end());
-        auto iter = users_.find(user_session.user_session_id());
-        if (iter == users_.end()) {
-            logger().Err("Session does not exist.");
-            co_return;
-        }
 
         // if (session->token == kInvaildToken) {
-        auto agent = iter->second->agent().lock();
-        if (!agent) {
+        if (!user_session.agent().lock()) {
             logger().Trace("packet send to user service.");
             SendTo<GatewayRecvPacketMsg>(user_service_, user_session_id, std::move(msg->packet), span);
         }
         else {
             logger().Trace("packet send to agent service.");
-            Send<GatewayRecvPacketMsg>(iter->second->agent(), std::move(msg->packet), span);
+            Send<GatewayRecvPacketMsg>(user_session.agent(), std::move(msg->packet), span);
         }
         co_return;
     }
@@ -142,33 +143,10 @@ public:
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(GatewaySureAgentMsg, msg) {
-        auto iter = users_.find(session_id);
-        if (iter == users_.end()) {
-            logger().Err("Session does not exist.");
-            co_return;
-        }
-        iter->second->set_agent(std::move(msg->agent_service));
-        co_return;
-    }
-
-    MILLION_CPP_MSG_HANDLE(GatewaySendPacketMsg, msg) {
-        auto iter = users_.find(session_id);
-        if (iter == users_.end()) {
-            co_return;
-        }
-        auto header_packet = net::Packet(kGatewayHeaderSize);
-        iter->second->Send(std::move(header_packet), net::PacketSpan(header_packet.begin(), header_packet.end()), header_packet.size() + msg->packet.size());
-        iter->second->Send(std::move(msg->packet), net::PacketSpan(msg->packet.begin(), msg->packet.end()), 0);
-        co_return;
-    }
-
 private:
     GatewayServer server_;
     TokenGenerator token_generator_;
     ServiceHandle user_service_;
-
-    std::unordered_map<SessionId, UserSessionShared> users_;
 
     static constexpr uint32_t kGatewayHeaderSize = 8;
 };

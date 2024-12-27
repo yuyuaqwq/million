@@ -106,7 +106,7 @@ public:
         Reply<gateway::GatewaySendPacketMsg>(gateway_, user_session_id_, *res);
     }
 
-    Logger& logger() { return logger(); }
+    Logger& logger() { return Base::logger(); }
 
     SessionId user_session_id() const { return user_session_id_; }
 

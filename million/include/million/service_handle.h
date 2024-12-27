@@ -34,9 +34,8 @@ public:
         weak_ = std::move(v.weak_);
     }
 
-    ServiceShared lock() const { 
-        auto shared = weak_.lock();
-        return shared;
+    ServiceShared lock() const {
+        return weak_.lock();
     }
 
     IService* get_ptr(const ServiceShared& lock) const;

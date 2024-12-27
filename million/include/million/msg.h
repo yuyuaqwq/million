@@ -96,7 +96,6 @@ public:
         throw std::bad_variant_access();
     }
 
-
     operator bool() const {
         if (IsProtoMessage()) {
             return GetProtoMessage().get();

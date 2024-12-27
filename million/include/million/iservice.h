@@ -186,19 +186,20 @@ private:
         }(); \
     ::million::Task<> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
 
-// 使用长会话有些需要注意的地方：
-// 一个服务可以创建多个长会话，创建后相当于对外提供一个持续性的，针对某个SessionId的服务端(服务协程)
-// 同一个对端服务，同一时间只能存在一个连接到此长会话的客户端(服务协程)
+// 持久会话循环参考
+// 使用持久会话有些需要注意的地方：
+// 一个服务可以创建多个持久会话，创建后相当于对外提供一个持续性的，针对某个SessionId的服务端(服务协程)
+// 同一个对端服务，同一时间只能存在一个连接到此持久会话的客户端(服务协程)
 
-// 需要创建新的协程，不能直接co_await OnMsg(会导致当前长会话协程被阻塞，无法处理新的长会话消息)
+// 需要创建新的协程，不能直接co_await OnMsg(会导致当前持久会话协程被阻塞，无法处理新的持久会话消息)
 // SendTo如果考虑性能可以直接替换成当前服务的Service::ProcessMsg，但是是私有类
-#define MILLION_PERSISTENT_SESSION_MSG_LOOP(START_TYPE_, START_MSG_TYPE_, STOP_MSG_TYPE_KEY_) \
+#define MILLION_PERSISTENT_SESSION_MSG_LOOP(START_TYPE_, START_MSG_TYPE_, STOP_MSG_TYPE_) \
     MILLION_##START_TYPE_##_MSG_HANDLE(START_MSG_TYPE_, msg) { \
         do { \
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false); \
             auto msg_type_key = recv_msg.GetTypeKey(); \
             imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg)); \
-            if (msg_type_key == reinterpret_cast<::million::MsgTypeKey>(STOP_MSG_TYPE_KEY_)) { \
+            if (recv_msg.IsType(STOP_MSG_TYPE_)) { \
                 break; \
             } \
         } while (true);\
