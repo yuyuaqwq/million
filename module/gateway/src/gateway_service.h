@@ -85,9 +85,9 @@ public:
     MILLION_CPP_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto session = static_cast<UserSession*>(msg->connection.get());
         // auto session_handle = UserSessionHandle(session);
-        auto persistent_session_id = session->info().user_session_id;
+        auto user_session_id = session->info().user_session_id;
 
-        logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", persistent_session_id, msg->packet.size());
+        logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", user_session_id, msg->packet.size());
 
         if (session->info().token == kInvaildToken) {
             // 连接没token，但是发来了token，当成断线重连处理
@@ -107,7 +107,7 @@ public:
         auto agent = iter->second->info().agent_.lock();
         if (!agent) {
             logger().Trace("packet send to user service.");
-            SendTo<GatewayRecvPacketMsg>(user_service_, persistent_session_id, std::move(msg->packet), span);
+            SendTo<GatewayRecvPacketMsg>(user_service_, user_session_id, std::move(msg->packet), span);
         }
         else {
             logger().Trace("packet send to agent service.");

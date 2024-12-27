@@ -65,9 +65,9 @@ public:
 
     MILLION_MSG_DISPATCH(ClusterService);
 
-    MILLION_PERSISTENT_SESSION_MSG_LOOP(CPP, GatewayServiceSessionCreateMsg, &GatewayServiceSessionCreateMsg::type_static());
+    //MILLION_PERSISTENT_SESSION_MSG_LOOP(CPP, GatewayServiceSessionCreateMsg, &GatewayServiceSessionCreateMsg::type_static());
 
-
+     
     MILLION_CPP_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
         auto& ep = msg->connection->remote_endpoint();
         auto ip = ep.address().to_string();
