@@ -59,7 +59,7 @@ public:
 
     MILLION_MSG_DISPATCH(GatewayService);
 
-    MILLION_PERSISTENT_SESSION_MSG_DISPATCH(CPP, GatewayRegisterUserServiceMsg, &GatewaySureAgentMsg::type_static());
+    MILLION_PERSISTENT_SESSION_MSG_LOOP(CPP, GatewayRegisterUserServiceMsg, &GatewaySureAgentMsg::type_static());
 
     MILLION_CPP_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
         auto& connection = msg->connection;

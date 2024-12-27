@@ -188,7 +188,7 @@ private:
 
 // 不使用OnMsg，而是再次给自己发送消息，触发MSG_HANDLE，直接OnMsg不能co_await(会导致当前协程被阻塞，无法处理新的长会话消息)
 // SendTo可以替换成Service::ProcessMsg，但是是私有类
-#define MILLION_PERSISTENT_SESSION_MSG_DISPATCH(START_TYPE_, START_MSG_TYPE_, STOP_MSG_TYPE_KEY_) \
+#define MILLION_PERSISTENT_SESSION_MSG_LOOP(START_TYPE_, START_MSG_TYPE_, STOP_MSG_TYPE_KEY_) \
     MILLION_##START_TYPE_##_MSG_HANDLE(START_MSG_TYPE_, msg) { \
         do { \
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false); \
