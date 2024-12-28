@@ -216,7 +216,7 @@ public:
                 msg->packet.end());
 
             // 基于持久会话，建立两端的虚拟服务会话
-            auto key = src_service + "." + target_service;
+            auto key = src_service + " -> " + target_service;
             auto service_session_id = node_session.FindServiceSession(key);
             if (!service_session_id) {
                 service_session_id = Send<ClusterPersistentNodeServiceSessionMsg>(service_handle()
