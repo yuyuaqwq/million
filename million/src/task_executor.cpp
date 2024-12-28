@@ -68,11 +68,11 @@ bool TaskExecutor::TaskQueueIsEmpty() const {
     return tasks_.empty();
 }
 
-Task<>* TaskExecutor::TaskTimeout(SessionId session_id) {
+std::pair<Task<>*, bool> TaskExecutor::TaskTimeout(SessionId session_id) {
     auto iter = tasks_.find(session_id);
     if (iter == tasks_.end()) {
         // 正常情况是已经执行完毕了
-        return nullptr;
+        return std::make_pair(nullptr, false);
     }
 
     // 超时，唤醒目标协程
@@ -80,11 +80,12 @@ Task<>* TaskExecutor::TaskTimeout(SessionId session_id) {
 
     if (!iter->second.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        return RePush(session_id, iter->second.coroutine.promise().session_awaiter()->waiting_session());
+        return std::make_pair(RePush(session_id, iter->second.coroutine.promise().session_awaiter()->waiting_session()), false);
     }
     else {
+        auto has_exception = iter->second.has_exception();
         tasks_.erase(iter);
-        return nullptr;
+        return std::make_pair(nullptr, has_exception);
     }
 }
 

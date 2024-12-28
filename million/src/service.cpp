@@ -102,11 +102,8 @@ void Service::ProcessMsg(MsgElement ele) {
     // Starting/Stop 都允许处理已有协程的超时
     if (msg.IsType(SessionTimeoutMsg::type_static())) {
         auto msg_ptr = msg.get<SessionTimeoutMsg>();
-        auto task = excutor_.TaskTimeout(msg_ptr->timeout_id);
-        if (task && IsStarting()) {
-            if (!task->coroutine.done() || !task->coroutine.promise().exception()) {
-                return;
-            }
+        auto&& [task, has_exception] = excutor_.TaskTimeout(msg_ptr->timeout_id);
+        if (IsStarting() || has_exception) {
             // 异常退出的OnStart，默认回收当前服务
             state_ = kStop;
             Exit();

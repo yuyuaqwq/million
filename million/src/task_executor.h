@@ -29,7 +29,7 @@ public:
 
     bool TaskQueueIsEmpty() const;
 
-    Task<>* TaskTimeout(SessionId id);
+    std::pair<Task<>*, bool> TaskTimeout(SessionId id);
 
 private:
     // 尝试调度指定Task

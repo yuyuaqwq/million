@@ -71,8 +71,8 @@ public:
                 logger().Trace("GatewaySendPacketMsg: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
                 auto msg = recv_msg.get<GatewaySendPacketMsg>();
-                user_session.Send(std::move(header_packet), net::PacketSpan(header_packet.begin(), header_packet.end()), header_packet.size() + msg->packet.size());
-                user_session.Send(std::move(msg->packet), net::PacketSpan(msg->packet.begin(), msg->packet.end()), 0);
+                user_session.Send(std::move(header_packet), net::PacketSpan(header_packet), header_packet.size() + msg->packet.size());
+                user_session.Send(std::move(msg->packet), net::PacketSpan(msg->packet), 0);
             }
             else if (recv_msg.IsType(GatewaySureAgentMsg::type_static())) {
                 auto msg = recv_msg.get<GatewaySureAgentMsg>();
@@ -94,14 +94,14 @@ public:
 
         if (user_session.Connected()) {
             // 开启持久会话
-            auto user_session_id = Send<ClusterPersistentUserSessionMsg>(service_handle(), msg->user_session);
+            auto user_session_id = Send<ClusterPersistentUserSessionMsg>(service_handle(), std::move(msg->user_session));
             user_session.set_user_session_id(user_session_id);
 
             logger().Debug("Gateway connection establishment, user_session_id:{}, ip: {}, port: {}", user_session_id, ip, port);
         }
         else {
             // 停止持久会话
-            Reply<ClusterPersistentUserSessionMsg>(service_handle(), user_session.user_session_id());
+            Reply<ClusterPersistentUserSessionMsg>(service_handle(), user_session.user_session_id(), std::move(msg->user_session));
 
             logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
@@ -139,7 +139,7 @@ public:
     MILLION_CPP_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
         logger().Trace("GatewayRegisterUserServiceMsg.");
         user_service_ = msg->user_service;
-        Reply(sender, session_id, std::move(msg));
+        // Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
