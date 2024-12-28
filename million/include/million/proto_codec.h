@@ -228,7 +228,7 @@ inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
 
 #define MILLION_PROTO_PACKET_DISPATCH(PROTO_CODEC_, PROTO_PACKET_MSG_TYPE_) \
     using _MILLION_PROTO_PACKET_MSG_TYPE_ = PROTO_PACKET_MSG_TYPE_; \
-    MILLION_CPP_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
+    MILLION_MSG_HANDLE(PROTO_PACKET_MSG_TYPE_, msg) { \
         auto res = (PROTO_CODEC_)->DecodeMessage(msg->packet); \
         if (!res) { \
             co_return; \
