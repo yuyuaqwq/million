@@ -51,23 +51,23 @@ public:
         return handle;
     }
 
-    SessionId StartService(const ServiceHandle& service);
-    SessionId StopService(const ServiceHandle& service);
+    std::optional<SessionId> StartService(const ServiceHandle& service);
+    std::optional<SessionId> StopService(const ServiceHandle& service);
 
     bool SetServiceName(const ServiceHandle& service, const ServiceName& name);
     std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
 
     SessionId NewSession();
 
-    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
+    std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
-    SessionId Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
+    std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
         return Send(sender, target, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
-    SessionId SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
+    bool SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
     template <typename MsgT, typename ...Args>
-    SessionId SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, Args&&... args) {
+    bool SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, Args&&... args) {
         return SendTo(sender, target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
@@ -94,7 +94,7 @@ public:
     }
 
     const YAML::Node& YamlConfig() const;
-    void Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
+    bool Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
     asio::io_context& NextIoContext();
     void EnableSeparateWorker(const ServiceHandle& service);
 
@@ -105,11 +105,7 @@ private:
     Million* impl_;
 };
 
-inline SessionId IService::NewSession() {
-    return imillion_->NewSession();
-}
-
-inline SessionId IService::Send(const ServiceHandle& target, MsgUnique msg) {
+inline std::optional<SessionId> IService::Send(const ServiceHandle& target, MsgUnique msg) {
     return imillion_->Send(service_handle_, target, std::move(msg));
 }
 

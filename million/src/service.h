@@ -29,7 +29,7 @@ public:
     Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
     ~Service();
 
-    void PushMsg(const ServiceShared& sender, SessionId session_id, MsgUnique msg);
+    bool PushMsg(const ServiceShared& sender, SessionId session_id, MsgUnique msg);
     std::optional<MsgElement> PopMsg();
     bool MsgQueueIsEmpty();
 
@@ -53,10 +53,9 @@ public:
 
     IService& iservice() const { assert(iservice_); return *iservice_; }
 
-    // 暂且不使用
-    SessionId Start();
-    SessionId Stop();
-    SessionId Exit();
+    std::optional<SessionId> Start();
+    std::optional<SessionId> Stop();
+    std::optional<SessionId> Exit();
 
     bool IsReady() const;
     bool IsStarting() const;

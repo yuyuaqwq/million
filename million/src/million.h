@@ -27,8 +27,8 @@ public:
 
     std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice, MsgUnique init_msg);
 
-    SessionId StartService(const ServiceShared& service);
-    SessionId StopService(const ServiceShared& service);
+    std::optional<SessionId> StartService(const ServiceShared& service);
+    std::optional<SessionId> StopService(const ServiceShared& service);
 
     bool SetServiceName(const ServiceShared& service, const ServiceName& name);
     std::optional<ServiceShared> GetServiceByName(const ServiceName& name);
@@ -36,7 +36,7 @@ public:
     SessionId NewSession();
 
     bool SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgUnique msg);
-    SessionId Send(const ServiceShared& sender, const ServiceShared& target, MsgUnique msg);
+    std::optional<SessionId> Send(const ServiceShared& sender, const ServiceShared& target, MsgUnique msg);
 
     const YAML::Node& YamlConfig() const;
     void Timeout(uint32_t tick, const ServiceShared& service, MsgUnique msg);

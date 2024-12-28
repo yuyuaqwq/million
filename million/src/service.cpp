@@ -20,11 +20,11 @@ Service::~Service() = default;
 
 
 
-void Service::PushMsg(const ServiceShared& sender, SessionId session_id, MsgUnique msg) {
+bool Service::PushMsg(const ServiceShared& sender, SessionId session_id, MsgUnique msg) {
     {
         auto lock = std::lock_guard(msgs_mutex_);
         if (!IsReady() && !IsStarting() && !IsRunning() && !msg.IsType<ServiceExitMsg>()) {
-            return;
+            return false;
         }
         Service::MsgElement ele{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
         msgs_.emplace(std::move(ele));
@@ -32,6 +32,7 @@ void Service::PushMsg(const ServiceShared& sender, SessionId session_id, MsgUniq
     if (HasSeparateWorker()) {
         separate_worker_->cv.notify_one();
     }
+    return true;
 }
 
 std::optional<Service::MsgElement> Service::PopMsg() {
@@ -201,15 +202,15 @@ std::optional<Service::MsgElement> Service::PopMsgWithLock() {
 }
 
 
-SessionId Service::Start() {
+std::optional<SessionId> Service::Start() {
     return iservice_->Send<ServiceStartMsg>(iservice_->service_handle());
 }
 
-SessionId Service::Stop() {
+std::optional<SessionId> Service::Stop() {
     return iservice_->Send<ServiceStopMsg>(iservice_->service_handle());
 }
 
-SessionId Service::Exit() {
+std::optional<SessionId> Service::Exit() {
     return iservice_->Send<ServiceExitMsg>(iservice_->service_handle());
 }
 

@@ -17,7 +17,7 @@ namespace cluster {
 MILLION_MSG_DEFINE(, ClusterTcpConnectionMsg, (NodeSessionShared) node_session)
 MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (NodeSessionShared) node_session, (net::Packet) packet)
 
-MILLION_MSG_DEFINE_EMPTY(, ClusterNewNodeServiceSessionMsg);
+MILLION_MSG_DEFINE_EMPTY(, ClusterNodeServiceSessionMsg);
 
 // SessionId部分，必须是a只能等待自己节点alloc的SessionId，想等待b的消息，必须是a把sessionid发给b，b再发回这个sessionid
 
@@ -69,7 +69,7 @@ public:
 
     MILLION_MSG_DISPATCH(ClusterService);
 
-    MILLION_PERSISTENT_SESSION_MSG_LOOP(ClusterNewNodeServiceSessionMsg, ClusterNewNodeServiceSessionMsg);
+    MILLION_PERSISTENT_SESSION_MSG_LOOP(ClusterNodeServiceSessionMsg, ClusterNodeServiceSessionMsg);
     
     MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
         auto& node_session = *msg->node_session;
@@ -80,8 +80,10 @@ public:
         if (node_session.Connected()) {
             logger().Debug("Connection establishment: ip: {}, port: {}", ip, port);
 
-            auto node_session_id = Send<ClusterNewNodeServiceSessionMsg>(service_handle());
-            node_session.set_node_session_id(node_session_id);
+            // 开启持久会话
+            // auto node_session_id = Send<ClusterNodeServiceSessionMsg>(service_handle());
+            // node_session.set_node_session_id(node_session_id);
+            node_session.set_node_session_id(imillion().NewSession());
         }
         else {
             logger().Debug("Disconnection: ip: {}, port: {}, cur_node: {}, target_node : {}", ip, port, node_name_, msg->node_session->node_name());
@@ -134,12 +136,10 @@ public:
             ss::cluster::MsgBody msg_body;
             auto* res = msg_body.mutable_handshake_res();
             res->set_target_node(node_name_);
+
             auto packet = ProtoMsgToPacket(msg_body);
-
             PacketInit(&node_session, packet, net::Packet());
-
-            auto span = net::PacketSpan(packet.begin(), packet.end());
-            msg->node_session->Send(std::move(packet), span, 0);
+            msg->node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
 
             if (node_name_ != req.target_node()) {
                 logger().Err("Src node name mismatch, ip: {}, port: {}, cur_node: {}, req_target_node: {}", ip, port, node_name_, req.target_node());
@@ -155,7 +155,8 @@ public:
             // 收到握手响应，当前是主动连接方
             auto& res = msg_body.handshake_res();
             if (node_session.node_name() != res.target_node()) {
-                logger().Err("Target node name mismatch, ip: {}, port: {}, target_node: {}, res_target_node: {}", ip, port, node_session.node_name(), res.target_node());
+                logger().Err("Target node name mismatch, ip: {}, port: {}, target_node: {}, res_target_node: {}",
+                    ip, port, node_session.node_name(), res.target_node());
                 node_session.Close();
                 co_return;
             }
@@ -184,13 +185,24 @@ public:
             auto& src_service = header.src_service();
             auto& target_service = header.target_service();
             auto target_service_handle = imillion().GetServiceByName(target_service);
-            if (target_service_handle) {
-                // 还需要获取下源节点
-                auto span = net::PacketSpan(msg->packet.begin() + sizeof(header_size) + header_size, msg->packet.end());
-                Send<ClusterRecvPacketMsg>(*target_service_handle, 
-                    node_session.node_session_id(),
-                    std::move(msg->packet), span);
+            if (!target_service_handle) {
+                break;
             }
+
+            // 还需要获取下源节点
+
+            auto span = net::PacketSpan(
+                msg->packet.begin() + sizeof(header_size) + header_size,
+                msg->packet.end());
+
+            // 需要向指定的持久会话发包，让持久会话转发给当前节点的服务
+            // 当前节点服务就可以通过Reply向目标节点服务回包了
+
+            // 根据target service name，find service session, 拿到一个session_id
+            // 啥时候创建这个
+
+            SendTo<ClusterRecvPacketMsg>(*target_service_handle,
+                node_session.node_session_id(), std::move(msg->packet), span);
             break;
         }
         }
@@ -212,31 +224,30 @@ public:
         }
 
         if (wait_nodes_.find(msg->target_node) == wait_nodes_.end()) {
+            // 与目标节点的连接未开始
             wait_nodes_.emplace(msg->target_node);
             auto& io_context = imillion().NextIoContext();
-            asio::co_spawn(io_context.get_executor(), [this, target_node = msg->target_node, ep = std::move(*ep)]() mutable -> asio::awaitable<void> {
+            asio::co_spawn(io_context.get_executor(), [this, target_node = msg->target_node
+                , ep = std::move(*ep)]() mutable -> asio::awaitable<void>
+            {
                 auto connection = co_await server_.ConnectTo(ep.ip, ep.port);
                 if (!connection) {
                     logger().Err("server_.ConnectTo failed, ip: {}, port: {}.", ep.ip, ep.port);
                     co_return;
                 }
 
-                // 握手
                 auto node_session = std::move(std::static_pointer_cast<NodeSession>(*connection));
+                node_session->set_node_name(target_node);
 
                 ss::cluster::MsgBody msg_body;
                 auto* req = msg_body.mutable_handshake_req();
                 req->set_src_node(node_name_);
                 req->set_target_node(target_node);
+
                 auto packet = ProtoMsgToPacket(msg_body);
-
                 PacketInit(node_session.get(), packet, net::Packet());
-
-                auto span = net::PacketSpan(packet.begin(), packet.end());
-                node_session->Send(std::move(packet), span, 0);
-
-                node_session->set_node_name(target_node);
-                }, asio::detached);
+                node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
+            }, asio::detached);
         }
 
         // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包

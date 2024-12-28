@@ -95,9 +95,9 @@ public:
         if (user_session.Connected()) {
             // 开启持久会话
             auto user_session_id = Send<ClusterPersistentUserSessionMsg>(service_handle(), std::move(msg->user_session));
-            user_session.set_user_session_id(user_session_id);
+            user_session.set_user_session_id(user_session_id.value());
 
-            logger().Debug("Gateway connection establishment, user_session_id:{}, ip: {}, port: {}", user_session_id, ip, port);
+            logger().Debug("Gateway connection establishment, user_session_id:{}, ip: {}, port: {}", user_session.user_session_id(), ip, port);
         }
         else {
             // 停止持久会话

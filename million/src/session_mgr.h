@@ -17,7 +17,7 @@ public:
 
 private:
     Million* million_;
-    std::atomic<SessionId> session_id_ = 0;
+    std::atomic<SessionId> session_id_ = kSessionIdInvalid;
 
     // session_monitor
 };

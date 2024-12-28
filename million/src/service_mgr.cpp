@@ -74,15 +74,15 @@ void ServiceMgr::DeleteService(Service* service) {
 }
 
 
-SessionId ServiceMgr::StartService(const ServiceShared& service) {
+std::optional<SessionId> ServiceMgr::StartService(const ServiceShared& service) {
     return service->Start();
 }
 
-SessionId ServiceMgr::StopService(const ServiceShared& service) {
+std::optional<SessionId> ServiceMgr::StopService(const ServiceShared& service) {
     return service->Stop();
 }
 
-SessionId ServiceMgr::ExitService(const ServiceShared& service) {
+std::optional<SessionId> ServiceMgr::ExitService(const ServiceShared& service) {
     return service->Exit();
 }
 
@@ -151,7 +151,9 @@ std::optional<ServiceShared> ServiceMgr::GetServiceById(ServiceId id) {
 }
 
 bool ServiceMgr::Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgUnique msg) {
-    target->PushMsg(sender, session_id, std::move(msg));
+    if (!target->PushMsg(sender, session_id, std::move(msg))) {
+        return false;
+    }
     PushService(target.get());
     return true;
 }

@@ -28,9 +28,9 @@ public:
     std::optional<ServiceShared> AddService(std::unique_ptr<IService> service, MsgUnique init_msg);
     void DeleteService(Service* service);
 
-    SessionId StartService(const ServiceShared& service);
-    SessionId StopService(const ServiceShared& service);
-    SessionId ExitService(const ServiceShared& service);
+    std::optional<SessionId> StartService(const ServiceShared& service);
+    std::optional<SessionId> StopService(const ServiceShared& service);
+    std::optional<SessionId> ExitService(const ServiceShared& service);
 
     void PushService(Service* service);
     Service* PopService();

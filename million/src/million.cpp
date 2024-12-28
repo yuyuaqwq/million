@@ -188,11 +188,11 @@ std::optional<ServiceShared> Million::AddService(std::unique_ptr<IService> iserv
 
 
 #undef StartService
-SessionId Million::StartService(const ServiceShared& service) {
+std::optional<SessionId> Million::StartService(const ServiceShared& service) {
     return service_mgr_->StartService(service);
 }
 
-SessionId Million::StopService(const ServiceShared& service) {
+std::optional<SessionId> Million::StopService(const ServiceShared& service) {
     return service_mgr_->StopService(service);
 }
 
@@ -215,12 +215,12 @@ bool Million::SendTo(const ServiceShared& sender, const ServiceShared& target, S
     return service_mgr_->Send(sender, target, session_id, std::move(msg));
 }
 
-SessionId Million::Send(const ServiceShared& sender, const ServiceShared& target, MsgUnique msg) {
+std::optional<SessionId> Million::Send(const ServiceShared& sender, const ServiceShared& target, MsgUnique msg) {
     auto session_id = session_mgr_->NewSession();
     if (SendTo(sender, target, session_id, std::move(msg))) {
         return session_id;
     }
-    return kSessionIdInvalid;
+    return std::nullopt;
 }
 
 

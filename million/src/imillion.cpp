@@ -32,18 +32,18 @@ std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iser
 }
 
 
-SessionId IMillion::StartService(const ServiceHandle& service) {
+std::optional<SessionId> IMillion::StartService(const ServiceHandle& service) {
     auto lock = service.lock();
     if (!lock) {
-        return kSessionIdInvalid;
+        return std::nullopt;
     }
     return impl_->StartService(lock);
 }
 
-SessionId IMillion::StopService(const ServiceHandle& service) {
+std::optional<SessionId> IMillion::StopService(const ServiceHandle& service) {
     auto lock = service.lock();
     if (!lock) {
-        return kSessionIdInvalid;
+        return std::nullopt;
     }
     return impl_->StopService(lock);
 }
@@ -52,7 +52,7 @@ SessionId IMillion::StopService(const ServiceHandle& service) {
 bool IMillion::SetServiceName(const ServiceHandle& service, const ServiceName& name) {
     auto lock = service.lock();
     if (!lock) {
-        return kSessionIdInvalid;
+        return false;
     }
     return impl_->SetServiceName(lock, name);
 }
@@ -71,27 +71,26 @@ SessionId IMillion::NewSession() {
 }
 
 
-SessionId IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
+std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
     auto sender_lock = sender.lock();
     if (!sender_lock) {
-        return kSessionIdInvalid;
+        return std::nullopt;
     }
     auto target_lock = target.lock();
     if (!target_lock) {
-        return kSessionIdInvalid;
+        return std::nullopt;
     }
-
     return impl_->Send(sender_lock, target_lock, std::move(msg));
 }
 
-SessionId IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+bool IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
     auto sender_lock = sender.lock();
     if (!sender_lock) {
-        return kSessionIdInvalid;
+        return false;
     }
     auto target_lock = target.lock();
     if (!target_lock) {
-        return kSessionIdInvalid;
+        return false;
     }
     return impl_->SendTo(sender_lock, target_lock, session_id, std::move(msg));
 }
@@ -101,12 +100,13 @@ const YAML::Node& IMillion::YamlConfig() const {
     return impl_->YamlConfig();
 }
 
-void IMillion::Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) {
+bool IMillion::Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) {
     auto lock = service.lock();
     if (!lock) {
-        return;
+        return false;
     }
-    return impl_->Timeout(tick, lock, std::move(msg));
+    impl_->Timeout(tick, lock, std::move(msg));
+    return true;
 }
 
 asio::io_context& IMillion::NextIoContext() {
