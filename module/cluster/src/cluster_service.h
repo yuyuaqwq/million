@@ -214,11 +214,12 @@ public:
                 msg->packet.end());
 
             // 基于持久会话，建立两端的虚拟服务会话
-            auto service_session_id = node_session.FindServiceSession(src_service);
+            auto key = src_service + " -> " + target_service;
+            auto service_session_id = node_session.FindServiceSession(key);
             if (!service_session_id) {
                 service_session_id = Send<ClusterPersistentNodeServiceSessionMsg>(service_handle()
                     , msg->node_session, src_service, target_service);
-                node_session.CreateServiceSession(src_service, service_session_id.value());
+                node_session.CreateServiceSession(key, service_session_id.value());
             }
             // 将包转发给本机节点的其他服务
             imillion().SendTo<ClusterRecvPacketMsg>(service_handle(), *target_service_handle,
