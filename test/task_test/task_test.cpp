@@ -44,7 +44,7 @@ class TestService : public million::IService {
     virtual million::Task<> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique msg) override {
         auto res1000 = co_await RecvWithTimeout<Test2Msg>(1000, 5);
 
-        if (msg.GetTypeKey() == (uint64_t) & Test2Msg::type_static()) {
+        if (msg.IsType<Test2Msg>()) {
             auto msg_ = msg.get<Test2Msg>();
             std::cout << session_id << std::endl;
             std::cout << "Test2Msg" << msg_->value1 << msg_->value2 << std::endl;

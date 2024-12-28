@@ -89,14 +89,14 @@ public:
     MILLION_MSG_DISPATCH(LoggerService);
 
     using Log = ss::logger::Log;
-    MILLION_PROTO_MSG_HANDLE(Log, msg) {
+    MILLION_MSG_HANDLE(Log, msg) {
         auto level = static_cast<spdlog::level::level_enum>(msg->level());
         logger_->log(spdlog::source_loc(msg->file().c_str(), msg->line(), msg->function().c_str()), level, msg->msg());
         co_return;
     }
 
     using SetLevel = ss::logger::SetLevel;
-    MILLION_PROTO_MSG_HANDLE(SetLevel, msg) {
+    MILLION_MSG_HANDLE(SetLevel, msg) {
         auto level = static_cast<spdlog::level::level_enum>(msg->level());
         logger_->set_level(level);
         co_return;

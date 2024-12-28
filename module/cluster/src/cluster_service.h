@@ -69,9 +69,9 @@ public:
 
     MILLION_MSG_DISPATCH(ClusterService);
 
-    MILLION_PERSISTENT_SESSION_MSG_LOOP(CPP, ClusterNewNodeServiceSessionMsg, &ClusterNewNodeServiceSessionMsg::type_static());
+    MILLION_PERSISTENT_SESSION_MSG_LOOP(ClusterNewNodeServiceSessionMsg, ClusterNewNodeServiceSessionMsg);
     
-    MILLION_CPP_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
         auto& node_session = *msg->node_session;
 
         auto& ep = node_session.remote_endpoint();
@@ -94,7 +94,7 @@ public:
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
         auto& node_session = *msg->node_session;
 
         auto& ep = node_session.remote_endpoint();
@@ -198,7 +198,7 @@ public:
     }
 
 
-    MILLION_CPP_MSG_HANDLE(ClusterSendPacketMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterSendPacketMsg, msg) {
         auto node_session = GetNodeSession(msg->target_node);
         if (node_session) {
             PacketForward(node_session, std::move(msg));

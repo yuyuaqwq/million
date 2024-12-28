@@ -71,7 +71,7 @@ public:
 
     MILLION_MSG_DISPATCH(TestService);
 
-    MILLION_CPP_MSG_HANDLE(Test1Msg, msg) {
+    MILLION_MSG_HANDLE(Test1Msg, msg) {
         std::printf("?? ");
         //auto msg2 = std::make_unique<Test1Msg>();
         //Timeout(100, std::move(msg2));

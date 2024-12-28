@@ -10,6 +10,21 @@ namespace million {
 
 using MsgTypeKey = uintptr_t;
 
+template <typename MsgT>
+inline MsgTypeKey GetMsgTypeKey() {
+    if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
+        return reinterpret_cast<MsgTypeKey>(MsgT::GetDescriptor());
+    }
+    else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
+        return reinterpret_cast<MsgTypeKey>(&MsgT::type_static());
+    }
+    else {
+        static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
+            "Unsupported message type.");
+    }
+}
+
+
 class MILLION_API MsgUnique {
 public:
     MsgUnique() = default;
@@ -71,12 +86,9 @@ public:
         return 0;
     }
 
-    bool IsType(const protobuf::Descriptor* desc) const {
-        return GetTypeKey() == reinterpret_cast<MsgTypeKey>(desc);
-    }
-
-    bool IsType(const type_info& type_info) const {
-        return GetTypeKey() == reinterpret_cast<MsgTypeKey>(&type_info);
+    template <typename MsgT>
+    bool IsType() {
+        return GetTypeKey() == GetMsgTypeKey<MsgT>();
     }
 
     MsgUnique Copy() const {

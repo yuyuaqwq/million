@@ -153,32 +153,14 @@ private:
     } \
     ::std::unordered_map<::million::MsgTypeKey, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
 
-
-#define MILLION_PROTO_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
+#define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
     ::million::Task<> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique MILLION_MSG_) { \
-        auto msg = ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release())); \
-        co_await _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, std::move(msg)); \
+        co_await _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release()))); \
         co_return; \
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
-            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(reinterpret_cast<::million::MsgTypeKey>(MSG_TYPE_::GetDescriptor()), \
-                &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
-            ); \
-            assert(res.second); \
-            return true; \
-        }(); \
-    ::million::Task<> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
-
-#define MILLION_CPP_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique MILLION_MSG_) { \
-        auto msg = ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release())); \
-        co_await _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, std::move(msg)); \
-        co_return; \
-    } \
-    const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
-        [this] { \
-            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(reinterpret_cast<::million::MsgTypeKey>(&MSG_TYPE_::type_static()), \
+            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(::million::GetMsgTypeKey<MSG_TYPE_>(), \
                 &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
             ); \
             assert(res.second); \
@@ -193,13 +175,13 @@ private:
 
 // 需要创建新的协程，不能直接co_await OnMsg(会导致当前持久会话协程被阻塞，无法处理新的持久会话消息)
 // SendTo如果考虑性能可以直接替换成当前服务的Service::ProcessMsg，但是是私有类
-#define MILLION_PERSISTENT_SESSION_MSG_LOOP(START_TYPE_, START_MSG_TYPE_, STOP_MSG_TYPE_) \
-    MILLION_##START_TYPE_##_MSG_HANDLE(START_MSG_TYPE_, msg) { \
+#define MILLION_PERSISTENT_SESSION_MSG_LOOP(START_MSG_TYPE_, STOP_MSG_TYPE_) \
+    MILLION_MSG_HANDLE(START_MSG_TYPE_, msg) { \
         do { \
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false); \
             auto msg_type_key = recv_msg.GetTypeKey(); \
             imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg)); \
-            if (recv_msg.IsType(STOP_MSG_TYPE_)) { \
+            if (::million::GetMsgTypeKey<STOP_MSG_TYPE_>()) { \
                 break; \
             } \
         } while (true);\

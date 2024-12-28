@@ -48,7 +48,7 @@ public:
 
     MILLION_MSG_DISPATCH(CacheService);
 
-    MILLION_CPP_MSG_HANDLE(CacheGetMsg, msg) {
+    MILLION_MSG_HANDLE(CacheGetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
@@ -88,7 +88,7 @@ public:
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(CacheSetMsg, msg) {
+    MILLION_MSG_HANDLE(CacheSetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         if (!msg->db_row->IsDirty()) {
             Reply(sender, session_id, std::move(msg));
@@ -174,7 +174,7 @@ public:
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(CacheGetBytesMsg, msg) {
+    MILLION_MSG_HANDLE(CacheGetBytesMsg, msg) {
         auto value =  redis_->get("million_db:" + msg->key_value);
         if (!value) {
             co_return;
@@ -184,7 +184,7 @@ public:
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(CacheSetBytesMsg, msg) {
+    MILLION_MSG_HANDLE(CacheSetBytesMsg, msg) {
         msg->success = redis_->set("million_db:" + msg->key, msg->value);
         Reply(sender, session_id, std::move(msg));
         co_return;

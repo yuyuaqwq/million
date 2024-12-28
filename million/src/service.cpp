@@ -23,7 +23,7 @@ Service::~Service() = default;
 void Service::PushMsg(const ServiceShared& sender, SessionId session_id, MsgUnique msg) {
     {
         auto lock = std::lock_guard(msgs_mutex_);
-        if (!IsReady() && !IsStarting() && !IsRunning() && !msg.IsType(ServiceExitMsg::type_static())) {
+        if (!IsReady() && !IsStarting() && !IsRunning() && !msg.IsType<ServiceExitMsg>()) {
             return;
         }
         Service::MsgElement ele{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
@@ -48,7 +48,7 @@ void Service::ProcessMsg(MsgElement ele) {
     auto& sender = ele.sender;
     auto session_id = ele.session_id;
     auto& msg = ele.msg;
-    if (msg.IsType(ServiceStartMsg::type_static())) {
+    if (msg.IsType<ServiceStartMsg>()) {
         if (!IsReady() && !IsStop()) {
             // 不是可开启服务的状态
             return;
@@ -62,7 +62,7 @@ void Service::ProcessMsg(MsgElement ele) {
         }
         return;
     }
-    else if (msg.IsType(ServiceStopMsg::type_static())) {
+    else if (msg.IsType<ServiceStopMsg>()) {
         if (!IsRunning()) {
             // 不是可关闭服务的状态
             return;
@@ -80,7 +80,7 @@ void Service::ProcessMsg(MsgElement ele) {
         }
         return;
     }
-    else if (msg.IsType(ServiceExitMsg::type_static())) {
+    else if (msg.IsType<ServiceExitMsg>()) {
         if (!IsStop()) {
             // 不是可退出服务的状态
             return;
@@ -100,7 +100,7 @@ void Service::ProcessMsg(MsgElement ele) {
     }
 
     // Starting/Stop 都允许处理已有协程的超时
-    if (msg.IsType(SessionTimeoutMsg::type_static())) {
+    if (msg.IsType<SessionTimeoutMsg>()) {
         auto msg_ptr = msg.get<SessionTimeoutMsg>();
         auto&& [task, has_exception] = excutor_.TaskTimeout(msg_ptr->timeout_id);
         if (IsStarting() || has_exception) {

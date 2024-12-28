@@ -48,7 +48,7 @@ public:
     // MILLION_PROTO_PACKET_DISPATCH(&proto_codec_, ClusterRecvPacketMsg);
 
     using LoginReq = ss::test::LoginReq;
-    MILLION_PROTO_MSG_HANDLE(LoginReq, req) {
+    MILLION_MSG_HANDLE(LoginReq, req) {
         logger().Info("test, value:{}", req->value());
 
         // »ØÒ»¸öLoginRes
@@ -56,7 +56,7 @@ public:
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(TestMsg, msg) {
+    MILLION_MSG_HANDLE(TestMsg, msg) {
         Send<million::cluster::ClusterSendPacketMsg>(cluster_, "TestService", msg->target_node, "TestService", proto_codec_.EncodeMessage(msg->req).value());
         co_return;
     }

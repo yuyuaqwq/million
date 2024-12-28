@@ -133,7 +133,7 @@ public:
 
     MILLION_MSG_DISPATCH(DbService);
 
-    MILLION_CPP_MSG_HANDLE(DbRowTickSyncMsg, msg) {
+    MILLION_MSG_HANDLE(DbRowTickSyncMsg, msg) {
         if (msg->db_row->IsDirty()) {
             // co_await期间可能会有新的DbRowSetMsg消息被处理，所以需要复制一份
             try {
@@ -151,13 +151,13 @@ public:
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(DbRegisterProtoCodecMsg, msg) {
+    MILLION_MSG_HANDLE(DbRegisterProtoCodecMsg, msg) {
         proto_codec_ = msg->proto_codec.get();
         Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(DbRegisterProtoMsg, msg) {
+    MILLION_MSG_HANDLE(DbRegisterProtoMsg, msg) {
         auto file_desc = proto_codec_->RegisterProto(msg->proto_file_name);
 
         if (!file_desc) {
@@ -187,7 +187,7 @@ public:
         Reply(sender, session_id, std::move(msg));
     }
 
-    MILLION_CPP_MSG_HANDLE(DbRowGetMsg, msg) {
+    MILLION_MSG_HANDLE(DbRowGetMsg, msg) {
         auto& desc = msg->table_desc; // proto_codec_.GetMsgDesc(msg->table_name);
         if (!desc.options().HasExtension(table)) {
             logger().Err("HasExtension table failed.");
@@ -243,7 +243,7 @@ public:
         Reply(sender, session_id, std::move(msg));
     }
 
-    MILLION_CPP_MSG_HANDLE(DbRowSetMsg, msg) {
+    MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
         auto db_row = msg->db_row;
         const auto& desc = db_row->GetDescriptor();
         const auto& reflection = db_row->GetReflection();

@@ -61,31 +61,31 @@ public:
 
     MILLION_MSG_DISPATCH(GatewayService);
 
-    MILLION_CPP_MSG_HANDLE(ClusterPersistentUserSessionMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterPersistentUserSessionMsg, msg) {
         auto& user_session = *msg->user_session;
         do {
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
             auto msg_type_key = recv_msg.GetTypeKey();
             // imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
-            if (recv_msg.IsType(GatewaySendPacketMsg::type_static())) {
+            if (recv_msg.IsType<GatewaySendPacketMsg>()) {
                 logger().Trace("GatewaySendPacketMsg: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
                 auto msg = recv_msg.get<GatewaySendPacketMsg>();
                 user_session.Send(std::move(header_packet), net::PacketSpan(header_packet), header_packet.size() + msg->packet.size());
                 user_session.Send(std::move(msg->packet), net::PacketSpan(msg->packet), 0);
             }
-            else if (recv_msg.IsType(GatewaySureAgentMsg::type_static())) {
+            else if (recv_msg.IsType<GatewaySureAgentMsg>()) {
                 auto msg = recv_msg.get<GatewaySureAgentMsg>();
                 user_session.set_agent(std::move(msg->agent_service));
             }
-            else if (recv_msg.IsType(ClusterPersistentUserSessionMsg::type_static())) {
+            else if (recv_msg.IsType<ClusterPersistentUserSessionMsg>()) {
                 break;
             }
         } while (true);
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
         auto& user_session = *msg->user_session;
 
         auto& ep = user_session.remote_endpoint();
@@ -108,7 +108,7 @@ public:
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto& user_session = *msg->user_session;
 
         auto user_session_id = user_session.user_session_id();
@@ -136,7 +136,7 @@ public:
         co_return;
     }
 
-    MILLION_CPP_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
         logger().Trace("GatewayRegisterUserServiceMsg.");
         user_service_ = msg->user_service;
         // Reply(sender, session_id, std::move(msg));
