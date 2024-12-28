@@ -17,7 +17,7 @@ namespace protobuf = google::protobuf;
 MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (UserSessionShared) user_session)
 MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (UserSessionShared) user_session, (net::Packet) packet)
 
-MILLION_MSG_DEFINE(, ClusterPersistentUserSessionMsg, (UserSessionShared) user_session);
+MILLION_MSG_DEFINE(, GatewayPersistentUserSessionMsg, (UserSessionShared) user_session);
 
 // 网关服务有两种模式
 // 集群、非集群
@@ -61,11 +61,10 @@ public:
 
     MILLION_MSG_DISPATCH(GatewayService);
 
-    MILLION_MSG_HANDLE(ClusterPersistentUserSessionMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayPersistentUserSessionMsg, msg) {
         auto& user_session = *msg->user_session;
         do {
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
-            auto msg_type_key = recv_msg.GetTypeKey();
             // imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
             if (recv_msg.IsType<GatewaySendPacketMsg>()) {
                 logger().Trace("GatewaySendPacketMsg: {}.", session_id);
@@ -78,7 +77,7 @@ public:
                 auto msg = recv_msg.get<GatewaySureAgentMsg>();
                 user_session.set_agent(std::move(msg->agent_service));
             }
-            else if (recv_msg.IsType<ClusterPersistentUserSessionMsg>()) {
+            else if (recv_msg.IsType<GatewayPersistentUserSessionMsg>()) {
                 break;
             }
         } while (true);
@@ -94,14 +93,14 @@ public:
 
         if (user_session.Connected()) {
             // 开启持久会话
-            auto user_session_id = Send<ClusterPersistentUserSessionMsg>(service_handle(), std::move(msg->user_session));
+            auto user_session_id = Send<GatewayPersistentUserSessionMsg>(service_handle(), std::move(msg->user_session));
             user_session.set_user_session_id(user_session_id.value());
 
             logger().Debug("Gateway connection establishment, user_session_id:{}, ip: {}, port: {}", user_session.user_session_id(), ip, port);
         }
         else {
             // 停止持久会话
-            Reply<ClusterPersistentUserSessionMsg>(service_handle(), user_session.user_session_id(), std::move(msg->user_session));
+            Reply<GatewayPersistentUserSessionMsg>(service_handle(), user_session.user_session_id(), std::move(msg->user_session));
 
             logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }

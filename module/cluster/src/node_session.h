@@ -22,13 +22,18 @@ public:
     //SessionId node_session_id() const { return node_session_id_; }
     //void set_node_session_id(SessionId node_session_id) { node_session_id_ = node_session_id; }
 
+
+    bool CreateServiceSession(const ServiceName& name, SessionId session_id) {
+        auto res = service_sessions_.emplace(name, session_id);
+        return res.second;
+    }
+
     std::optional<SessionId> FindServiceSession(const ServiceName& name) {
         auto iter = service_sessions_.find(name);
         if (iter == service_sessions_.end()) {
             return std::nullopt;
         }
-
-        
+        return iter->second;
     }
 
 private:

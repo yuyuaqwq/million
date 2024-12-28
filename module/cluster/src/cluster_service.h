@@ -17,7 +17,7 @@ namespace cluster {
 MILLION_MSG_DEFINE(, ClusterTcpConnectionMsg, (NodeSessionShared) node_session)
 MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (NodeSessionShared) node_session, (net::Packet) packet)
 
-MILLION_MSG_DEFINE_EMPTY(, ClusterNodeServiceSessionMsg);
+MILLION_MSG_DEFINE(, ClusterPersistentNodeServiceSessionMsg, (NodeSessionShared) node_session, (ServiceName) src_service, (ServiceName) target_service);
 
 // SessionId部分，必须是a只能等待自己节点alloc的SessionId，想等待b的消息，必须是a把sessionid发给b，b再发回这个sessionid
 
@@ -69,8 +69,26 @@ public:
 
     MILLION_MSG_DISPATCH(ClusterService);
 
-    MILLION_PERSISTENT_SESSION_MSG_LOOP(ClusterNodeServiceSessionMsg, ClusterNodeServiceSessionMsg);
-    
+    MILLION_MSG_HANDLE(ClusterPersistentNodeServiceSessionMsg, msg) {
+        auto& node_session = *msg->node_session;
+        auto& src_service = msg->src_service;
+        auto& target_service = msg->target_service;
+        do {
+            // 这里未来可以修改超时时间，来自动回收协程
+            auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
+            if (recv_msg.IsType<ClusterSendPacketMsg>()) {
+                logger().Trace("ClusterSendPacketMsg: {}.", session_id);
+                auto msg = recv_msg.get<ClusterSendPacketMsg>();
+                PacketForward(&node_session, ServiceName(src_service)
+                    , ServiceName(target_service), std::move(msg->packet));
+            }
+            else if (recv_msg.IsType<ClusterPersistentNodeServiceSessionMsg>()) {
+                break;
+            }
+        } while (true);
+        co_return;
+    }
+
     MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
         auto& node_session = *msg->node_session;
 
@@ -83,7 +101,6 @@ public:
             // 开启持久会话
             // auto node_session_id = Send<ClusterNodeServiceSessionMsg>(service_handle());
             // node_session.set_node_session_id(node_session_id);
-            node_session.set_node_session_id(imillion().NewSession());
         }
         else {
             logger().Debug("Disconnection: ip: {}, port: {}, cur_node: {}, target_node : {}", ip, port, node_name_, msg->node_session->node_name());
@@ -168,7 +185,8 @@ public:
             for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
                 auto& msg = *iter;
                 if (msg->target_node == res.target_node()) {
-                    PacketForward(&node_session, std::move(msg));
+                    PacketForward(&node_session, std::move(msg->src_service)
+                        , std::move(msg->target_service), std::move(msg->packet));
                     send_queue_.erase(iter++);
                 }
                 else {
@@ -195,25 +213,27 @@ public:
                 msg->packet.begin() + sizeof(header_size) + header_size,
                 msg->packet.end());
 
-            // 需要向指定的持久会话发包，让持久会话转发给当前节点的服务
-            // 当前节点服务就可以通过Reply向目标节点服务回包了
-
-            // 根据target service name，find service session, 拿到一个session_id
-            // 啥时候创建这个
-
-            SendTo<ClusterRecvPacketMsg>(*target_service_handle,
-                node_session.node_session_id(), std::move(msg->packet), span);
+            // 基于持久会话，建立两端的虚拟服务会话
+            auto service_session_id = node_session.FindServiceSession(src_service);
+            if (!service_session_id) {
+                service_session_id = Send<ClusterPersistentNodeServiceSessionMsg>(service_handle()
+                    , msg->node_session, src_service, target_service);
+                node_session.CreateServiceSession(src_service, service_session_id.value());
+            }
+            // 将包转发给本机节点的其他服务
+            imillion().SendTo<ClusterRecvPacketMsg>(service_handle(), *target_service_handle,
+                *service_session_id, std::move(msg->packet), span);
             break;
         }
         }
         co_return;
     }
 
-
-    MILLION_MSG_HANDLE(ClusterSendPacketMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterSendPacketWithNameMsg, msg) {
         auto node_session = GetNodeSession(msg->target_node);
         if (node_session) {
-            PacketForward(node_session, std::move(msg));
+            PacketForward(node_session, std::move(msg->src_service)
+                , std::move(msg->target_service), std::move(msg->packet));
             co_return;
         }
 
@@ -340,28 +360,31 @@ private:
     void PacketInit(NodeSession* node_session, const net::Packet& header_packet, const net::Packet& forward_packet) {
         uint32_t header_size = header_packet.size();
         header_size = asio::detail::socket_ops::host_to_network_long(header_size);
+
         auto size_packet = net::Packet(sizeof(header_size));
         std::memcpy(size_packet.data(), &header_size, sizeof(header_size));
-        auto size_span = net::PacketSpan(size_packet.begin(), size_packet.end());
+
+        auto size_span = net::PacketSpan(size_packet);
         auto total_size = sizeof(header_size) + header_packet.size() + forward_packet.size();
+
         node_session->Send(std::move(size_packet), size_span, total_size);
     }
 
-    void PacketForward(NodeSession* node_session, std::unique_ptr<ClusterSendPacketMsg> msg) {
+    void PacketForward(NodeSession* node_session, ServiceName&& src_service, ServiceName&& target_service, net::Packet&& packet) {
         // 追加集群头部
         ss::cluster::MsgBody msg_body;
         auto* header = msg_body.mutable_forward_header();
-        header->set_src_service(std::move(msg->src_service));
-        header->set_target_service(std::move(msg->target_service));
+        header->set_src_service(std::move(src_service));
+        header->set_target_service(std::move(target_service));
         auto header_packet = ProtoMsgToPacket(msg_body);
         
-        PacketInit(node_session, header_packet, msg->packet);
+        PacketInit(node_session, header_packet, packet);
 
-        auto header_span = net::PacketSpan(header_packet.begin(), header_packet.end());
+        auto header_span = net::PacketSpan(header_packet);
         node_session->Send(std::move(header_packet), header_span, 0);
 
-        auto span = net::PacketSpan(msg->packet.begin(), msg->packet.end());
-        node_session->Send(std::move(msg->packet), span, 0);
+        auto span = net::PacketSpan(packet);
+        node_session->Send(std::move(packet), span, 0);
     }
 
 private:
@@ -371,7 +394,7 @@ private:
     std::unordered_map<NodeName, NodeSessionShared> nodes_;
 
     std::set<NodeName> wait_nodes_;
-    std::list<std::unique_ptr<ClusterSendPacketMsg>> send_queue_;
+    std::list<std::unique_ptr<ClusterSendPacketWithNameMsg>> send_queue_;
 };
 
 } // namespace cluster

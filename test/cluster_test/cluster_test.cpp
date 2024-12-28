@@ -45,19 +45,32 @@ public:
 
     MILLION_MSG_DISPATCH(TestService);
 
-    // MILLION_PROTO_PACKET_DISPATCH(&proto_codec_, ClusterRecvPacketMsg);
+    MILLION_PROTO_PACKET_DISPATCH(&proto_codec_, ClusterRecvPacketMsg);
 
     using LoginReq = ss::test::LoginReq;
     MILLION_MSG_HANDLE(LoginReq, req) {
-        logger().Info("test, value:{}", req->value());
+        logger().Info("ss::test::LoginReq, value:{}", req->value());
 
         // »ØÒ»¸öLoginRes
+        ss::test::LoginRes res;
+        res.set_value("LoginRes res");
+
+        Reply<million::cluster::ClusterSendPacketMsg>(sender, session_id
+            , proto_codec_.EncodeMessage(res).value());
 
         co_return;
     }
 
+    using LoginRes = ss::test::LoginRes;
+    MILLION_MSG_HANDLE(LoginRes, res) {
+        logger().Info("ss::test::LoginRes, value:{}", res->value());
+        co_return;
+    }
+
     MILLION_MSG_HANDLE(TestMsg, msg) {
-        Send<million::cluster::ClusterSendPacketMsg>(cluster_, "TestService", msg->target_node, "TestService", proto_codec_.EncodeMessage(msg->req).value());
+        Send<million::cluster::ClusterSendPacketWithNameMsg>(cluster_
+            , "TestService", msg->target_node, "TestService"
+            , proto_codec_.EncodeMessage(msg->req).value());
         co_return;
     }
 
@@ -87,7 +100,7 @@ int main() {
     getchar();
 
     ss::test::LoginReq req;
-    req.set_value("sb");
+    req.set_value("LoginRes req");
 
     const auto& config = test_app->YamlConfig();
     if (config["cluster"]["name"].as<std::string>() == "node1") {
