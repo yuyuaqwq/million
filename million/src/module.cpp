@@ -37,7 +37,7 @@ bool Module::Init() {
 }
 
 void Module::Start() {
-    assert(!init_);
+    assert(init_);
     auto start_func = dll_.GetFunc<ModuleStartFunc>(kModuleStartName);
     if (!start_func) {
         return;
