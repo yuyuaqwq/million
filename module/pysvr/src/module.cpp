@@ -1,11 +1,12 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <string>
 
 #include <yaml-cpp/yaml.h>
 
 #include <google/protobuf/message.h>
-#include <string>
+#include <protogen/ss/ss_test.pb.h>
 
 #include <million/imillion.h>
 #include <million/msg.h>
@@ -223,7 +224,7 @@ public:
             // js_byte_code_dump
             if (!JsCheckException(js_main_module_)) break;
             
-          success = true;
+            success = true;
         } while (false);
        
         if (!success) {
@@ -247,26 +248,39 @@ public:
 
     }
 
-    virtual million::Task<> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique) override {
-        JSValue resolving_funcs[2];
-        JSValue promise = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
-        JSValue resolve_func = resolving_funcs[0];
-        JSValue result;
+    virtual million::Task<> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique msg) override {
+        if (!msg.IsProtoMessage()) {
+            // 只处理proto msg
+            co_return;
+        }
 
-        JSValue on_msg = JS_GetPropertyStr(js_ctx_, js_main_module_, "on_msg");
-        if (!JsCheckException(on_msg)) co_return;
+        JSModuleDef* js_main_module = (JSModuleDef*)JS_VALUE_GET_PTR(js_main_module_);
+
+        // 获取模块的 namespace 对象
+        JSValue namespace_ = JS_GetModuleNamespace(js_ctx_, js_main_module);
+
+        // 获取 `greet` 函数
+        JSValue onMsg_func = JS_GetPropertyStr(js_ctx_, namespace_, "onMsg");
+
+        // JSValue on_msg = JS_GetPropertyStr(js_ctx_, js_main_module_, "onMsg");
+        // if (!JsCheckException(on_msg)) co_return;
+
+        if (!JS_IsFunction(js_ctx_, onMsg_func)) co_return;
 
         ServiceFuncContext func_ctx;
         JS_SetContextOpaque(js_ctx_, &func_ctx);
 
         // 传入sender，session_id，msg
-        result = JS_Call(js_ctx_, on_msg, JS_UNDEFINED, 0, nullptr);
+        JSValue result;
+        result = JS_Call(js_ctx_, onMsg_func, JS_UNDEFINED, 0, nullptr);
         if (!JsCheckException(result)) co_return;
+
+        JSValue resolving_funcs[2];
+        JSValue promise = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
+        JSValue resolve_func = resolving_funcs[0];
 
         while (func_ctx.waiting_session_id != million::kSessionIdInvalid) {
             auto res_msg = co_await Recv<million::ProtoMessage>(func_ctx.waiting_session_id);
-
-
 
             // res_msg转js对象，唤醒
             // result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &obj);
@@ -431,8 +445,7 @@ private:
     void SetProtoMsgRepeatedFieldFromJsValue(million::ProtoMessage* msg
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
-        , JSValue repeated_value
-        , size_t j) {
+        , JSValue repeated_value , size_t j) {
         switch (field_desc.type()) {
         case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
             if (!JS_IsNumber(repeated_value)) {
@@ -542,10 +555,8 @@ private:
             }
 
             JSValue sub_obj = repeated_value;
-            // 递归调用，假设ProtoMsgToJsObj已支持递归
             const auto sub_msg = reflection.AddMessage(msg, &field_desc);
             JsObjToProtoMsg(sub_msg, sub_obj);
-            
             break;
         }
         default:
@@ -810,9 +821,13 @@ namespace million {
 namespace jssvr {
 
 extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
-    auto service = imillion->NewService<JsModuleService>();
+    auto handle = imillion->NewService<JsModuleService>();
 
-    imillion->NewService<JsService>(service->get_ptr<JsModuleService>(service->lock()));
+    handle = imillion->NewService<JsService>(handle->get_ptr<JsModuleService>(handle->lock()));
+
+    ss::test::LoginReq req;
+    imillion->Send<ss::test::LoginReq>(*handle, *handle, "shabi");
+
     return true;
 }
 
