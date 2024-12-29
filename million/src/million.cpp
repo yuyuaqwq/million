@@ -174,12 +174,12 @@ void Million::Start() {
 }
 
 void Million::Stop() {
+    if (module_mgr_) module_mgr_->Stop();
     if (timer_) timer_->Stop();
     if (service_mgr_) service_mgr_->Stop();
-    if (worker_mgr_) worker_mgr_->Stop();
-    if (io_context_mgr_) io_context_mgr_->Stop();
     if (session_monitor_) session_monitor_->Stop();
-    if (module_mgr_) module_mgr_->Stop();
+    if (io_context_mgr_) io_context_mgr_->Stop();
+    if (worker_mgr_) worker_mgr_->Stop();
 }
 
 
