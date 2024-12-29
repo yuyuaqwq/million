@@ -209,8 +209,6 @@ public:
                 break;
             }
 
-            // 还需要获取下源节点
-
             auto span = net::PacketSpan(
                 msg->packet.begin() + sizeof(header_size) + header_size,
                 msg->packet.end());

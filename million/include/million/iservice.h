@@ -22,7 +22,7 @@ public:
         : imillion_(imillion) {}
     virtual ~IService() = default;
 
-protected:
+public:
     std::optional<SessionId> Send(const ServiceHandle& target, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> Send(const ServiceHandle& target, Args&&... args) {
@@ -108,13 +108,18 @@ protected:
         return RecvOrNullWithTimeout<MsgT>(session_id.value(), timeout_s);
     }
 
-
     void Timeout(uint32_t tick, MsgUnique msg);
     template <typename MsgT, typename ...Args>
     void Timeout(uint32_t tick, Args&&... args) {
         Timeout(tick, std::make_unique<MsgT>(std::forward<Args>(args)...));
     }
 
+public:
+    Logger& logger();
+    IMillion& imillion() { return *imillion_; }
+    const ServiceHandle& service_handle() const { return service_handle_; }
+
+protected:
     void EnableSeparateWorker();
 
     virtual bool OnInit(MsgUnique init_msg) { return true; }
@@ -123,15 +128,9 @@ protected:
     virtual void OnStop(ServiceHandle sender, SessionId session_id) { }
     virtual void OnExit(ServiceHandle sender, SessionId session_id) { }
 
-    Logger& logger();
-
 private:
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
 
-public:
-    IMillion& imillion() { return *imillion_; }
-    const ServiceHandle& service_handle() const { return service_handle_; }
-    
 private:
     friend class Service;
     friend class ServiceMgr;

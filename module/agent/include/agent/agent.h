@@ -9,6 +9,8 @@
 namespace million {
 namespace agent {
 
+MILLION_MSG_DEFINE(MILLION_AGENT_API, NewAgentMsg, (SessionId) user_session_id, (std::optional<ServiceHandle>) agent_handle);
+
 class AgentService;
 using AgentLogicHandleFunc = Task<>(*)(AgentService* agent, ProtoMsgUnique proto_msg);
 
@@ -67,7 +69,6 @@ private:
     std::vector<std::function<void()>> logic_init_queue_;
 };
 
-
 MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (SessionId) user_session_id, (std::optional<ServiceHandle>) agent_handle);
 
 class MILLION_AGENT_API AgentService : public IService {
@@ -106,9 +107,7 @@ public:
         Reply<gateway::GatewaySendPacketMsg>(gateway_, user_session_id_, *res);
     }
 
-    Logger& logger() { return Base::logger(); }
-
-    SessionId user_session_id() const { return user_session_id_; }
+    SessionId agent_id() const { return user_session_id_; }
 
 private:
     ServiceHandle gateway_;

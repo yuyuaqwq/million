@@ -53,7 +53,6 @@ bool Million::Init(std::string_view config_path) {
         session_mgr_ = std::make_unique<SessionMgr>(this);
         logger_ = std::make_unique<Logger>(this);
 
-
         std::cout << "[worker_mgr] [info] load 'worker_mgr' config." << std::endl;
 
         const auto& worker_mgr_config = config["worker_mgr"];
@@ -82,39 +81,6 @@ bool Million::Init(std::string_view config_path) {
         }
         auto io_context_num = io_context_mgr_config["num"].as<size_t>();
         io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
-
-
-        std::cout << "[module] [info] load 'module' config." << std::endl;
-
-        const auto& module_config = config["module"];
-        if (!module_config) {
-            std::cerr << "[module] [error] cannot find 'module'." << std::endl;
-            break;
-        }
-        if (!module_config["dirs"]) {
-            std::cerr << "[module] [error] cannot find 'module.dirs'." << std::endl;
-            break;
-        }
-        auto module_dirs = module_config["dirs"].as<std::vector<std::string>>();
-        module_mgr_ = std::make_unique<ModuleMgr>(this, module_dirs);
-        const auto& loads = module_config["loads"];
-        if (loads) {
-            bool success = true;
-            for (auto name_config : loads) {
-                auto name = name_config.as<std::string>();
-                if (!module_mgr_->Load(name)) {
-                    std::cerr << "[module] [error] load module '" << name << "' failed." << std::endl;
-                    success = false;
-                    break;
-                }
-                else {
-                    std::cout << "[module] [info] load module '" << name << "' success." << std::endl;
-                }
-            }
-            if (!success) {
-                break;
-            }
-        }
 
 
         std::cout << "[session_monitor] [info] load 'session_monitor' config." << std::endl;
@@ -154,6 +120,39 @@ bool Million::Init(std::string_view config_path) {
         if (!logger_->Init()) {
             break;
         }
+
+
+        std::cout << "[module] [info] load 'module' config." << std::endl;
+
+        const auto& module_config = config["module"];
+        if (!module_config) {
+            std::cerr << "[module] [error] cannot find 'module'." << std::endl;
+            break;
+        }
+        if (!module_config["dirs"]) {
+            std::cerr << "[module] [error] cannot find 'module.dirs'." << std::endl;
+            break;
+        }
+        auto module_dirs = module_config["dirs"].as<std::vector<std::string>>();
+        module_mgr_ = std::make_unique<ModuleMgr>(this, module_dirs);
+        const auto& loads = module_config["loads"];
+        if (loads) {
+            bool success = true;
+            for (auto name_config : loads) {
+                auto name = name_config.as<std::string>();
+                if (!module_mgr_->Load(name)) {
+                    std::cerr << "[module] [error] load module '" << name << "' failed." << std::endl;
+                    success = false;
+                    break;
+                }
+                else {
+                    std::cout << "[module] [info] load module '" << name << "' success." << std::endl;
+                }
+            }
+            if (!success) {
+                break;
+            }
+        }
         module_mgr_->Init();
 
         std::cout << "[million] [error] init success." << std::endl;
@@ -171,6 +170,7 @@ void Million::Start() {
     io_context_mgr_->Start();
     session_monitor_->Start();
     timer_->Start();
+    module_mgr_->Start();
 }
 
 void Million::Stop() {
@@ -179,6 +179,7 @@ void Million::Stop() {
     if (worker_mgr_) worker_mgr_->Stop();
     if (io_context_mgr_) io_context_mgr_->Stop();
     if (session_monitor_) session_monitor_->Stop();
+    if (module_mgr_) module_mgr_->Stop();
 }
 
 

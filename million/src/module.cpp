@@ -36,4 +36,13 @@ bool Module::Init() {
     return init_;
 }
 
+void Module::Start() {
+    assert(!init_);
+    auto start_func = dll_.GetFunc<ModuleStartFunc>(kModuleStartName);
+    if (!start_func) {
+        return;
+    }
+    start_func(&million_->imillion());
+}
+
 } //namespace million

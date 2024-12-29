@@ -38,9 +38,23 @@ public:
         return false;
     }
 
-    void Init() {
+    bool Init() {
         for (auto& module : modules_) {
-            module.second->Init();
+            if (!module.second->Init()) {
+                return false;
+            }
+        }
+    }
+
+    void Start() {
+        for (auto& module : modules_) {
+            module.second->Start();
+        }
+    }
+
+    void Stop() {
+        for (auto& module : modules_) {
+            // module.second->Stop();
         }
     }
 
