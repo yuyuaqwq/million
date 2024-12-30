@@ -287,7 +287,7 @@ public:
                 result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
                 if (!JsCheckException(result)) break;
 
-                func_ctx.waiting_session_id = std::nullopt;
+                func_ctx.waiting_session_id.reset();
 
                 // 手动触发事件循环，确保异步操作继续执行
                 JSContext* ctx_ = nullptr;
