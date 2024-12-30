@@ -115,7 +115,24 @@ struct SessionAwaiter : public SessionAwaiterBase {
     using SessionAwaiterBase::SessionAwaiterBase;
 
     std::unique_ptr<MsgT> await_resume() {
-        return std::unique_ptr<MsgT>(static_cast<MsgT*>(SessionAwaiterBase::await_resume().release()));
+        auto msg = SessionAwaiterBase::await_resume();
+        // 如果是基类，说明外部希望自己转换，不做类型检查
+        if constexpr (std::is_same_v<MsgT, ProtoMessage>) {
+            if (!msg.IsProtoMessage()) {
+                throw TaskAbortException("Not ProtoMessage type.");
+            }
+        }
+        else if constexpr (std::is_same_v<MsgT, CppMessage>) {
+            if (!msg.IsCppMessage()) {
+                throw TaskAbortException("Not CppMessage type.");
+            }
+        }
+        else {
+            if (!msg.IsType<MsgT>()) {
+                throw TaskAbortException("Mismatched type.");
+            }
+        }
+        return std::unique_ptr<MsgT>(static_cast<MsgT*>(msg.release()));
     }
 };
 

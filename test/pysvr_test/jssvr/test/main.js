@@ -22,6 +22,6 @@ var a = false
 os.setTimeout(()=>{std.printf('AAB\n')}, 2000)
 std.printf(a + "\n")
 
-export function onMsg() {
-    console.log("onMsg called");
+export function onMsg(msg) {
+    console.log("onMsg called" + msg.value);
 }

@@ -17,7 +17,7 @@
 #include <quickjs/quickjs-libc.h>
 
 struct ServiceFuncContext {
-    million::SessionId waiting_session_id = million::kSessionIdInvalid;
+    std::optional<million::SessionId> waiting_session_id;
 };
 
 class JsModuleService : public million::IService {
@@ -256,44 +256,49 @@ public:
 
         JSModuleDef* js_main_module = (JSModuleDef*)JS_VALUE_GET_PTR(js_main_module_);
 
-        // 获取模块的 namespace 对象
-        JSValue namespace_ = JS_GetModuleNamespace(js_ctx_, js_main_module);
+        do {
+            // 获取模块的 namespace 对象
+            JSValue space = JS_GetModuleNamespace(js_ctx_, js_main_module);
+            if (!JsCheckException(space)) break;
 
-        // 获取 `greet` 函数
-        JSValue onMsg_func = JS_GetPropertyStr(js_ctx_, namespace_, "onMsg");
+            JSValue onMsg_func = JS_GetPropertyStr(js_ctx_, space, "onMsg");
+            if (!JsCheckException(onMsg_func)) break;
+            if (!JS_IsFunction(js_ctx_, onMsg_func)) break;
 
-        // JSValue on_msg = JS_GetPropertyStr(js_ctx_, js_main_module_, "onMsg");
-        // if (!JsCheckException(on_msg)) co_return;
+            ServiceFuncContext func_ctx;
+            JS_SetContextOpaque(js_ctx_, &func_ctx);
 
-        if (!JS_IsFunction(js_ctx_, onMsg_func)) co_return;
+            JSValue msg_obj = ProtoMsgToJsObj(*msg.GetProtoMessage());
 
-        ServiceFuncContext func_ctx;
-        JS_SetContextOpaque(js_ctx_, &func_ctx);
+            // 传入sender，session_id，msg
+            JSValue result;
+            result = JS_Call(js_ctx_, onMsg_func, JS_UNDEFINED, 1, &msg_obj);
+            if (!JsCheckException(result)) break;
 
-        // 传入sender，session_id，msg
-        JSValue result;
-        result = JS_Call(js_ctx_, onMsg_func, JS_UNDEFINED, 0, nullptr);
-        if (!JsCheckException(result)) co_return;
+            JSValue resolving_funcs[2];
+            JSValue promise = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
+            JSValue resolve_func = resolving_funcs[0];
 
-        JSValue resolving_funcs[2];
-        JSValue promise = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
-        JSValue resolve_func = resolving_funcs[0];
+            while (func_ctx.waiting_session_id) {
+                auto res_msg = co_await Recv<million::ProtoMessage>(*func_ctx.waiting_session_id);
 
-        while (func_ctx.waiting_session_id != million::kSessionIdInvalid) {
-            auto res_msg = co_await Recv<million::ProtoMessage>(func_ctx.waiting_session_id);
+                // res_msg转js对象，唤醒
+                JSValue msg_obj = ProtoMsgToJsObj(*res_msg);
+                result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
+                if (!JsCheckException(result)) break;
 
-            // res_msg转js对象，唤醒
-            // result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &obj);
-            if (!JsCheckException(result)) co_return;
+                func_ctx.waiting_session_id = std::nullopt;
 
-            func_ctx.waiting_session_id = million::kSessionIdInvalid;
-
-            // 手动触发事件循环，确保异步操作继续执行
-            JSContext* ctx_ = nullptr;
-            while (JS_ExecutePendingJob(js_rt_, &ctx_)) {
-                // 执行事件循环，直到没有更多的异步任务
+                // 手动触发事件循环，确保异步操作继续执行
+                JSContext* ctx_ = nullptr;
+                while (JS_ExecutePendingJob(js_rt_, &ctx_)) {
+                    // 执行事件循环，直到没有更多的异步任务
+                }
             }
-        }
+        } while (false);
+        
+
+        
 
         co_return;
     }
@@ -767,7 +772,7 @@ private:
         }
 
         // 发送消息，并将session_id传回
-        //func_ctx->waiting_session_id = service->Send<million::ProtoMessage>(*target);
+        func_ctx->waiting_session_id = service->Send(*target, );
 
         JSValue* promise = static_cast<JSValue*>(JS_GetContextOpaque(ctx));
         return *promise;
@@ -826,6 +831,7 @@ extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
     handle = imillion->NewService<JsService>(handle->get_ptr<JsModuleService>(handle->lock()));
 
     ss::test::LoginReq req;
+
     imillion->Send<ss::test::LoginReq>(*handle, *handle, "shabi");
 
     return true;
