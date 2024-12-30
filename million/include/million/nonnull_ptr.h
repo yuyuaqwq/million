@@ -10,7 +10,7 @@ template <typename T>
 class nonnull_ptr {
 public:
     // Constructors
-    explicit nonnull_ptr(T* ptr) {
+    /*explicit*/ nonnull_ptr(T* ptr) {
         if (!ptr) {
             throw std::invalid_argument("nonnull_ptr cannot be initialized with a null pointer.");
         }
@@ -81,9 +81,9 @@ private:
 };
 
 // Helper function to create nonnull_ptr
-template <typename T>
-nonnull_ptr<T> make_nonnull(T* ptr) {
-    return nonnull_ptr<T>(ptr);
-}
+//template <typename T>
+//nonnull_ptr<T> make_nonnull(T* ptr) {
+//    return nonnull_ptr<T>(ptr);
+//}
 
 } // namespace million

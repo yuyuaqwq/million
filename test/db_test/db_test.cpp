@@ -23,7 +23,7 @@ public:
     using Base = million::IService;
     TestService(million::IMillion* imillion)
         : Base(imillion)
-        , proto_codec_(million::GetDescriptorPool(), million::GetDescriptorDatabase(), million::GetMessageFactory()) {}
+        , proto_codec_(million::GetProtoMeta()) {}
 
     virtual bool OnInit(million::MsgUnique msg) override {
         
@@ -48,7 +48,7 @@ public:
 
         auto row = db::DbRow(std::move(user));
 
-        co_await Call<db::DbRegisterProtoCodecMsg>(db_service_, million::make_nonnull(&proto_codec_));
+        co_await Call<db::DbRegisterProtoCodecMsg>(db_service_, &proto_codec_);
 
         auto res = co_await Call<db::DbRegisterProtoMsg>(db_service_, "db/db_example.proto", false);
         if (res->success) {

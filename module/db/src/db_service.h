@@ -23,10 +23,8 @@
 namespace million {
 namespace db {
 
-DbProtoCodec::DbProtoCodec(const protobuf::DescriptorPool& desc_pool, protobuf::DescriptorDatabase& desc_db, protobuf::MessageFactory& message_factory)
-    : desc_pool_(desc_pool)
-    , desc_db_(desc_db)
-    , message_factory_(message_factory) {}
+DbProtoCodec::DbProtoCodec(const ProtoMgr& proto_mgr)
+    : proto_mgr_(proto_mgr) {}
 
 // 初始化
 void DbProtoCodec::Init() {
@@ -34,13 +32,7 @@ void DbProtoCodec::Init() {
 }
 
 const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& proto_file_name) {
-    //std::vector<std::string> file_names;
-    //desc_db_->FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
-    ////for (const std::string& filename : file_names) {
-    ////    const auto* file_desc = desc_pool_->FindFileByName(filename);
-    ////}
-
-    auto file_desc = desc_pool_.FindFileByName(proto_file_name);
+    auto file_desc = proto_mgr_.desc_pool().FindFileByName(proto_file_name);
     if (!file_desc) {
         return nullptr;
     }
@@ -62,7 +54,7 @@ const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& p
             continue;
         }
 
-        const auto* msg = message_factory_.GetPrototype(desc);
+        const auto* msg = proto_mgr_.msg_factory().GetPrototype(desc);
         if (!msg) {
             continue;
         }
@@ -83,7 +75,7 @@ const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& p
 //}
 
 std::optional<ProtoMsgUnique> DbProtoCodec::NewMessage(const protobuf::Descriptor& desc) {
-    const auto* proto_msg = message_factory_.GetPrototype(&desc);
+    const auto* proto_msg = proto_mgr_.msg_factory().GetPrototype(&desc);
     if (proto_msg != nullptr) {
         return ProtoMsgUnique(proto_msg->New());
     }
@@ -139,8 +131,8 @@ public:
             try {
                 auto db_row = msg->db_row->CopyDirtyTo();
                 msg->db_row->ClearDirty();
-                co_await Call<SqlUpdateMsg>(sql_service_, make_nonnull(&db_row));
-                co_await Call<CacheSetMsg>(cache_service_, make_nonnull(&db_row));
+                co_await Call<SqlUpdateMsg>(sql_service_, &db_row);
+                co_await Call<CacheSetMsg>(cache_service_, &db_row);
             }
             catch (const std::exception& e) {
                 logger().Err("DbRowTickSyncMsg: {}", e.what());
@@ -217,14 +209,14 @@ public:
             auto proto_msg = std::move(*proto_msg_opt);
 
             auto row = DbRow(std::move(proto_msg));
-            auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, make_nonnull(&row), false);
+            auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, &row, false);
             if (!res_msg->success) {
-                auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, make_nonnull(&row), false);
+                auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, &row, false);
                 if (!res_msg->success) {
-                    co_await Call<SqlInsertMsg>(sql_service_, make_nonnull(&row));
+                    co_await Call<SqlInsertMsg>(sql_service_, &row);
                 }
                 row.MarkDirty();
-                co_await Call<CacheSetMsg>(cache_service_, make_nonnull(&row));
+                co_await Call<CacheSetMsg>(cache_service_, &row);
                 row.ClearDirty();
             }
 
@@ -235,7 +227,7 @@ public:
             const MessageOptionsTable& options = desc.options().GetExtension(::million::db::table);
 
             auto sync_tick = options.sync_tick();
-            Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, make_nonnull(&row_iter->second));
+            Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, &row_iter->second);
 
         } while (false);
         msg->db_row = row_iter->second;

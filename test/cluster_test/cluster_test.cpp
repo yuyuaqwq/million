@@ -23,7 +23,7 @@ public:
     using Base = million::IService;
     TestService(million::IMillion* imillion)
         : Base(imillion)
-        , proto_codec_(million::GetDescriptorPool(), million::GetDescriptorDatabase(), million::GetMessageFactory()) {}
+        , proto_codec_(million::GetProtoMgr()) {}
 
     //TestService(million::IMillion* imillion)
     //    : proto_codec_(0)

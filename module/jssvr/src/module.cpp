@@ -23,7 +23,9 @@ struct ServiceFuncContext {
 class JsModuleService : public million::IService {
 public:
     using Base = IService;
-    using Base::Base;
+    JsModuleService(million::IMillion* imillion, const million::ProtoMgr proto_mgr)
+        : Base(imillion)
+        , proto_mgr_(proto_mgr) {}
 
 private:
     virtual bool OnInit(million::MsgUnique msg) override {
@@ -173,7 +175,35 @@ public:
         return module;
     }
 
+    //const million::ProtoMessage* GetMsgByName(std::string_view name) {
+    //    std::vector<std::string> file_names;
+    //    desc_db_.FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
+    //    for (const std::string& filename : file_names) {
+    //        const google::protobuf::FileDescriptor* file_desc = desc_pool_.FindFileByName(filename);
+    //        for (int i = 0; i < file_desc->message_type_count(); ++i) {
+    //            const google::protobuf::Descriptor* message_desc = file_desc->message_type(i);
+
+    //            // 获取消息类型的全名
+    //            const std::string& full_name = message_desc->full_name();
+
+
+
+    //            // 比较全名
+    //            /*if (message_full_name == name) {
+
+    //            }*/
+    //        }
+    //    }
+    //}
+
+
+    //million::ProtoMsgUnique MakeMsg(std::string_view msg_name) {
+    //    
+    //}
+
 private:
+    const million::ProtoMgr& proto_mgr_;
+
     std::vector<std::string> jssvr_dirs_;
     std::unordered_map<JSContext*, std::unordered_map<std::string, JSValue>> loaded_module_;
     std::unordered_map<std::filesystem::path, std::vector<uint8_t>> module_bytecodes_map_;
@@ -297,9 +327,6 @@ public:
             }
         } while (false);
         
-
-        
-
         co_return;
     }
 
@@ -759,7 +786,7 @@ private:
 
         const char* service_name;
         if (!JS_IsString(argv[0])) {
-            return JS_ThrowTypeError(ctx, "ServiceModuleCall first argument must be a string.");
+            return JS_ThrowTypeError(ctx, "ServiceModuleCall 1 argument must be a string.");
         }
         service_name = JS_ToCString(ctx, argv[0]);
         if (!service_name) {
@@ -770,6 +797,17 @@ private:
         if (!target) {
             return JS_ThrowInternalError(ctx, "ServiceModuleCall Service does not exist: %s .", service_name);
         }
+
+        const char* msg_name;
+        if (!JS_IsString(argv[1])) {
+            return JS_ThrowTypeError(ctx, "ServiceModuleCall 2 argument must be a string.");
+        }
+        msg_name = JS_ToCString(ctx, argv[1]);
+        if (!msg_name) {
+            return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert 2 argument to string.");
+        }
+
+        // 根据msg_name来创建消息
 
         // 发送消息，并将session_id传回
         // func_ctx->waiting_session_id = service->Send(*target, );

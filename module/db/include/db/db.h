@@ -15,7 +15,7 @@ namespace db {
 namespace protobuf = google::protobuf;
 class MILLION_DB_API DbProtoCodec : noncopyable{
 public:
-    DbProtoCodec(const protobuf::DescriptorPool& desc_pool, protobuf::DescriptorDatabase& desc_db, protobuf::MessageFactory& message_factory);
+    DbProtoCodec(const ProtoMgr& proto_mgr);
 
     // 初始化
     void Init();
@@ -29,9 +29,7 @@ public:
     // const auto& table_map() const { return table_map_; }
 
 private:
-    const protobuf::DescriptorPool& desc_pool_;
-    protobuf::DescriptorDatabase& desc_db_;
-    protobuf::MessageFactory& message_factory_;
+    const ProtoMgr& proto_mgr_;
     // std::unordered_map<std::string, const protobuf::Descriptor*> table_map_;
 };
 

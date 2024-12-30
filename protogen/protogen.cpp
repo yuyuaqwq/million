@@ -2,20 +2,12 @@
 
 namespace million {
 
-extern "C" MILLION_PROTOGEN_API const google::protobuf::DescriptorPool & GetDescriptorPool() {
+extern "C" MILLION_PROTOGEN_API const ProtoMeta& GetProtoMeta(){
 	static const auto* pool = google::protobuf::DescriptorPool::generated_pool();
-	return *pool;
-}
-
-extern "C" MILLION_PROTOGEN_API google::protobuf::DescriptorDatabase & GetDescriptorDatabase() {
-	static const auto& pool = GetDescriptorPool();
-	static auto* db = pool.internal_generated_database();
-	return *db;
-}
-
-extern "C" MILLION_PROTOGEN_API google::protobuf::MessageFactory & GetMessageFactory() {
+	static auto* db = pool->internal_generated_database();
 	static auto* factory = google::protobuf::MessageFactory::generated_factory();
-	return *factory;
+	static auto proto_meta = ProtoMeta(pool, db, factory);
+	return proto_meta;
 }
 
 } // namespace million
