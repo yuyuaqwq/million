@@ -8,7 +8,7 @@ namespace million {
 
 class MILLION_API ProtoMgr {
 public:
-    void Register(const ProtoMeta& meta) {
+    void RegisterMeta(const ProtoMeta& meta) {
 
     }
 
