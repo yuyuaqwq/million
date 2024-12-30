@@ -13,7 +13,7 @@ class TestApp : public million::IMillion {
 
 int main() {
     auto test_app = std::make_unique<TestApp>();
-    if (!test_app->Start("pysvr_test_config.yaml")) {
+    if (!test_app->Start("jssvr_test_config.yaml")) {
         return 0;
     }
 

@@ -11,7 +11,7 @@
 #include <million/imillion.h>
 #include <million/msg.h>
 
-#include <pysvr/api.h>
+#include <jssvr/api.h>
 
 #include <quickjs/quickjs.h>
 #include <quickjs/quickjs-libc.h>
@@ -772,7 +772,7 @@ private:
         }
 
         // 发送消息，并将session_id传回
-        func_ctx->waiting_session_id = service->Send(*target, );
+        // func_ctx->waiting_session_id = service->Send(*target, );
 
         JSValue* promise = static_cast<JSValue*>(JS_GetContextOpaque(ctx));
         return *promise;
@@ -825,7 +825,7 @@ private:
 namespace million {
 namespace jssvr {
 
-extern "C" MILLION_PYSVR_API  bool MillionModuleInit(IMillion* imillion) {
+extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
     auto handle = imillion->NewService<JsModuleService>();
 
     handle = imillion->NewService<JsService>(handle->get_ptr<JsModuleService>(handle->lock()));

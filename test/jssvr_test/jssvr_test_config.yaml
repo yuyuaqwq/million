@@ -9,7 +9,7 @@ module:
     dirs: 
         - ../../build/lib/Debug
     loads:
-        - pysvr
+        - jssvr
 
 timer:
     ms_per_tick: 10
