@@ -33,9 +33,10 @@ public:
     std::optional<MsgElement> PopMsg();
     bool MsgQueueIsEmpty();
 
+    void Reply(TaskElement* ele);
     void ProcessMsg(MsgElement msg);
     void ProcessMsgs(size_t count);
-
+    
     bool TaskExecutorIsEmpty() const;
 
     void EnableSeparateWorker();

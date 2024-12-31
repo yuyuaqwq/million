@@ -26,24 +26,25 @@ class TestService : public million::IService {
         //auto duratioin = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         //std::cout << "Elapsed time: " << duratioin.count() << "ms:" << j << " seconds\n";
 
-        auto handle = imillion().GetServiceByName("GatewayService");
+        /*auto handle = imillion().GetServiceByName("GatewayService");
         if (!handle) {
             logger().Err("GatewayService not found.");
             return false;
         }
-        gateway_ = *handle;
+        gateway_ = *handle;*/
 
         return true;
     }
 
     virtual million::Task<million::MsgUnique> OnStart(million::ServiceHandle sender, million::SessionId session_id) override {
-        auto res = co_await Call<gateway::GatewayRegisterUserServiceMsg>(gateway_, service_handle());
-        logger().Info("GatewayRegisterUserServiceMsg success.");
+        /*auto res = co_await Call<gateway::GatewayRegisterUserServiceMsg>(gateway_, service_handle());
+        logger().Info("GatewayRegisterUserServiceMsg success.");*/
         co_return nullptr;
     }
 
     virtual million::Task<million::MsgUnique> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique msg) override {
         auto res1000 = co_await RecvWithTimeout<Test2Msg>(1000, 5);
+        auto res = co_await On6();
 
         if (msg.IsType<Test2Msg>()) {
             auto msg_ = msg.get<Test2Msg>();
@@ -52,7 +53,6 @@ class TestService : public million::IService {
             co_return nullptr;
         }
 
-        
         //auto msg_ = static_cast<Test1Msg*> (msg.get());
         //std::cout << msg_->session_id() << std::endl;
         //std::cout << "1.Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
@@ -75,17 +75,9 @@ class TestService : public million::IService {
         co_return nullptr;
     }
 
-    //million::Task<> On6() {
-    //    //throw std::runtime_error("sb");
-    //    auto res = co_await Recv<million::IMsg>(14);
-    //    //throw std::runtime_error("sb2");
-    //    auto msg_ = static_cast<Test1Msg*>(res.get());
-    //    std::cout << res->session_id() << std::endl;
-    //    std::cout << "Test1Msg" << msg_->value1 << msg_->value2 << std::endl;
-    //    auto i = co_await On7();
-
-    //    co_return;
-    //}
+    million::Task<million::MsgUnique> On6() {
+        co_return nullptr;
+    }
 
     //million::Task<int> On7() {
     //    auto res = co_await Recv<million::IMsg>(15);

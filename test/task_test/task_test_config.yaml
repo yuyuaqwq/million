@@ -9,7 +9,7 @@ module:
     dirs: 
         - ../../lib/Debug
     loads:
-        - gateway
+        # - gateway
 
 timer:
     ms_per_tick: 10

@@ -46,6 +46,19 @@ bool Service::MsgQueueIsEmpty() {
     return msgs_.empty();
 }
 
+void Service::Reply(TaskElement* ele) {
+    if (!ele->task.coroutine.promise().result_value) {
+        service_mgr_->million().logger().Err("This task has no return value: {}.", ele->session_id);
+        return;
+    }
+    auto reply_msg = std::move(*ele->task.coroutine.promise().result_value);
+    if (!reply_msg) {
+        // co_return nullptr;
+        return;
+    }
+    service_mgr()->Send(*iter_, ele->sender, SessionSendToReplyId(ele->session_id), std::move(reply_msg));
+}
+
 void Service::ProcessMsg(MsgElement ele) {
     auto& sender = ele.sender;
     auto session_id = ele.session_id;
@@ -58,9 +71,11 @@ void Service::ProcessMsg(MsgElement ele) {
         state_ = kStarting;
         assert(SessionIsSendId(session_id));
         auto task = iservice_->OnStart(ServiceHandle(sender), session_id);
-        if (excutor_.AddTask(TaskElement(std::move(sender), session_id, std::move(task)))) {
+        auto ele = excutor_.AddTask(TaskElement(std::move(sender), session_id, std::move(task)));
+        if (ele) {
             // 已完成OnStart
             state_ = kRunning;
+            Reply(&*ele);
         }
         return;
     }
@@ -123,11 +138,10 @@ void Service::ProcessMsg(MsgElement ele) {
         if (!std::holds_alternative<TaskElement>(res)) {
             return;
         }
-        auto& task = std::get<TaskElement>(res);
 
         // 已完成OnStart
         state_ = kRunning;
-        
+        Reply(&std::get<TaskElement>(res));
         return;
     }
 
@@ -142,26 +156,17 @@ void Service::ProcessMsg(MsgElement ele) {
         if (!std::holds_alternative<TaskElement>(res)) {
             return;
         }
-        auto& ele = std::get<TaskElement>(res);
         // 已完成的任务
-        auto reply_msg = std::move(*ele.task.coroutine.promise().result_value);
-        if (reply_msg) {
-            // 需要注意，此处需要回复的对象
-            service_mgr()->Send(*iter_, ele.sender, SessionSendToReplyId(ele.session_id), std::move(reply_msg));
-        }
+        Reply(&std::get<TaskElement>(res));
     }
     else if (SessionIsSendId(session_id)) {
         auto task = iservice_->OnMsg(ServiceHandle(sender), session_id, std::move(msg));
-        auto task_opt = excutor_.AddTask(TaskElement(std::move(sender), session_id, std::move(task)));
-        if (!task_opt) {
+        auto ele = excutor_.AddTask(TaskElement(std::move(sender), session_id, std::move(task)));
+        if (!ele) {
             return;
         }
-        task = std::move(task_opt->task);
         // 已完成的任务
-        auto reply_msg = std::move(*task.coroutine.promise().result_value);
-        if (reply_msg) {
-            service_mgr()->Send(*iter_, task_opt->sender, SessionSendToReplyId(task_opt->session_id), std::move(reply_msg));
-        }
+        Reply(&*ele);
     }
 }
 

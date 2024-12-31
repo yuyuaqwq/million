@@ -202,7 +202,7 @@ struct Task {
     T await_resume() {
         rethrow_if_exception();
         if constexpr (!std::is_void_v<T>) {
-            return std::move(*coroutine.promise().result_value);
+            return std::move(coroutine.promise().result_value.value());
         }
     }
 
