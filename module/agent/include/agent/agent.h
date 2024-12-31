@@ -21,9 +21,8 @@ public:
         return handler;
     }
 
-    void Init(nonnull_ptr<IMillion> imillion, nonnull_ptr<ProtoCodec> proto_codec) {
+    void Init(nonnull_ptr<IMillion> imillion) {
         imillion_ = imillion.get();
-        proto_codec_ = proto_codec.get();
         for (auto& func : logic_init_queue_) {
             func();
         }
@@ -34,7 +33,7 @@ public:
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     void RegisterProto(std::string proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
         logic_init_queue_.emplace_back([this, proto_file_name = std::move(proto_file_name), msg_ext_id, sub_msg_ext_id] {
-            if (!proto_codec_->RegisterFile(proto_file_name, msg_ext_id, sub_msg_ext_id)) {
+            if (!imillion_->proto_mgr().codec().RegisterFile(proto_file_name, msg_ext_id, sub_msg_ext_id)) {
                 // 注册协议失败
                 imillion_->logger().Err("RegisterProto failed: {}.", proto_file_name);
             }
@@ -63,7 +62,6 @@ private:
     friend class AgentService;
 
     IMillion* imillion_;
-    ProtoCodec* proto_codec_;
 
     std::unordered_map<MsgTypeKey, AgentLogicHandleFunc> logic_handle_map_;
     std::vector<std::function<void()>> logic_init_queue_;
@@ -114,8 +112,7 @@ private:
     ::million::Task<::million::MsgUnique> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<MSG_TYPE_> MSG_NAME_); \
     ::million::Task<::million::MsgUnique> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::agent::AgentService* agent, ::million::ProtoMsgUnique MSG_PTR_NAME_) { \
         auto msg = ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MSG_PTR_NAME_.release())); \
-        co_await _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(agent, std::move(msg)); \
-        co_return; \
+        co_return co_await _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(agent, std::move(msg)); \
     } \
     const bool MILLION_AGENT_LOGIC_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [] { \

@@ -36,19 +36,20 @@ class TestService : public million::IService {
         return true;
     }
 
-    virtual million::Task<> OnStart(million::ServiceHandle sender, million::SessionId session_id) override {
+    virtual million::Task<million::MsgUnique> OnStart(million::ServiceHandle sender, million::SessionId session_id) override {
         auto res = co_await Call<gateway::GatewayRegisterUserServiceMsg>(gateway_, service_handle());
         logger().Info("GatewayRegisterUserServiceMsg success.");
+        co_return nullptr;
     }
 
-    virtual million::Task<> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique msg) override {
+    virtual million::Task<million::MsgUnique> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique msg) override {
         auto res1000 = co_await RecvWithTimeout<Test2Msg>(1000, 5);
 
         if (msg.IsType<Test2Msg>()) {
             auto msg_ = msg.get<Test2Msg>();
             std::cout << session_id << std::endl;
             std::cout << "Test2Msg" << msg_->value1 << msg_->value2 << std::endl;
-            co_return;
+            co_return nullptr;
         }
 
         
@@ -71,7 +72,7 @@ class TestService : public million::IService {
 
         //std::cout << "end:" << res2->session_id() << std::endl;
 
-        co_return;
+        co_return nullptr;
     }
 
     //million::Task<> On6() {

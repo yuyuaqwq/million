@@ -11,9 +11,21 @@
 
 #include <million/noncopyable.h>
 #include <million/session_def.h>
+#include <million/service_handle.h>
 #include <million/task.h>
 
 namespace million {
+
+struct TaskElement {
+    TaskElement(ServiceShared sender, SessionId session_id, Task<MsgUnique> task) 
+        : sender(std::move(sender))
+        , session_id(session_id)
+        , task(std::move(task)) { }
+
+    ServiceShared sender;
+    SessionId session_id;
+    Task<MsgUnique> task;
+};
 
 class Service;
 class TaskExecutor {
@@ -22,28 +34,28 @@ public:
     ~TaskExecutor();
 
     // 尝试调度
-    std::variant<MsgUnique, Task<MsgUnique>, Task<MsgUnique>*> TrySchedule(SessionId session_id, MsgUnique msg);
+    std::variant<MsgUnique, TaskElement, TaskElement*> TrySchedule(SessionId session_id, MsgUnique msg);
 
     // 将任务添加到调度器
-    std::optional<Task<MsgUnique>> AddTask(Task<MsgUnique>&& task);
+    std::optional<TaskElement> AddTask(TaskElement&& ele);
 
     bool TaskQueueIsEmpty() const;
 
-    std::pair<Task<MsgUnique>*, bool> TaskTimeout(SessionId id);
+    std::pair<TaskElement*, bool> TaskTimeout(SessionId id);
 
 private:
     // 尝试调度指定Task
-    std::optional<MsgUnique> TrySchedule(Task<MsgUnique>& task, SessionId session_id, MsgUnique msg);
+    std::optional<MsgUnique> TrySchedule(TaskElement& ele, SessionId session_id, MsgUnique msg);
 
     // 加入待调度队列等待调度
-    Task<MsgUnique>* Push(SessionId id, Task<MsgUnique>&& task);
+    TaskElement* Push(SessionId id, TaskElement&& ele);
 
     // 更新需要等待的session_id
-    Task<MsgUnique>* RePush(SessionId old_id, SessionId new_id);
+    TaskElement* RePush(SessionId old_id, SessionId new_id);
 
 private:
     Service* service_;
-    std::unordered_map<SessionId, Task<MsgUnique>> tasks_;
+    std::unordered_map<SessionId, TaskElement> tasks_;
 };
 
 } // namespace million

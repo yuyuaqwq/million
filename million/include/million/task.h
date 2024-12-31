@@ -69,13 +69,15 @@ struct SessionAwaiterBase {
         return std::coroutine_handle<TaskPromiseBase>::from_address(waiting_coroutine_.address());
     }
 
-    // 总是挂起
+
+    // co_await SessionAwaiterBase相关
+    // co_await 开始
     constexpr bool await_ready() const noexcept {
         return false;
     }
 
-    // 通过在协程中 co_await 当前类型的对象时调用
     template <typename U>
+    // co_await 挂起
     void await_suspend(std::coroutine_handle<TaskPromise<U>> parent_coroutine) noexcept {
         // 何时resume交给调度器，设计上的等待是必定挂起的
         waiting_coroutine_ = parent_coroutine;
@@ -90,7 +92,7 @@ struct SessionAwaiterBase {
         } while (parent_coroutine_void);
     }
 
-    // co_await等待在当前对象中的协程被恢复时调用
+    // co_await 恢复
     MsgUnique await_resume() {
         // 调度器恢复了等待当前awaiter的协程，说明已经等到结果/超时了
         if (!result_ && or_null_ == false) {
@@ -153,7 +155,7 @@ struct Task {
     Task(Task&& co) noexcept
         : coroutine(std::exchange(co.coroutine, {})) {}
 
-    Task& operator=(Task&& co) {
+    Task& operator=(Task&& co) noexcept {
         coroutine = std::exchange(co.coroutine, {});
         return *this;
     }
@@ -169,6 +171,9 @@ struct Task {
         if (has_exception()) std::rethrow_exception(coroutine.promise().exception());
     }
 
+
+    // co_await Task 相关
+    // co_await 开始
     bool await_ready() const noexcept {
         // co_await Task() 时调用，检查下Task内是否co_await
         if (!coroutine.promise().session_awaiter()) {
@@ -179,6 +184,7 @@ struct Task {
         return false;
     }
 
+    // co_await 挂起
     template <typename U>
     void await_suspend(std::coroutine_handle<TaskPromise<U>> parent_coroutine) noexcept {
         // 向上设置awaiter，让service可以拿到正在等待的awaiter，来恢复等待awaiter的协程
@@ -192,18 +198,23 @@ struct Task {
         } while (parent_coroutine_void);
     }
 
-    T await_resume() noexcept {
+    // co_await 恢复
+    T await_resume() {
+        rethrow_if_exception();
         if constexpr (!std::is_void_v<T>) {
             return std::move(*coroutine.promise().result_value);
         }
     }
 
+
     std::coroutine_handle<promise_type> coroutine;
 };
 
 struct TaskAwaiter {
+    // Task 协程退出
+
     bool await_ready() noexcept {
-        // 总是挂起，执行await_suspend
+        // 退出时总是挂起，执行await_suspend，不会调用await_resume
         return false;
     }
 
@@ -212,9 +223,11 @@ struct TaskAwaiter {
         // 该协程执行完毕了，需要恢复父协程的执行
         auto parent_coroutine = coroutine.promise().parent_coroutine();
         if (parent_coroutine) {
+            // 当前协程可能是异常退出，Task的await_resume需要rethrow_if_exception
             parent_coroutine.resume();
         }
     }
+
     void await_resume() noexcept {}
 };
 
@@ -245,7 +258,7 @@ struct TaskPromiseBase {
 #endif
     }
 
-    // 该协程内，可通过co_await进行等待的类型支持
+    // 可等待对象类型支持
     SessionAwaiterBase await_transform(SessionAwaiterBase&& awaiter) {
         return SessionAwaiterBase(std::move(awaiter));
     }
@@ -255,13 +268,13 @@ struct TaskPromiseBase {
         return SessionAwaiter<U>(std::move(awaiter));
     }
 
-    // Task等待支持
     template <typename U>
     Task<U> await_transform(Task<U>&& task) {
         // 期望等待的Task可能是异常退出的，则继续上抛
         task.rethrow_if_exception();
         return Task<U>(std::move(task));
     }
+
 
     void set_session_awaiter(SessionAwaiterBase* awaiter) {
         session_awaiter_ = awaiter;

@@ -103,6 +103,12 @@ bool Million::Init(std::string_view config_path) {
         session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
 
 
+        std::cout << "[timer] [info] load 'proto_mgr' config." << std::endl;
+
+        proto_mgr_ = std::make_unique<ProtoMgr>();
+        proto_mgr_->Init();
+
+
         std::cout << "[timer] [info] load 'timer' config." << std::endl;
 
         const auto& timer_config = config["timer"];
@@ -154,9 +160,6 @@ bool Million::Init(std::string_view config_path) {
             }
         }
         module_mgr_->Init();
-
-        proto_mgr_ = std::make_unique<ProtoMgr>();
-        proto_mgr_->Init();
 
         std::cout << "[million] [info] init success." << std::endl;
         return true;

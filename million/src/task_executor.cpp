@@ -21,7 +21,7 @@ TaskExecutor::TaskExecutor(Service* service)
 TaskExecutor::~TaskExecutor() = default;
 
 // 尝试调度
-std::variant<MsgUnique, Task<MsgUnique>, Task<MsgUnique>*> TaskExecutor::TrySchedule(SessionId session_id, MsgUnique msg) {
+std::variant<MsgUnique, TaskElement, TaskElement*> TaskExecutor::TrySchedule(SessionId session_id, MsgUnique msg) {
     auto iter = tasks_.find(session_id);
     if (iter == tasks_.end()) {
         return msg;
@@ -32,9 +32,9 @@ std::variant<MsgUnique, Task<MsgUnique>, Task<MsgUnique>*> TaskExecutor::TrySche
         auto& million = service_->service_mgr()->million();
         million.logger().Critical("[million] try schedule exception: {}.", session_id);
     }
-    if (!iter->second.coroutine.done()) {
+    if (!iter->second.task.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        auto task = RePush(session_id, iter->second.coroutine.promise().session_awaiter()->waiting_session());
+        auto task = RePush(session_id, iter->second.task.coroutine.promise().session_awaiter()->waiting_session());
         return task;
     }
     else {
@@ -44,12 +44,12 @@ std::variant<MsgUnique, Task<MsgUnique>, Task<MsgUnique>*> TaskExecutor::TrySche
     }
 }
 
-std::optional<Task<MsgUnique>> TaskExecutor::AddTask(Task<MsgUnique>&& task) {
-    if (task.has_exception()) {
+std::optional<TaskElement> TaskExecutor::AddTask(TaskElement&& ele) {
+    if (ele.task.has_exception()) {
         auto& million = service_->service_mgr()->million();
         // 记录异常
         try {
-            task.rethrow_if_exception();
+            ele.task.rethrow_if_exception();
         }
         catch (const std::exception& e) {
             million.logger().Err("Session exception: {}.", e.what());
@@ -58,19 +58,19 @@ std::optional<Task<MsgUnique>> TaskExecutor::AddTask(Task<MsgUnique>&& task) {
             million.logger().Err("Session exception: {}.", "unknown exception");
         }
     }
-    if (!task.coroutine.done()) {
-        assert(task.coroutine.promise().session_awaiter());
-        Push(task.coroutine.promise().session_awaiter()->waiting_session(), std::move(task));
+    if (!ele.task.coroutine.done()) {
+        assert(ele.task.coroutine.promise().session_awaiter());
+        Push(ele.task.coroutine.promise().session_awaiter()->waiting_session(), std::move(ele));
         return std::nullopt;
     }
-    return task;
+    return ele;
 }
 
 bool TaskExecutor::TaskQueueIsEmpty() const {
     return tasks_.empty();
 }
 
-std::pair<Task<MsgUnique>*, bool> TaskExecutor::TaskTimeout(SessionId session_id) {
+std::pair<TaskElement*, bool> TaskExecutor::TaskTimeout(SessionId session_id) {
     auto iter = tasks_.find(session_id);
     if (iter == tasks_.end()) {
         // 正常情况是已经执行完毕了
@@ -80,19 +80,19 @@ std::pair<Task<MsgUnique>*, bool> TaskExecutor::TaskTimeout(SessionId session_id
     // 超时，唤醒目标协程
     TrySchedule(iter->second, session_id, nullptr);
 
-    if (!iter->second.coroutine.done()) {
+    if (!iter->second.task.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        return std::make_pair(RePush(session_id, iter->second.coroutine.promise().session_awaiter()->waiting_session()), false);
+        return std::make_pair(RePush(session_id, iter->second.task.coroutine.promise().session_awaiter()->waiting_session()), false);
     }
     else {
-        auto has_exception = iter->second.has_exception();
+        auto has_exception = iter->second.task.has_exception();
         tasks_.erase(iter);
         return std::make_pair(nullptr, has_exception);
     }
 }
 
-std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<MsgUnique>& task, SessionId session_id, MsgUnique msg) {
-    auto awaiter = task.coroutine.promise().session_awaiter();
+std::optional<MsgUnique> TaskExecutor::TrySchedule(TaskElement& ele, SessionId session_id, MsgUnique msg) {
+    auto awaiter = ele.task.coroutine.promise().session_awaiter();
     if (msg) {
         if (awaiter->waiting_session() != session_id) {
             return msg;
@@ -101,11 +101,11 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<MsgUnique>& task, Sessio
     awaiter->set_result(std::move(msg));
     auto waiting_coroutine = awaiter->waiting_coroutine();
     waiting_coroutine.resume();
-    if (task.has_exception()) {
+    if (ele.task.has_exception()) {
         auto& million = service_->service_mgr()->million();
         // 记录异常
         try {
-            task.rethrow_if_exception();
+            ele.task.rethrow_if_exception();
         }
 #ifdef MILLION_STACK_TRACE
         catch (const TaskAbortException& e) {
@@ -122,18 +122,18 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(Task<MsgUnique>& task, Sessio
     return std::nullopt;
 }
 
-Task<MsgUnique>* TaskExecutor::Push(SessionId id, Task<MsgUnique>&& task) {
+TaskElement* TaskExecutor::Push(SessionId id, TaskElement&& ele) {
     assert(!SessionIsReplyId(id));
     auto& million = service_->service_mgr()->million();
     if (id == kSessionIdInvalid) {
         million.logger().Err("Waiting for an invalid session.");
         return nullptr;
     }
-    auto timeout_s = task.coroutine.promise().session_awaiter()->timeout_s();
+    auto timeout_s = ele.task.coroutine.promise().session_awaiter()->timeout_s();
     if (timeout_s != kSessionNeverTimeout) {
         million.session_monitor().AddSession(service_->shared(), id, timeout_s);
     }
-    auto res = tasks_.emplace(id, std::move(task));
+    auto res = tasks_.emplace(id, std::move(ele));
     if (!res.second) {
         // throw std::runtime_error("Duplicate session id.");
         million.logger().Err("Found duplicate session id: {}", id);
@@ -142,7 +142,7 @@ Task<MsgUnique>* TaskExecutor::Push(SessionId id, Task<MsgUnique>&& task) {
     return &res.first->second;
 }
 
-Task<MsgUnique>* TaskExecutor::RePush(SessionId old_id, SessionId new_id) {
+TaskElement* TaskExecutor::RePush(SessionId old_id, SessionId new_id) {
     auto iter = tasks_.find(old_id);
     if (iter == tasks_.end()) {
         return nullptr;

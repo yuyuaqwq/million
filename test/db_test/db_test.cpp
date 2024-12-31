@@ -36,7 +36,7 @@ public:
         return true;
     }
 
-    virtual million::Task<> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
+    virtual million::Task<million::MsgUnique> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
         auto user = std::make_unique<million::db::example::User>();
         user->set_id(100);
         user->set_password_hash("sadawd");
@@ -64,7 +64,7 @@ public:
             logger().Info("DbRowGetMsg failed.");
         }
 
-        co_return;
+        co_return nullptr;
     }
 
 
@@ -75,7 +75,7 @@ public:
         //auto msg2 = std::make_unique<Test1Msg>();
         //Timeout(100, std::move(msg2));
 
-        co_return;
+        co_return nullptr;
     }
 
 private:
