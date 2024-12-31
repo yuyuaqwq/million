@@ -86,7 +86,7 @@ int main() {
 
     getchar();
 
-    auto req = million::make_proto_msg<ss::test::LoginReq>("LoginRes req");
+    auto req = million::make_proto_msg<ss::test::LoginReq>("LoginReq req");
 
     const auto& config = test_app->YamlConfig();
     if (config["cluster"]["name"].as<std::string>() == "node1") {
