@@ -84,7 +84,7 @@ public:
 
 
     MILLION_MSG_HANDLE(DbRowGetMsg, msg) {
-        auto& desc = msg->table_desc; // proto_codec_.GetMsgDesc(msg->table_name);
+        auto& desc = msg->table_desc;
         if (!desc.options().HasExtension(table)) {
             logger().Err("HasExtension table failed.");
             co_return std::move(msg);

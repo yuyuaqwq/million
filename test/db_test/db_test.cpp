@@ -47,17 +47,9 @@ public:
 
         auto row = db::DbRow(std::move(user));
 
-        // co_await Call<db::DbRegisterProtoCodecMsg>(db_service_, &proto_codec_);
-
-        auto res = co_await Call<db::DbRegisterProtoMsg>(db_service_, "db/db_example.proto", false);
-        if (res->success) {
-            logger().Info("DbProtoRegisterMsg success: {}.", "db/db_example.proto");
-        }
-
         auto handle = imillion().GetServiceByName("SqlService");
 
-
-        // co_await Call<db::SqlInsertMsg>(*handle, million::make_nonnull(&row));
+        // co_await Call<db::SqlInsertMsg>(*handle, &row);
 
         auto res2 = co_await Call<db::DbRowGetMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103", std::nullopt);
         if (!res2->db_row) {
