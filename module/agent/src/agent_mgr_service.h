@@ -39,8 +39,7 @@ public:
         auto agent_msg = co_await Call<NewAgentMsg>(node_mgr_, msg->user_session_id, std::nullopt);
         msg->agent_handle = std::move(agent_msg->agent_handle);
         Reply<gateway::GatewaySureAgentMsg>(gateway_, msg->user_session_id, *msg->agent_handle);
-        Reply(sender, session_id, std::move(msg));
-        co_return;
+        co_return std::move(msg);
     }
 
 private:
