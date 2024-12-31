@@ -12,7 +12,7 @@ namespace agent {
 MILLION_MSG_DEFINE(MILLION_AGENT_API, NewAgentMsg, (SessionId) user_session_id, (std::optional<ServiceHandle>) agent_handle);
 
 class AgentService;
-using AgentLogicHandleFunc = Task<>(*)(AgentService* agent, ProtoMsgUnique proto_msg);
+using AgentLogicHandleFunc = Task<MsgUnique>(*)(AgentService* agent, ProtoMsgUnique proto_msg);
 
 class MILLION_AGENT_API AgentLogicHandler {
 public:
@@ -79,32 +79,21 @@ public:
         , user_session_id_(user_session_id) {}
 
 private:
-    // MILLION_MSG_DISPATCH(AgentService);
-
-    /*using GatewayRecvPacketMsg = gateway::GatewayRecvPacketMsg;
-    MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
-        auto res = AgentLogicHandler::Instance().proto_codec_->DecodeMessage(msg->packet);
-        if (!res) {
-            logger().Err("DecodeMessage failed");
-            co_return;
+    virtual Task<MsgUnique> OnMsg(ServiceHandle sender, SessionId session_id, MsgUnique msg) override {
+        if (!msg.IsProtoMessage()) {
+            co_return nullptr;
         }
-        auto func = AgentLogicHandler::Instance().GetLogicHandle(res->msg.GetTypeKey());
+        auto func = AgentLogicHandler::Instance().GetLogicHandle(msg.GetTypeKey());
         if (!func) {
-            logger().Err("Agent logic handle not found, msg_id:{}, sub_msg_id:{}", res->msg_id, res->sub_msg_id);
-            co_return;
+            logger().Err("Agent logic handle not found.");
+            co_return nullptr;
         }
-        co_await(*func)(this, std::move(res->msg.GetProtoMessage()));
-        co_return;
-    }*/
+        co_return co_await(*func)(this, std::move(msg.GetProtoMessage()));
+    }
 
 public:
-    void SendToClient(const protobuf::Message& proto_msg) {
-        auto res = AgentLogicHandler::Instance().proto_codec_->EncodeMessage(proto_msg);
-        if (!res) {
-            logger().Err("EncodeMessage failed: type:{}.", typeid(proto_msg).name());
-            return;
-        }
-        Reply<gateway::GatewaySendPacketMsg>(gateway_, user_session_id_, *res);
+    void SendToClient(ProtoMsgUnique proto_msg) {
+        Reply(gateway_, user_session_id_, std::move(proto_msg));
     }
 
     SessionId agent_id() const { return user_session_id_; }
@@ -122,19 +111,19 @@ private:
         }() \
 
 #define MILLION_AGENT_LOGIC_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<MSG_TYPE_> MSG_NAME_); \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::agent::AgentService* agent, ::million::ProtoMsgUnique MSG_PTR_NAME_) { \
+    ::million::Task<::million::MsgUnique> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<MSG_TYPE_> MSG_NAME_); \
+    ::million::Task<::million::MsgUnique> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::agent::AgentService* agent, ::million::ProtoMsgUnique MSG_PTR_NAME_) { \
         auto msg = ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MSG_PTR_NAME_.release())); \
         co_await _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(agent, std::move(msg)); \
         co_return; \
     } \
     const bool MILLION_AGENT_LOGIC_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [] { \
-            ::million::agent::AgentLogicHandler::Instance().RegisterLogicHandle(reinterpret_cast<::million::MsgTypeKey>(MSG_TYPE_::GetDescriptor()), \
+            ::million::agent::AgentLogicHandler::Instance().RegisterLogicHandle(::million::GetMsgTypeKey<MSG_TYPE_>(), \
                 _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I); \
             return true; \
         }(); \
-    ::million::Task<> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
+    ::million::Task<::million::MsgUnique> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(::million::agent::AgentService* agent, ::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
 
 
 } // namespace agent

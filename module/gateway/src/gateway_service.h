@@ -76,16 +76,18 @@ public:
                     logger().Err("Gateway Recv ProtoMessage EncodeMessage failed: {}.", session_id);
                     continue;
                 }
-                user_session.Send(std::move(header_packet), net::PacketSpan(header_packet), header_packet.size() + packet->size());
-                auto span = net::PacketSpan(*packet);
+                auto span = net::PacketSpan(header_packet);
+                user_session.Send(std::move(header_packet), span, header_packet.size() + packet->size());
+                span = net::PacketSpan(*packet);
                 user_session.Send(std::move(*packet), span, 0);
             }
             else if (recv_msg.IsType<GatewaySendPacketMsg>()) {
-                logger().Trace("Gateway Recv ProtoMessage: {}.", session_id);
+                logger().Trace("GatewaySendPacketMsg: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
                 auto msg = recv_msg.get<GatewaySendPacketMsg>();
-                user_session.Send(std::move(header_packet), net::PacketSpan(header_packet), header_packet.size() + msg->packet.size());
-                auto span = net::PacketSpan(msg->packet);
+                auto span = net::PacketSpan(header_packet);
+                user_session.Send(std::move(header_packet), span, header_packet.size() + msg->packet.size());
+                span = net::PacketSpan(msg->packet);
                 user_session.Send(std::move(msg->packet), span, 0);
             }
             else if (recv_msg.IsType<GatewaySureAgentMsg>()) {
