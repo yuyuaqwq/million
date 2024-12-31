@@ -121,8 +121,8 @@ public:
 
 protected:
     virtual bool OnInit(MsgUnique init_msg) { return true; }
-    virtual Task<> OnStart(ServiceHandle sender, SessionId session_id) { co_return; }
-    virtual Task<> OnMsg(ServiceHandle sender, SessionId session_id, MsgUnique msg) { co_return; }
+    virtual Task<MsgUnique> OnStart(ServiceHandle sender, SessionId session_id) { co_return nullptr; }
+    virtual Task<MsgUnique> OnMsg(ServiceHandle sender, SessionId session_id, MsgUnique msg) { co_return nullptr; }
     virtual void OnStop(ServiceHandle sender, SessionId session_id) { }
     virtual void OnExit(ServiceHandle sender, SessionId session_id) { }
 
@@ -139,19 +139,18 @@ private:
 
 #define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_) \
     using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
-    virtual ::million::Task<> OnMsg(::million::ServiceHandle sender, ::million::SessionId session_id, ::million::MsgUnique msg) override { \
+    virtual ::million::Task<::million::MsgUnique> OnMsg(::million::ServiceHandle sender, ::million::SessionId session_id, ::million::MsgUnique msg) override { \
         auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg.GetTypeKey()); \
         if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
-            co_await (this->*iter->second)(sender, session_id, std::move(msg)); \
+             co_return co_await (this->*iter->second)(sender, session_id, std::move(msg)); \
         } \
-        co_return; \
+        co_return nullptr; \
     } \
-    ::std::unordered_map<::million::MsgTypeKey, ::million::Task<>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<::million::MsgTypeKey, ::million::Task<::million::MsgUnique>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique MILLION_MSG_) { \
-        co_await _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release()))); \
-        co_return; \
+    ::million::Task<::million::MsgUnique> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique MILLION_MSG_) { \
+        co_return co_await _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release()))); \
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
@@ -161,7 +160,7 @@ private:
             assert(res.second); \
             return true; \
         }(); \
-    ::million::Task<> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
+    ::million::Task<::million::MsgUnique> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
 
 // 持久会话循环参考
 // 使用持久会话有些需要注意的地方：

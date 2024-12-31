@@ -92,14 +92,14 @@ public:
     MILLION_MSG_HANDLE(Log, msg) {
         auto level = static_cast<spdlog::level::level_enum>(msg->level());
         logger_->log(spdlog::source_loc(msg->file().c_str(), msg->line(), msg->function().c_str()), level, msg->msg());
-        co_return;
+        co_return nullptr;
     }
 
     using SetLevel = ss::logger::SetLevel;
     MILLION_MSG_HANDLE(SetLevel, msg) {
         auto level = static_cast<spdlog::level::level_enum>(msg->level());
         logger_->set_level(level);
-        co_return;
+        co_return nullptr;
     }
 
 private:

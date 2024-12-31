@@ -76,17 +76,18 @@ public:
         do {
             // 这里未来可以修改超时时间，来自动回收协程
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
-            if (recv_msg.IsType<ClusterSendMsg>()) {
-                logger().Trace("ClusterSendMsg: {}.", session_id);
-                auto msg = recv_msg.get<ClusterSendMsg>();
+            if (recv_msg.IsProtoMessage()) {
+                logger().Trace("Cluster Recv ProtoMessage: {}.", session_id);
+
+                auto proto_msg = std::move(recv_msg.GetProtoMessage());
                 PacketForward(&node_session, ServiceName(src_service)
-                    , ServiceName(target_service), *msg->msg);
+                    , ServiceName(target_service), *proto_msg);
             }
             else if (recv_msg.IsType<ClusterPersistentNodeServiceSessionMsg>()) {
                 break;
             }
         } while (true);
-        co_return;
+        co_return nullptr;
     }
 
     MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
@@ -110,7 +111,7 @@ public:
         // 可能是主动发起，也可能是被动收到连接的，连接去重不在这里处理
         // 连接投递到定时任务，比如10s还没有握手成功就断开连接
         
-        co_return;
+        co_return nullptr;
     }
 
     MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
@@ -124,7 +125,7 @@ public:
         if (msg->packet.size() < sizeof(header_size)) {
             logger().Warn("Invalid header size: ip: {}, port: {}", ip, port);
             node_session.Close();
-            co_return;
+            co_return nullptr;
         }
         header_size = *reinterpret_cast<uint32_t*>(msg->packet.data());
         header_size = asio::detail::socket_ops::network_to_host_long(header_size);
@@ -133,7 +134,7 @@ public:
         if (!msg_body.ParseFromArray(msg->packet.data() + sizeof(header_size), header_size)) {
             logger().Warn("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
             node_session.Close();
-            co_return;
+            co_return nullptr;
         }
 
         switch (msg_body.body_case()) {
@@ -161,7 +162,7 @@ public:
             if (node_name_ != req.target_node()) {
                 logger().Err("Src node name mismatch, ip: {}, port: {}, cur_node: {}, req_target_node: {}", ip, port, node_name_, req.target_node());
                 msg->node_session->Close();
-                co_return;
+                break;
             }
 
             // 创建节点
@@ -175,7 +176,7 @@ public:
                 logger().Err("Target node name mismatch, ip: {}, port: {}, target_node: {}, res_target_node: {}",
                     ip, port, node_session.node_name(), res.target_node());
                 node_session.Close();
-                co_return;
+                break;
             }
             
             // 创建节点
@@ -231,21 +232,21 @@ public:
             break;
         }
         }
-        co_return;
+        co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(ClusterSendWithNameMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterSendMsg, msg) {
         auto node_session = GetNodeSession(msg->target_node);
         if (node_session) {
             PacketForward(node_session, std::move(msg->src_service)
                 , std::move(msg->target_service), *msg->msg);
-            co_return;
+            co_return nullptr;
         }
 
         auto ep = FindNodeConfig(msg->target_node);
         if (!ep) {
             logger().Err("Node cannot be found: {}.", msg->target_node);
-            co_return;
+            co_return nullptr;
         }
 
         if (wait_nodes_.find(msg->target_node) == wait_nodes_.end()) {
@@ -279,7 +280,7 @@ public:
         // 使用一个全局队列，因为这种连接排队的包很少，直接扫描就行
         send_queue_.emplace_back(std::move(msg));
 
-        co_return;
+        co_return nullptr;
     }
 
 private:
@@ -405,7 +406,7 @@ private:
     std::unordered_map<NodeName, NodeSessionShared> nodes_;
 
     std::set<NodeName> wait_nodes_;
-    std::list<std::unique_ptr<ClusterSendWithNameMsg>> send_queue_;
+    std::list<std::unique_ptr<ClusterSendMsg>> send_queue_;
 };
 
 } // namespace cluster

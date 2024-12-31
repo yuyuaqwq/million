@@ -57,7 +57,7 @@ void Service::ProcessMsg(MsgElement ele) {
         state_ = kStarting;
         assert(SessionIsSendId(session_id));
         auto task = iservice_->OnStart(ServiceHandle(sender), session_id);
-        if (!excutor_.AddTask(std::move(task))) {
+        if (excutor_.AddTask(std::move(task))) {
             // 已完成OnStart
             state_ = kRunning;
         }
@@ -119,14 +119,14 @@ void Service::ProcessMsg(MsgElement ele) {
         }
         session_id = SessionReplyToSendId(session_id);
         auto res = excutor_.TrySchedule(session_id, std::move(msg));
-        if (!std::holds_alternative<Task<>*>(res)) {
+        if (!std::holds_alternative<Task<MsgUnique>>(res)) {
             return;
         }
-        auto task = std::get<Task<>*>(res);
-        if (!task) {
-            // 已完成OnStart
-            state_ = kRunning;
-        }
+        auto& task = std::get<Task<MsgUnique>>(res);
+
+        // 已完成OnStart
+        state_ = kRunning;
+        
         return;
     }
 
@@ -135,13 +135,29 @@ void Service::ProcessMsg(MsgElement ele) {
         return;
     }
 
+    MsgUnique reply_msg;
     if (SessionIsReplyId(session_id)) {
         session_id = SessionReplyToSendId(session_id);
-        excutor_.TrySchedule(session_id, std::move(msg));
+        auto res = excutor_.TrySchedule(session_id, std::move(msg));
+        if (!std::holds_alternative<Task<MsgUnique>>(res)) {
+            return;
+        }
+        auto& task = std::get<Task<MsgUnique>>(res);
+        // 已完成的任务
+        reply_msg = std::move(*task.coroutine.promise().result_value);
     }
     else if (SessionIsSendId(session_id)) {
         auto task = iservice_->OnMsg(ServiceHandle(sender), session_id, std::move(msg));
-        excutor_.AddTask(std::move(task));
+        auto task_opt = excutor_.AddTask(std::move(task));
+        if (!task_opt) {
+            return;
+        }
+        task = std::move(*task_opt);
+        // 已完成的任务
+        reply_msg = std::move(*task.coroutine.promise().result_value);
+    }
+    if (reply_msg) {
+        service_mgr()->Send(*iter_, sender, SessionSendToReplyId(session_id), std::move(reply_msg));
     }
 }
 

@@ -278,10 +278,10 @@ public:
 
     }
 
-    virtual million::Task<> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique msg) override {
+    virtual million::Task<million::MsgUnique> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique msg) override {
         if (!msg.IsProtoMessage()) {
             // 只处理proto msg
-            co_return;
+            co_return nullptr;
         }
 
         JSModuleDef* js_main_module = (JSModuleDef*)JS_VALUE_GET_PTR(js_main_module_);
@@ -327,7 +327,7 @@ public:
             }
         } while (false);
         
-        co_return;
+        co_return nullptr;
     }
 
 private:

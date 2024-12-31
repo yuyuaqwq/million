@@ -69,7 +69,7 @@ private:
 
 private:
     ServiceMgr* service_mgr_;
-    std::list<std::shared_ptr<Service>>::iterator iter_;
+    std::list<ServiceShared>::iterator iter_;
 
     // std::optional<Task<>> on_start_task_;
     enum State {

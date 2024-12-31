@@ -133,6 +133,21 @@ using CppMsgUnique = std::unique_ptr<CppMessage>;
 		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
 	};
 
+#define MILLION_MSG_DEFINE_NONCOPYABLE(API_, NAME_, ...) \
+    class API_ NAME_ : public ::million::CppMessage { \
+	public: \
+        NAME_() = delete; \
+		NAME_(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
+			: _MILLION_CTOR_INIT_LIST(__VA_ARGS__) {} \
+		_MILLION_FIELDS_DECL(__VA_ARGS__) \
+		virtual const std::type_info& type() const override { return type_static(); } \
+		static const std::type_info& type_static() { return typeid(NAME_); } \
+		virtual CppMessage* Copy() const override { throw std::runtime_error("Non copy messages."); } \
+		template<size_t index> struct MetaFieldData; \
+		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
+		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
+	};
+
 #define MILLION_MSG_DEFINE_EMPTY(API_, NAME_) \
     class API_ NAME_ : public ::million::CppMessage { \
 	public: \

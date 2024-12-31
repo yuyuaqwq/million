@@ -153,6 +153,11 @@ struct Task {
     Task(Task&& co) noexcept
         : coroutine(std::exchange(co.coroutine, {})) {}
 
+    Task& operator=(Task&& co) {
+        coroutine = std::exchange(co.coroutine, {});
+        return *this;
+    }
+
     Task(const Task&) = delete;
     Task& operator=(const Task&) = delete;
     
