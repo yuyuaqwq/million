@@ -155,6 +155,9 @@ bool Million::Init(std::string_view config_path) {
         }
         module_mgr_->Init();
 
+        proto_mgr_ = std::make_unique<ProtoMgr>();
+        proto_mgr_->Init();
+
         std::cout << "[million] [info] init success." << std::endl;
         return true;
 

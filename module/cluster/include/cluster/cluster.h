@@ -15,11 +15,8 @@ namespace cluster {
 
 using NodeName = std::string;
 
-MILLION_MSG_DEFINE(MILLION_CLUSTER_API, ClusterSendPacketWithNameMsg, (ServiceName) src_service, (NodeName) target_node, (ServiceName) target_service, (net::Packet) packet)
-MILLION_MSG_DEFINE(MILLION_CLUSTER_API, ClusterRecvPacketMsg, (net::Packet) raw_packet, (net::PacketSpan) packet)
-
-MILLION_MSG_DEFINE(MILLION_CLUSTER_API, ClusterSendPacketMsg, (net::Packet) packet)
-
+MILLION_MSG_DEFINE(MILLION_CLUSTER_API, ClusterSendWithNameMsg, (ServiceName) src_service, (NodeName) target_node, (ServiceName) target_service, (const ProtoMessage*) msg)
+MILLION_MSG_DEFINE(MILLION_CLUSTER_API, ClusterSendMsg, (const ProtoMessage*) msg)
 
 // Cluster.Call返回一个Task<ProtoMsgUnique>，通过co_return 将proto_msg返回回来
 // Cluster.Call内部：

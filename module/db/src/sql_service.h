@@ -40,7 +40,7 @@ public:
             logger().Err("MySQL error : {}", e.what());
         } 
 
-        EnableSeparateWorker();
+        imillion().EnableSeparateWorker(service_handle());
 
         return true;
     }

@@ -3,13 +3,13 @@
 #include <string_view>
 
 #include <million/api.h>
+#include <million/exception.h>
 #include <million/noncopyable.h>
 #include <million/nonnull_ptr.h>
 #include <million/msg.h>
 #include <million/iservice.h>
 #include <million/logger.h>
-#include <million/exception.h>
-#include <million/proto_codec.h>
+#include <million/proto_mgr.h>
 
 namespace YAML {
 
@@ -93,13 +93,15 @@ public:
         return SessionAwaiter<MsgT>(session_id, timeout_s, true);
     }
 
-    const YAML::Node& YamlConfig() const;
     bool Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
-    asio::io_context& NextIoContext();
     void EnableSeparateWorker(const ServiceHandle& service);
 
+    const YAML::Node& YamlConfig() const;
+    asio::io_context& NextIoContext();
+    
     Logger& logger();
-    Million& impl() const { return *impl_; }
+    ProtoMgr& proto_mgr();
+    Million& impl() { return *impl_; }
 
 private:
     Million* impl_;
@@ -119,10 +121,6 @@ inline bool IService::Reply(const ServiceHandle& target, SessionId session_id, M
 
 inline void IService::Timeout(uint32_t tick, MsgUnique msg) {
     imillion_->Timeout(tick, service_handle(), std::move(msg));
-}
-
-inline void IService::EnableSeparateWorker() {
-    imillion_->EnableSeparateWorker(service_handle());
 }
 
 inline Logger& IService::logger() {

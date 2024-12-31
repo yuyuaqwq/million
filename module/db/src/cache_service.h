@@ -37,7 +37,7 @@ public:
             logger().Err("Redis error:{}", e.what());
         }
 
-        EnableSeparateWorker();
+        imillion().EnableSeparateWorker(service_handle());
 
         return true;
     }

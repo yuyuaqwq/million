@@ -16,6 +16,7 @@ class WorkerMgr;
 class IoContextMgr;
 class Timer;
 class Logger;
+class ProtoMgr;
 class Million {
 public:
     Million(IMillion* imillion);
@@ -52,6 +53,7 @@ public:
     auto& worker_mgr() { assert(worker_mgr_); return *worker_mgr_; }
     auto& io_context_mgr() { assert(io_context_mgr_); return *io_context_mgr_; }
     auto& timer() { assert(timer_); return *timer_; }
+    auto& proto_mgr() { assert(proto_mgr_); return *proto_mgr_; }
 
 private:
     IMillion* imillion_;
@@ -66,6 +68,7 @@ private:
     std::unique_ptr<WorkerMgr> worker_mgr_;
     std::unique_ptr<IoContextMgr> io_context_mgr_;
     std::unique_ptr<Timer> timer_;
+    std::unique_ptr<ProtoMgr> proto_mgr_;
 };
 
 } // namespace million

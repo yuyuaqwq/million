@@ -32,7 +32,7 @@ void DbProtoCodec::Init() {
 }
 
 const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& proto_file_name) {
-    auto file_desc = proto_mgr_.desc_pool().FindFileByName(proto_file_name);
+    auto file_desc = proto_mgr_.FindFileByName(proto_file_name);
     if (!file_desc) {
         return nullptr;
     }
@@ -54,7 +54,7 @@ const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& p
             continue;
         }
 
-        const auto* msg = proto_mgr_.msg_factory().GetPrototype(desc);
+        const auto* msg = proto_mgr_.GetPrototype(*desc);
         if (!msg) {
             continue;
         }
@@ -75,7 +75,7 @@ const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& p
 //}
 
 std::optional<ProtoMsgUnique> DbProtoCodec::NewMessage(const protobuf::Descriptor& desc) {
-    const auto* proto_msg = proto_mgr_.msg_factory().GetPrototype(&desc);
+    const auto* proto_msg = proto_mgr_.GetPrototype(desc);
     if (proto_msg != nullptr) {
         return ProtoMsgUnique(proto_msg->New());
     }
@@ -144,13 +144,13 @@ public:
     }
 
     MILLION_MSG_HANDLE(DbRegisterProtoCodecMsg, msg) {
-        proto_codec_ = msg->proto_codec.get();
+        // proto_codec_ = msg->proto_codec.get();
         Reply(sender, session_id, std::move(msg));
         co_return;
     }
 
     MILLION_MSG_HANDLE(DbRegisterProtoMsg, msg) {
-        auto file_desc = proto_codec_->RegisterProto(msg->proto_file_name);
+        /*auto file_desc = proto_codec_->RegisterProto(msg->proto_file_name);
 
         if (!file_desc) {
             logger().Err("DbService RegisterProto failed: {}.", msg->proto_file_name);
@@ -176,7 +176,8 @@ public:
             break;
         }
 
-        Reply(sender, session_id, std::move(msg));
+        Reply(sender, session_id, std::move(msg));*/
+        co_return;
     }
 
     MILLION_MSG_HANDLE(DbRowGetMsg, msg) {
@@ -201,7 +202,7 @@ public:
                 break;
             }
 
-            auto proto_msg_opt = proto_codec_->NewMessage(desc);
+            /*auto proto_msg_opt = proto_codec_->NewMessage(desc);
             if (!proto_msg_opt) {
                 logger().Err("proto_codec_.NewMessage failed.");
                 co_return;
@@ -227,7 +228,7 @@ public:
             const MessageOptionsTable& options = desc.options().GetExtension(::million::db::table);
 
             auto sync_tick = options.sync_tick();
-            Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, &row_iter->second);
+            Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, &row_iter->second);*/
 
         } while (false);
         msg->db_row = row_iter->second;
@@ -277,7 +278,6 @@ public:
 
 
 private:
-    DbProtoCodec* proto_codec_;
 
     // 改用lru
     using DbTable = std::unordered_map<std::string, DbRow>;

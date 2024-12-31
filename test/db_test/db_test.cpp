@@ -22,8 +22,7 @@ class TestService : public million::IService {
 public:
     using Base = million::IService;
     TestService(million::IMillion* imillion)
-        : Base(imillion)
-        , proto_codec_(million::GetProtoMeta()) {}
+        : Base(imillion) {}
 
     virtual bool OnInit(million::MsgUnique msg) override {
         
@@ -48,7 +47,7 @@ public:
 
         auto row = db::DbRow(std::move(user));
 
-        co_await Call<db::DbRegisterProtoCodecMsg>(db_service_, &proto_codec_);
+        // co_await Call<db::DbRegisterProtoCodecMsg>(db_service_, &proto_codec_);
 
         auto res = co_await Call<db::DbRegisterProtoMsg>(db_service_, "db/db_example.proto", false);
         if (res->success) {
@@ -80,7 +79,7 @@ public:
     }
 
 private:
-    million::db::DbProtoCodec proto_codec_;
+    // million::db::DbProtoCodec proto_codec_;
     million::ServiceHandle db_service_;
 
 };

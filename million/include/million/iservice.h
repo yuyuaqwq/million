@@ -120,8 +120,6 @@ public:
     const ServiceHandle& service_handle() const { return service_handle_; }
 
 protected:
-    void EnableSeparateWorker();
-
     virtual bool OnInit(MsgUnique init_msg) { return true; }
     virtual Task<> OnStart(ServiceHandle sender, SessionId session_id) { co_return; }
     virtual Task<> OnMsg(ServiceHandle sender, SessionId session_id, MsgUnique msg) { co_return; }

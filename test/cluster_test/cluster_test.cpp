@@ -16,14 +16,11 @@ namespace protobuf = google::protobuf;
 
 MILLION_MSG_DEFINE(, TestMsg, (million::cluster::NodeName) target_node, (ss::test::LoginReq) req);
 
-using ClusterRecvPacketMsg = million::cluster::ClusterRecvPacketMsg;
-
 class TestService : public million::IService {
 public:
     using Base = million::IService;
     TestService(million::IMillion* imillion)
-        : Base(imillion)
-        , proto_codec_(million::GetProtoMgr()) {}
+        : Base(imillion) {}
 
     //TestService(million::IMillion* imillion)
     //    : proto_codec_(0)
@@ -38,14 +35,12 @@ public:
         }
         cluster_ = *handle;
 
-        proto_codec_.RegisterProto("ss/ss_test.proto", ss::msg_id, ss::test::sub_msg_id);
+        imillion().proto_mgr().codec().RegisterFile("ss/ss_test.proto", ss::msg_id, ss::test::sub_msg_id);
 
         return true;
     }
 
     MILLION_MSG_DISPATCH(TestService);
-
-    MILLION_PROTO_PACKET_DISPATCH(&proto_codec_, ClusterRecvPacketMsg);
 
     using LoginReq = ss::test::LoginReq;
     MILLION_MSG_HANDLE(LoginReq, req) {
@@ -55,8 +50,7 @@ public:
         ss::test::LoginRes res;
         res.set_value("LoginRes res");
 
-        Reply<million::cluster::ClusterSendPacketMsg>(sender, session_id
-            , proto_codec_.EncodeMessage(res).value());
+        Reply<million::cluster::ClusterSendMsg>(sender, session_id, &res);
 
         co_return;
     }
@@ -68,16 +62,14 @@ public:
     }
 
     MILLION_MSG_HANDLE(TestMsg, msg) {
-        Send<million::cluster::ClusterSendPacketWithNameMsg>(cluster_
+        Send<million::cluster::ClusterSendWithNameMsg>(cluster_
             , "TestService", msg->target_node, "TestService"
-            , proto_codec_.EncodeMessage(msg->req).value());
+            , &msg->req);
         co_return;
     }
 
 private:
     million::ServiceHandle cluster_;
-
-    million::ProtoCodec proto_codec_;
 };
 
 class TestApp : public million::IMillion {

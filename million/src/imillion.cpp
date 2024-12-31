@@ -117,6 +117,10 @@ Logger& IMillion::logger() {
     return impl_->logger();
 }
 
+ProtoMgr& IMillion::proto_mgr() {
+    return impl_->proto_mgr();
+}
+
 void IMillion::EnableSeparateWorker(const ServiceHandle& handle) {
     auto lock = handle.lock();
     if (!lock) {
