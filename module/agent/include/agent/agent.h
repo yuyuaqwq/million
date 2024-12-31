@@ -79,9 +79,9 @@ public:
         , user_session_id_(user_session_id) {}
 
 private:
-    MILLION_MSG_DISPATCH(AgentService);
+    // MILLION_MSG_DISPATCH(AgentService);
 
-    using GatewayRecvPacketMsg = gateway::GatewayRecvPacketMsg;
+    /*using GatewayRecvPacketMsg = gateway::GatewayRecvPacketMsg;
     MILLION_MSG_HANDLE(GatewayRecvPacketMsg, msg) {
         auto res = AgentLogicHandler::Instance().proto_codec_->DecodeMessage(msg->packet);
         if (!res) {
@@ -95,7 +95,7 @@ private:
         }
         co_await(*func)(this, std::move(res->msg.GetProtoMessage()));
         co_return;
-    }
+    }*/
 
 public:
     void SendToClient(const protobuf::Message& proto_msg) {

@@ -67,11 +67,19 @@ public:
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
             // imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
             if (recv_msg.IsType<GatewaySendPacketMsg>()) {
-                logger().Trace("GatewaySendPacketMsg: {}.", session_id);
+                logger().Trace("Gateway Recv ProtoMessage: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
+
+                // auto proto_msg = std::move(recv_msg.GetProtoMessage());
+                //auto packet = imillion().proto_mgr().codec().EncodeMessage(*proto_msg);
+                //if (!packet) {
+                //    logger().Err("Gateway Recv ProtoMessage EncodeMessage failed: {}.", session_id);
+                //    continue;
+                //}
                 auto msg = recv_msg.get<GatewaySendPacketMsg>();
                 user_session.Send(std::move(header_packet), net::PacketSpan(header_packet), header_packet.size() + msg->packet.size());
-                user_session.Send(std::move(msg->packet), net::PacketSpan(msg->packet), 0);
+                auto span = net::PacketSpan(msg->packet);
+                user_session.Send(std::move(msg->packet), span, 0);
             }
             else if (recv_msg.IsType<GatewaySureAgentMsg>()) {
                 auto msg = recv_msg.get<GatewaySureAgentMsg>();
@@ -81,7 +89,7 @@ public:
                 break;
             }
         } while (true);
-        co_return;
+        co_return nullptr;
     }
 
     MILLION_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
@@ -104,7 +112,7 @@ public:
 
             logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
-        co_return;
+        co_return nullptr;
     }
 
     MILLION_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
@@ -121,26 +129,34 @@ public:
             // todo: 需要断开原先token指向的连接
         }
         // 没有token
+
         auto span = net::PacketSpan(msg->packet.begin() + kGatewayHeaderSize, msg->packet.end());
+
+        // 将消息转发给本机节点的其他服务
+        auto res = imillion().proto_mgr().codec().DecodeMessage(span);
+        if (!res) {
+            co_return nullptr;
+        }
 
         // if (session->token == kInvaildToken) {
         if (!user_session.agent().lock()) {
             logger().Trace("packet send to user service.");
-            SendTo<GatewayRecvPacketMsg>(user_service_, user_session_id, std::move(msg->packet), span);
+            SendTo(user_service_, user_session_id, std::move(res->msg));
         }
         else {
             logger().Trace("packet send to agent service.");
-            Send<GatewayRecvPacketMsg>(user_session.agent(), std::move(msg->packet), span);
+            Send(user_session.agent(), std::move(res->msg));
         }
-        co_return;
+        co_return nullptr;
     }
 
     MILLION_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
         logger().Trace("GatewayRegisterUserServiceMsg.");
         user_service_ = msg->user_service;
-        Reply(sender, session_id, std::move(msg));
-        co_return;
+        co_return std::move(msg);
     }
+
+
 
 private:
     GatewayServer server_;

@@ -24,7 +24,7 @@ MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySureAgentMsg, (ServiceHandle) age
 MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySendPacketMsg, (net::Packet) packet);
 
 // send
-MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayRecvPacketMsg, (net::Packet) packet_raw, (net::PacketSpan) packet);
+// MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayRecvPacketMsg, (net::Packet) packet_raw, (net::PacketSpan) packet);
 
 } // namespace gateway
 } // namespace million
