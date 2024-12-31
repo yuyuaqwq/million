@@ -34,9 +34,6 @@ target_link_libraries(${AGENT_LIB} PRIVATE ${GATEWAY_LIB})
 
 target_include_directories(${AGENT_LIB} PRIVATE ${ASIO_HEADER_DIR})
 
-target_include_directories(${AGENT_LIB} PRIVATE ${DB_HEADER_DIR})
-target_link_libraries(${AGENT_LIB} PRIVATE ${DB_LIB})
-
 target_compile_definitions(${AGENT_LIB} PRIVATE ${MILLION_PROTOGEN_COMPILE_DEFINITIONS})
 target_include_directories(${AGENT_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
 target_link_libraries(${AGENT_LIB} PRIVATE ${MILLION_PROTOGEN_LIB})

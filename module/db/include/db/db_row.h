@@ -226,8 +226,6 @@ private:
         }
     }
 
-
-
 private:
     ProtoMsgUnique proto_msg_;
     std::vector<bool> dirty_fields_;

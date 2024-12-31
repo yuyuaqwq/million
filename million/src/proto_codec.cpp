@@ -59,7 +59,7 @@ std::optional<ProtoCodec::DecodeRes> ProtoCodec::DecodeMessage(net::PacketSpan p
     if (!msg_opt) return {};
     res.msg = std::move(*msg_opt);
 
-    auto success = res.msg.GetProtoMessage()->ParseFromArray(packet.data() + i, packet.size() - i);
+    auto success = res.msg->ParseFromArray(packet.data() + i, packet.size() - i);
     if (!success) {
         return std::nullopt;
     }
@@ -91,14 +91,14 @@ std::optional<MsgKey> ProtoCodec::GetMsgKey(const protobuf::Descriptor* desc) co
     return iter->second;
 }
 
-std::optional<MsgUnique> ProtoCodec::NewMessage(MsgId msg_id, SubMsgId sub_msg_id) const {
+std::optional<ProtoMsgUnique> ProtoCodec::NewMessage(MsgId msg_id, SubMsgId sub_msg_id) const {
     auto desc = GetMsgDesc(msg_id, sub_msg_id);
     if (!desc) return std::nullopt;
-    const ProtoMessage* msg = proto_mgr_.GetPrototype(*desc);
-    if (msg != nullptr) {
-        return MsgUnique(msg->New());
+    auto msg = proto_mgr_.NewMessage(*desc);
+    if (!msg) {
+        return std::nullopt;
     }
-    return std::nullopt;
+    return msg;
 }
 
 uint16_t ProtoCodec::host_to_network_short(uint16_t value) const {

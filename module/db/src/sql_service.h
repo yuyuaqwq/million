@@ -62,8 +62,7 @@ public:
             "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name",
             soci::use(table_name), soci::into(count);
         if (count > 0) {
-            Reply(sender, session_id, std::move(msg));
-            co_return;
+            co_return std::move(msg);
         }
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
@@ -232,8 +231,7 @@ public:
 
         sql_ << sql;
 
-        Reply(sender, session_id, std::move(msg));
-        co_return;
+        co_return std::move(msg);
     }
 
     MILLION_MSG_HANDLE(SqlQueryMsg, msg) {
@@ -262,7 +260,7 @@ public:
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
         if (!primary_key_field_desc) {
             logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
-            co_return;
+            co_return nullptr;
         }
 
         sql += " WHERE ";
@@ -274,8 +272,7 @@ public:
         auto it = rs.begin();
         if (it == rs.end()) {
             msg->success = false;
-            Reply(sender, session_id, std::move(msg));
-            co_return;
+            co_return std::move(msg);
         }
         const auto& row = *it;
         for (int i = 0; i < desc.field_count(); ++i) {
@@ -348,7 +345,7 @@ public:
 
         msg->success = true;
         Reply(sender, session_id, std::move(msg));
-        co_return;
+        co_return nullptr;
     }
 
     MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
@@ -357,7 +354,7 @@ public:
         const auto& reflection = msg->db_row->GetReflection();
         if (!desc.options().HasExtension(table)) {
             logger().Err("HasExtension table failed.");
-            co_return;
+            co_return nullptr;
         }
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         if (options.has_sql()) {
@@ -412,8 +409,7 @@ public:
 
         stmt.execute(true);
 
-        Reply(sender, session_id, std::move(msg));
-        co_return;
+        co_return std::move(msg);
     }
 
     MILLION_MSG_HANDLE(SqlUpdateMsg, msg) {
@@ -422,7 +418,7 @@ public:
         const auto& reflection = msg->db_row->GetReflection();
         if (!desc.options().HasExtension(table)) {
             logger().Err("HasExtension table failed.");
-            co_return;
+            co_return nullptr;
         }
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         if (options.has_sql()) {
@@ -460,8 +456,7 @@ public:
 
         stmt.execute(true);
 
-        Reply(sender, session_id, std::move(msg));
-        co_return;
+        co_return std::move(msg);
     }
 
 private:

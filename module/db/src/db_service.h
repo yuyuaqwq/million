@@ -23,73 +23,12 @@
 namespace million {
 namespace db {
 
-DbProtoCodec::DbProtoCodec(const ProtoMgr& proto_mgr)
-    : proto_mgr_(proto_mgr) {}
-
-// 初始化
-void DbProtoCodec::Init() {
-
-}
-
-const protobuf::FileDescriptor* DbProtoCodec::RegisterProto(const std::string& proto_file_name) {
-    auto file_desc = proto_mgr_.FindFileByName(proto_file_name);
-    if (!file_desc) {
-        return nullptr;
-    }
-
-    // 获取该文件的options，确认是否设置了db
-    const auto& file_options = file_desc->options();
-    // 检查 db 是否被设置
-    if (!file_options.HasExtension(::million::db::db)) {
-        return nullptr;
-    }
-    const auto& db_options = file_options.GetExtension(::million::db::db);
-
-    int message_count = file_desc->message_type_count();
-    for (int i = 0; i < message_count; i++) {
-        const auto* desc = file_desc->message_type(i);
-        if (!desc) continue;
-        const auto& msg_options = desc->options();
-        if (!msg_options.HasExtension(table)) {
-            continue;
-        }
-
-        const auto* msg = proto_mgr_.GetPrototype(*desc);
-        if (!msg) {
-            continue;
-        }
-
-        const auto& table_options = msg_options.GetExtension(table);
-        const auto& table_name = table_options.name();
-        // table_map_.emplace(table_name, desc);
-    }
-    return file_desc;
-}
-
-//const protobuf::Descriptor* DbProtoCodec::GetMsgDesc(const std::string& table_name) {
-//    auto iter = table_map_.find(table_name);
-//    if (iter == table_map_.end()) {
-//        return nullptr;
-//    }
-//    return iter->second;
-//}
-
-std::optional<ProtoMsgUnique> DbProtoCodec::NewMessage(const protobuf::Descriptor& desc) {
-    const auto* proto_msg = proto_mgr_.GetPrototype(desc);
-    if (proto_msg != nullptr) {
-        return ProtoMsgUnique(proto_msg->New());
-    }
-    return std::nullopt;
-}
-
-
 // DbService使用lru来淘汰row
 // 可能n秒脏row需要入库
 
 // 查询时，会返回所有权给外部服务，避免lru淘汰导致指针无效
 // 外部必须有一份数据，dbservice也可能有一份，但是会通过lru来自动淘汰
 // 外部修改后，通过发送标记脏消息来通知dbservice可以更新此消息
-
 
 MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (nonnull_ptr<DbRow>) db_row);
 
@@ -140,51 +79,15 @@ public:
         }
         auto sync_tick = msg->sync_tick;
         Timeout(sync_tick, std::move(msg));
-        co_return;
+        co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(DbRegisterProtoCodecMsg, msg) {
-        // proto_codec_ = msg->proto_codec.get();
-        Reply(sender, session_id, std::move(msg));
-        co_return;
-    }
-
-    MILLION_MSG_HANDLE(DbRegisterProtoMsg, msg) {
-        /*auto file_desc = proto_codec_->RegisterProto(msg->proto_file_name);
-
-        if (!file_desc) {
-            logger().Err("DbService RegisterProto failed: {}.", msg->proto_file_name);
-            co_return;
-        }
-        int message_count = file_desc->message_type_count();
-        for (int i = 0; i < message_count; i++) {
-            const auto* desc = file_desc->message_type(i);
-            if (!desc) continue;
-
-            const auto& msg_options = desc->options();
-            if (!msg_options.HasExtension(table)) {
-                continue;
-            }
-            const auto& table_options = msg_options.GetExtension(table);
-
-            co_await CallOrNull<SqlTableInitMsg>(sql_service_, *desc);
-
-            const auto& table_name = table_options.name();
-            logger().Info("SqlTableInitMsg success: {}", table_name);
-
-            msg->success = true;
-            break;
-        }
-
-        Reply(sender, session_id, std::move(msg));*/
-        co_return;
-    }
 
     MILLION_MSG_HANDLE(DbRowGetMsg, msg) {
         auto& desc = msg->table_desc; // proto_codec_.GetMsgDesc(msg->table_name);
         if (!desc.options().HasExtension(table)) {
             logger().Err("HasExtension table failed.");
-            co_return;
+            co_return std::move(msg);
         }
         const MessageOptionsTable& options = desc.options().GetExtension(table);
 
@@ -202,12 +105,11 @@ public:
                 break;
             }
 
-            /*auto proto_msg_opt = proto_codec_->NewMessage(desc);
-            if (!proto_msg_opt) {
-                logger().Err("proto_codec_.NewMessage failed.");
-                co_return;
+            auto proto_msg = imillion().proto_mgr().NewMessage(desc);
+            if (!proto_msg) {
+                logger().Err("proto_mgr().NewMessage failed.");
+                co_return nullptr;
             }
-            auto proto_msg = std::move(*proto_msg_opt);
 
             auto row = DbRow(std::move(proto_msg));
             auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, &row, false);
@@ -228,12 +130,12 @@ public:
             const MessageOptionsTable& options = desc.options().GetExtension(::million::db::table);
 
             auto sync_tick = options.sync_tick();
-            Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, &row_iter->second);*/
+            Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, &row_iter->second);
 
         } while (false);
         msg->db_row = row_iter->second;
 
-        Reply(sender, session_id, std::move(msg));
+        co_return std::move(msg);
     }
 
     MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
@@ -242,7 +144,7 @@ public:
         const auto& reflection = db_row->GetReflection();
         if (!desc.options().HasExtension(table)) {
             logger().Err("HasExtension table failed.");
-            co_return;
+            co_return nullptr;
         }
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         auto& table_name = options.name();
@@ -250,35 +152,34 @@ public:
         auto table_iter = tables_.find(&desc);
         if (table_iter == tables_.end()) {
             logger().Err("Table does not exist.");
-            co_return;
+            co_return nullptr;
         }
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
         if (!primary_key_field_desc) {
             logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
-            co_return;
+            co_return nullptr;
         }
         std::string primary_key;
         primary_key = reflection.GetStringReference(db_row->get(), primary_key_field_desc, &primary_key);
         if (primary_key.empty()) {
             logger().Err("primary_key is empty.");
-            co_return;
+            co_return nullptr;
         }
 
         auto row_iter = table_iter->second.find(primary_key);
         if (row_iter == table_iter->second.end()) {
             logger().Err("Row does not exist.");
-            co_return;
+            co_return nullptr;
         }
 
         row_iter->second.CopyFromDirty(*msg->db_row);
 
-        co_return;
+        co_return nullptr;
     }
 
 
 private:
-
     // 改用lru
     using DbTable = std::unordered_map<std::string, DbRow>;
     std::unordered_map<const protobuf::Descriptor*, DbTable> tables_;

@@ -54,13 +54,13 @@ public:
         const auto& reflection = msg->db_row->GetReflection();
         if (!desc.options().HasExtension(table)) {
             logger().Err("HasExtension table failed.");
-            co_return;
+            co_return nullptr;
         }
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         const auto& table_name = options.name();
         if (table_name.empty()) {
             logger().Err("table_name is empty.");
-            co_return;
+            co_return nullptr;
         }
 
         // 通过 Redis 哈希表存取 Protobuf 字段
@@ -84,28 +84,26 @@ public:
             msg->success = true;
         }
 
-        Reply(sender, session_id, std::move(msg));
-        co_return;
+        co_return std::move(msg);
     }
 
     MILLION_MSG_HANDLE(CacheSetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         if (!msg->db_row->IsDirty()) {
-            Reply(sender, session_id, std::move(msg));
-            co_return;
+            co_return std::move(msg);
         }
 
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
         if (!desc.options().HasExtension(table)) {
             logger().Err("HasExtension table failed.");
-            co_return;
+            co_return nullptr;
         }
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         const auto& table_name = options.name();
         if (table_name.empty()) {
             logger().Err("table_name is empty.");
-            co_return;
+            co_return nullptr;
         }
 
         int32_t ttl = 0;
@@ -118,12 +116,12 @@ public:
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
         if (!primary_key_field_desc) {
             logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
-            co_return;
+            co_return nullptr;
         }
         std::string primary_key = GetField(proto_msg, *primary_key_field_desc);
         if (primary_key.empty()) {
             logger().Err("primary_key is empty:{}.{}", table_name, options.primary_key());
-            co_return;
+            co_return nullptr;
         }
 
         // 使用 std::unordered_map 来存储要更新到 Redis 的字段和值
@@ -170,24 +168,21 @@ public:
             redis_->expire(redis_key.data(), ttl);
         }
 
-        Reply(sender, session_id, std::move(msg));
-        co_return;
+        co_return std::move(msg);
     }
 
     MILLION_MSG_HANDLE(CacheGetBytesMsg, msg) {
         auto value =  redis_->get("million_db:" + msg->key_value);
         if (!value) {
-            co_return;
+            co_return std::move(msg);
         }
         msg->key_value = std::move(*value);
-        Reply(sender, session_id, std::move(msg));
-        co_return;
+        co_return std::move(msg);
     }
 
     MILLION_MSG_HANDLE(CacheSetBytesMsg, msg) {
         msg->success = redis_->set("million_db:" + msg->key, msg->value);
-        Reply(sender, session_id, std::move(msg));
-        co_return;
+        co_return std::move(msg);
     }
 
 

@@ -46,6 +46,12 @@ public:
         return nullptr;
     }
 
+    ProtoMsgUnique NewMessage(const google::protobuf::Descriptor& desc) const {
+        auto prototype = GetPrototype(desc);
+        if (!prototype) return nullptr;
+        return ProtoMsgUnique(prototype->New());
+    }
+
     const ProtoCodec& codec() const { return codec_; }
     ProtoCodec& codec() { return codec_; }
 
