@@ -66,16 +66,23 @@ public:
         do {
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
             // imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
-            if (recv_msg.IsType<GatewaySendPacketMsg>()) {
+            if (recv_msg.IsProtoMessage()) {
                 logger().Trace("Gateway Recv ProtoMessage: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
 
-                // auto proto_msg = std::move(recv_msg.GetProtoMessage());
-                //auto packet = imillion().proto_mgr().codec().EncodeMessage(*proto_msg);
-                //if (!packet) {
-                //    logger().Err("Gateway Recv ProtoMessage EncodeMessage failed: {}.", session_id);
-                //    continue;
-                //}
+                auto proto_msg = std::move(recv_msg.GetProtoMessage());
+                auto packet = imillion().proto_mgr().codec().EncodeMessage(*proto_msg);
+                if (!packet) {
+                    logger().Err("Gateway Recv ProtoMessage EncodeMessage failed: {}.", session_id);
+                    continue;
+                }
+                user_session.Send(std::move(header_packet), net::PacketSpan(header_packet), header_packet.size() + packet->size());
+                auto span = net::PacketSpan(*packet);
+                user_session.Send(std::move(*packet), span, 0);
+            }
+            else if (recv_msg.IsType<GatewaySendPacketMsg>()) {
+                logger().Trace("Gateway Recv ProtoMessage: {}.", session_id);
+                auto header_packet = net::Packet(kGatewayHeaderSize);
                 auto msg = recv_msg.get<GatewaySendPacketMsg>();
                 user_session.Send(std::move(header_packet), net::PacketSpan(header_packet), header_packet.size() + msg->packet.size());
                 auto span = net::PacketSpan(msg->packet);
