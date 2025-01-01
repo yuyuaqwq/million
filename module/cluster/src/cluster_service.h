@@ -376,7 +376,7 @@ private:
         node_session->Send(std::move(size_packet), size_span, total_size);
     }
 
-    void PacketForward(NodeSession* node_session, ServiceName&& src_service, ServiceName&& target_service, const ProtoMessage& msg) {
+    void PacketForward(NodeSession* node_session, ServiceName&& src_service, ServiceName&& target_service, const ProtoMsg& msg) {
         auto packet_opt = imillion().proto_mgr().codec().EncodeMessage(msg);
         if (!packet_opt) {
             return;

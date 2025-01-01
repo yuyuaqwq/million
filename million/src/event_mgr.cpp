@@ -81,13 +81,13 @@ Task<> EventMgr::Call(const ServiceHandle& caller, MsgUnique msg, std::function<
 		auto session_id = imillion_->impl().Send(caller_lock, target_lock, MsgUnique(msg.Copy()));
 
 		if (msg.IsProtoMessage()) {
-			auto res = co_await imillion_->RecvOrNull<ProtoMessage>(session_id.value());
+			auto res = co_await imillion_->RecvOrNull<ProtoMsg>(session_id.value());
 			if (res && !res_handle(MsgUnique(res.release()))) {
 				break;
 			}
 		}
 		else if (msg.IsCppMessage()) {
-			auto res = co_await imillion_->RecvOrNull<CppMessage>(session_id.value());
+			auto res = co_await imillion_->RecvOrNull<CppMsg>(session_id.value());
 			if (res && !res_handle(MsgUnique(res.release()))) {
 				break;
 			}

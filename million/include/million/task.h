@@ -119,12 +119,12 @@ struct SessionAwaiter : public SessionAwaiterBase {
     std::unique_ptr<MsgT> await_resume() {
         auto msg = SessionAwaiterBase::await_resume();
         // 如果是基类，说明外部希望自己转换，不做类型检查
-        if constexpr (std::is_same_v<MsgT, ProtoMessage>) {
+        if constexpr (std::is_same_v<MsgT, ProtoMsg>) {
             if (!msg.IsProtoMessage()) {
                 throw TaskAbortException("Not ProtoMessage type.");
             }
         }
-        else if constexpr (std::is_same_v<MsgT, CppMessage>) {
+        else if constexpr (std::is_same_v<MsgT, CppMsg>) {
             if (!msg.IsCppMessage()) {
                 throw TaskAbortException("Not CppMessage type.");
             }

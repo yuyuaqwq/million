@@ -23,9 +23,7 @@ struct ServiceFuncContext {
 class JsModuleService : public million::IService {
 public:
     using Base = IService;
-    JsModuleService(million::IMillion* imillion, const million::ProtoMgr proto_mgr)
-        : Base(imillion)
-        , proto_mgr_(proto_mgr) {}
+    using Base::Base;
 
 private:
     virtual bool OnInit(million::MsgUnique msg) override {
@@ -310,7 +308,7 @@ public:
             JSValue resolve_func = resolving_funcs[0];
 
             while (func_ctx.waiting_session_id) {
-                auto res_msg = co_await Recv<million::ProtoMessage>(*func_ctx.waiting_session_id);
+                auto res_msg = co_await Recv<million::ProtoMsg>(*func_ctx.waiting_session_id);
 
                 // res_msg转js对象，唤醒
                 JSValue msg_obj = ProtoMsgToJsObj(*res_msg);
@@ -331,7 +329,7 @@ public:
     }
 
 private:
-    JSValue GetJsValueByProtoMsgField(const million::ProtoMessage& msg, const google::protobuf::Reflection& reflection, const google::protobuf::FieldDescriptor& field_desc) {
+    JSValue GetJsValueByProtoMsgField(const million::ProtoMsg& msg, const google::protobuf::Reflection& reflection, const google::protobuf::FieldDescriptor& field_desc) {
         JSValue js_value;
         switch (field_desc.type()) {
         case google::protobuf::FieldDescriptor::TYPE_DOUBLE:
@@ -390,7 +388,7 @@ private:
         return js_value;
     }
 
-    JSValue GetJsValueByProtoMsgRepeatedField(const million::ProtoMessage& msg, const google::protobuf::Reflection& reflection, const google::protobuf::FieldDescriptor& field_desc, size_t j) {
+    JSValue GetJsValueByProtoMsgRepeatedField(const million::ProtoMsg& msg, const google::protobuf::Reflection& reflection, const google::protobuf::FieldDescriptor& field_desc, size_t j) {
         JSValue js_value;
         switch (field_desc.type()) {
         case google::protobuf::FieldDescriptor::TYPE_DOUBLE:
@@ -449,7 +447,7 @@ private:
         return js_value;
     }
 
-    JSValue ProtoMsgToJsObj(const million::ProtoMessage& msg) {
+    JSValue ProtoMsgToJsObj(const million::ProtoMsg& msg) {
         JSValue obj = JS_NewObject(js_ctx_);
 
         const auto desc = msg.GetDescriptor();
@@ -474,7 +472,7 @@ private:
         return obj;
     }
 
-    void SetProtoMsgRepeatedFieldFromJsValue(million::ProtoMessage* msg
+    void SetProtoMsgRepeatedFieldFromJsValue(million::ProtoMsg* msg
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
         , JSValue repeated_value , size_t j) {
@@ -597,7 +595,7 @@ private:
         
     }
 
-    void SetProtoMsgFieldFromJsValue(million::ProtoMessage* msg
+    void SetProtoMsgFieldFromJsValue(million::ProtoMsg* msg
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
         , JSValue repeated_value) {
@@ -720,7 +718,7 @@ private:
     }
 
 
-    void JsObjToProtoMsg(million::ProtoMessage* msg, JSValue obj) {
+    void JsObjToProtoMsg(million::ProtoMsg* msg, JSValue obj) {
         const auto desc = msg->GetDescriptor();
         const auto reflection = msg->GetReflection();
 
@@ -848,7 +846,6 @@ private:
         }
         return module;
     }
-
 
 
 private:

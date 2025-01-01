@@ -12,14 +12,14 @@ using MsgTypeKey = uintptr_t;
 
 template <typename MsgT>
 inline MsgTypeKey GetMsgTypeKey() {
-    if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
+    if constexpr (std::is_base_of_v<ProtoMsg, MsgT>) {
         return reinterpret_cast<MsgTypeKey>(MsgT::GetDescriptor());
     }
-    else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
+    else if constexpr (std::is_base_of_v<CppMsg, MsgT>) {
         return reinterpret_cast<MsgTypeKey>(&MsgT::type_static());
     }
     else {
-        static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
+        static_assert(std::is_base_of_v<ProtoMsg, MsgT> || std::is_base_of_v<CppMsg, MsgT>,
             "Unsupported message type.");
     }
 }
@@ -31,10 +31,10 @@ public:
 
     MsgUnique(std::nullptr_t) {}
 
-    MsgUnique(ProtoMessage* msg)
+    MsgUnique(ProtoMsg* msg)
         : msg_unique_(ProtoMsgUnique(msg)) {}
 
-    MsgUnique(CppMessage* msg)
+    MsgUnique(CppMsg* msg)
         : msg_unique_(CppMsgUnique(msg)) {}
 
     MsgUnique(MsgUnique&&) = default;
@@ -145,14 +145,14 @@ private:
 
 template <typename MsgT, typename... Args>
 inline MsgUnique make_msg(Args&&... args) {
-    if constexpr (std::is_base_of_v<ProtoMessage, MsgT>) {
+    if constexpr (std::is_base_of_v<ProtoMsg, MsgT>) {
         return MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release());
     }
-    else if constexpr (std::is_base_of_v<CppMessage, MsgT>) {
+    else if constexpr (std::is_base_of_v<CppMsg, MsgT>) {
         return MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release());
     }
     else {
-        static_assert(std::is_base_of_v<ProtoMessage, MsgT> || std::is_base_of_v<CppMessage, MsgT>,
+        static_assert(std::is_base_of_v<ProtoMsg, MsgT> || std::is_base_of_v<CppMsg, MsgT>,
             "Unsupported message type.");
     }
 }

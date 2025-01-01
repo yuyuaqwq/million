@@ -12,21 +12,21 @@
 
 namespace million {
 	 
-class MILLION_API CppMessage {
+class MILLION_API CppMsg {
 public:
-	CppMessage() = default;
-    virtual ~CppMessage() = default;
+	CppMsg() = default;
+    virtual ~CppMsg() = default;
 
 	virtual const std::type_info& type() const { return type_static(); };
-	static const std::type_info& type_static() { return typeid(CppMessage); };
+	static const std::type_info& type_static() { return typeid(CppMsg); };
 
     template<typename MsgT>
     MsgT* get() { return static_cast<MsgT*>(this); }
 
-	virtual CppMessage* Copy() const { return new CppMessage(*this); };
+	virtual CppMsg* Copy() const { return new CppMsg(*this); };
 };
 
-using CppMsgUnique = std::unique_ptr<CppMessage>;
+using CppMsgUnique = std::unique_ptr<CppMsg>;
 
 // 生成一个逗号
 // (由COMMON_IF_NOT_END调用)
