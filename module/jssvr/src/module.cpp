@@ -17,6 +17,7 @@
 #include <quickjs/quickjs-libc.h>
 
 struct ServiceFuncContext {
+    JSValue* promise_cap;
     std::optional<million::SessionId> waiting_session_id;
 };
 
@@ -297,23 +298,35 @@ public:
             ServiceFuncContext func_ctx;
             JS_SetContextOpaque(js_ctx_, &func_ctx);
 
+            JSValue resolving_funcs[2];
+            JSValue promise_cap = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
+            JSValue resolve_func = resolving_funcs[0];
+            func_ctx.promise_cap = &promise_cap;
+
             JSValue msg_obj = ProtoMsgToJsObj(*msg.GetProtoMessage());
 
-            // 传入sender，session_id，msg
-            JSValue result;
-            result = JS_Call(js_ctx_, onMsg_func, JS_UNDEFINED, 1, &msg_obj);
-            if (!JsCheckException(result)) break;
+            JSValue promise = JS_Call(js_ctx_, onMsg_func, JS_UNDEFINED, 1, &msg_obj);
+            if (!JsCheckException(promise)) break;
+            
+            JSPromiseStateEnum state;
+            do {
+                state = JS_PromiseState(js_ctx_, promise);
+                if (state != JS_PROMISE_PENDING) {
+                    break;
+                }
 
-            JSValue resolving_funcs[2];
-            JSValue promise = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
-            JSValue resolve_func = resolving_funcs[0];
+                //if (!func_ctx.waiting_session_id) {
+                //    // logger
+                //    break;
+                //}
 
-            while (func_ctx.waiting_session_id) {
-                auto res_msg = co_await Recv<million::ProtoMsg>(*func_ctx.waiting_session_id);
+                // auto res_msg = co_await Recv<million::ProtoMsg>(*func_ctx.waiting_session_id);
+                auto res_msg = million::make_proto_msg<million::ss::test::LoginReq>();
+                res_msg->set_value("shabi666");
 
                 // res_msg转js对象，唤醒
                 JSValue msg_obj = ProtoMsgToJsObj(*res_msg);
-                result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
+                auto result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
                 if (!JsCheckException(result)) break;
 
                 func_ctx.waiting_session_id.reset();
@@ -323,8 +336,20 @@ public:
                 while (JS_ExecutePendingJob(js_rt_, &ctx_)) {
                     // 执行事件循环，直到没有更多的异步任务
                 }
+            } while (true);
+
+            if (state == JS_PROMISE_FULFILLED) {
+                // 获取返回值
+                auto result = JS_PromiseResult(js_ctx_, promise);
+                // co_return JsObjToProtoMsg();
+                co_return nullptr;
             }
+
+            // js_async_function_resumenc();
+
         } while (false);
+
+
         
         co_return nullptr;
     }
@@ -785,11 +810,11 @@ private:
     }
 
     static JSValue ServiceModuleCall(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
-        if (argc < 1) {
+       if (argc < 2) {
             return JS_ThrowTypeError(ctx, "ServiceModuleCall argc: %d.", argc);
         }
 
+       JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
         auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
 
         const char* service_name;
@@ -803,7 +828,7 @@ private:
 
         auto target = service->imillion().GetServiceByName(service_name);
         if (!target) {
-            return JS_ThrowInternalError(ctx, "ServiceModuleCall Service does not exist: %s .", service_name);
+            // return JS_ThrowInternalError(ctx, "ServiceModuleCall Service does not exist: %s .", service_name);
         }
 
         const char* msg_name;
@@ -820,8 +845,7 @@ private:
         // 发送消息，并将session_id传回
         // func_ctx->waiting_session_id = service->Send(*target, );
 
-        JSValue* promise = static_cast<JSValue*>(JS_GetContextOpaque(ctx));
-        return *promise;
+        return *func_ctx->promise_cap;
     }
 
     static JSCFunctionListEntry* ServiceModuleExportList(size_t* count) {
