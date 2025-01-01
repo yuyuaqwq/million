@@ -6,7 +6,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <google/protobuf/message.h>
-#include <protogen/ss/ss_test.pb.h>
+#include <ss/ss_test.pb.h>
 
 #include <million/imillion.h>
 #include <million/msg.h>

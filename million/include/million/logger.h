@@ -7,7 +7,7 @@
 #include <million/msg.h>
 #include <million/service_handle.h>
 
-#include <protogen/ss/ss_logger.pb.h>
+#include <ss/ss_logger.pb.h>
 
 namespace million {
 

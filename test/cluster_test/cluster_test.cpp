@@ -9,7 +9,7 @@
 #include <million/proto_codec.h>
 
 #include <protogen/protogen.h>
-#include <protogen/ss/ss_test.pb.h>
+#include <ss/ss_test.pb.h>
 
 namespace ss = million::ss;
 namespace protobuf = google::protobuf;

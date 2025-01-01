@@ -5,7 +5,7 @@
 #include <million/iservice.h>
 #include <million/proto_codec.h>
 
-#include <protogen/ss/ss_cluster.pb.h>
+#include <ss/ss_cluster.pb.h>
 
 #include <cluster/cluster.h>
 

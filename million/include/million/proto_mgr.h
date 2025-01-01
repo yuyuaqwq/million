@@ -1,7 +1,5 @@
 #pragma once
 
-#include <protogen/protogen.h>
-
 #include <million/api.h>
 #include <million/proto_codec.h>
 
@@ -13,8 +11,6 @@ public:
 
     void Init();
 
-    void RegisterMeta(const ProtoMeta& meta);
-
     const google::protobuf::FileDescriptor* FindFileByName(const std::string& proto_file_name) const;
 
     const google::protobuf::Message* GetPrototype(const google::protobuf::Descriptor& desc) const;
@@ -24,8 +20,11 @@ public:
     const ProtoCodec& codec() const { return codec_; }
     ProtoCodec& codec() { return codec_; }
 
+    static const google::protobuf::DescriptorPool& desc_pool();
+    static google::protobuf::DescriptorDatabase& desc_db();
+    static google::protobuf::MessageFactory& msg_factory();
+
 private:
-    std::vector<ProtoMeta> meta_list_;
     ProtoCodec codec_;
 };
 

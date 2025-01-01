@@ -18,7 +18,9 @@ if (WIN32)
 elseif(UNIX)
     set(MILLION_PROTOGEN_COMPILE_DEFINITIONS MILLION_PROTOGEN_API=__attribute__\(\(visibility\(\"hidden\"\)\)\) CACHE STRING "protobuf compile definitions")
 endif()
-set(MILLION_PROTOGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protogen CACHE STRING "protobuf header dir")
+set(MILLION_PROTOGEN_HEADER_DIR 
+    ${CMAKE_CURRENT_SOURCE_DIR}/protogen/include
+    CACHE STRING "protobuf header dir")
 set(MILLION_PROTOGEN_LIB million_protogen CACHE STRING "protobuf lib")
 
 if (WIN32)

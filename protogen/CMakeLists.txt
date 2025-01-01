@@ -2,20 +2,27 @@ cmake_minimum_required(VERSION 3.10)
 project(${MILLION_PROTOGEN_LIB})
 
 if(WIN32)
+    file(GLOB_RECURSE PRIVATE_HEADERS 
+        ./src/*.h
+        ./src/*.hpp
+        ./src/**/*.h
+        ./src/**/*.hpp)
+    source_group("Private Header Files" FILES ${PUBLIC_HEADERS})
     file(GLOB_RECURSE PUBLIC_HEADERS 
-        ./*.h
-        ./*.hpp
-        ./**/*.h
-        ./**/*.hpp)
-    source_group("Header Files" FILES ${PUBLIC_HEADERS})
+        ./include/*.h
+        ./include/*.hpp
+        ./include/**/*.h
+        ./include/**/*.hpp)
+    source_group("Public Header Files" FILES ${PUBLIC_HEADERS})
 endif()
 file(GLOB SRC
-    ./*.cpp
-    ./**/*.cpp
-    ./*.cc
-    ./**/*.cc)
+    ./src/*.cpp
+    ./src/**/*.cpp
+    ./src/*.cc
+    ./src/**/*.cc)
+add_library(${MILLION_PROTOGEN_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
-add_library(${MILLION_PROTOGEN_LIB} SHARED ${SRC})
+target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
 
 if (WIN32)
