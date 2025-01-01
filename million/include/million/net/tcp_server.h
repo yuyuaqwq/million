@@ -29,6 +29,8 @@ public:
     auto& on_msg() const { return on_msg_; }
     void set_on_msg(const TcpMsgFunc& on_msg) { on_msg_ = on_msg; }
 
+    IMillion& imillion() const { return *imillion_; }
+
     void Start(uint16_t port);
     void Stop();
     void RemoveConnection(std::list<TcpConnectionShared>::iterator iter);

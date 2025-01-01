@@ -33,7 +33,6 @@ public:
     std::optional<MsgElement> PopMsg();
     bool MsgQueueIsEmpty();
 
-    void Reply(TaskElement* ele);
     void ProcessMsg(MsgElement msg);
     void ProcessMsgs(size_t count);
     
@@ -67,6 +66,8 @@ public:
 private:
     void SeparateThreadHandle();
     std::optional<Service::MsgElement> PopMsgWithLock();
+
+    void ReplyMsg(TaskElement* ele);
 
 private:
     ServiceMgr* service_mgr_;

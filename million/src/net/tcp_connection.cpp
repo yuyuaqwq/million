@@ -13,9 +13,9 @@ TcpConnection::TcpConnection(
     , executor_(std::move(executor))
 {
     remote_endpoint_ = socket_.remote_endpoint();
-};
+}
 
-    TcpConnection::~TcpConnection() = default;
+TcpConnection::~TcpConnection() = default;
 
 void TcpConnection::Close() {
     std::lock_guard guard(close_mutex_);
@@ -41,17 +41,19 @@ void TcpConnection::Process(bool call_on_connection) {
                     , asio::buffer(&total_packet_size, sizeof(total_packet_size))
                     , asio::use_awaitable);
                 if (bytes_read != sizeof(total_packet_size)) {
+                    server_->imillion().logger().Err("TCP connection cannot correctly read data length.");
                     break;
                 }
                 total_packet_size = asio::detail::socket_ops::network_to_host_long(total_packet_size);
                 if (total_packet_size > kPacketMaxSize) {
                     // 不正确的数据，直接断开
+                    server_->imillion().logger().Err("TCP connection read incorrect abnormal data length: {}.", total_packet_size);
                     break;
                 }
 
                 // 避免恶意total_packet_size
-                constexpr uint32_t max_read_size = 1024 * 64;
-                constexpr uint32_t max_expansion_size = 1024 * 1024 * 64;
+                constexpr uint32_t max_read_size = 1024 * 64;   // 64k
+                constexpr uint32_t max_expansion_size = 1024 * 1024 * 1;       // 单次增长最多1m
                 auto packet = Packet(std::min(total_packet_size, max_read_size));
                 uint32_t total_bytes_read = 0;
                 while (total_bytes_read < total_packet_size) {
@@ -71,6 +73,7 @@ void TcpConnection::Process(bool call_on_connection) {
                         asio::buffer(packet.data() + total_bytes_read, chunk_size),
                         asio::use_awaitable);
                     if (bytes_read != chunk_size) {
+                        server_->imillion().logger().Err("TCP connection read failed, bytes_read:{}, chunk_size{}.", bytes_read, chunk_size);
                         break;
                     }
                     total_bytes_read += bytes_read;
@@ -82,7 +85,8 @@ void TcpConnection::Process(bool call_on_connection) {
                 }
             }
         }
-        catch (std::exception&) {
+        catch (std::exception& e) {
+            server_->imillion().logger().Err("TCP connection processing exception: {}", e.what());
         }
         Close();
         if (on_connection) {
@@ -133,9 +137,12 @@ void TcpConnection::Send(Packet&& packet, PacketSpan span, uint32_t total_size) 
                 }
             } while (true);
         }
-        //catch (const std::exception& e) {
-        //}
+        catch (const std::exception& e) {
+            self->server_->imillion().logger().Err("TCP connection send exception: {}", e.what());
+            self->Close();
+        }
         catch (...) {
+            self->server_->imillion().logger().Err("TCP connection send exception.");
             self->Close();
         }
     }, asio::detached);

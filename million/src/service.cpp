@@ -46,19 +46,6 @@ bool Service::MsgQueueIsEmpty() {
     return msgs_.empty();
 }
 
-void Service::Reply(TaskElement* ele) {
-    if (!ele->task.coroutine.promise().result_value) {
-        service_mgr_->million().logger().Err("This task has no return value: {}.", ele->session_id);
-        return;
-    }
-    auto reply_msg = std::move(*ele->task.coroutine.promise().result_value);
-    if (!reply_msg) {
-        // co_return nullptr;
-        return;
-    }
-    service_mgr()->Send(*iter_, ele->sender, SessionSendToReplyId(ele->session_id), std::move(reply_msg));
-}
-
 void Service::ProcessMsg(MsgElement ele) {
     auto& sender = ele.sender;
     auto session_id = ele.session_id;
@@ -75,7 +62,7 @@ void Service::ProcessMsg(MsgElement ele) {
         if (ele) {
             // 已完成OnStart
             state_ = kRunning;
-            Reply(&*ele);
+            ReplyMsg(&*ele);
         }
         return;
     }
@@ -141,7 +128,7 @@ void Service::ProcessMsg(MsgElement ele) {
 
         // 已完成OnStart
         state_ = kRunning;
-        Reply(&std::get<TaskElement>(res));
+        ReplyMsg(&std::get<TaskElement>(res));
         return;
     }
 
@@ -157,7 +144,7 @@ void Service::ProcessMsg(MsgElement ele) {
             return;
         }
         // 已完成的任务
-        Reply(&std::get<TaskElement>(res));
+        ReplyMsg(&std::get<TaskElement>(res));
     }
     else if (SessionIsSendId(session_id)) {
         auto task = iservice_->OnMsg(ServiceHandle(sender), session_id, std::move(msg));
@@ -166,7 +153,7 @@ void Service::ProcessMsg(MsgElement ele) {
             return;
         }
         // 已完成的任务
-        Reply(&*ele);
+        ReplyMsg(&*ele);
     }
 }
 
@@ -224,6 +211,19 @@ std::optional<Service::MsgElement> Service::PopMsgWithLock() {
     msgs_.pop();
     assert(msg.msg);
     return msg;
+}
+
+void Service::ReplyMsg(TaskElement* ele) {
+    if (!ele->task.coroutine.promise().result_value) {
+        service_mgr_->million().logger().Err("Task has no return value: {}.", ele->session_id);
+        return;
+    }
+    auto reply_msg = std::move(*ele->task.coroutine.promise().result_value);
+    if (!reply_msg) {
+        // co_return nullptr;
+        return;
+    }
+    service_mgr()->Send(*iter_, ele->sender, SessionSendToReplyId(ele->session_id), std::move(reply_msg));
 }
 
 
