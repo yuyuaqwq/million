@@ -5,6 +5,6 @@
 
 namespace million {
 
-extern "C" MILLION_PROTOGEN_API const ProtoMeta & GetProtoMeta();
+extern "C" MILLION_PROTOGEN_API const ProtoMeta& GetProtoMeta();
 
 } // namespace million

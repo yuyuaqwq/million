@@ -113,7 +113,6 @@ Service* ServiceMgr::PopService() {
         service_queue_cv_.wait(lock);
     }
     if (!run_) return nullptr;
-    // std::cout << "wake up" << std::endl;
     auto* service = service_queue_.front();
     assert(service);
     service_queue_.pop();

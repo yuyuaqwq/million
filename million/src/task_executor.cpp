@@ -30,7 +30,7 @@ std::variant<MsgUnique, TaskElement, TaskElement*> TaskExecutor::TrySchedule(Ses
     if (msg_opt) {
         // find找到的task，却未处理，异常情况
         auto& million = service_->service_mgr()->million();
-        million.logger().Critical("[million] try schedule exception: {}.", session_id);
+        million.logger().Critical("Try schedule exception: {}.", session_id);
     }
     if (!iter->second.task.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
@@ -52,10 +52,10 @@ std::optional<TaskElement> TaskExecutor::AddTask(TaskElement&& ele) {
             ele.task.rethrow_if_exception();
         }
         catch (const std::exception& e) {
-            million.logger().Err("Session exception: {}.", e.what());
+            million.logger().Err("Session exception: {}", e.what());
         }
         catch (...) {
-            million.logger().Err("Session exception: {}.", "unknown exception");
+            million.logger().Err("Session exception: {}", "unknown exception.");
         }
     }
     if (!ele.task.coroutine.done()) {
@@ -116,7 +116,7 @@ std::optional<MsgUnique> TaskExecutor::TrySchedule(TaskElement& ele, SessionId s
             million.logger().Err("Session {} exception: {}", session_id, e.what());
         }
         catch (...) {
-            million.logger().Err("Session {} exception: {}", session_id, "unknown exception");
+            million.logger().Err("Session {} exception: {}", session_id, "unknown exception.");
         }
     }
     return std::nullopt;
@@ -136,7 +136,7 @@ TaskElement* TaskExecutor::Push(SessionId id, TaskElement&& ele) {
     auto res = tasks_.emplace(id, std::move(ele));
     if (!res.second) {
         // throw std::runtime_error("Duplicate session id.");
-        million.logger().Err("Found duplicate session id: {}", id);
+        million.logger().Err("Found duplicate session id: {}.", id);
         return nullptr;
     }
     return &res.first->second;

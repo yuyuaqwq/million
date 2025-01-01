@@ -42,7 +42,7 @@ asio::awaitable<std::optional<TcpConnectionShared>> TcpServer::ConnectTo(std::st
         co_return handle;
     }
     catch (const std::exception& e) {
-        // std::cerr << "Error: " << e.what() << std::endl;
+        imillion().logger().Err("Tcp server ConnectTo exception: {}", e.what());
     }
     co_return std::nullopt;
 }
@@ -76,7 +76,7 @@ asio::awaitable<void> TcpServer::Listen(uint16_t port) {
             handle->Process(true);
         }
         catch (const std::exception& e) {
-            // std::cerr << "Error: " << e.what() << std::endl;
+            imillion().logger().Err("Tcp server Listen exception: {}", e.what());
         }
     }
     co_return;

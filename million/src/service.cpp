@@ -80,7 +80,7 @@ void Service::ProcessMsg(MsgElement ele) {
             service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", e.what());
         }
         catch (...) {
-            service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", "unknown exception");
+            service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", "unknown exception.");
         }
         return;
     }
@@ -98,7 +98,7 @@ void Service::ProcessMsg(MsgElement ele) {
             service_mgr_->million().logger().Err("Service OnExit exception occurred: {}", e.what());
         }
         catch (...) {
-            service_mgr_->million().logger().Err("Service OnExit exception occurred: {}", "unknown exception");
+            service_mgr_->million().logger().Err("Service OnExit exception occurred: {}", "unknown exception.");
         }
         return;
     }

@@ -141,10 +141,6 @@ void TcpConnection::Send(Packet&& packet, PacketSpan span, uint32_t total_size) 
             self->server_->imillion().logger().Err("TCP connection send exception: {}", e.what());
             self->Close();
         }
-        catch (...) {
-            self->server_->imillion().logger().Err("TCP connection send exception.");
-            self->Close();
-        }
     }, asio::detached);
 }
 

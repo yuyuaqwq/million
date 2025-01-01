@@ -101,7 +101,7 @@ private:
     SessionId user_session_id_;
 };
 
-#define MILLION_AGENT_LOGIC_REGISTER_PROTO(PROTO_FILE_NAME, NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
+#define MILLION_AGENT_LOGIC_REGISTER_PROTO(PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \
     const bool _MILLION_AGENT_LOGIC_HANDLE_REGISTER_PROTO_##MSG_ID_ = \
         [] { \
             ::million::agent::AgentLogicHandler::Instance().RegisterProto(PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_); \
