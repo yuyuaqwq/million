@@ -13,13 +13,17 @@ IMillion::~IMillion() {
     delete impl_;
 }
 
-bool IMillion::Start(std::string_view config_path) {
+bool IMillion::Init(std::string_view config_path) {
     auto success = impl_->Init(config_path);
     if (!success) {
         return false;
     }
     impl_->Start();
     return true;
+}
+
+void IMillion::Start() {
+    impl_->Start();
 }
 
 

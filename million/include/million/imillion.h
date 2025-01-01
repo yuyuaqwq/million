@@ -31,7 +31,8 @@ public:
     IMillion();
     virtual ~IMillion();
 
-    bool Start(std::string_view config_path);
+    bool Init(std::string_view config_path);
+    void Start();
 
     std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice, MsgUnique init_msg);
     template <typename IServiceT, typename ...Args>

@@ -13,11 +13,14 @@ class TestApp : public million::IMillion {
 
 int main() {
     auto test_app = std::make_unique<TestApp>();
-    if (!test_app->Start("jssvr_test_config.yaml")) {
+    if (!test_app->Init("jssvr_test_config.yaml")) {
         return 0;
     }
-
+    test_app->Start();
     std::this_thread::sleep_for(std::chrono::seconds(10000));
+
+
+
 
     return 0;
 }

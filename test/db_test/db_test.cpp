@@ -37,7 +37,7 @@ public:
     }
 
     virtual million::Task<million::MsgUnique> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
-        auto user = std::make_unique<million::db::example::User>();
+        auto user = million::make_proto_msg<million::db::example::User>();
         user->set_id(100);
         user->set_password_hash("sadawd");
         user->set_is_active(true);
@@ -83,9 +83,10 @@ class TestApp : public million::IMillion {
 
 int main() {
     auto test_app = std::make_unique<TestApp>();
-    if (!test_app->Start("db_test_config.yaml")) {
+    if (!test_app->Init("db_test_config.yaml")) {
         return 0;
     }
+    test_app->Start();
 
     auto service_opt = test_app->NewService<TestService>();
     if (!service_opt) {

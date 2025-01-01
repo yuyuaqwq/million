@@ -32,7 +32,7 @@ public:
     static inline const std::string_view user = "root";
     static inline const std::string_view password = "You_Yu666";
 
-    virtual bool OnInit(million::MsgUnique msg) override {
+    virtual bool OnInit(MsgUnique msg) override {
         try {
             sql_ = soci::session(soci::mysql, std::format("db={} user={} password={} host={}", db, user, password, host));
         }
@@ -45,7 +45,7 @@ public:
         return true;
     }
 
-    virtual void OnStop(::million::ServiceHandle sender, ::million::SessionId session_id) override {
+    virtual void OnStop(ServiceHandle sender, SessionId session_id) override {
         sql_.close();
     }
 

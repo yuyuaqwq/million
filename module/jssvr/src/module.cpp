@@ -184,8 +184,6 @@ public:
     //            // 获取消息类型的全名
     //            const std::string& full_name = message_desc->full_name();
 
-
-
     //            // 比较全名
     //            /*if (message_full_name == name) {
 
@@ -282,6 +280,11 @@ public:
 
         JSModuleDef* js_main_module = (JSModuleDef*)JS_VALUE_GET_PTR(js_main_module_);
 
+        auto desc = msg.GetProtoMessage()->GetDescriptor();
+        auto& full_name = desc->full_name();
+
+        
+
         do {
             // 获取模块的 namespace 对象
             JSValue space = JS_GetModuleNamespace(js_ctx_, js_main_module);
@@ -327,7 +330,10 @@ public:
     }
 
 private:
-    JSValue GetJsValueByProtoMsgField(const million::ProtoMsg& msg, const google::protobuf::Reflection& reflection, const google::protobuf::FieldDescriptor& field_desc) {
+    JSValue GetJsValueByProtoMsgField(const million::ProtoMsg& msg
+        , const google::protobuf::Reflection& reflection
+        , const google::protobuf::FieldDescriptor& field_desc)
+    {
         JSValue js_value;
         switch (field_desc.type()) {
         case google::protobuf::FieldDescriptor::TYPE_DOUBLE:
@@ -386,7 +392,11 @@ private:
         return js_value;
     }
 
-    JSValue GetJsValueByProtoMsgRepeatedField(const million::ProtoMsg& msg, const google::protobuf::Reflection& reflection, const google::protobuf::FieldDescriptor& field_desc, size_t j) {
+    JSValue GetJsValueByProtoMsgRepeatedField(const million::ProtoMsg& msg
+        , const google::protobuf::Reflection& reflection
+        , const google::protobuf::FieldDescriptor& field_desc
+        , size_t j)
+    {
         JSValue js_value;
         switch (field_desc.type()) {
         case google::protobuf::FieldDescriptor::TYPE_DOUBLE:
@@ -473,7 +483,8 @@ private:
     void SetProtoMsgRepeatedFieldFromJsValue(million::ProtoMsg* msg
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
-        , JSValue repeated_value , size_t j) {
+        , JSValue repeated_value , size_t j)
+    {
         switch (field_desc.type()) {
         case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
             if (!JS_IsNumber(repeated_value)) {
@@ -596,7 +607,8 @@ private:
     void SetProtoMsgFieldFromJsValue(million::ProtoMsg* msg
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
-        , JSValue repeated_value) {
+        , JSValue repeated_value)
+    {
         switch (field_desc.type()) {
         case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
             if (!JS_IsNumber(repeated_value)) {
