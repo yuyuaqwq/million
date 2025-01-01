@@ -9,48 +9,17 @@ namespace million {
 
 class MILLION_API ProtoMgr {
 public:
-    ProtoMgr() 
-        : codec_(*this) {}
+    ProtoMgr();
 
-    void Init() {
-        RegisterMeta(GetProtoMeta());
-    }
+    void Init();
 
-    void RegisterMeta(const ProtoMeta& meta) {
-        meta_list_.emplace_back(meta);
-    }
+    void RegisterMeta(const ProtoMeta& meta);
 
-    const google::protobuf::FileDescriptor* FindFileByName(const std::string& proto_file_name) const {
-        for (const auto& meta : meta_list_) {
-            //std::vector<std::string> file_names;
-            //meta.desc_db().FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
-            //for (const std::string& filename : file_names) {
-            //    const protobuf::FileDescriptor* file_desc = meta.desc_pool().FindFileByName(filename);
-            //}
+    const google::protobuf::FileDescriptor* FindFileByName(const std::string& proto_file_name) const;
 
-            auto file_desc = meta.desc_pool().FindFileByName(proto_file_name);
-            if (file_desc) {
-                return file_desc;
-            }
-        }
-        return nullptr;
-    }
+    const google::protobuf::Message* GetPrototype(const google::protobuf::Descriptor& desc) const;
 
-    const google::protobuf::Message* GetPrototype(const google::protobuf::Descriptor& desc) const {
-        for (const auto& meta : meta_list_) {
-            auto prototype = meta.msg_factory().GetPrototype(&desc);
-            if (prototype) {
-                return prototype;
-            }
-        }
-        return nullptr;
-    }
-
-    ProtoMsgUnique NewMessage(const google::protobuf::Descriptor& desc) const {
-        auto prototype = GetPrototype(desc);
-        if (!prototype) return nullptr;
-        return ProtoMsgUnique(prototype->New());
-    }
+    ProtoMsgUnique NewMessage(const google::protobuf::Descriptor& desc) const;
 
     const ProtoCodec& codec() const { return codec_; }
     ProtoCodec& codec() { return codec_; }

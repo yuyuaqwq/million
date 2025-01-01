@@ -283,7 +283,7 @@ public:
         auto desc = msg.GetProtoMessage()->GetDescriptor();
         auto& full_name = desc->full_name();
 
-        
+        imillion().proto_mgr().FindFileByName("sb");
 
         do {
             // 获取模块的 namespace 对象
