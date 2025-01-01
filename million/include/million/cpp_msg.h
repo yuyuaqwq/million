@@ -119,7 +119,7 @@ using CppMsgUnique = std::unique_ptr<CppMsg>;
 
 // 数据定义的主宏
 #define MILLION_MSG_DEFINE(API_, NAME_, ...) \
-    class API_ NAME_ : public ::million::CppMessage { \
+    class API_ NAME_ : public ::million::CppMsg { \
 	public: \
         NAME_() = delete; \
 		NAME_(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
@@ -127,14 +127,14 @@ using CppMsgUnique = std::unique_ptr<CppMsg>;
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \
-		virtual CppMessage* Copy() const override { return new NAME_(*this); } \
+		virtual CppMsg* Copy() const override { return new NAME_(*this); } \
 		template<size_t index> struct MetaFieldData; \
 		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
 		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
 	};
 
 #define MILLION_MSG_DEFINE_NONCOPYABLE(API_, NAME_, ...) \
-    class API_ NAME_ : public ::million::CppMessage { \
+    class API_ NAME_ : public ::million::CppMsg { \
 	public: \
         NAME_() = delete; \
 		NAME_(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
@@ -142,14 +142,14 @@ using CppMsgUnique = std::unique_ptr<CppMsg>;
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \
-		virtual CppMessage* Copy() const override { throw std::runtime_error("Non copy messages."); } \
+		virtual CppMsg* Copy() const override { throw std::runtime_error("Non copy messages."); } \
 		template<size_t index> struct MetaFieldData; \
 		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
 		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
 	};
 
 #define MILLION_MSG_DEFINE_EMPTY(API_, NAME_) \
-    class API_ NAME_ : public ::million::CppMessage { \
+    class API_ NAME_ : public ::million::CppMsg { \
 	public: \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \

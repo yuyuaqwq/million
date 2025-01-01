@@ -200,8 +200,6 @@ public:
     //}
 
 private:
-    const million::ProtoMgr& proto_mgr_;
-
     std::vector<std::string> jssvr_dirs_;
     std::unordered_map<JSContext*, std::unordered_map<std::string, JSValue>> loaded_module_;
     std::unordered_map<std::filesystem::path, std::vector<uint8_t>> module_bytecodes_map_;
