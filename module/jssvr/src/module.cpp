@@ -341,16 +341,48 @@ public:
             if (state == JS_PROMISE_FULFILLED) {
                 // 获取返回值
                 auto result = JS_PromiseResult(js_ctx_, promise);
-                // co_return JsObjToProtoMsg();
-                co_return nullptr;
+                if (!JsCheckException(result)) break;
+
+                if (!JS_IsArray(js_ctx_, result)) {
+                    logger().Err("Need to return an array.");
+                }
+
+                int64_t length = 0;
+                if (JS_GetLength(js_ctx_, result, &length)) {
+                    logger().Err("JS_GetLength failed.");
+                }
+
+                if (length < 2) {
+                    logger().Err("Need message name and object.");
+                }
+
+                // 解析result，第一个是message name，第二个是js_obj
+
+                auto msg_name = JS_GetPropertyUint32(js_ctx_, result, 0);
+
+                if (!JS_IsString(msg_name)) {
+                    logger().Err("message name must be a string.");
+                }
+                auto msg_name_cstr = JS_ToCString(js_ctx_, msg_name);
+                if (!msg_name_cstr) {
+                    logger().Err("message name to cstring failed.");
+                }
+
+                auto msg_obj = JS_GetPropertyUint32(js_ctx_, result, 1);
+                if (!JS_IsObject(msg_obj)) {
+                    logger().Err("message must be an object.");
+                }
+
+                auto res_msg = million::make_proto_msg<million::ss::test::LoginRes>();
+
+                JsObjToProtoMsg(res_msg.get(), msg_obj);
+                co_return std::move(res_msg);
             }
 
             // js_async_function_resumenc();
 
         } while (false);
 
-
-        
         co_return nullptr;
     }
 
@@ -506,6 +538,7 @@ private:
     }
 
     void SetProtoMsgRepeatedFieldFromJsValue(million::ProtoMsg* msg
+        , const google::protobuf::Descriptor& desc
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
         , JSValue repeated_value , size_t j)
@@ -513,7 +546,7 @@ private:
         switch (field_desc.type()) {
         case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
             if (!JS_IsNumber(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a number.", desc.name(), field_desc.name(), j);
             }
             double value;
             if (JS_ToFloat64(js_ctx_, &value, repeated_value) == 0) {
@@ -523,7 +556,7 @@ private:
         }
         case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
             if (!JS_IsNumber(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a number.", desc.name(), field_desc.name(), j);
             }
             double value;
             if (JS_ToFloat64(js_ctx_, &value, repeated_value) == 0) {
@@ -535,7 +568,7 @@ private:
         case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
         case google::protobuf::FieldDescriptor::TYPE_SINT64: {
             if (!JS_IsBigInt(js_ctx_, repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a bigint.", desc.name(), field_desc.name(), j);
             }
             int64_t value;
             if (JS_ToBigInt64(js_ctx_, &value, repeated_value) == 0) {
@@ -546,7 +579,7 @@ private:
         case google::protobuf::FieldDescriptor::TYPE_UINT64:
         case google::protobuf::FieldDescriptor::TYPE_FIXED64: {
             if (!JS_IsBigInt(js_ctx_, repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a bigint.", desc.name(), field_desc.name(), j);
             }
             uint64_t value;
             if (JS_ToBigUint64(js_ctx_, &value, repeated_value) == 0) {
@@ -558,7 +591,7 @@ private:
         case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
         case google::protobuf::FieldDescriptor::TYPE_SINT32: {
             if (!JS_IsNumber(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a number.", desc.name(), field_desc.name(), j);
             }
             int32_t value;
             if (JS_ToInt32(js_ctx_, &value, repeated_value) == 0) {
@@ -569,7 +602,7 @@ private:
         case google::protobuf::FieldDescriptor::TYPE_UINT32:
         case google::protobuf::FieldDescriptor::TYPE_FIXED32: {
             if (!JS_IsNumber(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a number.", desc.name(), field_desc.name(), j);
             }
             uint32_t value;
             if (JS_ToUint32(js_ctx_, &value, repeated_value) == 0) {
@@ -579,23 +612,26 @@ private:
         }
         case google::protobuf::FieldDescriptor::TYPE_BOOL: {
             if (!JS_IsBool(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a bool.", desc.name(), field_desc.name(), j);
             }
             reflection.AddBool(msg, &field_desc, JS_ToBool(js_ctx_, repeated_value));
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_STRING: {
             if (!JS_IsString(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a string.", desc.name(), field_desc.name(), j);
             }
             const char* str = JS_ToCString(js_ctx_, repeated_value);
+            if (!str) {
+                THROW_TaskAbortException("Field {}.{}[{}] to cstring failed.", desc.name(), field_desc.name(), j);
+            }
             reflection.AddString(msg, &field_desc, str);
             JS_FreeCString(js_ctx_, str);
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_BYTES: {
             if (!JS_IsArrayBuffer(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a array buffer.", desc.name(), field_desc.name(), j);
             }
 
             size_t size;
@@ -605,7 +641,7 @@ private:
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
             if (!JS_IsNumber(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a number.", desc.name(), field_desc.name(), j);
             }
             int32_t value;
             if (JS_ToInt32(js_ctx_, &value, repeated_value) == 0) {
@@ -615,7 +651,7 @@ private:
         }
         case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
             if (!JS_IsObject(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{}[{}] is not a object.", desc.name(), field_desc.name(), j);
             }
 
             JSValue sub_obj = repeated_value;
@@ -624,12 +660,14 @@ private:
             break;
         }
         default:
+            THROW_TaskAbortException("Field {}.{}[{}] cannot convert type.", desc.name(), field_desc.name(), j);
             break;
         }
         
     }
 
     void SetProtoMsgFieldFromJsValue(million::ProtoMsg* msg
+        , const google::protobuf::Descriptor& desc
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
         , JSValue repeated_value)
@@ -637,7 +675,7 @@ private:
         switch (field_desc.type()) {
         case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
             if (!JS_IsNumber(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
             double value;
             if (JS_ToFloat64(js_ctx_, &value, repeated_value) == 0) {
@@ -647,7 +685,7 @@ private:
         }
         case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
             if (!JS_IsNumber(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
             double value;
             if (JS_ToFloat64(js_ctx_, &value, repeated_value) == 0) {
@@ -659,7 +697,7 @@ private:
         case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
         case google::protobuf::FieldDescriptor::TYPE_SINT64: {
             if (!JS_IsBigInt(js_ctx_, repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a bigint.", desc.name(), desc.name(), field_desc.name());
             }
             int64_t value;
             if (JS_ToBigInt64(js_ctx_, &value, repeated_value) == 0) {
@@ -670,7 +708,7 @@ private:
         case google::protobuf::FieldDescriptor::TYPE_UINT64:
         case google::protobuf::FieldDescriptor::TYPE_FIXED64: {
             if (!JS_IsBigInt(js_ctx_, repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a bigint.", desc.name(), field_desc.name());
             }
             uint64_t value;
             if (JS_ToBigUint64(js_ctx_, &value, repeated_value) == 0) {
@@ -682,7 +720,7 @@ private:
         case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
         case google::protobuf::FieldDescriptor::TYPE_SINT32: {
             if (!JS_IsNumber(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
             int32_t value;
             if (JS_ToInt32(js_ctx_, &value, repeated_value) == 0) {
@@ -693,7 +731,7 @@ private:
         case google::protobuf::FieldDescriptor::TYPE_UINT32:
         case google::protobuf::FieldDescriptor::TYPE_FIXED32: {
             if (!JS_IsNumber(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
             uint32_t value;
             if (JS_ToUint32(js_ctx_, &value, repeated_value) == 0) {
@@ -703,23 +741,26 @@ private:
         }
         case google::protobuf::FieldDescriptor::TYPE_BOOL: {
             if (!JS_IsBool(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a bool.", desc.name(), field_desc.name());
             }
             reflection.SetBool(msg, &field_desc, JS_ToBool(js_ctx_, repeated_value));
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_STRING: {
             if (!JS_IsString(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a string.", desc.name(), field_desc.name());
             }
             const char* str = JS_ToCString(js_ctx_, repeated_value);
+            if (!str) {
+                THROW_TaskAbortException("Field {}.{} to cstring failed.", desc.name(), field_desc.name());
+            }
             reflection.SetString(msg, &field_desc, str);
             JS_FreeCString(js_ctx_, str);
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_BYTES: {
             if (!JS_IsArrayBuffer(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a array buffer.", desc.name(), field_desc.name());
             }
 
             size_t size;
@@ -729,7 +770,7 @@ private:
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
             if (!JS_IsNumber(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
             int32_t value;
             if (JS_ToInt32(js_ctx_, &value, repeated_value) == 0) {
@@ -739,7 +780,7 @@ private:
         }
         case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
             if (!JS_IsObject(repeated_value)) {
-
+                THROW_TaskAbortException("Field {}.{} is not a object.", desc.name(), field_desc.name());
             }
             JSValue sub_obj = repeated_value;
             auto sub_msg = reflection.MutableMessage(msg, &field_desc);
@@ -747,6 +788,7 @@ private:
             break;
         }
         default:
+            THROW_TaskAbortException("Field {}.{} cannot convert type.", desc.name(), field_desc.name());
             break;
         }
 
@@ -769,11 +811,11 @@ private:
             if (field_desc->is_repeated()) {
                 for (size_t j = 0; j < reflection->FieldSize(*msg, field_desc); ++j) {
                     JSValue repeated_value = JS_GetPropertyUint32(js_ctx_, field_value, j);
-                    SetProtoMsgRepeatedFieldFromJsValue(msg, *reflection, *field_desc, repeated_value, j);
+                    SetProtoMsgRepeatedFieldFromJsValue(msg, *desc, *reflection, *field_desc, repeated_value, j);
                 }
             }
             else {
-                SetProtoMsgFieldFromJsValue(msg, *reflection, *field_desc, field_value);
+                SetProtoMsgFieldFromJsValue(msg, *desc, *reflection, *field_desc, field_value);
             }
         }
     }
@@ -898,8 +940,6 @@ extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
     auto handle = imillion->NewService<JsModuleService>();
 
     handle = imillion->NewService<JsService>(handle->get_ptr<JsModuleService>(handle->lock()));
-
-    ss::test::LoginReq req;
 
     imillion->Send<ss::test::LoginReq>(*handle, *handle, "shabi");
 

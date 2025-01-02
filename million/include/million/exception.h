@@ -38,6 +38,6 @@ private:
 #endif
 };
 
-#define THROW_TaskAbortException(fmt, ...)  throw TaskAbortException(::std::format(fmt, __VA_ARGS__))
+#define THROW_TaskAbortException(fmt, ...)  throw ::million::TaskAbortException(::std::format(fmt, __VA_ARGS__))
 
 } // namespace million

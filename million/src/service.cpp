@@ -214,6 +214,10 @@ std::optional<Service::MsgElement> Service::PopMsgWithLock() {
 }
 
 void Service::ReplyMsg(TaskElement* ele) {
+    if (ele->task.has_exception()) {
+        return;
+    }
+
     if (!ele->task.coroutine.promise().result_value) {
         service_mgr_->million().logger().Err("Task has no return value: {}.", ele->session_id);
         return;

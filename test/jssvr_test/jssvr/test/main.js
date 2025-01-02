@@ -26,5 +26,5 @@ export async function onMsg(msg) {
     console.log("onMsg called " + msg.value);
     let recv_msg = await service.call("test", "test")
     console.log("recv_msg called " + recv_msg.value);
-    return 102123112;
+    return ["sb", {value: 1}];
 }
