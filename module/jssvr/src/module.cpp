@@ -240,7 +240,12 @@ public:
 
             js_module_service_->InitModule(js_ctx_);
             if (!CreateServiceModule(js_ctx_)) {
-                logger().Err("InitModule failed.");
+                logger().Err("CreateServiceModule failed.");
+                break;
+            }
+
+            if (!CreateLoggerModule(js_ctx_)) {
+                logger().Err("CreateLoggerModule failed.");
                 break;
             }
 
@@ -278,13 +283,9 @@ public:
             // 只处理proto msg
             co_return nullptr;
         }
+        auto proto_msg = std::move(msg.GetProtoMessage());
 
         JSModuleDef* js_main_module = (JSModuleDef*)JS_VALUE_GET_PTR(js_main_module_);
-
-        auto desc = msg.GetProtoMessage()->GetDescriptor();
-        auto& full_name = desc->full_name();
-
-        imillion().proto_mgr().FindFileByName("sb");
 
         do {
             // 获取模块的 namespace 对象
@@ -303,9 +304,10 @@ public:
             JSValue resolve_func = resolving_funcs[0];
             func_ctx.promise_cap = &promise_cap;
 
-            JSValue msg_obj = ProtoMsgToJsObj(*msg.GetProtoMessage());
-
-            JSValue promise = JS_Call(js_ctx_, onMsg_func, JS_UNDEFINED, 1, &msg_obj);
+            JSValue par[2];
+            par[0] = JS_NewString(js_ctx_, proto_msg->GetDescriptor()->full_name().c_str());
+            par[1] = ProtoMsgToJsObj(*proto_msg);
+            JSValue promise = JS_Call(js_ctx_, onMsg_func, JS_UNDEFINED, 2, par);
             if (!JsCheckException(promise)) break;
             
             JSPromiseStateEnum state;
@@ -315,14 +317,12 @@ public:
                     break;
                 }
 
-                //if (!func_ctx.waiting_session_id) {
-                //    // logger
-                //    break;
-                //}
+                if (!func_ctx.waiting_session_id) {
+                    // logger
+                    break;
+                }
 
-                // auto res_msg = co_await Recv<million::ProtoMsg>(*func_ctx.waiting_session_id);
-                auto res_msg = million::make_proto_msg<million::ss::test::LoginReq>();
-                res_msg->set_value("shabi666");
+                auto res_msg = co_await Recv<million::ProtoMsg>(*func_ctx.waiting_session_id);
 
                 // res_msg转js对象，唤醒
                 JSValue msg_obj = ProtoMsgToJsObj(*res_msg);
@@ -345,41 +345,54 @@ public:
 
                 if (!JS_IsArray(js_ctx_, result)) {
                     logger().Err("Need to return an array.");
+                    break;
                 }
 
                 int64_t length = 0;
                 if (JS_GetLength(js_ctx_, result, &length)) {
                     logger().Err("JS_GetLength failed.");
+                    break;
                 }
 
                 if (length < 2) {
                     logger().Err("Need message name and object.");
+                    break;
                 }
 
                 // 解析result，第一个是message name，第二个是js_obj
-
                 auto msg_name = JS_GetPropertyUint32(js_ctx_, result, 0);
 
                 if (!JS_IsString(msg_name)) {
                     logger().Err("message name must be a string.");
+                    break;
                 }
                 auto msg_name_cstr = JS_ToCString(js_ctx_, msg_name);
                 if (!msg_name_cstr) {
                     logger().Err("message name to cstring failed.");
+                    break;
                 }
 
                 auto msg_obj = JS_GetPropertyUint32(js_ctx_, result, 1);
                 if (!JS_IsObject(msg_obj)) {
                     logger().Err("message must be an object.");
+                    break;
                 }
 
-                auto res_msg = million::make_proto_msg<million::ss::test::LoginRes>();
+                auto desc = imillion().proto_mgr().FindMessageTypeByName(msg_name_cstr);
+                if (!desc) {
+                    logger().Err("Invalid message type.");
+                    break;
+                }
 
-                JsObjToProtoMsg(res_msg.get(), msg_obj);
-                co_return std::move(res_msg);
+                auto ret_msg = imillion().proto_mgr().NewMessage(*desc);
+                if (!ret_msg) {
+                    logger().Err("New message failed.");
+                    break;
+                }
+
+                JsObjToProtoMsg(ret_msg.get(), msg_obj);
+                co_return std::move(ret_msg);
             }
-
-            // js_async_function_resumenc();
 
         } while (false);
 
@@ -845,18 +858,16 @@ private:
 
     static JSValue ServiceModuleSend(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         JsService* service = static_cast<JsService*>(JS_GetContextOpaque(ctx));
-        //js_std_eval_binary
 
-        //service->Send();
         return JSValue();
     }
 
     static JSValue ServiceModuleCall(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
        if (argc < 3) {
             return JS_ThrowTypeError(ctx, "ServiceModuleCall argc: %d.", argc);
-        }
+       }
 
-       JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
         auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
 
         const char* service_name;
@@ -870,7 +881,7 @@ private:
 
         auto target = service->imillion().GetServiceByName(service_name);
         if (!target) {
-            // return JS_ThrowInternalError(ctx, "ServiceModuleCall Service does not exist: %s .", service_name);
+            return JS_ThrowInternalError(ctx, "ServiceModuleCall Service does not exist: %s .", service_name);
         }
 
         const char* msg_name;
@@ -886,12 +897,18 @@ private:
             return JS_ThrowTypeError(ctx, "ServiceModuleCall 3 argument must be a object.");
         }
 
-
-
-        // 根据msg_name来创建消息
+        auto desc = service->imillion().proto_mgr().FindMessageTypeByName(msg_name);
+        if (!desc) {
+            return JS_ThrowTypeError(ctx, "ServiceModuleCall 2 argument Invalid message type.");
+        }
+        
+        auto msg = service->imillion().proto_mgr().NewMessage(*desc);
+        if (!msg) {
+            return JS_ThrowTypeError(ctx, "new message failed.");
+        }
 
         // 发送消息，并将session_id传回
-        // func_ctx->waiting_session_id = service->Send(*target, );
+        func_ctx->waiting_session_id = service->Send(*target, std::move(msg));
 
         return *func_ctx->promise_cap;
     }
@@ -924,6 +941,60 @@ private:
         JS_AddModuleExportList(js_ctx, module, list, count);
         if (!js_module_service_->AddModule(js_ctx, "service", module)) {
             logger().Err("JsAddModule failed: {}.", "service");
+            return nullptr;
+        }
+        return module;
+    }
+
+
+    static JSValue LoggerModuleErr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc < 1) {
+            return JS_ThrowTypeError(ctx, "LoggerModuleErr argc: %d.", argc);
+        }
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+        
+        const char* info;
+        if (!JS_IsString(argv[0])) {
+            return JS_ThrowTypeError(ctx, "ServiceModuleCall 1 argument must be a string.");
+        }
+        info = JS_ToCString(ctx, argv[0]);
+        if (!info) {
+            return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
+        }
+
+        service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_ERR, info);
+
+        return JSValue();
+    }
+
+    static JSCFunctionListEntry* LoggerModuleExportList(size_t* count) {
+        static JSCFunctionListEntry list[] = {
+            JS_CFUNC_DEF("err", 1, LoggerModuleErr),
+        };
+        *count = sizeof(list) / sizeof(JSCFunctionListEntry);
+        return list;
+    }
+
+    static int LoggerModuleInit(JSContext* ctx, JSModuleDef* m) {
+        // 导出函数到模块
+
+        size_t count = 0;
+        auto list = LoggerModuleExportList(&count);
+        return JS_SetModuleExportList(ctx, m, list, count);
+    }
+
+    JSModuleDef* CreateLoggerModule(JSContext* js_ctx) {
+        JSModuleDef* module = JS_NewCModule(js_ctx, "logger", LoggerModuleInit);
+        if (!module) {
+            logger().Err("JS_NewCModule failed: {}.", "logger");
+            return nullptr;
+        }
+        size_t count = 0;
+        auto list = LoggerModuleExportList(&count);
+        JS_AddModuleExportList(js_ctx, module, list, count);
+        if (!js_module_service_->AddModule(js_ctx, "logger", module)) {
+            logger().Err("JsAddModule failed: {}.", "logger");
             return nullptr;
         }
         return module;

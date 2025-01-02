@@ -6,7 +6,17 @@ ProtoMgr::ProtoMgr()
     : codec_(*this) {}
 
 void ProtoMgr::Init() {
-    
+    std::vector<std::string> file_names;
+    desc_db().FindAllFileNames(&file_names);
+    for (const std::string& file_name : file_names) {
+        const protobuf::FileDescriptor* file_desc = desc_pool().FindFileByName(file_name);
+    }
+
+    std::vector<std::string> msg_names;
+    desc_db().FindAllMessageNames(&msg_names);
+    for (const std::string& msg_name : msg_names) {
+        const protobuf::Descriptor* desc = desc_pool().FindMessageTypeByName(msg_name);
+    }
 }
 
 const google::protobuf::DescriptorPool& ProtoMgr::desc_pool() {
@@ -24,19 +34,12 @@ google::protobuf::MessageFactory& ProtoMgr::msg_factory() {
     return *msg_factory;
 }
 
-const google::protobuf::FileDescriptor* ProtoMgr::FindFileByName(const std::string& proto_file_name) const {
-    //std::vector<std::string> file_names;
-    //desc_db().FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
-    //for (const std::string& filename : file_names) {
-    //    const protobuf::FileDescriptor* file_desc = desc_pool().FindFileByName(filename);
-    //}
+const google::protobuf::FileDescriptor* ProtoMgr::FindFileByName(const std::string& name) const {
+    return desc_pool().FindFileByName(name);
+}
 
-    auto file_desc = desc_pool().FindFileByName(proto_file_name);
-    if (file_desc) {
-        return file_desc;
-    }
-    
-    return nullptr;
+const google::protobuf::Descriptor* ProtoMgr::FindMessageTypeByName(const std::string& name) const {
+    return desc_pool().FindMessageTypeByName(name);
 }
 
 const google::protobuf::Message* ProtoMgr::GetPrototype(const google::protobuf::Descriptor& desc) const {

@@ -2,6 +2,7 @@ import * as std from 'std';
 import * as os from 'os';
 //import * as sb666 from 'sb666';
 import * as service from 'service';
+import * as logger from 'logger';
 
 service.send()
 var console = {}
@@ -22,9 +23,9 @@ var a = false
 os.setTimeout(()=>{std.printf('AAB\n')}, 2000)
 std.printf(a + "\n")
 
-export async function onMsg(msg) {
-    console.log("onMsg called " + msg.value);
-    let recv_msg = await service.call("test", "test", {value: 1})
-    console.log("recv_msg called " + recv_msg.value);
-    return ["sb", {value: 1}];
+export async function onMsg(msg_type, msg) {
+    logger.err(`onMsg: ${msg_type}, ${msg.value}`);
+    let recv_msg = await service.call("TestService", "million.ss.test.LoginReq", {value: "test req"})
+    logger.err(`recv_msg ${recv_msg.value}`);
+    return ["million.ss.test.LoginRes", {value: "test res"}];
 }

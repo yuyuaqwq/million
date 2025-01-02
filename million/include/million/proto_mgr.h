@@ -11,14 +11,16 @@ public:
 
     void Init();
 
-    const google::protobuf::FileDescriptor* FindFileByName(const std::string& proto_file_name) const;
-
-    const google::protobuf::Message* GetPrototype(const google::protobuf::Descriptor& desc) const;
+    const google::protobuf::FileDescriptor* FindFileByName(const std::string& name) const;
+    const google::protobuf::Descriptor* FindMessageTypeByName(const std::string& name) const;
 
     ProtoMsgUnique NewMessage(const google::protobuf::Descriptor& desc) const;
 
     const ProtoCodec& codec() const { return codec_; }
     ProtoCodec& codec() { return codec_; }
+
+private:
+    const google::protobuf::Message* GetPrototype(const google::protobuf::Descriptor& desc) const;
 
     static const google::protobuf::DescriptorPool& desc_pool();
     static google::protobuf::DescriptorDatabase& desc_db();
@@ -26,6 +28,8 @@ public:
 
 private:
     ProtoCodec codec_;
+
+    std::unordered_map<std::string, const google::protobuf::Descriptor*> msg_name_map_;
 };
 
 
