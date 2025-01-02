@@ -219,7 +219,7 @@ void Service::ReplyMsg(TaskElement* ele) {
     }
 
     if (!ele->task.coroutine.promise().result_value) {
-        service_mgr_->million().logger().Err("Task has no return value: {}.", ele->session_id);
+        service_mgr_->million().logger().Err("Task Session {} has no return value.", ele->session_id);
         return;
     }
     auto reply_msg = std::move(*ele->task.coroutine.promise().result_value);
