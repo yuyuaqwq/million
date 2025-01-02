@@ -6,7 +6,6 @@
 
 #include <cluster/cluster.h>
 
-#include <protogen/protogen.h>
 #include <ss/ss_test.pb.h>
 
 namespace ss = million::ss;

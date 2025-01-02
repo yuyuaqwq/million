@@ -1,11 +1,6 @@
 # 环境
 ## Protobuf
-### Windows
-```
-./vcpkg install protobuf
-./vcpkg integrate install
-```
-- 指定build.bat中的 vcpkg.cmake 路径
+- 确保是动态链接，否则ProtoCodec无法正常工作
 
 ## MySQL
 ### Windows

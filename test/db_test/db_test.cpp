@@ -7,7 +7,6 @@
 #include <db/db.h>
 #include <db/sql.h>
 
-#include <protogen/protogen.h>
 #include <db/db_options.pb.h>
 #include <db/db_example.pb.h>
 

@@ -1,14 +1,12 @@
 #include <million/proto_mgr.h>
 
-#include <protogen/protogen.h>
-
 namespace million {
 
 ProtoMgr::ProtoMgr()
     : codec_(*this) {}
 
 void ProtoMgr::Init() {
-    ProtogenInit();
+    
 }
 
 const google::protobuf::DescriptorPool& ProtoMgr::desc_pool() {
