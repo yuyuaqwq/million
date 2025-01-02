@@ -150,7 +150,7 @@ private:
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
     ::million::Task<::million::MsgUnique> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique MILLION_MSG_) { \
-        co_return co_await _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release()))); \
+        return _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release()))); \
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \

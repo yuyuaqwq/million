@@ -11,28 +11,27 @@ void ProtoMgr::Init() {
     ProtogenInit();
 }
 
-
 const google::protobuf::DescriptorPool& ProtoMgr::desc_pool() {
-    static const auto* pool = google::protobuf::DescriptorPool::generated_pool();
-    return *pool;
+    static auto desc_pool = google::protobuf::DescriptorPool::generated_pool();
+    return *desc_pool;
 }
 
 google::protobuf::DescriptorDatabase& ProtoMgr::desc_db() {
-    static auto* db = desc_pool().internal_generated_database();
-    return *db;
+    static auto desc_db = desc_pool().internal_generated_database();
+    return *desc_db;
 }
 
 google::protobuf::MessageFactory& ProtoMgr::msg_factory() {
-    static auto* factory = google::protobuf::MessageFactory::generated_factory();
-    return *factory;
+    static auto msg_factory = google::protobuf::MessageFactory::generated_factory();
+    return *msg_factory;
 }
 
 const google::protobuf::FileDescriptor* ProtoMgr::FindFileByName(const std::string& proto_file_name) const {
-    std::vector<std::string> file_names;
-    desc_db().FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
-    for (const std::string& filename : file_names) {
-        const protobuf::FileDescriptor* file_desc = desc_pool().FindFileByName(filename);
-    }
+    //std::vector<std::string> file_names;
+    //desc_db().FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
+    //for (const std::string& filename : file_names) {
+    //    const protobuf::FileDescriptor* file_desc = desc_pool().FindFileByName(filename);
+    //}
 
     auto file_desc = desc_pool().FindFileByName(proto_file_name);
     if (file_desc) {

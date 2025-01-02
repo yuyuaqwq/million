@@ -14,12 +14,7 @@ IMillion::~IMillion() {
 }
 
 bool IMillion::Init(std::string_view config_path) {
-    auto success = impl_->Init(config_path);
-    if (!success) {
-        return false;
-    }
-    impl_->Start();
-    return true;
+    return impl_->Init(config_path);
 }
 
 void IMillion::Start() {

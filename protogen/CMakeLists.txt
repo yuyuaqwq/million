@@ -31,5 +31,6 @@ elseif(UNIX)
     target_compile_definitions(${MILLION_PROTOGEN_LIB} PRIVATE MILLION_PROTOGEN_API=__attribute__\(\(visibility\(\"default\"\)\)\))
  endif()
 
+target_compile_definitions(${MILLION_PROTOGEN_LIB} PRIVATE PROTOBUF_USE_DLLS)
 target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
 target_link_libraries(${MILLION_PROTOGEN_LIB} PRIVATE ${PROTOBUF_LIB})

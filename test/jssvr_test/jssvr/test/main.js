@@ -24,7 +24,7 @@ std.printf(a + "\n")
 
 export async function onMsg(msg) {
     console.log("onMsg called " + msg.value);
-    let recv_msg = await service.call("test", "test")
+    let recv_msg = await service.call("test", "test", {value: 1})
     console.log("recv_msg called " + recv_msg.value);
     return ["sb", {value: 1}];
 }

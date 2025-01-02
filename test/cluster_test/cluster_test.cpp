@@ -6,8 +6,6 @@
 
 #include <cluster/cluster.h>
 
-#include <million/proto_codec.h>
-
 #include <protogen/protogen.h>
 #include <ss/ss_test.pb.h>
 
@@ -78,6 +76,10 @@ int main() {
         return 0;
     }
     test_app->Start();
+
+
+
+    test_app->proto_mgr().codec().RegisterFile("ss/ss_test.proto", million::ss::msg_id, million::ss::test::sub_msg_id);
 
     auto service_opt = test_app->NewService<TestService>();
     if (!service_opt) {

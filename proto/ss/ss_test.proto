@@ -6,7 +6,7 @@ import "google/protobuf/descriptor.proto";
 import "ss/ss_msgid.proto";
 
 enum SubMsgId {
-    option (msg_id) = MSG_ID_TEST;
+    option (million.ss.msg_id) = MSG_ID_TEST;
     
     SUB_MSG_ID_INVALID = 0;
     SUB_MSG_ID_LOGIN_REQ = 1;
