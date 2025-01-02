@@ -852,7 +852,7 @@ private:
     }
 
     static JSValue ServiceModuleCall(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-       if (argc < 2) {
+       if (argc < 3) {
             return JS_ThrowTypeError(ctx, "ServiceModuleCall argc: %d.", argc);
         }
 
@@ -881,6 +881,12 @@ private:
         if (!msg_name) {
             return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert 2 argument to string.");
         }
+
+        if (!JS_IsObject(argv[2])) {
+            return JS_ThrowTypeError(ctx, "ServiceModuleCall 3 argument must be a object.");
+        }
+
+
 
         // 根据msg_name来创建消息
 
