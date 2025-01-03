@@ -23,9 +23,26 @@ var a = false
 os.setTimeout(()=>{std.printf('AAB\n')}, 2000)
 std.printf(a + "\n")
 
+function printStack() {
+    try {
+        throw new Error("Stack trace");
+    } catch (e) {
+        const stack = e.stack.split("\n");
+        const currentFrame = stack[2]; // 第二行是调用 printStack 的堆栈帧
+        console.log(stack); // 打印当前的函数调用堆栈
+    }
+}
+
+function testFunction() {
+    printStack(); // 在这里调用 printStack
+}
+
+testFunction();
+
+
 export async function onMsg(msg_type, msg) {
-    logger.err(`onMsg: ${msg_type}, ${msg.value}`);
+    logger.info(`onMsg: ${msg_type}, ${msg.value}`);
     let recv_msg = await service.call("TestService", "million.ss.test.LoginReq", {value: "test req"})
-    logger.err(`recv_msg ${recv_msg.value}`);
+    logger.info(`recv_msg ${recv_msg.value}`);
     return ["million.ss.test.LoginRes", {value: "test res"}];
 }

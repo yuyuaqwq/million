@@ -17,7 +17,7 @@
 #include <quickjs/quickjs-libc.h>
 
 struct ServiceFuncContext {
-    JSValue* promise_cap;
+    JSValue promise_cap = { JS_UNDEFINED };
     std::optional<million::SessionId> waiting_session_id;
 };
 
@@ -174,30 +174,6 @@ public:
         return module;
     }
 
-    //const million::ProtoMessage* GetMsgByName(std::string_view name) {
-    //    std::vector<std::string> file_names;
-    //    desc_db_.FindAllFileNames(&file_names);   // 遍历得到所有proto文件名
-    //    for (const std::string& filename : file_names) {
-    //        const google::protobuf::FileDescriptor* file_desc = desc_pool_.FindFileByName(filename);
-    //        for (int i = 0; i < file_desc->message_type_count(); ++i) {
-    //            const google::protobuf::Descriptor* message_desc = file_desc->message_type(i);
-
-    //            // 获取消息类型的全名
-    //            const std::string& full_name = message_desc->full_name();
-
-    //            // 比较全名
-    //            /*if (message_full_name == name) {
-
-    //            }*/
-    //        }
-    //    }
-    //}
-
-
-    //million::ProtoMsgUnique MakeMsg(std::string_view msg_name) {
-    //    
-    //}
-
 private:
     std::vector<std::string> jssvr_dirs_;
     std::unordered_map<JSContext*, std::unordered_map<std::string, JSValue>> loaded_module_;
@@ -250,8 +226,7 @@ public:
             }
 
             js_main_module_ = js_module_service_->LoadModule(js_ctx_, "", "test/main");
-            // js_main_module_ = js_module_service_->LoadModule(js_ctx_, "", "test/main");
-            // js_byte_code_dump
+
             if (!JsCheckException(js_main_module_)) break;
             
             success = true;
@@ -287,27 +262,31 @@ public:
 
         JSModuleDef* js_main_module = (JSModuleDef*)JS_VALUE_GET_PTR(js_main_module_);
 
+        JSValue space = { JS_UNDEFINED };
+        JSValue onMsg_func = { JS_UNDEFINED };
+        JSValue par[2] = { JS_UNDEFINED };
+        ServiceFuncContext func_ctx;
+        JSValue promise = { JS_UNDEFINED };
+        JSValue result = { JS_UNDEFINED };
+
         do {
             // 获取模块的 namespace 对象
-            JSValue space = JS_GetModuleNamespace(js_ctx_, js_main_module);
+            space = JS_GetModuleNamespace(js_ctx_, js_main_module);
             if (!JsCheckException(space)) break;
 
-            JSValue onMsg_func = JS_GetPropertyStr(js_ctx_, space, "onMsg");
+            onMsg_func = JS_GetPropertyStr(js_ctx_, space, "onMsg");
             if (!JsCheckException(onMsg_func)) break;
             if (!JS_IsFunction(js_ctx_, onMsg_func)) break;
 
-            ServiceFuncContext func_ctx;
             JS_SetContextOpaque(js_ctx_, &func_ctx);
 
             JSValue resolving_funcs[2];
-            JSValue promise_cap = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
+            func_ctx.promise_cap = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
             JSValue resolve_func = resolving_funcs[0];
-            func_ctx.promise_cap = &promise_cap;
 
-            JSValue par[2];
             par[0] = JS_NewString(js_ctx_, proto_msg->GetDescriptor()->full_name().c_str());
             par[1] = ProtoMsgToJsObj(*proto_msg);
-            JSValue promise = JS_Call(js_ctx_, onMsg_func, JS_UNDEFINED, 2, par);
+            promise = JS_Call(js_ctx_, onMsg_func, JS_UNDEFINED, 2, par);
             if (!JsCheckException(promise)) break;
             
             JSPromiseStateEnum state;
@@ -326,7 +305,8 @@ public:
 
                 // res_msg转js对象，唤醒
                 JSValue msg_obj = ProtoMsgToJsObj(*res_msg);
-                auto result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
+                result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
+                JS_FreeValue(js_ctx_, msg_obj);
                 if (!JsCheckException(result)) break;
 
                 func_ctx.waiting_session_id.reset();
@@ -340,11 +320,15 @@ public:
 
             if (state == JS_PROMISE_FULFILLED) {
                 // 获取返回值
-                auto result = JS_PromiseResult(js_ctx_, promise);
+                result = JS_PromiseResult(js_ctx_, promise);
                 if (!JsCheckException(result)) break;
 
+                if (JS_IsUndefined(result)) {
+                    break;
+                }
+
                 if (!JS_IsArray(js_ctx_, result)) {
-                    logger().Err("Need to return an array.");
+                    logger().Err("Need to return undefined or array.");
                     break;
                 }
 
@@ -372,12 +356,6 @@ public:
                     break;
                 }
 
-                auto msg_obj = JS_GetPropertyUint32(js_ctx_, result, 1);
-                if (!JS_IsObject(msg_obj)) {
-                    logger().Err("message must be an object.");
-                    break;
-                }
-
                 auto desc = imillion().proto_mgr().FindMessageTypeByName(msg_name_cstr);
                 if (!desc) {
                     logger().Err("Invalid message type.");
@@ -390,12 +368,26 @@ public:
                     break;
                 }
 
+                auto msg_obj = JS_GetPropertyUint32(js_ctx_, result, 1);
+                if (!JS_IsObject(msg_obj)) {
+                    logger().Err("message must be an object.");
+                    break;
+                }
+
                 JsObjToProtoMsg(ret_msg.get(), msg_obj);
                 co_return std::move(ret_msg);
             }
 
         } while (false);
 
+        JS_FreeValue(js_ctx_, space);
+        JS_FreeValue(js_ctx_, onMsg_func);
+        JS_FreeValue(js_ctx_, par[0]);
+        JS_FreeValue(js_ctx_, par[1]);
+        JS_FreeValue(js_ctx_, func_ctx.promise_cap);
+        JS_FreeValue(js_ctx_, promise);
+        JS_FreeValue(js_ctx_, result);
+        
         co_return nullptr;
     }
 
@@ -870,47 +862,64 @@ private:
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
         auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
 
-        const char* service_name;
-        if (!JS_IsString(argv[0])) {
-            return JS_ThrowTypeError(ctx, "ServiceModuleCall 1 argument must be a string.");
-        }
-        service_name = JS_ToCString(ctx, argv[0]);
-        if (!service_name) {
-            return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
-        }
+        const char* service_name = nullptr;
+        const char* msg_name = nullptr;
 
-        auto target = service->imillion().GetServiceByName(service_name);
-        if (!target) {
-            return JS_ThrowInternalError(ctx, "ServiceModuleCall Service does not exist: %s .", service_name);
-        }
+        JSValue result = func_ctx->promise_cap;
+        do {
+            if (!JS_IsString(argv[0])) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleCall 1 argument must be a string.");
+                break;
+            }
+            service_name = JS_ToCString(ctx, argv[0]);
+            if (!service_name) {
+                result = JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
+                break;
+            }
 
-        const char* msg_name;
-        if (!JS_IsString(argv[1])) {
-            return JS_ThrowTypeError(ctx, "ServiceModuleCall 2 argument must be a string.");
-        }
-        msg_name = JS_ToCString(ctx, argv[1]);
-        if (!msg_name) {
-            return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert 2 argument to string.");
-        }
+            auto target = service->imillion().GetServiceByName(service_name);
+            if (!target) {
+                result = JS_ThrowInternalError(ctx, "ServiceModuleCall Service does not exist: %s .", service_name);
+                break;
+            }
 
-        if (!JS_IsObject(argv[2])) {
-            return JS_ThrowTypeError(ctx, "ServiceModuleCall 3 argument must be a object.");
-        }
 
-        auto desc = service->imillion().proto_mgr().FindMessageTypeByName(msg_name);
-        if (!desc) {
-            return JS_ThrowTypeError(ctx, "ServiceModuleCall 2 argument Invalid message type.");
-        }
+            if (!JS_IsString(argv[1])) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleCall 2 argument must be a string.");
+                break;
+            }
+            msg_name = JS_ToCString(ctx, argv[1]);
+            if (!msg_name) {
+                result = JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert 2 argument to string.");
+                break;
+            }
+
+            if (!JS_IsObject(argv[2])) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleCall 3 argument must be a object.");
+                break;
+            }
+
+            auto desc = service->imillion().proto_mgr().FindMessageTypeByName(msg_name);
+            if (!desc) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleCall 2 argument Invalid message type.");
+                break;
+            }
+
+            auto msg = service->imillion().proto_mgr().NewMessage(*desc);
+            if (!msg) {
+                result = JS_ThrowTypeError(ctx, "new message failed.");
+                break;
+            }
+
+            // 发送消息，并将session_id传回
+            func_ctx->waiting_session_id = service->Send(*target, std::move(msg));
+
+        } while (false);
         
-        auto msg = service->imillion().proto_mgr().NewMessage(*desc);
-        if (!msg) {
-            return JS_ThrowTypeError(ctx, "new message failed.");
-        }
+        JS_FreeCString(ctx, service_name);
+        JS_FreeCString(ctx, msg_name);
 
-        // 发送消息，并将session_id传回
-        func_ctx->waiting_session_id = service->Send(*target, std::move(msg));
-
-        return *func_ctx->promise_cap;
+        return result;
     }
 
     static JSCFunctionListEntry* ServiceModuleExportList(size_t* count) {
@@ -924,7 +933,6 @@ private:
 
     static int ServiceModuleInit(JSContext* ctx, JSModuleDef* m) {
         // 导出函数到模块
-
         size_t count = 0;
         auto list = ServiceModuleExportList(&count);
         return JS_SetModuleExportList(ctx, m, list, count);
@@ -947,13 +955,76 @@ private:
     }
 
 
-    static JSValue LoggerModuleErr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    static JSValue LoggerModuleDebug(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         if (argc < 1) {
             return JS_ThrowTypeError(ctx, "LoggerModuleErr argc: %d.", argc);
         }
 
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
         
+        const char* info;
+        if (!JS_IsString(argv[0])) {
+            return JS_ThrowTypeError(ctx, "ServiceModuleCall 1 argument must be a string.");
+        }
+        info = JS_ToCString(ctx, argv[0]);
+        if (!info) {
+            return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
+        }
+
+        service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_DEBUG, info);
+
+        return JSValue();
+    }
+    
+    static JSValue LoggerModuleInfo(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc < 1) {
+            return JS_ThrowTypeError(ctx, "LoggerModuleErr argc: %d.", argc);
+        }
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+        const char* info;
+        if (!JS_IsString(argv[0])) {
+            return JS_ThrowTypeError(ctx, "ServiceModuleCall 1 argument must be a string.");
+        }
+        info = JS_ToCString(ctx, argv[0]);
+        if (!info) {
+            return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
+        }
+
+        service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_INFO, info);
+
+        return JSValue();
+    }
+
+    static JSValue LoggerModuleWarn(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc < 1) {
+            return JS_ThrowTypeError(ctx, "LoggerModuleErr argc: %d.", argc);
+        }
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+        const char* info;
+        if (!JS_IsString(argv[0])) {
+            return JS_ThrowTypeError(ctx, "ServiceModuleCall 1 argument must be a string.");
+        }
+        info = JS_ToCString(ctx, argv[0]);
+        if (!info) {
+            return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
+        }
+
+        service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_WARN, info);
+
+        return JSValue();
+    }
+
+    static JSValue LoggerModuleErr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc < 1) {
+            return JS_ThrowTypeError(ctx, "LoggerModuleErr argc: %d.", argc);
+        }
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
         const char* info;
         if (!JS_IsString(argv[0])) {
             return JS_ThrowTypeError(ctx, "ServiceModuleCall 1 argument must be a string.");
@@ -970,6 +1041,9 @@ private:
 
     static JSCFunctionListEntry* LoggerModuleExportList(size_t* count) {
         static JSCFunctionListEntry list[] = {
+            JS_CFUNC_DEF("debug", 1, LoggerModuleDebug),
+            JS_CFUNC_DEF("info", 1, LoggerModuleInfo),
+            JS_CFUNC_DEF("warn", 1, LoggerModuleWarn),
             JS_CFUNC_DEF("err", 1, LoggerModuleErr),
         };
         *count = sizeof(list) / sizeof(JSCFunctionListEntry);
@@ -978,7 +1052,6 @@ private:
 
     static int LoggerModuleInit(JSContext* ctx, JSModuleDef* m) {
         // 导出函数到模块
-
         size_t count = 0;
         auto list = LoggerModuleExportList(&count);
         return JS_SetModuleExportList(ctx, m, list, count);
@@ -999,7 +1072,6 @@ private:
         }
         return module;
     }
-
 
 private:
     JsModuleService* js_module_service_;
