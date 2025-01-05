@@ -17,7 +17,7 @@
 #include <quickjs/quickjs-libc.h>
 
 struct ServiceFuncContext {
-    JSValue promise_cap = { JS_UNDEFINED };
+    JSValue promise_cap = JS_UNDEFINED;
     std::optional<million::SessionId> waiting_session_id;
 };
 
@@ -260,14 +260,14 @@ public:
         }
         auto proto_msg = std::move(msg.GetProtoMessage());
 
-        JSModuleDef* js_main_module = (JSModuleDef*)JS_VALUE_GET_PTR(js_main_module_);
+        JSModuleDef* js_main_module = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(js_main_module_));
 
-        JSValue space = { JS_UNDEFINED };
-        JSValue onMsg_func = { JS_UNDEFINED };
+        JSValue space = JS_UNDEFINED;
+        JSValue onMsg_func = JS_UNDEFINED;
         JSValue par[2] = { JS_UNDEFINED };
         ServiceFuncContext func_ctx;
-        JSValue promise = { JS_UNDEFINED };
-        JSValue result = { JS_UNDEFINED };
+        JSValue promise = JS_UNDEFINED;
+        JSValue result = JS_UNDEFINED;
 
         do {
             // 获取模块的 namespace 对象
@@ -973,7 +973,7 @@ private:
 
         service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_DEBUG, info);
 
-        return JSValue();
+        return JS_UNDEFINED;
     }
     
     static JSValue LoggerModuleInfo(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -994,7 +994,7 @@ private:
 
         service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_INFO, info);
 
-        return JSValue();
+        return JS_UNDEFINED;
     }
 
     static JSValue LoggerModuleWarn(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -1015,7 +1015,7 @@ private:
 
         service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_WARN, info);
 
-        return JSValue();
+        return JS_UNDEFINED;
     }
 
     static JSValue LoggerModuleErr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -1036,7 +1036,7 @@ private:
 
         service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_ERR, info);
 
-        return JSValue();
+        return JS_UNDEFINED;
     }
 
     static JSCFunctionListEntry* LoggerModuleExportList(size_t* count) {
