@@ -162,7 +162,7 @@ public:
     MILLION_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
         logger().Trace("GatewayRegisterUserServiceMsg.");
         user_service_ = msg->user_service;
-        co_return std::move(msg_ptr);
+        co_return std::move(msg_);
     }
 
 

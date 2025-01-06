@@ -54,7 +54,7 @@ public:
     }
 
     MILLION_MSG_HANDLE(TestMsg, msg) {
-        auto mut_msg = msg_ptr.GetMutableMsg<TestMsg>();
+        auto mut_msg = msg_.GetMutableMsg<TestMsg>();
 
         Send<million::cluster::ClusterSendMsg>(cluster_
             , "TestService", msg->target_node, "TestService"

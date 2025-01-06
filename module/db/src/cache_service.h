@@ -48,7 +48,7 @@ public:
 
     MILLION_MSG_DISPATCH(CacheService);
 
-    MILLION_MSG_HANDLE(CacheGetMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(CacheGetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
@@ -84,13 +84,13 @@ public:
             msg->success = true;
         }
 
-        co_return std::move(msg_ptr);
+        co_return std::move(msg_);
     }
 
     MILLION_MSG_HANDLE(CacheSetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         if (!msg->db_row->IsDirty()) {
-            co_return std::move(msg_ptr);
+            co_return std::move(msg_);
         }
 
         const auto& desc = msg->db_row->GetDescriptor();
@@ -168,21 +168,21 @@ public:
             redis_->expire(redis_key.data(), ttl);
         }
 
-        co_return std::move(msg_ptr);
+        co_return std::move(msg_);
     }
 
-    MILLION_MSG_HANDLE(CacheGetBytesMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(CacheGetBytesMsg, msg) {
         auto value =  redis_->get("million_db:" + msg->key_value);
         if (!value) {
-            co_return std::move(msg_ptr);
+            co_return std::move(msg_);
         }
         msg->key_value = std::move(*value);
-        co_return std::move(msg_ptr);
+        co_return std::move(msg_);
     }
 
-    MILLION_MSG_HANDLE(CacheSetBytesMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(CacheSetBytesMsg, msg) {
         msg->success = redis_->set("million_db:" + msg->key, msg->value);
-        co_return std::move(msg_ptr);
+        co_return std::move(msg_);
     }
 
 

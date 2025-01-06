@@ -146,12 +146,12 @@ private:
         } \
         co_return nullptr; \
     } \
-    ::std::unordered_map<::million::MsgTypeKey, ::million::Task<::million::MsgPtr>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr)> _MILLION_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<::million::MsgTypeKey, ::million::Task<::million::MsgPtr>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle&, ::million::SessionId, ::million::MsgPtr)> _MILLION_MSG_HANDLE_MAP_ \
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr MILLION_MSG_) { \
-        auto raw = MILLION_MSG_.GetMsg<MSG_TYPE_>(); \
-        return _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, std::move(MILLION_MSG_), raw); \
+    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_) { \
+        auto msg = msg_.GetMsg<MSG_TYPE_>(); \
+        return _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, std::move(msg_), msg); \
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
@@ -161,7 +161,23 @@ private:
             assert(res.second); \
             return true; \
         }(); \
-    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_ptr, const MSG_TYPE_* MSG_PTR_NAME_)
+    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, const MSG_TYPE_* MSG_PTR_NAME_)
+
+#define MILLION_MUT_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
+    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_) { \
+        auto msg = msg_.GetMutableMsg<MSG_TYPE_>(); \
+        return _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, std::move(msg_), msg); \
+    } \
+    const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
+        [this] { \
+            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(::million::GetMsgTypeKey<MSG_TYPE_>(), \
+                &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
+            ); \
+            assert(res.second); \
+            return true; \
+        }(); \
+    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE_* MSG_PTR_NAME_)
+
 
 // 持久会话循环参考
 // 使用持久会话有些需要注意的地方：

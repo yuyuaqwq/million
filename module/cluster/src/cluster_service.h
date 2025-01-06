@@ -90,9 +90,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
-        auto mut_msg = msg_ptr.GetMutableMsg<ClusterTcpConnectionMsg>();
-
+    MILLION_MUT_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
         auto& node_session = *msg->node_session;
 
         auto& ep = node_session.remote_endpoint();
@@ -107,7 +105,7 @@ public:
         }
         else {
             logger().Debug("Disconnection: ip: {}, port: {}, cur_node: {}, target_node : {}", ip, port, node_name_, msg->node_session->node_name());
-            DeleteNodeSession(std::move(mut_msg->node_session));
+            DeleteNodeSession(std::move(msg->node_session));
         }
 
         // 可能是主动发起，也可能是被动收到连接的，连接去重不在这里处理
@@ -116,9 +114,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
-        auto mut_msg = msg_ptr.GetMutableMsg<ClusterTcpRecvPacketMsg>();
-
+    MILLION_MUT_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
         auto& node_session = *msg->node_session;
 
         auto& ep = node_session.remote_endpoint();
@@ -170,7 +166,7 @@ public:
             }
 
             // 创建节点
-            CreateNodeSession(std::move(mut_msg->node_session), false);
+            CreateNodeSession(std::move(msg->node_session), false);
             break;
         }
         case ss::cluster::MsgBody::BodyCase::kHandshakeRes: {
@@ -184,7 +180,7 @@ public:
             }
             
             // 创建节点
-            auto& node_session = CreateNodeSession(std::move(mut_msg->node_session), true);
+            auto& node_session = CreateNodeSession(std::move(msg->node_session), true);
 
             // 完成连接，发送所有队列包
             for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
@@ -239,13 +235,11 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(ClusterSendMsg, msg) {
-        auto mut_msg = msg_ptr.GetMutableMsg<ClusterSendMsg>();
-
+    MILLION_MUT_MSG_HANDLE(ClusterSendMsg, msg) {
         auto node_session = GetNodeSession(msg->target_node);
         if (node_session) {
-            PacketForward(node_session, std::move(mut_msg->src_service)
-                , std::move(mut_msg->target_service), *msg->msg);
+            PacketForward(node_session, std::move(msg->src_service)
+                , std::move(msg->target_service), *msg->msg);
             co_return nullptr;
         }
 
@@ -284,7 +278,7 @@ public:
 
         // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
         // 使用一个全局队列，因为这种连接排队的包很少，直接扫描就行
-        send_queue_.emplace_back(std::move(msg_ptr));
+        send_queue_.emplace_back(std::move(msg_));
 
         co_return nullptr;
     }

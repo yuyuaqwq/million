@@ -62,7 +62,7 @@ public:
             "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name",
             soci::use(table_name), soci::into(count);
         if (count > 0) {
-            co_return std::move(msg);
+            co_return std::move(msg_);
         }
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
@@ -231,10 +231,11 @@ public:
 
         sql_ << sql;
 
-        co_return std::move(msg);
+        co_return std::move(msg_);
     }
 
-    MILLION_MSG_HANDLE(SqlQueryMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(SqlQueryMsg, msg) {
+
         auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
@@ -272,7 +273,7 @@ public:
         auto it = rs.begin();
         if (it == rs.end()) {
             msg->success = false;
-            co_return std::move(msg);
+            co_return std::move(msg_);
         }
         const auto& row = *it;
         for (int i = 0; i < desc.field_count(); ++i) {
@@ -344,7 +345,7 @@ public:
         }
 
         msg->success = true;
-        Reply(sender, session_id, std::move(msg_ptr));
+        Reply(sender, session_id, std::move(msg_));
         co_return nullptr;
     }
 
@@ -409,7 +410,7 @@ public:
 
         stmt.execute(true);
 
-        co_return std::move(msg);
+        co_return std::move(msg_);
     }
 
     MILLION_MSG_HANDLE(SqlUpdateMsg, msg) {
@@ -456,7 +457,7 @@ public:
 
         stmt.execute(true);
 
-        co_return std::move(msg);
+        co_return std::move(msg_);
     }
 
 private:

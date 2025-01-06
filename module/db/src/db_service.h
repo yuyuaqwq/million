@@ -77,16 +77,16 @@ public:
             }
         }
         auto sync_tick = msg->sync_tick;
-        Timeout(sync_tick, std::move(msg_ptr));
+        Timeout(sync_tick, std::move(msg_));
         co_return nullptr;
     }
 
 
-    MILLION_MSG_HANDLE(DbRowGetMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(DbRowGetMsg, msg) {
         auto& desc = msg->table_desc;
         if (!desc.options().HasExtension(table)) {
             logger().Err("HasExtension table failed.");
-            co_return std::move(msg);
+            co_return std::move(msg_);
         }
         const MessageOptionsTable& options = desc.options().GetExtension(table);
 
@@ -134,7 +134,7 @@ public:
         } while (false);
         msg->db_row = row_iter->second;
 
-        co_return std::move(msg);
+        co_return std::move(msg_);
     }
 
     MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
