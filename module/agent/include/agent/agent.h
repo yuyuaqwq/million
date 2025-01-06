@@ -109,10 +109,10 @@ private:
         }() \
 
 #define MILLION_AGENT_LOGIC_HANDLE(AGENT_SERVICE_TYPE_, AGENT_SERVICE_NAME_, MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<::million::MsgPtr> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(AGENT_SERVICE_TYPE_* AGENT_SERVICE_NAME_, ::million::MsgPtr msg_ptr, const MSG_TYPE_* MSG_NAME_); \
-    ::million::Task<::million::MsgPtr> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::agent::AgentService* agent, ::million::MsgPtr MSG_PTR_NAME_) { \
-        auto msg = MSG_PTR_NAME_.GetMsg<MSG_TYPE_>(); \
-        return _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(static_cast<AGENT_SERVICE_TYPE_*>(agent), std::move(MSG_PTR_NAME_), msg); \
+    ::million::Task<::million::MsgPtr> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(AGENT_SERVICE_TYPE_* AGENT_SERVICE_NAME_, ::million::MsgPtr msg_, const MSG_TYPE_* msg); \
+    ::million::Task<::million::MsgPtr> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::agent::AgentService* agent, ::million::MsgPtr msg_) { \
+        auto msg = msg_.GetMsg<MSG_TYPE_>(); \
+        return _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(static_cast<AGENT_SERVICE_TYPE_*>(agent), std::move(msg_), msg); \
     } \
     const bool MILLION_AGENT_LOGIC_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [] { \
@@ -120,7 +120,7 @@ private:
                 _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I); \
             return true; \
         }(); \
-    ::million::Task<::million::MsgUnique> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(AGENT_SERVICE_TYPE_* agent, ::million::MsgPtr msg_ptr, const MSG_TYPE_* MSG_NAME_)
+    ::million::Task<::million::MsgPtr> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(AGENT_SERVICE_TYPE_* agent, ::million::MsgPtr msg_ptr, const MSG_TYPE_* MSG_PTR_NAME_)
 
 
 } // namespace agent
