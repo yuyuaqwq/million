@@ -43,7 +43,7 @@ public:
     MILLION_MSG_HANDLE(LoginReq, req) {
         logger().Info("ss::test::LoginReq, value:{}", req->value());
 
-        // ªÿ“ª∏ˆLoginRes
+        // ÂõûÂ§çLoginRes
         co_return million::make_proto_msg<ss::test::LoginRes>("LoginRes res");
     }
 
@@ -53,12 +53,10 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(TestMsg, msg) {
-        auto mut_msg = msg_.GetMutableMsg<TestMsg>();
-
+    MILLION_MUT_MSG_HANDLE(TestMsg, msg) {
         Send<million::cluster::ClusterSendMsg>(cluster_
             , "TestService", msg->target_node, "TestService"
-            , std::move(mut_msg->req));
+            , std::move(msg->req));
         co_return nullptr;
     }
 
