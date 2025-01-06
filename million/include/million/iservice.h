@@ -148,7 +148,7 @@ private:
     } \
     ::std::unordered_map<::million::MsgTypeKey, ::million::Task<::million::MsgPtr>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle&, ::million::SessionId, ::million::MsgPtr)> _MILLION_MSG_HANDLE_MAP_ \
 
-#define MILLION_MSG_HANDLE_I(MSG_TYPE_, MSG_PTR_NAME_, GET_MSG_METHOD_) \
+#define MILLION_MSG_HANDLE_TEMPLATE(MSG_TYPE_, MSG_PTR_NAME_, GET_MSG_METHOD_, CONST_) \
     ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_) { \
         auto msg = msg_.GET_MSG_METHOD_<MSG_TYPE_>(); \
         return _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, std::move(msg_), msg); \
@@ -161,14 +161,13 @@ private:
             assert(res.second); \
             return true; \
         }(); \
+    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, CONST_ MSG_TYPE_* MSG_PTR_NAME_)
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    MILLION_MSG_HANDLE_I(MSG_TYPE_, MSG_PTR_NAME_, GetMsg); \
-    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, const MSG_TYPE_* MSG_PTR_NAME_)
+    MILLION_MSG_HANDLE_TEMPLATE(MSG_TYPE_, MSG_PTR_NAME_, GetMsg, const)
 
 #define MILLION_MUT_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    MILLION_MSG_HANDLE_I(MSG_TYPE_, MSG_PTR_NAME_, GetMutableMsg); \
-    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE_* MSG_PTR_NAME_)
+    MILLION_MSG_HANDLE_TEMPLATE(MSG_TYPE_, MSG_PTR_NAME_, GetMutableMsg)
 
 
 // 持久会话循环参考
