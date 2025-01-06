@@ -34,9 +34,9 @@ public:
     bool Init(std::string_view config_path);
     void Start();
 
-    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice, MsgUnique init_msg);
+    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice, MsgPtr init_msg);
     template <typename IServiceT, typename ...Args>
-    std::optional<ServiceHandle> NewServiceWithMsg(MsgUnique init_msg, Args&&... args) {
+    std::optional<ServiceHandle> NewServiceWithMsg(MsgPtr init_msg, Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
         auto handle = AddService(std::move(iservice), std::move(init_msg));
         if (!handle) return std::nullopt;
@@ -46,7 +46,7 @@ public:
     template <typename IServiceT, typename ...Args>
     std::optional<ServiceHandle> NewService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
-        auto handle = AddService(std::move(iservice), MsgUnique());
+        auto handle = AddService(std::move(iservice), MsgPtr());
         if (!handle) return std::nullopt;
         StartService(*handle);
         return handle;
@@ -60,13 +60,13 @@ public:
 
     SessionId NewSession();
 
-    std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg);
+    std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, MsgPtr msg);
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
         return Send(sender, target, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
-    bool SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg);
+    bool SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgPtr msg);
     template <typename MsgT, typename ...Args>
     bool SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, Args&&... args) {
         return SendTo(sender, target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
@@ -94,7 +94,7 @@ public:
         return SessionAwaiter<MsgT>(session_id, timeout_s, true);
     }
 
-    bool Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg);
+    bool Timeout(uint32_t tick, const ServiceHandle& service, MsgPtr msg);
     void EnableSeparateWorker(const ServiceHandle& service);
 
     const YAML::Node& YamlConfig() const;
@@ -108,19 +108,19 @@ private:
     Million* impl_;
 };
 
-inline std::optional<SessionId> IService::Send(const ServiceHandle& target, MsgUnique msg) {
+inline std::optional<SessionId> IService::Send(const ServiceHandle& target, MsgPtr msg) {
     return imillion_->Send(service_handle_, target, std::move(msg));
 }
 
-inline bool IService::SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+inline bool IService::SendTo(const ServiceHandle& target, SessionId session_id, MsgPtr msg) {
     return imillion_->SendTo(service_handle_, target, session_id, std::move(msg)) != kSessionIdInvalid;
 }
 
-inline bool IService::Reply(const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+inline bool IService::Reply(const ServiceHandle& target, SessionId session_id, MsgPtr msg) {
     return imillion_->SendTo(service_handle_, target, SessionSendToReplyId(session_id), std::move(msg)) != kSessionIdInvalid;
 }
 
-inline void IService::Timeout(uint32_t tick, MsgUnique msg) {
+inline void IService::Timeout(uint32_t tick, MsgPtr msg) {
     imillion_->Timeout(tick, service_handle(), std::move(msg));
 }
 

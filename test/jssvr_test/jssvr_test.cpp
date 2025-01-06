@@ -25,7 +25,7 @@ public:
     //    : proto_codec_(0)
     //    , Base(imillion) {}
 
-    virtual bool OnInit(million::MsgUnique msg) override {
+    virtual bool OnInit(million::MsgPtr msg) override {
         imillion().SetServiceName(service_handle(), "TestService");
 
         imillion().proto_mgr().codec().RegisterFile("ss/ss_test.proto", ss::msg_id, ss::test::sub_msg_id);

@@ -25,7 +25,7 @@ public:
 
     ServiceId AllocServiceId();
 
-    std::optional<ServiceShared> AddService(std::unique_ptr<IService> service, MsgUnique init_msg);
+    std::optional<ServiceShared> AddService(std::unique_ptr<IService> service, MsgPtr init_msg);
     void DeleteService(Service* service);
 
     std::optional<SessionId> StartService(const ServiceShared& service);
@@ -41,7 +41,7 @@ public:
     bool SetServiceId(const ServiceShared& handle, ServiceId id);
     std::optional<ServiceShared> GetServiceById(ServiceId id);
 
-    bool Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgUnique msg);
+    bool Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgPtr msg);
     
     Million& million() const { return *million_; }
 

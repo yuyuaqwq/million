@@ -16,6 +16,7 @@ namespace protobuf = google::protobuf;
 
 using ProtoMsg = protobuf::Message;
 using ProtoMsgUnique = std::unique_ptr<ProtoMsg>;
+using ProtoMsgShared = std::shared_ptr<const ProtoMsg>;
 
 inline const google::protobuf::FieldDescriptor& GetFieldDescriptor(const google::protobuf::Descriptor& desc, int index) {
     const auto* field_desc = desc.field(index);
@@ -141,5 +142,8 @@ inline std::unique_ptr<MsgT> make_proto_msg(Args&&... args) {
     (SetValue(msg.get(), *desc, *reflection, index++, std::forward<decltype(args)>(args)),  ...);
     return msg;
 }
+
+template <class MsgT>
+inline constexpr bool is_proto_msg_v = std::is_base_of_v<ProtoMsg, MsgT>;
 
 } // namespace million

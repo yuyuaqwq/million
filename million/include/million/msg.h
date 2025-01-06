@@ -12,147 +12,271 @@ using MsgTypeKey = uintptr_t;
 
 template <typename MsgT>
 inline MsgTypeKey GetMsgTypeKey() {
-    if constexpr (std::is_base_of_v<ProtoMsg, MsgT>) {
+    if constexpr (is_proto_msg_v<MsgT>) {
         return reinterpret_cast<MsgTypeKey>(MsgT::GetDescriptor());
     }
-    else if constexpr (std::is_base_of_v<CppMsg, MsgT>) {
+    else if constexpr (is_cpp_msg_v<MsgT>) {
         return reinterpret_cast<MsgTypeKey>(&MsgT::type_static());
     }
     else {
-        static_assert(std::is_base_of_v<ProtoMsg, MsgT> || std::is_base_of_v<CppMsg, MsgT>,
+        static_assert(is_proto_msg_v<MsgT> || is_cpp_msg_v<MsgT>,
             "Unsupported message type.");
     }
 }
 
+MILLION_MSG_DEFINE_EMPTY(, SB)
 
-class MILLION_API MsgUnique {
+class MILLION_API MsgPtr {
 public:
-    MsgUnique() = default;
+    MsgPtr() = default;
 
-    MsgUnique(std::nullptr_t) {}
+    MsgPtr(std::nullptr_t) {}
 
-    MsgUnique(ProtoMsg* msg)
-        : msg_unique_(ProtoMsgUnique(msg)) {}
+    MsgPtr(MsgPtr&&) = default;
 
-    MsgUnique(CppMsg* msg)
-        : msg_unique_(CppMsgUnique(msg)) {}
-
-    MsgUnique(MsgUnique&&) = default;
-
-    void operator=(MsgUnique&& rv) noexcept {
-        msg_unique_ = std::move(rv.msg_unique_);
+    void operator=(MsgPtr&& rv) noexcept {
+        msg_ptr_ = std::move(rv.msg_ptr_);
     }
 
     template <typename T>
-    MsgUnique(std::unique_ptr<T>&& rv) noexcept
-        : msg_unique_(std::move(MsgUnique(rv.release()).msg_unique_)) {}
+        requires is_proto_msg_v<T>
+    MsgPtr(std::unique_ptr<T>&& rv) noexcept
+        : msg_ptr_(ProtoMsgUnique(std::move(rv))) {}
 
     template <typename T>
+        requires is_proto_msg_v<T>
     void operator=(std::unique_ptr<T>&& rv) noexcept {
-        msg_unique_ = std::move(MsgUnique(rv.release()).msg_unique_);
+        msg_ptr_ = ProtoMsgUnique(std::move(rv));
     }
 
-    bool IsProtoMessage() const {
-        return std::holds_alternative<ProtoMsgUnique>(msg_unique_);
+    template <typename T>
+        requires is_cpp_msg_v<T>
+    MsgPtr(std::unique_ptr<T>&& rv) noexcept
+        : msg_ptr_(CppMsgUnique(std::move(rv))) {}
+
+    template <typename T>
+        requires is_cpp_msg_v<T>
+    void operator=(std::unique_ptr<T>&& rv) noexcept {
+        msg_ptr_ = CppMsgUnique(std::move(rv));
     }
 
-    bool IsCppMessage() const {
-        return std::holds_alternative<CppMsgUnique>(msg_unique_);
+    template <typename T>
+        requires is_proto_msg_v<T> || is_cpp_msg_v<T>
+    MsgPtr(std::shared_ptr<const T>&& rv) noexcept
+        : msg_ptr_(std::move(rv)){}
+
+    template <typename T>
+        requires is_proto_msg_v<T> || is_cpp_msg_v<T>
+    void operator=(std::shared_ptr<const T>&& rv) noexcept {
+        msg_ptr_ = std::move(rv);
     }
 
-    const ProtoMsgUnique& GetProtoMessage() const {
-        return std::get<ProtoMsgUnique>(msg_unique_);
+    template <typename T>
+        requires is_proto_msg_v<T> || is_cpp_msg_v<T>
+    MsgPtr(const std::shared_ptr<const T>& v) noexcept
+        : msg_ptr_(v) {}
+
+    template <typename T>
+        requires is_proto_msg_v<T> || is_cpp_msg_v<T>
+    void operator=(const std::shared_ptr<const T>& v) noexcept {
+        msg_ptr_ = v;
     }
 
-    const CppMsgUnique& GetCppMessage() const {
-        return std::get<CppMsgUnique>(msg_unique_);
+    bool IsProtoMsg() const {
+        return IsProtoMsgUnique() || IsProtoMsgShared();
     }
 
-    ProtoMsgUnique& GetProtoMessage() {
-        return std::get<ProtoMsgUnique>(msg_unique_);
+    bool IsCppMsg() const {
+        return IsCppMsgUnique() || IsCppMsgShared();
     }
 
-    CppMsgUnique& GetCppMessage() {
-        return std::get<CppMsgUnique>(msg_unique_);
+    const ProtoMsg* GetProtoMsg() const {
+        if (IsProtoMsgUnique()) {
+            return GetProtoMsgUnique().get();
+        }
+        else if (IsProtoMsgShared()) {
+            return GetProtoMsgShared().get();
+        }
+        else {
+            throw std::bad_variant_access();
+        }
     }
+
+    const CppMsg* GetCppMsg() const {
+        if (IsCppMsgUnique()) {
+            return GetCppMsgUnique().get();
+        }
+        else if (IsCppMsgShared()) {
+            return GetCppMsgShared().get();
+        }
+        else {
+            throw std::bad_variant_access();
+        }
+    }
+
+    ProtoMsg* GetMutableProtoMsg() const {
+        return GetProtoMsgUnique().get();
+    }
+
+    CppMsg* GetMutableCppMsg() const {
+        return GetCppMsgUnique().get();
+    }
+
 
     MsgTypeKey GetTypeKey() const {
-        if (IsProtoMessage()) {
-            return reinterpret_cast<MsgTypeKey>(GetProtoMessage()->GetDescriptor());
+        if (IsProtoMsg()) {
+            return reinterpret_cast<MsgTypeKey>(GetProtoMsg()->GetDescriptor());
         }
-        else if (IsCppMessage()) {
-            return reinterpret_cast<MsgTypeKey>(&GetCppMessage()->type());
+        else if (IsCppMsg()) {
+            return reinterpret_cast<MsgTypeKey>(&GetCppMsg()->type());
         }
         return 0;
     }
 
     template <typename MsgT>
-    bool IsType() {
+    bool IsType() const {
         return GetTypeKey() == GetMsgTypeKey<MsgT>();
     }
 
-    MsgUnique Copy() const {
-        if (IsProtoMessage()) {
-            auto& proto_msg = GetProtoMessage();
+    MsgPtr Copy() const {
+        if (IsProtoMsgUnique()) {
+            auto proto_msg = GetProtoMsg();
             auto new_msg = proto_msg->New();
             if (!new_msg) throw std::bad_alloc();
             new_msg->CopyFrom(*proto_msg);
-            return MsgUnique(new_msg);
+            return MsgPtr(ProtoMsgUnique(new_msg));
         }
-        else if (IsCppMessage()) {
-            auto& cpp_msg = GetCppMessage();
+        else if (IsProtoMsgShared()) {
+            return MsgPtr(GetProtoMsgShared());
+        }
+        else if (IsCppMsgUnique()) {
+            auto cpp_msg = GetCppMsg();
             auto new_msg = cpp_msg->Copy();
             if (!new_msg) throw std::bad_alloc();
-            return MsgUnique(new_msg);
+            return MsgPtr(CppMsgUnique(new_msg));
+        }
+        else if (IsCppMsgShared()) {
+            return MsgPtr(GetCppMsgShared());
         }
         throw std::bad_variant_access();
     }
 
     operator bool() const {
-        if (IsProtoMessage()) {
-            return GetProtoMessage().get();
+        if (IsProtoMsg()) {
+            return GetProtoMsg();
         }
-        else if (IsCppMessage()) {
-            return GetCppMessage().get();
+        else if (IsCppMsg()) {
+            return GetCppMsg();
         }
         throw std::bad_variant_access();
     }
 
     template<typename MsgT>
-    MsgT* get() {
-        if (IsProtoMessage()) {
-            return reinterpret_cast<MsgT*>(GetProtoMessage().get());
+    const MsgT* GetMsg() const {
+        assert(IsType<MsgT>());
+        if constexpr (is_proto_msg_v<MsgT>) {
+            return static_cast<const MsgT*>(GetProtoMsg());
         }
-        else if (IsCppMessage()) {
-            return reinterpret_cast<MsgT*>(GetCppMessage().get());
+        else if constexpr (is_cpp_msg_v<MsgT>) {
+            return static_cast<const MsgT*>(GetCppMsg());
         }
-        throw std::bad_variant_access();
+        else {
+            static_assert(is_proto_msg_v<MsgT> || is_cpp_msg_v<MsgT>,
+                "Unsupported message type.");
+        }
     }
 
-    void* release() {
-        if (IsProtoMessage()) {
-            return GetProtoMessage().release();
+    template<typename MsgT>
+    MsgT* GetMutableMsg() const {
+        assert(IsType<MsgT>());
+        if constexpr (is_proto_msg_v<MsgT>) {
+            return static_cast<MsgT*>(GetMutableProtoMsg());
         }
-        else if (IsCppMessage()) {
-            return GetCppMessage().release();
+        else if constexpr (is_cpp_msg_v<MsgT>) {
+            return static_cast<MsgT*>(GetMutableCppMsg());
+        }
+        else {
+            static_assert(is_proto_msg_v<MsgT> || is_cpp_msg_v<MsgT>,
+                "Unsupported message type.");
+        }
+    }
+
+    void* Release() {
+        if (IsProtoMsgUnique()) {
+            return GetProtoMsgUnique().release();
+        }
+        else if (IsCppMsgUnique()) {
+            return GetCppMsgUnique().release();
         }
         throw std::bad_variant_access();
     }
 
 private:
-    std::variant<ProtoMsgUnique, CppMsgUnique> msg_unique_;
+    bool IsProtoMsgUnique() const {
+        return std::holds_alternative<ProtoMsgUnique>(msg_ptr_);
+    }
+
+    bool IsProtoMsgShared() const {
+        return std::holds_alternative<ProtoMsgShared>(msg_ptr_);
+    }
+
+    bool IsCppMsgUnique() const {
+        return std::holds_alternative<CppMsgUnique>(msg_ptr_);
+    }
+
+    bool IsCppMsgShared() const {
+        return std::holds_alternative<CppMsgShared>(msg_ptr_);
+    }
+
+    const ProtoMsgUnique& GetProtoMsgUnique() const {
+        return std::get<ProtoMsgUnique>(msg_ptr_);
+    }
+
+    const CppMsgUnique& GetCppMsgUnique() const {
+        return std::get<CppMsgUnique>(msg_ptr_);
+    }
+
+    const ProtoMsgShared& GetProtoMsgShared() const {
+        return std::get<ProtoMsgShared>(msg_ptr_);
+    }
+
+    const CppMsgShared& GetCppMsgShared() const {
+        return std::get<CppMsgShared>(msg_ptr_);
+    }
+
+    ProtoMsgUnique& GetProtoMsgUnique() {
+        return std::get<ProtoMsgUnique>(msg_ptr_);
+    }
+
+    CppMsgUnique& GetCppMsgUnique() {
+        return std::get<CppMsgUnique>(msg_ptr_);
+    }
+
+    ProtoMsgShared& GetProtoMsgShared() {
+        return std::get<ProtoMsgShared>(msg_ptr_);
+    }
+
+    CppMsgShared& GetCppMsgShared() {
+        return std::get<CppMsgShared>(msg_ptr_);
+    }
+
+private:
+    std::variant<ProtoMsgUnique
+        , ProtoMsgShared
+        , CppMsgUnique
+        , CppMsgShared> msg_ptr_;
 };
 
 template <typename MsgT, typename... Args>
-inline MsgUnique make_msg(Args&&... args) {
-    if constexpr (std::is_base_of_v<ProtoMsg, MsgT>) {
-        return MsgUnique(make_proto_msg<MsgT>(std::forward<Args>(args)...).release());
+inline MsgPtr make_msg(Args&&... args) {
+    if constexpr (is_proto_msg_v<MsgT>) {
+        return MsgPtr(make_proto_msg<MsgT>(std::forward<Args>(args)...));
     }
-    else if constexpr (std::is_base_of_v<CppMsg, MsgT>) {
-        return MsgUnique(make_cpp_msg<MsgT>(std::forward<Args>(args)...).release());
+    else if constexpr (is_cpp_msg_v<MsgT>) {
+        return MsgPtr(make_cpp_msg<MsgT>(std::forward<Args>(args)...));
     }
     else {
-        static_assert(std::is_base_of_v<ProtoMsg, MsgT> || std::is_base_of_v<CppMsg, MsgT>,
+        static_assert(is_proto_msg_v<MsgT> || is_cpp_msg_v<MsgT>,
             "Unsupported message type.");
     }
 }

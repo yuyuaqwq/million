@@ -17,14 +17,14 @@
 namespace million {
 
 struct TaskElement {
-    TaskElement(ServiceShared sender, SessionId session_id, Task<MsgUnique> task) 
+    TaskElement(ServiceShared sender, SessionId session_id, Task<MsgPtr> task) 
         : sender(std::move(sender))
         , session_id(session_id)
         , task(std::move(task)) { }
 
     ServiceShared sender;
     SessionId session_id;
-    Task<MsgUnique> task;
+    Task<MsgPtr> task;
 };
 
 class Service;
@@ -34,7 +34,7 @@ public:
     ~TaskExecutor();
 
     // 尝试调度
-    std::variant<MsgUnique, TaskElement, TaskElement*> TrySchedule(SessionId session_id, MsgUnique msg);
+    std::variant<MsgPtr, TaskElement, TaskElement*> TrySchedule(SessionId session_id, MsgPtr msg);
 
     // 将任务添加到调度器
     std::optional<TaskElement> AddTask(TaskElement&& ele);
@@ -45,7 +45,7 @@ public:
 
 private:
     // 尝试调度指定Task
-    std::optional<MsgUnique> TrySchedule(TaskElement& ele, SessionId session_id, MsgUnique msg);
+    std::optional<MsgPtr> TrySchedule(TaskElement& ele, SessionId session_id, MsgPtr msg);
 
     // 加入待调度队列等待调度
     TaskElement* Push(SessionId id, TaskElement&& ele);

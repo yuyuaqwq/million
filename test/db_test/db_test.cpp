@@ -23,7 +23,7 @@ public:
     TestService(million::IMillion* imillion)
         : Base(imillion) {}
 
-    virtual bool OnInit(million::MsgUnique msg) override {
+    virtual bool OnInit(million::MsgPtr msg) override {
         
         auto handle = imillion().GetServiceByName("DbService");
         if (!handle) {
@@ -35,7 +35,7 @@ public:
         return true;
     }
 
-    virtual million::Task<million::MsgUnique> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
+    virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
         auto user = million::make_proto_msg<million::db::example::User>();
         user->set_id(100);
         user->set_password_hash("sadawd");

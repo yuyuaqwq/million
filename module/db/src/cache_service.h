@@ -28,7 +28,7 @@ public:
     static inline const std::string_view host = "127.0.0.1";
     static inline const std::string_view port = "6379";
 
-    virtual bool OnInit(MsgUnique msg) override {
+    virtual bool OnInit(MsgPtr msg) override {
         try {
             // 创建 Redis 对象并连接到 Redis 服务器
             redis_.emplace(std::format("tcp://{}:{}", host, port));
@@ -84,13 +84,13 @@ public:
             msg->success = true;
         }
 
-        co_return std::move(msg);
+        co_return std::move(msg_ptr);
     }
 
     MILLION_MSG_HANDLE(CacheSetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         if (!msg->db_row->IsDirty()) {
-            co_return std::move(msg);
+            co_return std::move(msg_ptr);
         }
 
         const auto& desc = msg->db_row->GetDescriptor();
@@ -168,21 +168,21 @@ public:
             redis_->expire(redis_key.data(), ttl);
         }
 
-        co_return std::move(msg);
+        co_return std::move(msg_ptr);
     }
 
     MILLION_MSG_HANDLE(CacheGetBytesMsg, msg) {
         auto value =  redis_->get("million_db:" + msg->key_value);
         if (!value) {
-            co_return std::move(msg);
+            co_return std::move(msg_ptr);
         }
         msg->key_value = std::move(*value);
-        co_return std::move(msg);
+        co_return std::move(msg_ptr);
     }
 
     MILLION_MSG_HANDLE(CacheSetBytesMsg, msg) {
         msg->success = redis_->set("million_db:" + msg->key, msg->value);
-        co_return std::move(msg);
+        co_return std::move(msg_ptr);
     }
 
 

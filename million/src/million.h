@@ -26,7 +26,7 @@ public:
     void Start();
     void Stop();
 
-    std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice, MsgUnique init_msg);
+    std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice, MsgPtr init_msg);
 
     std::optional<SessionId> StartService(const ServiceShared& service);
     std::optional<SessionId> StopService(const ServiceShared& service);
@@ -36,11 +36,11 @@ public:
 
     SessionId NewSession();
 
-    bool SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgUnique msg);
-    std::optional<SessionId> Send(const ServiceShared& sender, const ServiceShared& target, MsgUnique msg);
+    bool SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgPtr msg);
+    std::optional<SessionId> Send(const ServiceShared& sender, const ServiceShared& target, MsgPtr msg);
 
     const YAML::Node& YamlConfig() const;
-    void Timeout(uint32_t tick, const ServiceShared& service, MsgUnique msg);
+    void Timeout(uint32_t tick, const ServiceShared& service, MsgPtr msg);
     asio::io_context& NextIoContext();
     void EnableSeparateWorker(const ServiceShared& service);
 

@@ -49,7 +49,7 @@ struct SessionAwaiterBase {
     SessionAwaiterBase(SessionAwaiterBase&) = delete;
     SessionAwaiterBase& operator=(SessionAwaiterBase&) = delete;
 
-    void set_result(MsgUnique result) {
+    void set_result(MsgPtr result) {
         result_ = std::move(result);
     }
 
@@ -93,7 +93,7 @@ struct SessionAwaiterBase {
     }
 
     // co_await 恢复
-    MsgUnique await_resume() {
+    MsgPtr await_resume() {
         // 调度器恢复了等待当前awaiter的协程，说明已经等到结果/超时了
         if (!result_ && or_null_ == false) {
             // 超时，不返回nullptr
@@ -108,7 +108,7 @@ protected:
     uint32_t timeout_s_;
     bool or_null_;
     std::coroutine_handle<> waiting_coroutine_;
-    MsgUnique result_;
+    MsgPtr result_;
 };
 
 // 会话等待器，等待一条消息
@@ -120,12 +120,12 @@ struct SessionAwaiter : public SessionAwaiterBase {
         auto msg = SessionAwaiterBase::await_resume();
         // 如果是基类，说明外部希望自己转换，不做类型检查
         if constexpr (std::is_same_v<MsgT, ProtoMsg>) {
-            if (!msg.IsProtoMessage()) {
+            if (!msg.IsProtoMsg()) {
                 throw TaskAbortException("Not ProtoMessage type.");
             }
         }
         else if constexpr (std::is_same_v<MsgT, CppMsg>) {
-            if (!msg.IsCppMessage()) {
+            if (!msg.IsCppMsg()) {
                 throw TaskAbortException("Not CppMessage type.");
             }
         }
@@ -134,7 +134,7 @@ struct SessionAwaiter : public SessionAwaiterBase {
                 throw TaskAbortException("Mismatched type.");
             }
         }
-        return std::unique_ptr<MsgT>(static_cast<MsgT*>(msg.release()));
+        return std::unique_ptr<MsgT>(static_cast<MsgT*>(msg.Release()));
     }
 };
 

@@ -28,7 +28,7 @@ public:
     using Base = IService;
     using Base::Base;
 
-    virtual bool OnInit(MsgUnique init_msg) override {
+    virtual bool OnInit(MsgPtr init_msg) override {
         auto& config = imillion().YamlConfig();
 
         std::cout << "[logger] [info] load 'logger' config." << std::endl;

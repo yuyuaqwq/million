@@ -34,7 +34,7 @@ bool EventMgr::Unsubscribe(MsgTypeKey key, const ServiceHandle& subscriber) {
 	return false;
 }
 
-void EventMgr::Send(const ServiceHandle& sender, MsgUnique msg) {
+void EventMgr::Send(const ServiceHandle& sender, MsgPtr msg) {
 	auto iter = services_.find(msg.GetTypeKey());
 	if (iter == services_.end()) {
 		// 没有关注此事件的服务
@@ -54,12 +54,12 @@ void EventMgr::Send(const ServiceHandle& sender, MsgUnique msg) {
 			services.erase(service_iter++);
 			continue;
 		}
-		imillion_->impl().Send(sender_lock, target_lock, MsgUnique(msg.Copy()));
+		imillion_->impl().Send(sender_lock, target_lock, MsgPtr(msg.Copy()));
 		++service_iter;
 	}
 }
 
-Task<> EventMgr::Call(const ServiceHandle& caller, MsgUnique msg, std::function<bool(MsgUnique)> res_handle) {
+Task<> EventMgr::Call(const ServiceHandle& caller, MsgPtr msg, std::function<bool(MsgPtr)> res_handle) {
 	auto iter = services_.find(msg.GetTypeKey());
 	if (iter == services_.end()) {
 		// 没有关注此事件的服务
@@ -78,17 +78,17 @@ Task<> EventMgr::Call(const ServiceHandle& caller, MsgUnique msg, std::function<
 			continue;
 		}
 
-		auto session_id = imillion_->impl().Send(caller_lock, target_lock, MsgUnique(msg.Copy()));
+		auto session_id = imillion_->impl().Send(caller_lock, target_lock, MsgPtr(msg.Copy()));
 
-		if (msg.IsProtoMessage()) {
+		if (msg.IsProtoMsg()) {
 			auto res = co_await imillion_->RecvOrNull<ProtoMsg>(session_id.value());
-			if (res && !res_handle(MsgUnique(res.release()))) {
+			if (res && !res_handle(MsgPtr(std::move(res)))) {
 				break;
 			}
 		}
-		else if (msg.IsCppMessage()) {
+		else if (msg.IsCppMsg()) {
 			auto res = co_await imillion_->RecvOrNull<CppMsg>(session_id.value());
-			if (res && !res_handle(MsgUnique(res.release()))) {
+			if (res && !res_handle(MsgPtr(std::move(res)))) {
 				break;
 			}
 		}

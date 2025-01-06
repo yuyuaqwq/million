@@ -31,7 +31,7 @@ public:
         : Base(imillion)
         , server_(imillion) { }
 
-    virtual bool OnInit(::million::MsgUnique msg) override {
+    virtual bool OnInit(::million::MsgPtr msg) override {
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
             Send<ClusterTcpConnectionMsg>(service_handle(), std::move(std::static_pointer_cast<NodeSession>(connection)));
@@ -76,10 +76,10 @@ public:
         do {
             // 这里未来可以修改超时时间，来自动回收协程
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
-            if (recv_msg.IsProtoMessage()) {
+            if (recv_msg.IsProtoMsg()) {
                 logger().Trace("Cluster Recv ProtoMessage: {}.", session_id);
 
-                auto proto_msg = std::move(recv_msg.GetProtoMessage());
+                auto proto_msg = std::move(recv_msg.GetProtoMsg());
                 PacketForward(&node_session, ServiceName(src_service)
                     , ServiceName(target_service), *proto_msg);
             }
@@ -91,6 +91,8 @@ public:
     }
 
     MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
+        auto mut_msg = msg_ptr.GetMutableMsg<ClusterTcpConnectionMsg>();
+
         auto& node_session = *msg->node_session;
 
         auto& ep = node_session.remote_endpoint();
@@ -105,7 +107,7 @@ public:
         }
         else {
             logger().Debug("Disconnection: ip: {}, port: {}, cur_node: {}, target_node : {}", ip, port, node_name_, msg->node_session->node_name());
-            DeleteNodeSession(std::move(msg->node_session));
+            DeleteNodeSession(std::move(mut_msg->node_session));
         }
 
         // 可能是主动发起，也可能是被动收到连接的，连接去重不在这里处理
@@ -115,6 +117,8 @@ public:
     }
 
     MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
+        auto mut_msg = msg_ptr.GetMutableMsg<ClusterTcpRecvPacketMsg>();
+
         auto& node_session = *msg->node_session;
 
         auto& ep = node_session.remote_endpoint();
@@ -127,7 +131,7 @@ public:
             node_session.Close();
             co_return nullptr;
         }
-        header_size = *reinterpret_cast<uint32_t*>(msg->packet.data());
+        header_size = *reinterpret_cast<const uint32_t*>(msg->packet.data());
         header_size = asio::detail::socket_ops::network_to_host_long(header_size);
 
         ss::cluster::MsgBody msg_body;
@@ -166,7 +170,7 @@ public:
             }
 
             // 创建节点
-            CreateNodeSession(std::move(msg->node_session), false);
+            CreateNodeSession(std::move(mut_msg->node_session), false);
             break;
         }
         case ss::cluster::MsgBody::BodyCase::kHandshakeRes: {
@@ -180,7 +184,7 @@ public:
             }
             
             // 创建节点
-            auto& node_session = CreateNodeSession(std::move(msg->node_session), true);
+            auto& node_session = CreateNodeSession(std::move(mut_msg->node_session), true);
 
             // 完成连接，发送所有队列包
             for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
@@ -236,10 +240,12 @@ public:
     }
 
     MILLION_MSG_HANDLE(ClusterSendMsg, msg) {
+        auto mut_msg = msg_ptr.GetMutableMsg<ClusterSendMsg>();
+
         auto node_session = GetNodeSession(msg->target_node);
         if (node_session) {
-            PacketForward(node_session, std::move(msg->src_service)
-                , std::move(msg->target_service), *msg->msg);
+            PacketForward(node_session, std::move(mut_msg->src_service)
+                , std::move(mut_msg->target_service), *msg->msg);
             co_return nullptr;
         }
 

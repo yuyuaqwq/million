@@ -16,8 +16,8 @@ public:
 	void Subscribe(MsgTypeKey key, const ServiceHandle& subscriber, uint32_t priority = 0);
 	bool Unsubscribe(MsgTypeKey key, const ServiceHandle& subscriber);
 
-	void Send(const ServiceHandle& sender, MsgUnique msg);
-	Task<> Call(const ServiceHandle& caller, MsgUnique msg, std::function<bool(MsgUnique)> res_handle);
+	void Send(const ServiceHandle& sender, MsgPtr msg);
+	Task<> Call(const ServiceHandle& caller, MsgPtr msg, std::function<bool(MsgPtr)> res_handle);
 
 private:
 	IMillion* imillion_;

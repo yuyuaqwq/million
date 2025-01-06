@@ -33,7 +33,7 @@ void Timer::Stop() {
     thread_.reset();
 }
 
-void Timer::AddTask(uint32_t tick, const ServiceShared& service, MsgUnique msg) {
+void Timer::AddTask(uint32_t tick, const ServiceShared& service, MsgPtr msg) {
     tasks_.AddTask(tick, { service, std::move(msg) });
 }
 

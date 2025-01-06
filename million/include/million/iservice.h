@@ -23,19 +23,19 @@ public:
     virtual ~IService() = default;
 
 public:
-    std::optional<SessionId> Send(const ServiceHandle& target, MsgUnique msg);
+    std::optional<SessionId> Send(const ServiceHandle& target, MsgPtr msg);
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> Send(const ServiceHandle& target, Args&&... args) {
         return Send(target, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
-    bool SendTo(const ServiceHandle& target, SessionId session_id, MsgUnique msg);
+    bool SendTo(const ServiceHandle& target, SessionId session_id, MsgPtr msg);
     template <typename MsgT, typename ...Args>
     bool SendTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
         return SendTo(target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
-    bool Reply(const ServiceHandle& target, SessionId session_id, MsgUnique msg);
+    bool Reply(const ServiceHandle& target, SessionId session_id, MsgPtr msg);
     template <typename MsgT, typename ...Args>
     bool Reply(const ServiceHandle& target, SessionId session_id, Args&&... args) {
         return Reply(target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
@@ -108,7 +108,7 @@ public:
         return RecvOrNullWithTimeout<MsgT>(session_id.value(), timeout_s);
     }
 
-    void Timeout(uint32_t tick, MsgUnique msg);
+    void Timeout(uint32_t tick, MsgPtr msg);
     template <typename MsgT, typename ...Args>
     void Timeout(uint32_t tick, Args&&... args) {
         Timeout(tick, std::make_unique<MsgT>(std::forward<Args>(args)...));
@@ -120,9 +120,9 @@ public:
     const ServiceHandle& service_handle() const { return service_handle_; }
 
 protected:
-    virtual bool OnInit(MsgUnique init_msg) { return true; }
-    virtual Task<MsgUnique> OnStart(ServiceHandle sender, SessionId session_id) { co_return nullptr; }
-    virtual Task<MsgUnique> OnMsg(ServiceHandle sender, SessionId session_id, MsgUnique msg) { co_return nullptr; }
+    virtual bool OnInit(MsgPtr init_msg) { return true; }
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) { co_return nullptr; }
+    virtual Task<MsgPtr> OnMsg(ServiceHandle sender, SessionId session_id, MsgPtr msg) { co_return nullptr; }
     virtual void OnStop(ServiceHandle sender, SessionId session_id) { }
     virtual void OnExit(ServiceHandle sender, SessionId session_id) { }
 
@@ -139,18 +139,19 @@ private:
 
 #define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_) \
     using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
-    virtual ::million::Task<::million::MsgUnique> OnMsg(::million::ServiceHandle sender, ::million::SessionId session_id, ::million::MsgUnique msg) override { \
+    virtual ::million::Task<::million::MsgPtr> OnMsg(::million::ServiceHandle sender, ::million::SessionId session_id, ::million::MsgPtr msg) override { \
         auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg.GetTypeKey()); \
         if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
              co_return co_await (this->*iter->second)(sender, session_id, std::move(msg)); \
         } \
         co_return nullptr; \
     } \
-    ::std::unordered_map<::million::MsgTypeKey, ::million::Task<::million::MsgUnique>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique)> _MILLION_MSG_HANDLE_MAP_ \
+    ::std::unordered_map<::million::MsgTypeKey, ::million::Task<::million::MsgPtr>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr)> _MILLION_MSG_HANDLE_MAP_ \
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<::million::MsgUnique> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgUnique MILLION_MSG_) { \
-        return _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, ::std::unique_ptr<MSG_TYPE_>(static_cast<MSG_TYPE_*>(MILLION_MSG_.release()))); \
+    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr MILLION_MSG_) { \
+        auto raw = MILLION_MSG_.GetMsg<MSG_TYPE_>(); \
+        return _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, std::move(MILLION_MSG_), raw); \
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
         [this] { \
@@ -160,7 +161,7 @@ private:
             assert(res.second); \
             return true; \
         }(); \
-    ::million::Task<::million::MsgUnique> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::std::unique_ptr<MSG_TYPE_> MSG_PTR_NAME_)
+    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_ptr, const MSG_TYPE_* MSG_PTR_NAME_)
 
 // 持久会话循环参考
 // 使用持久会话有些需要注意的地方：

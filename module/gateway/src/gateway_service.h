@@ -31,7 +31,7 @@ public:
         : Base(imillion)
         , server_(imillion) { }
 
-    virtual bool OnInit(::million::MsgUnique msg) override {
+    virtual bool OnInit(::million::MsgPtr msg) override {
         logger().Info("Gateway init start.");
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
@@ -66,11 +66,11 @@ public:
         do {
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
             // imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
-            if (recv_msg.IsProtoMessage()) {
+            if (recv_msg.IsProtoMsg()) {
                 logger().Trace("Gateway Recv ProtoMessage: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
 
-                auto proto_msg = std::move(recv_msg.GetProtoMessage());
+                auto proto_msg = std::move(recv_msg.GetProtoMsg());
                 auto packet = imillion().proto_mgr().codec().EncodeMessage(*proto_msg);
                 if (!packet) {
                     logger().Err("Gateway Recv ProtoMessage EncodeMessage failed: {}.", session_id);
@@ -84,14 +84,14 @@ public:
             else if (recv_msg.IsType<GatewaySendPacketMsg>()) {
                 logger().Trace("GatewaySendPacketMsg: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
-                auto msg = recv_msg.get<GatewaySendPacketMsg>();
+                auto msg = recv_msg.GetMutableMsg<GatewaySendPacketMsg>();
                 auto span = net::PacketSpan(header_packet);
                 user_session.Send(std::move(header_packet), span, header_packet.size() + msg->packet.size());
                 span = net::PacketSpan(msg->packet);
                 user_session.Send(std::move(msg->packet), span, 0);
             }
             else if (recv_msg.IsType<GatewaySureAgentMsg>()) {
-                auto msg = recv_msg.get<GatewaySureAgentMsg>();
+                auto msg = recv_msg.GetMsg<GatewaySureAgentMsg>();
                 user_session.set_agent(std::move(msg->agent_service));
             }
             else if (recv_msg.IsType<GatewayPersistentUserSessionMsg>()) {
@@ -162,7 +162,7 @@ public:
     MILLION_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
         logger().Trace("GatewayRegisterUserServiceMsg.");
         user_service_ = msg->user_service;
-        co_return std::move(msg);
+        co_return std::move(msg_ptr);
     }
 
 

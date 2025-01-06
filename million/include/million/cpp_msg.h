@@ -27,6 +27,10 @@ public:
 };
 
 using CppMsgUnique = std::unique_ptr<CppMsg>;
+using CppMsgShared = std::shared_ptr<const CppMsg>;
+
+template <class MsgT>
+inline constexpr bool is_cpp_msg_v = std::is_base_of_v<CppMsg, MsgT>;
 
 // 生成一个逗号
 // (由COMMON_IF_NOT_END调用)

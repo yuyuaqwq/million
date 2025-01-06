@@ -21,7 +21,7 @@ TaskExecutor::TaskExecutor(Service* service)
 TaskExecutor::~TaskExecutor() = default;
 
 // 尝试调度
-std::variant<MsgUnique, TaskElement, TaskElement*> TaskExecutor::TrySchedule(SessionId session_id, MsgUnique msg) {
+std::variant<MsgPtr, TaskElement, TaskElement*> TaskExecutor::TrySchedule(SessionId session_id, MsgPtr msg) {
     auto iter = tasks_.find(session_id);
     if (iter == tasks_.end()) {
         return msg;
@@ -91,7 +91,7 @@ std::pair<TaskElement*, bool> TaskExecutor::TaskTimeout(SessionId session_id) {
     }
 }
 
-std::optional<MsgUnique> TaskExecutor::TrySchedule(TaskElement& ele, SessionId session_id, MsgUnique msg) {
+std::optional<MsgPtr> TaskExecutor::TrySchedule(TaskElement& ele, SessionId session_id, MsgPtr msg) {
     auto awaiter = ele.task.coroutine.promise().session_awaiter();
     if (msg) {
         if (awaiter->waiting_session() != session_id) {

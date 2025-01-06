@@ -22,14 +22,14 @@ public:
     struct MsgElement{
         ServiceShared sender;
         SessionId session_id;
-        MsgUnique msg;
+        MsgPtr msg;
     };
 
 public:
     Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
     ~Service();
 
-    bool PushMsg(const ServiceShared& sender, SessionId session_id, MsgUnique msg);
+    bool PushMsg(const ServiceShared& sender, SessionId session_id, MsgPtr msg);
     std::optional<MsgElement> PopMsg();
     bool MsgQueueIsEmpty();
 

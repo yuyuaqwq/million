@@ -32,7 +32,7 @@ ServiceId ServiceMgr::AllocServiceId() {
     return id;
 }
 
-std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> iservice, MsgUnique init_msg) {
+std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> iservice, MsgPtr init_msg) {
     decltype(services_)::iterator iter;
     auto service_shared = std::make_shared<Service>(this, std::move(iservice));
     auto handle = ServiceHandle(service_shared);
@@ -149,7 +149,7 @@ std::optional<ServiceShared> ServiceMgr::GetServiceById(ServiceId id) {
     return *iter->second;
 }
 
-bool ServiceMgr::Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgUnique msg) {
+bool ServiceMgr::Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgPtr msg) {
     if (!target->PushMsg(sender, session_id, std::move(msg))) {
         return false;
     }

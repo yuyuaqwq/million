@@ -37,7 +37,7 @@ public:
     DbService(IMillion* imillion)
         : Base(imillion) {}
 
-    virtual bool OnInit(MsgUnique msg) override {
+    virtual bool OnInit(MsgPtr msg) override {
         logger().Info("DbService Init");
 
         auto handle = imillion().GetServiceByName("SqlService");
@@ -77,7 +77,7 @@ public:
             }
         }
         auto sync_tick = msg->sync_tick;
-        Timeout(sync_tick, std::move(msg));
+        Timeout(sync_tick, std::move(msg_ptr));
         co_return nullptr;
     }
 

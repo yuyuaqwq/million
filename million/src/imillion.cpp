@@ -22,7 +22,7 @@ void IMillion::Start() {
 }
 
 
-std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iservice, MsgUnique init_msg) {
+std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iservice, MsgPtr init_msg) {
     auto shared = impl_->AddService(std::move(iservice), std::move(init_msg));
     if (!shared) {
         return std::nullopt;
@@ -70,7 +70,7 @@ SessionId IMillion::NewSession() {
 }
 
 
-std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgUnique msg) {
+std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgPtr msg) {
     auto sender_lock = sender.lock();
     if (!sender_lock) {
         return std::nullopt;
@@ -82,7 +82,7 @@ std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const Servi
     return impl_->Send(sender_lock, target_lock, std::move(msg));
 }
 
-bool IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgUnique msg) {
+bool IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgPtr msg) {
     auto sender_lock = sender.lock();
     if (!sender_lock) {
         return false;
@@ -99,7 +99,7 @@ const YAML::Node& IMillion::YamlConfig() const {
     return impl_->YamlConfig();
 }
 
-bool IMillion::Timeout(uint32_t tick, const ServiceHandle& service, MsgUnique msg) {
+bool IMillion::Timeout(uint32_t tick, const ServiceHandle& service, MsgPtr msg) {
     auto lock = service.lock();
     if (!lock) {
         return false;

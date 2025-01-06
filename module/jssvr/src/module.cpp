@@ -27,7 +27,7 @@ public:
     using Base::Base;
 
 private:
-    virtual bool OnInit(million::MsgUnique msg) override {
+    virtual bool OnInit(million::MsgPtr msg) override {
         const auto& config = imillion().YamlConfig();
 
         const auto& jssvr_config = config["jssvr"];
@@ -189,7 +189,7 @@ public:
 
     using Base::Base;
 
-    virtual bool OnInit(million::MsgUnique msg) override {
+    virtual bool OnInit(million::MsgPtr msg) override {
         bool success = false;
         do {
             js_rt_ = JS_NewRuntime();
@@ -253,12 +253,12 @@ public:
 
     }
 
-    virtual million::Task<million::MsgUnique> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgUnique msg) override {
-        if (!msg.IsProtoMessage()) {
+    virtual million::Task<million::MsgPtr> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr msg) override {
+        if (!msg.IsProtoMsg()) {
             // 只处理proto msg
             co_return nullptr;
         }
-        auto proto_msg = std::move(msg.GetProtoMessage());
+        auto proto_msg = std::move(msg.GetProtoMsg());
 
         JSModuleDef* js_main_module = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(js_main_module_));
 
