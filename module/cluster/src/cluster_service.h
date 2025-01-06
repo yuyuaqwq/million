@@ -188,7 +188,7 @@ public:
 
             // 完成连接，发送所有队列包
             for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
-                auto& msg = *iter;
+                auto msg = iter->GetMutableMsg<ClusterSendMsg>();
                 if (msg->target_node == res.target_node()) {
                     PacketForward(&node_session, std::move(msg->src_service)
                         , std::move(msg->target_service), *msg->msg);
@@ -284,7 +284,7 @@ public:
 
         // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
         // 使用一个全局队列，因为这种连接排队的包很少，直接扫描就行
-        send_queue_.emplace_back(std::move(msg));
+        send_queue_.emplace_back(std::move(msg_ptr));
 
         co_return nullptr;
     }
@@ -412,7 +412,7 @@ private:
     std::unordered_map<NodeName, NodeSessionShared> nodes_;
 
     std::set<NodeName> wait_nodes_;
-    std::list<std::unique_ptr<ClusterSendMsg>> send_queue_;
+    std::list<MsgPtr> send_queue_;
 };
 
 } // namespace cluster

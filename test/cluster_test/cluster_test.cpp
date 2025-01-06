@@ -54,9 +54,11 @@ public:
     }
 
     MILLION_MSG_HANDLE(TestMsg, msg) {
+        auto mut_msg = msg_ptr.GetMutableMsg<TestMsg>();
+
         Send<million::cluster::ClusterSendMsg>(cluster_
             , "TestService", msg->target_node, "TestService"
-            , std::move(msg->req));
+            , std::move(mut_msg->req));
         co_return nullptr;
     }
 
