@@ -82,12 +82,60 @@ public:
         msg_ptr_ = v;
     }
 
+
     bool IsProtoMsg() const {
         return IsProtoMsgUnique() || IsProtoMsgShared();
     }
 
     bool IsCppMsg() const {
         return IsCppMsgUnique() || IsCppMsgShared();
+    }
+
+
+    MsgTypeKey GetTypeKey() const {
+        if (IsProtoMsg()) {
+            return reinterpret_cast<MsgTypeKey>(GetProtoMsg()->GetDescriptor());
+        }
+        else if (IsCppMsg()) {
+            return reinterpret_cast<MsgTypeKey>(&GetCppMsg()->type());
+        }
+        return 0;
+    }
+
+    template <typename MsgT>
+    bool IsType() const {
+        return GetTypeKey() == GetMsgTypeKey<MsgT>();
+    }
+
+
+    template<typename MsgT>
+    const MsgT* GetMsg() const {
+        assert(IsType<MsgT>());
+        if constexpr (is_proto_msg_v<MsgT>) {
+            return static_cast<const MsgT*>(GetProtoMsg());
+        }
+        else if constexpr (is_cpp_msg_v<MsgT>) {
+            return static_cast<const MsgT*>(GetCppMsg());
+        }
+        else {
+            static_assert(is_proto_msg_v<MsgT> || is_cpp_msg_v<MsgT>,
+                "Unsupported message type.");
+        }
+    }
+
+    template<typename MsgT>
+    MsgT* GetMutableMsg() const {
+        assert(IsType<MsgT>());
+        if constexpr (is_proto_msg_v<MsgT>) {
+            return static_cast<MsgT*>(GetMutableProtoMsg());
+        }
+        else if constexpr (is_cpp_msg_v<MsgT>) {
+            return static_cast<MsgT*>(GetMutableCppMsg());
+        }
+        else {
+            static_assert(is_proto_msg_v<MsgT> || is_cpp_msg_v<MsgT>,
+                "Unsupported message type.");
+        }
     }
 
     const ProtoMsg* GetProtoMsg() const {
@@ -123,19 +171,14 @@ public:
     }
 
 
-    MsgTypeKey GetTypeKey() const {
-        if (IsProtoMsg()) {
-            return reinterpret_cast<MsgTypeKey>(GetProtoMsg()->GetDescriptor());
+    void* Release() {
+        if (IsProtoMsgUnique()) {
+            return GetProtoMsgUnique().release();
         }
-        else if (IsCppMsg()) {
-            return reinterpret_cast<MsgTypeKey>(&GetCppMsg()->type());
+        else if (IsCppMsgUnique()) {
+            return GetCppMsgUnique().release();
         }
-        return 0;
-    }
-
-    template <typename MsgT>
-    bool IsType() const {
-        return GetTypeKey() == GetMsgTypeKey<MsgT>();
+        throw std::bad_variant_access();
     }
 
     MsgPtr Copy() const {
@@ -161,52 +204,13 @@ public:
         throw std::bad_variant_access();
     }
 
+
     operator bool() const {
         if (IsProtoMsg()) {
             return GetProtoMsg();
         }
         else if (IsCppMsg()) {
             return GetCppMsg();
-        }
-        throw std::bad_variant_access();
-    }
-
-    template<typename MsgT>
-    const MsgT* GetMsg() const {
-        assert(IsType<MsgT>());
-        if constexpr (is_proto_msg_v<MsgT>) {
-            return static_cast<const MsgT*>(GetProtoMsg());
-        }
-        else if constexpr (is_cpp_msg_v<MsgT>) {
-            return static_cast<const MsgT*>(GetCppMsg());
-        }
-        else {
-            static_assert(is_proto_msg_v<MsgT> || is_cpp_msg_v<MsgT>,
-                "Unsupported message type.");
-        }
-    }
-
-    template<typename MsgT>
-    MsgT* GetMutableMsg() const {
-        assert(IsType<MsgT>());
-        if constexpr (is_proto_msg_v<MsgT>) {
-            return static_cast<MsgT*>(GetMutableProtoMsg());
-        }
-        else if constexpr (is_cpp_msg_v<MsgT>) {
-            return static_cast<MsgT*>(GetMutableCppMsg());
-        }
-        else {
-            static_assert(is_proto_msg_v<MsgT> || is_cpp_msg_v<MsgT>,
-                "Unsupported message type.");
-        }
-    }
-
-    void* Release() {
-        if (IsProtoMsgUnique()) {
-            return GetProtoMsgUnique().release();
-        }
-        else if (IsCppMsgUnique()) {
-            return GetCppMsgUnique().release();
         }
         throw std::bad_variant_access();
     }
