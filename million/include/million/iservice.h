@@ -148,9 +148,9 @@ private:
     } \
     ::std::unordered_map<::million::MsgTypeKey, ::million::Task<::million::MsgPtr>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle&, ::million::SessionId, ::million::MsgPtr)> _MILLION_MSG_HANDLE_MAP_ \
 
-#define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
+#define MILLION_MSG_HANDLE_I(MSG_TYPE_, MSG_PTR_NAME_, GET_MSG_METHOD_) \
     ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_) { \
-        auto msg = msg_.GetMsg<MSG_TYPE_>(); \
+        auto msg = msg_.GET_MSG_METHOD_<MSG_TYPE_>(); \
         return _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, std::move(msg_), msg); \
     } \
     const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
@@ -161,21 +161,13 @@ private:
             assert(res.second); \
             return true; \
         }(); \
+
+#define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
+    MILLION_MSG_HANDLE_I(MSG_TYPE_, MSG_PTR_NAME_, GetMsg); \
     ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, const MSG_TYPE_* MSG_PTR_NAME_)
 
 #define MILLION_MUT_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_) { \
-        auto msg = msg_.GetMutableMsg<MSG_TYPE_>(); \
-        return _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, std::move(msg_), msg); \
-    } \
-    const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
-        [this] { \
-            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(::million::GetMsgTypeKey<MSG_TYPE_>(), \
-                &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
-            ); \
-            assert(res.second); \
-            return true; \
-        }(); \
+    MILLION_MSG_HANDLE_I(MSG_TYPE_, MSG_PTR_NAME_, GetMutableMsg); \
     ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE_* MSG_PTR_NAME_)
 
 
