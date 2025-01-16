@@ -58,6 +58,24 @@ public:
 
     const protobuf::Reflection& GetReflection() const { return *proto_msg_->GetReflection(); }
 
+    void MoveFrom(DbRow* db_row) {
+        std::swap(proto_msg_, db_row->proto_msg_);
+        std::swap(dirty_fields_, db_row->dirty_fields_);
+
+        // db_row->proto_msg_->Clear();
+        db_row->ClearDirty();
+    }
+
+    DbRow MoveTo() {
+        auto* proto_msg = proto_msg_->New();
+        if (proto_msg == nullptr) {
+            throw std::bad_alloc();
+        }
+        auto row = DbRow(ProtoMsgUnique(proto_msg));
+        row.MoveFrom(this);
+        return row;
+    }
+
     //void CopyFrom(const google::protobuf::Message& msg) {
     //    proto_msg_->CopyFrom(msg);
     //    dirty_ = false;
@@ -69,15 +87,11 @@ public:
         if (proto_msg == nullptr) {
             throw std::bad_alloc();
         }
-        auto copy = DbRow(ProtoMsgUnique(proto_msg));
-        copy.dirty_fields_ = dirty_fields_;
+        auto row = DbRow(ProtoMsgUnique(proto_msg));
+        row.dirty_fields_ = dirty_fields_;
 
-        const auto* reflection = proto_msg_->GetReflection();
-        for (size_t i = 0; i < dirty_fields_.size(); ++i) {
-            if (copy.dirty_fields_[i]) {
-                copy.CopyField(*proto_msg_, GetFieldByIndex(i), copy.proto_msg_.get(), copy.GetFieldByIndex(i));
-            }
-        }
+        row.CopyFromDirty(*this);
+        return row;
     }
 
     void CopyFromDirty(const DbRow& db_row) {
@@ -89,7 +103,6 @@ public:
             }
         }
     }
-
 
     bool IsDirty() const {
         for (size_t i = 0; i < dirty_fields_.size(); ++i) {

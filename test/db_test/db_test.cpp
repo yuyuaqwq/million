@@ -50,7 +50,7 @@ public:
 
         // co_await Call<db::SqlInsertMsg>(*handle, &row);
 
-        auto res2 = co_await Call<db::DbRowPullMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103", std::nullopt);
+        auto res2 = co_await Call<db::DbRowGetMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103", std::nullopt);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");
         }
