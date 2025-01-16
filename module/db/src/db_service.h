@@ -142,15 +142,17 @@ public:
             co_return nullptr;
         }
 
-        auto row = DbRow(std::move(proto_msg));
-        //auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, &row, false);
+        auto tmp_row = DbRow(std::move(proto_msg));
+        row = &tmp_row;
+
+        //auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, row, false);
         //if (!res_msg->success) {
-            auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, &row, false);
+            auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, row, false);
             if (!res_msg->success) {
                 co_return nullptr;
             }
             //row.MarkDirty();
-            //co_await Call<CacheSetMsg>(cache_service_, &row);
+            //co_await Call<CacheSetMsg>(cache_service_, row);
             //row.ClearDirty();
         //}
 
@@ -234,7 +236,7 @@ private:
         if (!tmp_msg) {
             throw std::bad_alloc();
         }
-        Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, &res.second, DbRow(std::move(tmp_msg)));
+        Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, &res.first->second, DbRow(std::move(tmp_msg)));
 
         return true;
     }

@@ -44,16 +44,15 @@ public:
         user->set_updated_at(13123);
         user->set_email("sb@qq.com");
 
-        auto row = db::DbRow(std::move(user));
-
-        auto handle = imillion().GetServiceByName("SqlService");
-
-        // co_await Call<db::SqlInsertMsg>(*handle, &row);
+        auto res = co_await Call<db::DbRowCreateMsg>(db_service_, std::move(user), std::nullopt);
 
         auto res2 = co_await Call<db::DbRowGetMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103", std::nullopt);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");
         }
+
+        // auto handle = imillion().GetServiceByName("SqlService");
+        // co_await Call<db::SqlInsertMsg>(*handle, &row);
 
         co_return nullptr;
     }

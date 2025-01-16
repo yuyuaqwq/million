@@ -17,7 +17,7 @@ constexpr BatchId kBatchIdNull = 0;
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DbRowExistMsg, (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (bool) exist);
 
-MILLION_MSG_DEFINE(MILLION_DB_API, DbRowCreateMsg, (ProtoMsgUnique) row_msg, (std::optional<DbRow>) db_row);
+MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_DB_API, DbRowCreateMsg, (ProtoMsgUnique) row_msg, (std::optional<DbRow>) db_row);
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DbRowGetMsg
     , (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (std::optional<DbRow>) db_row);
