@@ -14,14 +14,14 @@ find_library(PROTOBUF_CORE_LIB libprotobufd find_library PATHS ${PROTOBUF_LIB_DI
 set(PROTOBUF_LIB ${PROTOBUF_PROTOC_LIB} ${PROTOBUF_CORE_LIB})
 
 if (WIN32)
-    set(MILLION_PROTOGEN_COMPILE_DEFINITIONS MILLION_PROTOGEN_API=__declspec\(dllimport\) CACHE STRING "protobuf compile definitions")
+    set(PROTOGEN_COMPILE_DEFINITIONS PROTOGEN_API=__declspec\(dllimport\) CACHE STRING "protobuf compile definitions")
 elseif(UNIX)
-    set(MILLION_PROTOGEN_COMPILE_DEFINITIONS MILLION_PROTOGEN_API=__attribute__\(\(visibility\(\"hidden\"\)\)\) CACHE STRING "protobuf compile definitions")
+    set(PROTOGEN_COMPILE_DEFINITIONS PROTOGEN_API=__attribute__\(\(visibility\(\"hidden\"\)\)\) CACHE STRING "protobuf compile definitions")
 endif()
-set(MILLION_PROTOGEN_HEADER_DIR 
+set(PROTOGEN_HEADER_DIR 
     ${CMAKE_CURRENT_SOURCE_DIR}/protogen/include
     CACHE STRING "protobuf header dir")
-set(MILLION_PROTOGEN_LIB million_protogen CACHE STRING "protobuf lib")
+set(PROTOGEN_LIB protogen CACHE STRING "protobuf lib")
 
 if (WIN32)
     message(STATUS "Compiling on Windows")

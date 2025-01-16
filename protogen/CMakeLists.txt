@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(${MILLION_PROTOGEN_LIB})
+project(${PROTOGEN_LIB})
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 
@@ -20,17 +20,17 @@ file(GLOB SRC
     ./src/**/*.cpp
     ./src/*.cc
     ./src/**/*.cc)
-add_library(${MILLION_PROTOGEN_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
+add_library(${PROTOGEN_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
-target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
+target_include_directories(${PROTOGEN_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${PROTOGEN_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
 
 if (WIN32)
-    target_compile_definitions(${MILLION_PROTOGEN_LIB} PRIVATE MILLION_PROTOGEN_API=__declspec\(dllexport\))
+    target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_API=__declspec\(dllexport\))
 elseif(UNIX)
-    target_compile_definitions(${MILLION_PROTOGEN_LIB} PRIVATE MILLION_PROTOGEN_API=__attribute__\(\(visibility\(\"default\"\)\)\))
+    target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_API=__attribute__\(\(visibility\(\"default\"\)\)\))
  endif()
 
-target_compile_definitions(${MILLION_PROTOGEN_LIB} PRIVATE PROTOBUF_USE_DLLS)
-target_include_directories(${MILLION_PROTOGEN_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
-target_link_libraries(${MILLION_PROTOGEN_LIB} PRIVATE ${PROTOBUF_LIB})
+target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOBUF_USE_DLLS)
+target_include_directories(${PROTOGEN_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
+target_link_libraries(${PROTOGEN_LIB} PRIVATE ${PROTOBUF_LIB})

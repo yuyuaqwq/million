@@ -27,9 +27,9 @@ add_library(${MILLION_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 target_include_directories(${MILLION_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(${MILLION_LIB} PRIVATE ${MILLION_HEADER_DIR})
 
-target_include_directories(${MILLION_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
-target_link_libraries(${MILLION_LIB} PRIVATE ${MILLION_PROTOGEN_LIB})
-target_compile_definitions(${MILLION_LIB} PRIVATE ${MILLION_PROTOGEN_COMPILE_DEFINITIONS})
+target_include_directories(${MILLION_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
+target_link_libraries(${MILLION_LIB} PRIVATE ${PROTOGEN_LIB})
+target_compile_definitions(${MILLION_LIB} PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
 
 target_include_directories(${MILLION_LIB} PRIVATE ${SPDLOG_HEADER_DIR})
 target_link_libraries(${MILLION_LIB} PRIVATE ${SPDLOG_LIB})

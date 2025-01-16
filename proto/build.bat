@@ -1,6 +1,6 @@
 :: @echo off
 set OUTPUT_DIR=..\protogen
-set EXPORT_MACRO=MILLION_PROTOGEN_API
+set EXPORT_MACRO=PROTOGEN_API
 set TEMP_DIR=%OUTPUT_DIR%\temp
 
 :: 创建输出目录，如果已存在则跳过

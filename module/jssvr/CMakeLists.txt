@@ -29,9 +29,9 @@ target_include_directories(${JSSVR_LIB} PRIVATE ${JSSVR_HEADER_DIR})
 target_include_directories(${JSSVR_LIB} PRIVATE ${MILLION_HEADER_DIR})
 target_link_libraries(${JSSVR_LIB} PRIVATE ${MILLION_LIB})
 
-target_include_directories(${JSSVR_LIB} PRIVATE ${MILLION_PROTOGEN_HEADER_DIR})
-target_link_libraries(${JSSVR_LIB} PRIVATE ${MILLION_PROTOGEN_LIB})
-target_compile_definitions(${JSSVR_LIB} PRIVATE ${MILLION_PROTOGEN_COMPILE_DEFINITIONS})
+target_include_directories(${JSSVR_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
+target_link_libraries(${JSSVR_LIB} PRIVATE ${PROTOGEN_LIB})
+target_compile_definitions(${JSSVR_LIB} PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
 
 target_include_directories(${JSSVR_LIB} PRIVATE ${QUICK_JS_HEADER_DIR})
 target_link_libraries(${JSSVR_LIB} PRIVATE ${QUICK_JS_LIB})

@@ -29,6 +29,11 @@ namespace db {
 // 外部必须有一份数据，dbservice也可能有一份，但是会通过lru来自动淘汰
 // 外部修改后，通过发送标记脏消息来通知dbservice可以更新此消息
 
+// 使用本地wal来支持事务和持久化
+// wal写满时，就将所有内存中的数据回写到sql，然后清空wal
+
+// 另外支持跨节点访问其他db，由sql支持，sql提供当前行被哪个节点所持有
+
 MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (nonnull_ptr<DbRow>) db_row);
 
 class DbService : public IService {
@@ -117,9 +122,9 @@ public:
                 if (!res_msg->success) {
                     co_await Call<SqlInsertMsg>(sql_service_, &row);
                 }
-                row.MarkDirty();
+                //row.MarkDirty();
                 //co_await Call<CacheSetMsg>(cache_service_, &row);
-                row.ClearDirty();
+                //row.ClearDirty();
             //}
 
             auto res = table.emplace(std::move(msg->primary_key), std::move(row));
@@ -185,6 +190,10 @@ private:
 
     ServiceHandle cache_service_;
     ServiceHandle sql_service_;
+
+
+    // 回写负载均衡
+
 };
 
 } // namespace db
