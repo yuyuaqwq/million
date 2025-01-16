@@ -29,10 +29,12 @@ namespace db {
 // 外部必须有一份数据，dbservice也可能有一份，但是会通过lru来自动淘汰
 // 外部修改后，通过发送标记脏消息来通知dbservice可以更新此消息
 
-// 使用本地wal来支持事务和持久化
-// wal写满时，就将所有内存中的数据回写到sql，然后清空wal
+// 另外可以支持跨节点访问其他db，可以由redis来支持，存储该路径的行位于哪个节点的db中
+// 另外也可以由redis来确定该行是否被锁定，以及该行数据是否成功回写sql
+// 或者说不使用本地wal，而是通过redis来支持事务？
 
-// 另外支持跨节点访问其他db，由sql支持，sql提供当前行被哪个节点所持有
+// 置脏的数据会被放到redis中，来保证可用，需要批量写的数据，就批量写到redis中
+
 
 MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (nonnull_ptr<DbRow>) db_row);
 
@@ -52,12 +54,12 @@ public:
         }
         sql_service_ = *handle;
 
-        handle = imillion().GetServiceByName("CacheService");
-        if (!handle) {
-            logger().Err("Unable to find SqlService.");
-            return false;
-        }
-        cache_service_ = *handle;
+        //handle = imillion().GetServiceByName("CacheService");
+        //if (!handle) {
+        //    logger().Err("Unable to find SqlService.");
+        //    return false;
+        //}
+        //cache_service_ = *handle;
 
         return true;
     }
@@ -87,7 +89,7 @@ public:
     }
 
 
-    MILLION_MUT_MSG_HANDLE(DbRowGetMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(DbRowPullMsg, msg) {
         auto& desc = msg->table_desc;
         if (!desc.options().HasExtension(table)) {
             logger().Err("HasExtension table failed.");
@@ -142,7 +144,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MSG_HANDLE(DbRowSetMsg, msg) {
+    MILLION_MSG_HANDLE(DbRowPushMsg, msg) {
         auto db_row = msg->db_row;
         const auto& desc = db_row->GetDescriptor();
         const auto& reflection = db_row->GetReflection();
@@ -188,11 +190,11 @@ private:
     using DbTable = std::unordered_map<std::string, DbRow>;
     std::unordered_map<const protobuf::Descriptor*, DbTable> tables_;
 
-    ServiceHandle cache_service_;
+    //ServiceHandle cache_service_;
     ServiceHandle sql_service_;
 
 
-    // 回写负载均衡
+    // 回写可以负载均衡，避免出现多个回写挤在同一秒进行
 
 };
 

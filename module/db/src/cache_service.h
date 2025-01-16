@@ -48,128 +48,128 @@ public:
 
     MILLION_MSG_DISPATCH(CacheService);
 
-    MILLION_MUT_MSG_HANDLE(CacheGetMsg, msg) {
-        auto& proto_msg = msg->db_row->get();
-        const auto& desc = msg->db_row->GetDescriptor();
-        const auto& reflection = msg->db_row->GetReflection();
-        if (!desc.options().HasExtension(table)) {
-            logger().Err("HasExtension table failed.");
-            co_return nullptr;
-        }
-        const MessageOptionsTable& options = desc.options().GetExtension(table);
-        const auto& table_name = options.name();
-        if (table_name.empty()) {
-            logger().Err("table_name is empty.");
-            co_return nullptr;
-        }
+    //MILLION_MUT_MSG_HANDLE(CacheGetMsg, msg) {
+    //    auto& proto_msg = msg->db_row->get();
+    //    const auto& desc = msg->db_row->GetDescriptor();
+    //    const auto& reflection = msg->db_row->GetReflection();
+    //    if (!desc.options().HasExtension(table)) {
+    //        logger().Err("HasExtension table failed.");
+    //        co_return nullptr;
+    //    }
+    //    const MessageOptionsTable& options = desc.options().GetExtension(table);
+    //    const auto& table_name = options.name();
+    //    if (table_name.empty()) {
+    //        logger().Err("table_name is empty.");
+    //        co_return nullptr;
+    //    }
 
-        // 通过 Redis 哈希表存取 Protobuf 字段
-        std::unordered_map<std::string, std::string> redis_hash;
-        auto redis_key = std::format("million_db:{}:{}", table_name, msg->primary_key);
-        redis_->hgetall(redis_key, std::inserter(redis_hash, redis_hash.end()));
-        if (redis_hash.empty()) {
-            msg->success = false;
-        }
-        else {
-            // 遍历 Protobuf 字段并设置对应的值
-            for (int i = 0; i < desc.field_count(); ++i) {
-                const google::protobuf::FieldDescriptor* field = desc.field(i);
+    //    // 通过 Redis 哈希表存取 Protobuf 字段
+    //    std::unordered_map<std::string, std::string> redis_hash;
+    //    auto redis_key = std::format("million_db:{}:{}", table_name, msg->primary_key);
+    //    redis_->hgetall(redis_key, std::inserter(redis_hash, redis_hash.end()));
+    //    if (redis_hash.empty()) {
+    //        msg->success = false;
+    //    }
+    //    else {
+    //        // 遍历 Protobuf 字段并设置对应的值
+    //        for (int i = 0; i < desc.field_count(); ++i) {
+    //            const google::protobuf::FieldDescriptor* field = desc.field(i);
 
-                auto iter = redis_hash.find(field->name());
-                if (iter == redis_hash.end()) {
-                    continue;
-                }
-                SetField(&proto_msg, *field, iter->second);
-            }
-            msg->success = true;
-        }
+    //            auto iter = redis_hash.find(field->name());
+    //            if (iter == redis_hash.end()) {
+    //                continue;
+    //            }
+    //            SetField(&proto_msg, *field, iter->second);
+    //        }
+    //        msg->success = true;
+    //    }
 
-        co_return std::move(msg_);
-    }
+    //    co_return std::move(msg_);
+    //}
 
-    MILLION_MSG_HANDLE(CacheSetMsg, msg) {
-        auto& proto_msg = msg->db_row->get();
-        if (!msg->db_row->IsDirty()) {
-            co_return std::move(msg_);
-        }
+    //MILLION_MSG_HANDLE(CacheSetMsg, msg) {
+    //    auto& proto_msg = msg->db_row->get();
+    //    if (!msg->db_row->IsDirty()) {
+    //        co_return std::move(msg_);
+    //    }
 
-        const auto& desc = msg->db_row->GetDescriptor();
-        const auto& reflection = msg->db_row->GetReflection();
-        if (!desc.options().HasExtension(table)) {
-            logger().Err("HasExtension table failed.");
-            co_return nullptr;
-        }
-        const MessageOptionsTable& options = desc.options().GetExtension(table);
-        const auto& table_name = options.name();
-        if (table_name.empty()) {
-            logger().Err("table_name is empty.");
-            co_return nullptr;
-        }
+    //    const auto& desc = msg->db_row->GetDescriptor();
+    //    const auto& reflection = msg->db_row->GetReflection();
+    //    if (!desc.options().HasExtension(table)) {
+    //        logger().Err("HasExtension table failed.");
+    //        co_return nullptr;
+    //    }
+    //    const MessageOptionsTable& options = desc.options().GetExtension(table);
+    //    const auto& table_name = options.name();
+    //    if (table_name.empty()) {
+    //        logger().Err("table_name is empty.");
+    //        co_return nullptr;
+    //    }
 
-        int32_t ttl = 0;
-        if (options.has_cache()) {
-            const TableCacheOptions& cache_options = options.cache();
-            ttl = cache_options.ttl();
-        }
-        // options.tick_second();
+    //    int32_t ttl = 0;
+    //    if (options.has_cache()) {
+    //        const TableCacheOptions& cache_options = options.cache();
+    //        ttl = cache_options.ttl();
+    //    }
+    //    // options.tick_second();
 
-        const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
-        if (!primary_key_field_desc) {
-            logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
-            co_return nullptr;
-        }
-        std::string primary_key = GetField(proto_msg, *primary_key_field_desc);
-        if (primary_key.empty()) {
-            logger().Err("primary_key is empty:{}.{}", table_name, options.primary_key());
-            co_return nullptr;
-        }
+    //    const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
+    //    if (!primary_key_field_desc) {
+    //        logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
+    //        co_return nullptr;
+    //    }
+    //    std::string primary_key = GetField(proto_msg, *primary_key_field_desc);
+    //    if (primary_key.empty()) {
+    //        logger().Err("primary_key is empty:{}.{}", table_name, options.primary_key());
+    //        co_return nullptr;
+    //    }
 
-        // 使用 std::unordered_map 来存储要更新到 Redis 的字段和值
-        std::unordered_map<std::string, std::string> redis_hash;
+    //    // 使用 std::unordered_map 来存储要更新到 Redis 的字段和值
+    //    std::unordered_map<std::string, std::string> redis_hash;
 
-        // 遍历 Protobuf 的所有字段，将字段和值存入 redis_hash 中
-        for (int i = 0; i < desc.field_count(); ++i) {
-            if (!msg->db_row->IsDirtyFromFIeldIndex(i)) {
-                continue;
-            }
+    //    // 遍历 Protobuf 的所有字段，将字段和值存入 redis_hash 中
+    //    for (int i = 0; i < desc.field_count(); ++i) {
+    //        if (!msg->db_row->IsDirtyFromFIeldIndex(i)) {
+    //            continue;
+    //        }
 
-            const auto* field = desc.field(i);
-            if (!field) {
-                logger().Err("desc.field failed: {}.", i);
-                continue;
-            }
+    //        const auto* field = desc.field(i);
+    //        if (!field) {
+    //            logger().Err("desc.field failed: {}.", i);
+    //            continue;
+    //        }
 
-            const FieldOptionsColumn& options = field->options().GetExtension(column);
+    //        const FieldOptionsColumn& options = field->options().GetExtension(column);
 
-            redis_hash[field->name()] = GetField(proto_msg, *field);
+    //        redis_hash[field->name()] = GetField(proto_msg, *field);
 
-            // 主键在上面获取
-            //if (options.has_cache()) {
-            //    const auto& cache_options = options.cache();
-            //    if (cache_options.index()) {
-            //        if (!primary_key.empty()) {
-            //            logger().Err("there can only be one index:{}", field->name());
-            //        }
-            //        if (field->is_repeated()) {
-            //            logger().Err("index cannot be an array:{}", field->name());
-            //        }
-            //        else {
-            //            primary_key = redis_hash[field->name()];
-            //        }
-            //    }
-            //}
-        }
+    //        // 主键在上面获取
+    //        //if (options.has_cache()) {
+    //        //    const auto& cache_options = options.cache();
+    //        //    if (cache_options.index()) {
+    //        //        if (!primary_key.empty()) {
+    //        //            logger().Err("there can only be one index:{}", field->name());
+    //        //        }
+    //        //        if (field->is_repeated()) {
+    //        //            logger().Err("index cannot be an array:{}", field->name());
+    //        //        }
+    //        //        else {
+    //        //            primary_key = redis_hash[field->name()];
+    //        //        }
+    //        //    }
+    //        //}
+    //    }
 
-        auto redis_key = std::format("million_db:{}:{}", table_name, primary_key);
+    //    auto redis_key = std::format("million_db:{}:{}", table_name, primary_key);
 
-        redis_->hmset(redis_key, redis_hash.begin(), redis_hash.end());
+    //    redis_->hmset(redis_key, redis_hash.begin(), redis_hash.end());
 
-        if (ttl > 0) {
-            redis_->expire(redis_key.data(), ttl);
-        }
+    //    if (ttl > 0) {
+    //        redis_->expire(redis_key.data(), ttl);
+    //    }
 
-        co_return std::move(msg_);
-    }
+    //    co_return std::move(msg_);
+    //}
 
     MILLION_MUT_MSG_HANDLE(CacheGetBytesMsg, msg) {
         auto value =  redis_->get("million_db:" + msg->key_value);
