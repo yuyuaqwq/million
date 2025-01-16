@@ -70,7 +70,7 @@ public:
                 auto db_row = msg->db_row->CopyDirtyTo();
                 msg->db_row->ClearDirty();
                 co_await Call<SqlUpdateMsg>(sql_service_, &db_row);
-                co_await Call<CacheSetMsg>(cache_service_, &db_row);
+                // co_await Call<CacheSetMsg>(cache_service_, &db_row);
             }
             catch (const std::exception& e) {
                 logger().Err("DbRowTickSyncMsg: {}", e.what());
@@ -111,16 +111,16 @@ public:
             }
 
             auto row = DbRow(std::move(proto_msg));
-            auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, &row, false);
-            if (!res_msg->success) {
+            //auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, &row, false);
+            //if (!res_msg->success) {
                 auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, &row, false);
                 if (!res_msg->success) {
                     co_await Call<SqlInsertMsg>(sql_service_, &row);
                 }
                 row.MarkDirty();
-                co_await Call<CacheSetMsg>(cache_service_, &row);
+                //co_await Call<CacheSetMsg>(cache_service_, &row);
                 row.ClearDirty();
-            }
+            //}
 
             auto res = table.emplace(std::move(msg->primary_key), std::move(row));
             assert(res.second);
