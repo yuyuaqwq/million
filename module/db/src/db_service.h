@@ -166,6 +166,7 @@ public:
             // 根据配置选择是否回写到redis，让redis保证数据可靠
             // 这里可以直接传递msg->db_row，外部需要等待
             co_await Call<CacheSetMsg>(cache_service_, msg->db_row, old_db_version);
+            // 如果db_version不匹配，则会超时
         }
 
         co_return std::move(msg_);
