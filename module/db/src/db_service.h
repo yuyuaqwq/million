@@ -92,26 +92,17 @@ public:
 
     MILLION_MUT_MSG_HANDLE(DbRowCreateMsg, msg) {
         auto& desc = *msg->row_msg->GetDescriptor();
-        if (!desc.options().HasExtension(table)) {
-            logger().Err("HasExtension table failed.");
-            co_return std::move(msg_);
-        }
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
+        
         const auto& reflection = *msg->row_msg->GetReflection();
 
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         auto& table_name = options.name();
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
-        if (!primary_key_field_desc) {
-            logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
-            co_return nullptr;
-        }
-        std::string primary_key;
-        primary_key = reflection.GetStringReference(*msg->row_msg.get(), primary_key_field_desc, &primary_key);
-        if (primary_key.empty()) {
-            logger().Err("primary_key is empty.");
-            co_return nullptr;
-        }
+        TaskAssert(primary_key_field_desc, "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
+        
+        auto primary_key = GetField(*msg->row_msg.get(), *primary_key_field_desc);
 
         auto db_row = DbRow(std::move(msg->row_msg));
         msg->db_row = db_row;
@@ -123,10 +114,8 @@ public:
 
     MILLION_MUT_MSG_HANDLE(DbRowGetMsg, msg) {
         auto& desc = msg->table_desc;
-        if (!desc.options().HasExtension(table)) {
-            logger().Err("HasExtension table failed.");
-            co_return std::move(msg_);
-        }
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
+        
         const MessageOptionsTable& options = desc.options().GetExtension(table);
 
         auto row = FindDbRow(desc, msg->primary_key);
@@ -137,20 +126,16 @@ public:
         }
 
         auto proto_msg = imillion().proto_mgr().NewMessage(desc);
-        if (!proto_msg) {
-            logger().Err("proto_mgr().NewMessage failed.");
-            co_return nullptr;
-        }
-
+        TaskAssert(proto_msg, "proto_mgr().NewMessage failed.");
+        
         auto tmp_row = DbRow(std::move(proto_msg));
         row = &tmp_row;
 
         //auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, row, false);
         //if (!res_msg->success) {
             auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, row, false);
-            if (!res_msg->success) {
-                co_return nullptr;
-            }
+            TaskAssert(res_msg->success, "SqlQueryMsg failed.");
+            
             //row.MarkDirty();
             //co_await Call<CacheSetMsg>(cache_service_, row);
             //row.ClearDirty();
@@ -164,36 +149,24 @@ public:
         auto db_row = msg->db_row;
         const auto& desc = db_row->GetDescriptor();
         const auto& reflection = db_row->GetReflection();
-        if (!desc.options().HasExtension(table)) {
-            logger().Err("HasExtension table failed.");
-            co_return nullptr;
-        }
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
+        
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         auto& table_name = options.name();
 
         auto table_iter = tables_.find(&desc);
-        if (table_iter == tables_.end()) {
-            logger().Err("Table does not exist.");
-            co_return nullptr;
-        }
+        TaskAssert(table_iter != tables_.end(), "Table does not exist.");
+        
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
-        if (!primary_key_field_desc) {
-            logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
-            co_return nullptr;
-        }
+        TaskAssert(primary_key_field_desc, "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
+        
         std::string primary_key;
         primary_key = reflection.GetStringReference(db_row->get(), primary_key_field_desc, &primary_key);
-        if (primary_key.empty()) {
-            logger().Err("primary_key is empty.");
-            co_return nullptr;
-        }
-
+        TaskAssert(!primary_key.empty(), "primary_key is empty.");
+       
         auto row_iter = table_iter->second.find(primary_key);
-        if (row_iter == table_iter->second.end()) {
-            logger().Err("Row does not exist.");
-            co_return nullptr;
-        }
+        TaskAssert(row_iter != table_iter->second.end(), "Row does not exist.");
 
         row_iter->second.CopyFromDirty(*msg->db_row);
 
@@ -233,9 +206,8 @@ private:
         auto sync_tick = options.sync_tick();
 
         auto tmp_msg = imillion().proto_mgr().NewMessage(desc);
-        if (!tmp_msg) {
-            throw std::bad_alloc();
-        }
+        TaskAssert(tmp_msg, "proto_mgr().NewMessage Failed.");
+        
         Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, &res.first->second, DbRow(std::move(tmp_msg)));
 
         return true;

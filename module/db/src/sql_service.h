@@ -53,8 +53,11 @@ public:
 
     MILLION_MSG_HANDLE(SqlTableInitMsg, msg) {
         const auto& desc = msg->desc;
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
+        
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         auto& table_name = options.name();
+        TaskAssert(!table_name.empty(), "table_name is empty.");
 
         uint32_t count = 0;
         // Query to check if the table exists in the current database
@@ -235,7 +238,6 @@ public:
     }
 
     MILLION_MUT_MSG_HANDLE(SqlQueryMsg, msg) {
-
         auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
@@ -245,6 +247,9 @@ public:
             const TableSqlOptions& sql_options = options.sql();
         }
         auto& table_name = options.name();
+        if (table_name.empty()) {
+            TaskAbort("table_name is empty.");
+        }
 
         std::string sql = "SELECT";
         for (int i = 0; i < desc.field_count(); ++i) {
@@ -259,11 +264,9 @@ public:
         sql += table_name;
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
-        if (!primary_key_field_desc) {
-            logger().Err("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
-            co_return nullptr;
-        }
-
+        TaskAssert(primary_key_field_desc, 
+            "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
+        
         sql += " WHERE ";
         sql += primary_key_field_desc->name() + " = :" + primary_key_field_desc->name() + ";";
 
@@ -345,23 +348,21 @@ public:
         }
 
         msg->success = true;
-        Reply(sender, session_id, std::move(msg_));
-        co_return nullptr;
+        co_return std::move(msg_);
     }
 
     MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
         const auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
-        if (!desc.options().HasExtension(table)) {
-            logger().Err("HasExtension table failed.");
-            co_return nullptr;
-        }
+
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         if (options.has_sql()) {
             const TableSqlOptions& sql_options = options.sql();
         }
         auto& table_name = options.name();
+        TaskAssert(!table_name.empty(), "table_name is empty.");
 
         std::string sql = "INSERT INTO ";
         sql += table_name;
@@ -417,15 +418,13 @@ public:
         const auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
-        if (!desc.options().HasExtension(table)) {
-            logger().Err("HasExtension table failed.");
-            co_return nullptr;
-        }
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         if (options.has_sql()) {
             const TableSqlOptions& sql_options = options.sql();
         }
         auto& table_name = options.name();
+        TaskAssert(!table_name.empty(), "table_name is empty.");
 
         std::string sql = "UPDATE ";
         sql += table_name;

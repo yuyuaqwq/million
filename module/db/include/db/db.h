@@ -6,6 +6,7 @@
 #include <million/imillion.h>
 #include <million/msg.h>
 
+#include <db/db_options.pb.h>
 #include <db/api.h>
 #include <db/db_row.h>
 
@@ -30,6 +31,7 @@ MILLION_MSG_DEFINE(MILLION_DB_API, DbRowDeleteMsg, (std::string) table_name, (st
 MILLION_MSG_DEFINE(MILLION_DB_API, DbBatchBeginMsg, (BatchId) batch_id);
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DbBatchCommitMsg, (BatchId) batch_id);
+
 
 } // namespace db
 } // namespace million
