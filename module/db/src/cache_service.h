@@ -151,7 +151,6 @@ public:
 
         auto redis_key = std::format("million:db:{}:{}", table_name, primary_key);
 
-        // redis_hash["__db_lock"] = "";
         redis_->hmset(redis_key, redis_hash.begin(), redis_hash.end());
 
         //if (ttl > 0) {
@@ -162,17 +161,22 @@ public:
     }
 
     MILLION_MUT_MSG_HANDLE(CacheLockMsg, msg) {
-        // 设置一个超时时间，避免锁定过程当前节点宕机
-        std::string script = R"(
-            if redis.call('HSETNX', KEYS[1], ARGV[1], ARGV[2]) == 1 then
-                redis.call('EXPIRE', KEYS[1], ARGV[3])
-                return 1
-            else
-                return 0
-            end
-        )";
-        auto result = redis_->command<long long>("EVAL", script, 1, msg->key, "__db_lock", "1", "-1");
-        msg->success = result == 1;
+        // 锁定过程当前节点宕机，会导致该行无法被其他线程占用
+        // 引入一个__db_version，如果当前写入低于redis中存储的__db_version
+        // 说明出现了异常情况，抛出异常即可
+        
+        //std::string script = R"(
+        //    if redis.call('HSETNX', KEYS[1], ARGV[1], ARGV[2]) == 1 then
+        //        redis.call('EXPIRE', KEYS[1], ARGV[3])
+        //        return 1
+        //    else
+        //        return 0
+        //    end
+        //)";
+        //auto result = redis_->command<long long>("EVAL", script, 1, msg->key, "__db_lock", "1", "-1");
+        //msg->success = result == 1;
+
+        msg->success = redis_->hsetnx(msg->key, "__db_lock", "1");
         co_return std::move(msg_);
     }
 
