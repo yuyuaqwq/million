@@ -101,7 +101,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
         auto& user_session = *msg->user_session;
 
         auto& ep = user_session.remote_endpoint();
@@ -126,7 +126,6 @@ public:
 
     MILLION_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto& user_session = *msg->user_session;
-
         auto user_session_id = user_session.user_session_id();
 
         logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", user_session_id, msg->packet.size());
@@ -164,7 +163,6 @@ public:
         user_service_ = msg->user_service;
         co_return std::move(msg_);
     }
-
 
 
 private:

@@ -45,12 +45,19 @@ public:
         //user->set_email("sb@qq.com");
         //auto res = co_await Call<db::DbRowCreateMsg>(db_service_, std::move(user), std::nullopt);
 
-        auto res2 = co_await Call<db::DbRowGetMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103", std::nullopt);
+        auto res2 = co_await Call<db::DbRowQueryMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103"
+            , std::nullopt);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");
         }
 
-        res2->db_row->MarkDirty();
+        auto res3 = co_await Call<db::DbRowLockMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103"
+            , std::nullopt);
+        if (!res3->db_row) {
+            logger().Info("DbRowLockMsg failed.");
+        }
+
+        // res2->db_row->MarkDirty();
 
         // auto handle = imillion().GetServiceByName("SqlService");
         // co_await Call<db::SqlInsertMsg>(*handle, &row);

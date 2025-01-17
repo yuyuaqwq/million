@@ -42,18 +42,21 @@ void DbRow::operator=(DbRow&& rv) noexcept {
     dirty_fields_ = std::move(rv.dirty_fields_);
 }
 
-google::protobuf::Message& DbRow::get() const { return *proto_msg_.get(); }
+const google::protobuf::Message& DbRow::get() const { return *proto_msg_.get(); }
+
+google::protobuf::Message& DbRow::get() { return *proto_msg_.get(); }
+
 
 const protobuf::Descriptor& DbRow::GetDescriptor() const { return *proto_msg_->GetDescriptor(); }
 
 const protobuf::Reflection& DbRow::GetReflection() const { return *proto_msg_->GetReflection(); }
 
-void DbRow::MoveFrom(DbRow* db_row) {
-    std::swap(proto_msg_, db_row->proto_msg_);
-    std::swap(dirty_fields_, db_row->dirty_fields_);
+void DbRow::MoveFrom(DbRow* target) {
+    std::swap(proto_msg_, target->proto_msg_);
+    std::swap(dirty_fields_, target->dirty_fields_);
 
-    // db_row->proto_msg_->Clear();
-    db_row->ClearDirty();
+    // target->proto_msg_->Clear();
+    target->ClearDirty();
 }
 
 DbRow DbRow::MoveTo() {
@@ -84,11 +87,11 @@ DbRow DbRow::CopyDirtyTo() {
     return row;
 }
 
-void DbRow::CopyFromDirty(const DbRow& db_row) {
+void DbRow::CopyFromDirty(const DbRow& target) {
     const auto* reflection = proto_msg_->GetReflection();
     for (size_t i = 0; i < dirty_fields_.size(); ++i) {
-        if (db_row.dirty_fields_[i]) {
-            CopyField(*db_row.proto_msg_, db_row.GetFieldByIndex(i), proto_msg_.get(), GetFieldByIndex(i));
+        if (target.dirty_fields_[i]) {
+            CopyField(*target.proto_msg_, target.GetFieldByIndex(i), proto_msg_.get(), GetFieldByIndex(i));
             dirty_fields_.at(i) = true;
         }
     }
@@ -103,17 +106,6 @@ bool DbRow::IsDirty() const {
     return false;
 }
 
-void DbRow::MarkDirty() {
-    for (size_t i = 0; i < dirty_fields_.size(); ++i) {
-        dirty_fields_[i] = true;
-    }
-}
-
-void DbRow::ClearDirty() {
-    for (size_t i = 0; i < dirty_fields_.size(); ++i) {
-        dirty_fields_[i] = false;
-    }
-}
 
 bool DbRow::IsDirtyFromFIeldNum(int32_t field_number) const {
     return dirty_fields_.at(GetFieldByNumber(field_number).index());
@@ -123,12 +115,24 @@ bool DbRow::IsDirtyFromFIeldIndex(int32_t field_index) const {
     return dirty_fields_.at(field_index);
 }
 
+void DbRow::MarkDirty() {
+    for (size_t i = 0; i < dirty_fields_.size(); ++i) {
+        dirty_fields_[i] = true;
+    }
+}
+
 void DbRow::MarkDirtyByFieldNum(int32_t field_number) {
     dirty_fields_.at(GetFieldByNumber(field_number).index()) = true;
 }
 
 void DbRow::MarkDirtyByFieldIndex(int32_t field_index) {
     dirty_fields_.at(field_index) = true;
+}
+
+void DbRow::ClearDirty() {
+    for (size_t i = 0; i < dirty_fields_.size(); ++i) {
+        dirty_fields_[i] = false;
+    }
 }
 
 void DbRow::ClearDirtyByFieldNum(int32_t field_number) {
@@ -145,17 +149,13 @@ Task<> DbRow::Commit(IService* self, const ServiceHandle& db) {
 
 const google::protobuf::FieldDescriptor& DbRow::GetFieldByNumber(int32_t field_number) const {
     auto field_desc = GetDescriptor().FindFieldByNumber(field_number);
-    if (!field_desc) {
-        TaskAbort("msg:{}, desc_.FindFieldByNumber:{}", GetDescriptor().name(), field_number);
-    }
+    TaskAssert(field_desc, "msg:{}, desc_.FindFieldByNumber:{}", GetDescriptor().name(), field_number);
     return *field_desc;
 }
 
 const google::protobuf::FieldDescriptor& DbRow::GetFieldByIndex(int32_t field_index) const {
     auto field_desc = GetDescriptor().field(field_index);
-    if (!field_desc) {
-        TaskAbort("msg:{}, desc_.field:{}", GetDescriptor().name(), field_index);
-    }
+    TaskAssert(field_desc, "msg:{}, desc_.field:{}", GetDescriptor().name(), field_index);
     return *field_desc;
 }
 

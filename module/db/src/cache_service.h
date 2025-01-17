@@ -63,7 +63,8 @@ public:
         std::unordered_map<std::string, std::string> redis_hash;
         auto redis_key = std::format("million:db:{}:{}", table_name, msg->primary_key);
         redis_->hgetall(redis_key, std::inserter(redis_hash, redis_hash.end()));
-        if (redis_hash.empty()) {
+        if (redis_hash.empty() || redis_hash.size() == 1) {
+            // 可能正在上锁但未完成数据写入
             msg->success = false;
         }
         else {
@@ -97,11 +98,11 @@ public:
         const auto& table_name = options.name();
         TaskAssert(!table_name.empty(), "table_name is empty.");
 
-        int32_t ttl = 0;
-        if (options.has_cache()) {
-            const TableCacheOptions& cache_options = options.cache();
-            ttl = cache_options.ttl();
-        }
+        //int32_t ttl = 0;
+        //if (options.has_cache()) {
+        //    const TableCacheOptions& cache_options = options.cache();
+        //    ttl = cache_options.ttl();
+        //}
         // options.tick_second();
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
@@ -150,17 +151,33 @@ public:
 
         auto redis_key = std::format("million:db:{}:{}", table_name, primary_key);
 
+        // redis_hash["__db_lock"] = "";
         redis_->hmset(redis_key, redis_hash.begin(), redis_hash.end());
 
-        if (ttl > 0) {
-            redis_->expire(redis_key.data(), ttl);
-        }
+        //if (ttl > 0) {
+        //    redis_->expire(redis_key.data(), ttl);
+        //}
 
         co_return std::move(msg_);
     }
 
+    MILLION_MUT_MSG_HANDLE(CacheLockMsg, msg) {
+        // 设置一个超时时间，避免锁定过程当前节点宕机
+        std::string script = R"(
+            if redis.call('HSETNX', KEYS[1], ARGV[1], ARGV[2]) == 1 then
+                redis.call('EXPIRE', KEYS[1], ARGV[3])
+                return 1
+            else
+                return 0
+            end
+        )";
+        auto result = redis_->command<long long>("EVAL", script, 1, msg->key, "__db_lock", "1", "-1");
+        msg->success = result == 1;
+        co_return std::move(msg_);
+    }
+
     MILLION_MUT_MSG_HANDLE(CacheGetBytesMsg, msg) {
-        auto value =  redis_->get("million:" + msg->key_value);
+        auto value =  redis_->get(msg->key_value);
         if (!value) {
             co_return std::move(msg_);
         }
@@ -169,10 +186,9 @@ public:
     }
 
     MILLION_MUT_MSG_HANDLE(CacheSetBytesMsg, msg) {
-        msg->success = redis_->set("million:" + msg->key, msg->value);
+        msg->success = redis_->set(msg->key, msg->value);
         co_return std::move(msg_);
     }
-
 
 private:
 

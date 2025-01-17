@@ -97,9 +97,8 @@ struct SessionAwaiterBase {
         // 调度器恢复了等待当前awaiter的协程，说明已经等到结果/超时了
         if (!result_ && or_null_ == false) {
             // 超时，不返回nullptr
-            throw TaskAbortException("Session timeout.");
+            TaskAbort("Session timeout: {}.", waiting_session_id_);
         }
-
         return std::move(result_);
     }
 
@@ -120,19 +119,13 @@ struct SessionAwaiter : public SessionAwaiterBase {
         auto msg = SessionAwaiterBase::await_resume();
         // 如果是基类，说明外部希望自己转换，不做类型检查
         if constexpr (std::is_same_v<MsgT, ProtoMsg>) {
-            if (!msg.IsProtoMsg()) {
-                throw TaskAbortException("Not ProtoMessage type.");
-            }
+            TaskAssert(msg.IsProtoMsg(), "Not ProtoMessage type.");
         }
         else if constexpr (std::is_same_v<MsgT, CppMsg>) {
-            if (!msg.IsCppMsg()) {
-                throw TaskAbortException("Not CppMessage type.");
-            }
+            TaskAssert(msg.IsCppMsg(), "Not CppMessage type.");
         }
         else {
-            if (!msg.IsType<MsgT>()) {
-                throw TaskAbortException("Mismatched type.");
-            }
+            TaskAssert(msg.IsType<MsgT>(), "Mismatched type.");
         }
         return std::unique_ptr<MsgT>(static_cast<MsgT*>(msg.Release()));
     }
@@ -202,9 +195,7 @@ struct Task {
     T await_resume() {
         rethrow_if_exception();
         if constexpr (!std::is_void_v<T>) {
-            if (!coroutine.promise().result_value) {
-                throw TaskAbortException("Task has no return value.");
-            }
+            TaskAssert(coroutine.promise().result_value, "Task has no return value.");
             return std::move(*coroutine.promise().result_value);
         }
     }
