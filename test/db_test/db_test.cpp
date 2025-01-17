@@ -27,23 +27,32 @@ public:
         
         auto handle = imillion().GetServiceByName("DbService");
         if (!handle) {
-            logger().Err("Unable to find SqlService.");
+            logger().Err("Unable to find DbService.");
             return false;
         }
         db_service_ = *handle;
+
+        handle = imillion().GetServiceByName("SqlService");
+        if (!handle) {
+            logger().Err("Unable to find SqlService.");
+            return false;
+        }
+        sql_service_ = *handle;
 
         return true;
     }
 
     virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
-        //auto user = million::make_proto_msg<million::db::example::User>();
-        //user->set_id(100);
-        //user->set_password_hash("sadawd");
-        //user->set_is_active(true);
-        //user->set_created_at(10000);
-        //user->set_updated_at(13123);
-        //user->set_email("sb@qq.com");
-        //auto res = co_await Call<db::DbRowCreateMsg>(db_service_, std::move(user), std::nullopt);
+        // co_await Call<db::SqlTableInitMsg>(sql_service_, *million::db::example::User::GetDescriptor());
+        
+        auto user = million::make_proto_msg<million::db::example::User>();
+        user->set_id(100);
+        user->set_password_hash("sadawd");
+        user->set_is_active(true);
+        user->set_created_at(10000);
+        user->set_updated_at(13123);
+        user->set_email("sb@qq.com");
+        // auto res = co_await Call<db::DbRowCreateMsg>(db_service_, std::move(user));
 
         auto res2 = co_await Call<db::DbRowQueryMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103"
             , std::nullopt);
@@ -51,13 +60,9 @@ public:
             logger().Info("DbRowGetMsg failed.");
         }
 
-        auto res3 = co_await Call<db::DbRowLockMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103"
-            , std::nullopt);
-        if (!res3->db_row) {
-            logger().Info("DbRowLockMsg failed.");
-        }
+        res2->db_row->MarkDirty();
+        auto res3 = co_await Call<db::DbRowUpdateMsg>(db_service_, &*res2->db_row);
 
-        // res2->db_row->MarkDirty();
 
         // auto handle = imillion().GetServiceByName("SqlService");
         // co_await Call<db::SqlInsertMsg>(*handle, &row);
@@ -77,8 +82,8 @@ public:
     }
 
 private:
-    // million::db::DbProtoCodec proto_codec_;
     million::ServiceHandle db_service_;
+    million::ServiceHandle sql_service_;
 
 };
 

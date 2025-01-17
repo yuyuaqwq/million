@@ -52,6 +52,9 @@ public:
 
     Task<> Commit(IService* self, const ServiceHandle& db);
 
+    uint64_t db_version() const { return db_version_; }
+    void set_db_version(uint64_t db_version) { db_version_ = db_version; }
+
 private:
     const google::protobuf::FieldDescriptor& GetFieldByNumber(int32_t field_number) const;
     const google::protobuf::FieldDescriptor& GetFieldByIndex(int32_t field_index) const;
@@ -60,6 +63,7 @@ private:
         , google::protobuf::Message* proto_msg2, const google::protobuf::FieldDescriptor& field_desc2);
 
 private:
+    uint64_t db_version_ = 0;
     ProtoMsgUnique proto_msg_;
     std::vector<bool> dirty_fields_;
 };

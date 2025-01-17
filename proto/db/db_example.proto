@@ -18,7 +18,7 @@ message UserEx {
 message User {
     option (table) = {
         name: "user"               // 表名
-        sync_tick: 6000            // Tick入库时间，60s
+        sync_tick: 1000            // Tick入库时间，10s
         primary_key: 1
         sql: {
             charset: "utf8mb4"     // MySQL 字符集
@@ -35,7 +35,7 @@ message User {
             }
         }
         cache: {
-            ttl: 3600               // 键的 TTL，单位秒
+            enable: true
         }
     };
 

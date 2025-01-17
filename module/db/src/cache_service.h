@@ -63,11 +63,13 @@ public:
         std::unordered_map<std::string, std::string> redis_hash;
         auto redis_key = std::format("million:db:{}:{}", table_name, msg->primary_key);
         redis_->hgetall(redis_key, std::inserter(redis_hash, redis_hash.end()));
-        if (redis_hash.empty() || redis_hash.size() == 1) {
-            // 可能正在上锁但未完成数据写入
+        if (redis_hash.empty()) {
             msg->success = false;
         }
         else {
+            auto db_version = std::stoull(redis_hash["__db_version__"]);
+            msg->db_row->set_db_version(db_version);
+
             // 遍历 Protobuf 字段并设置对应的值
             for (int i = 0; i < desc.field_count(); ++i) {
                 const google::protobuf::FieldDescriptor* field = desc.field(i);
@@ -114,9 +116,19 @@ public:
         TaskAssert(!primary_key.empty(), "primary_key is empty:{}.{}", table_name, options.primary_key());
 
         // 使用 std::unordered_map 来存储要更新到 Redis 的字段和值
-        std::unordered_map<std::string, std::string> redis_hash;
+        // std::unordered_map<std::string, std::string> redis_hash;
 
         // 遍历 Protobuf 的所有字段，将字段和值存入 redis_hash 中
+        auto redis_key = std::format("million:db:{}:{}", table_name, primary_key);
+
+        std::vector<std::string> keys;
+        keys.push_back(redis_key);  // Redis键
+        keys.push_back(std::to_string(msg->old_db_version));  // 预期的 db_version 值
+
+        std::vector<std::string> args;
+
+        args.emplace_back("__db_version__");
+        args.emplace_back(std::to_string(msg->db_row->db_version()));
         for (int i = 0; i < desc.field_count(); ++i) {
             if (!msg->db_row->IsDirtyFromFIeldIndex(i)) {
                 continue;
@@ -130,7 +142,10 @@ public:
 
             const FieldOptionsColumn& options = field->options().GetExtension(column);
 
-            redis_hash[field->name()] = GetField(proto_msg, *field);
+            //redis_hash[field->name()] = GetField(proto_msg, *field);
+
+            args.emplace_back(field->name());
+            args.emplace_back(GetField(proto_msg, *field));
 
             // 主键在上面获取
             //if (options.has_cache()) {
@@ -149,34 +164,25 @@ public:
             //}
         }
 
-        auto redis_key = std::format("million:db:{}:{}", table_name, primary_key);
+        // redis_->hmset(redis_key, redis_hash.begin(), redis_hash.end());
 
-        redis_->hmset(redis_key, redis_hash.begin(), redis_hash.end());
+        std::string_view lua_script = R"(
+            local unpack_func = (_VERSION == "Lua 5.1" or _VERSION == "Lua 5.2") and unpack or table.unpack
+            local db_version = redis.call('HGET', KEYS[1], '__db_version__')
+            if db_version == false or db_version == KEYS[2] then
+                return redis.call('HSET', KEYS[1], unpack_func(ARGV))
+            else
+                return -1
+            end
+        )";
+
+        auto res = redis_->eval<long long>(lua_script, keys.begin(), keys.end(), args.begin(), args.end());
+        TaskAssert(res >= 0, "HSET failed.");
 
         //if (ttl > 0) {
         //    redis_->expire(redis_key.data(), ttl);
         //}
 
-        co_return std::move(msg_);
-    }
-
-    MILLION_MUT_MSG_HANDLE(CacheLockMsg, msg) {
-        // 锁定过程当前节点宕机，会导致该行无法被其他线程占用
-        // 引入一个__db_version，如果当前写入低于redis中存储的__db_version
-        // 说明出现了异常情况，抛出异常即可
-        
-        //std::string script = R"(
-        //    if redis.call('HSETNX', KEYS[1], ARGV[1], ARGV[2]) == 1 then
-        //        redis.call('EXPIRE', KEYS[1], ARGV[3])
-        //        return 1
-        //    else
-        //        return 0
-        //    end
-        //)";
-        //auto result = redis_->command<long long>("EVAL", script, 1, msg->key, "__db_lock", "1", "-1");
-        //msg->success = result == 1;
-
-        msg->success = redis_->hsetnx(msg->key, "__db_lock", "1");
         co_return std::move(msg_);
     }
 

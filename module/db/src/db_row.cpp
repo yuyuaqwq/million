@@ -33,11 +33,13 @@ void DbRow::operator=(const DbRow& rv) {
         throw std::bad_alloc();
     }
     proto_msg->CopyFrom(*rv.proto_msg_);
+    db_version_ = rv.db_version_;
     proto_msg_.reset(proto_msg);
     dirty_fields_ = rv.dirty_fields_;
 }
 
 void DbRow::operator=(DbRow&& rv) noexcept {
+    db_version_ = rv.db_version_;
     proto_msg_ = std::move(rv.proto_msg_);
     dirty_fields_ = std::move(rv.dirty_fields_);
 }
@@ -51,23 +53,23 @@ const protobuf::Descriptor& DbRow::GetDescriptor() const { return *proto_msg_->G
 
 const protobuf::Reflection& DbRow::GetReflection() const { return *proto_msg_->GetReflection(); }
 
-void DbRow::MoveFrom(DbRow* target) {
-    std::swap(proto_msg_, target->proto_msg_);
-    std::swap(dirty_fields_, target->dirty_fields_);
+//void DbRow::MoveFrom(DbRow* target) {
+//    std::swap(proto_msg_, target->proto_msg_);
+//    std::swap(dirty_fields_, target->dirty_fields_);
+//
+//    // target->proto_msg_->Clear();
+//    target->ClearDirty();
+//}
 
-    // target->proto_msg_->Clear();
-    target->ClearDirty();
-}
-
-DbRow DbRow::MoveTo() {
-    auto* proto_msg = proto_msg_->New();
-    if (proto_msg == nullptr) {
-        throw std::bad_alloc();
-    }
-    auto row = DbRow(ProtoMsgUnique(proto_msg));
-    row.MoveFrom(this);
-    return row;
-}
+//DbRow DbRow::MoveTo() {
+//    auto* proto_msg = proto_msg_->New();
+//    if (proto_msg == nullptr) {
+//        throw std::bad_alloc();
+//    }
+//    auto row = DbRow(ProtoMsgUnique(proto_msg));
+//    row.MoveFrom(this);
+//    return row;
+//}
 
 //void DbRow::CopyFrom(const google::protobuf::Message& msg) {
 //    proto_msg_->CopyFrom(msg);
@@ -95,6 +97,7 @@ void DbRow::CopyFromDirty(const DbRow& target) {
             dirty_fields_.at(i) = true;
         }
     }
+    set_db_version(target.db_version());
 }
 
 bool DbRow::IsDirty() const {

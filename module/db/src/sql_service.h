@@ -70,6 +70,8 @@ public:
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
 
+        sql += "    __db_version__ BIGINT  NOT NULL,\n";
+
         std::vector<const std::string*> primary_keys;
         for (int i = 0; i < desc.field_count(); ++i) {
             const auto* field = desc.field(i);
@@ -252,6 +254,8 @@ public:
         }
 
         std::string sql = "SELECT";
+        sql += " __db_version__,";
+
         for (int i = 0; i < desc.field_count(); ++i) {
             const auto* const field = desc.field(i);
             sql += " " + field->name() + ",";
@@ -278,9 +282,13 @@ public:
             msg->success = false;
             co_return std::move(msg_);
         }
+
+        auto db_version = it->get<uint64_t>(0);
+        msg->db_row->set_db_version(db_version);
+
         const auto& row = *it;
-        for (int i = 0; i < desc.field_count(); ++i) {
-            const auto* const field = desc.field(i);
+        for (int i = 1; i < desc.field_count() + 1; ++i) {
+            const auto* const field = desc.field(i - 1);
             if (!field) {
                 logger().Err("desc.field failed: {}.{}.", table_name, i);
                 continue;
@@ -351,7 +359,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(SqlInsertMsg, msg) {
         const auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
@@ -367,7 +375,10 @@ public:
         std::string sql = "INSERT INTO ";
         sql += table_name;
         sql += " (";
+        sql += "__db_version__, ";
+
         std::string values_placeholder = " VALUES (";
+        values_placeholder += "1, ";
 
         soci::statement stmt(sql_);
 
@@ -414,7 +425,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MSG_HANDLE(SqlUpdateMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(SqlUpdateMsg, msg) {
         const auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
@@ -432,6 +443,7 @@ public:
 
         soci::statement stmt(sql_);
 
+        sql += std::format("__db_version__ = '{}',", msg->db_row->db_version());
         for (int i = 0; i < desc.field_count(); ++i) {
             const auto* field = desc.field(i);
             sql += field->name() + " = :" + field->name() + ",";
@@ -441,9 +453,17 @@ public:
             sql.pop_back();
         }
 
+        sql += " WHERE ";
+        sql += std::format("__db_version__ = '{}'", msg->old_db_version);
+
+        const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
+        TaskAssert(primary_key_field_desc,
+            "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
+
+        sql += std::format("AND {} = :{}", primary_key_field_desc->name(), primary_key_field_desc->name());
+
         // 这里自动根据主键来设置条件进行Update
         //if (!condition.empty()) {
-        //    sql += " WHERE ";
         //    sql += condition;
         //}
         sql += ";";
@@ -451,7 +471,7 @@ public:
         stmt.alloc();
         stmt.prepare(sql);
         std::vector<std::any> values;
-        BindValuesToStatement(proto_msg, &values, stmt);  // ��ֵ
+        BindValuesToStatement(proto_msg, &values, stmt);
         stmt.define_and_bind();
 
         stmt.execute(true);

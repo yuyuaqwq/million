@@ -22,15 +22,9 @@ MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_DB_API, DbRowCreateMsg, (ProtoMsgUnique) 
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DbRowQueryMsg
     , (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key
-    , (std::optional<const DbRow>) db_row);
-
-MILLION_MSG_DEFINE(MILLION_DB_API, DbRowLockMsg
-    , (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key
     , (std::optional<DbRow>) db_row);
 
-MILLION_MSG_DEFINE(MILLION_DB_API, DbRowUnlockMsg, (nonnull_ptr<DbRow>) db_row);
-
-MILLION_MSG_DEFINE(MILLION_DB_API, DbRowUpdateMsg, (nonnull_ptr<const DbRow>) db_row);
+MILLION_MSG_DEFINE(MILLION_DB_API, DbRowUpdateMsg, (nonnull_ptr<DbRow>) db_row);
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DbRowDeleteMsg, (std::string) table_name, (std::string) primary_key);
 

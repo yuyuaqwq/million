@@ -22,25 +22,9 @@
 namespace million {
 namespace db {
 
-// Lock时，返回所有权给外部服务
-// 外部必须有一份数据，dbservice也可能有一份
-// 外部修改后，通过发送标记脏消息来通知dbservice可以更新此消息
+// 通过redis来支持跨行事务，redis保证数据的可用性
 
-// 另外可以支持跨节点访问其他db，可以由redis来支持，存储该路径的行位于哪个节点的db中
-// 另外也可以由redis来确定该行是否被锁定，以及该行数据是否成功回写sql
-// 或者说不使用本地wal，而是通过redis来支持事务？
-
-// 置脏的数据会被放到redis中，来保证可用，需要批量写的数据，就批量写到redis中
-
-// 1.置脏后，数据放入redis，同时db也会有一份这个数据，等待tick回写到sql
-// 2.tick触发后，回写到sql
-
-// 目前看只能让用户分开处理，如果玩家在线，就投递给玩家服务处理，否则再自己抢占写锁
-// 抢占写锁交给db服务进行
-// 当然可能会出现，首先判断玩家不在线，然后准备抢占时，玩家上线并抢占了写锁，导致失败的情况
-// 这种情况发生的概率很低，让交易服务抢占失败也不是不行，最多就是玩家重试一次交易
-
-MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (nonnull_ptr<DbRow>) cache_row, (DbRow) tmp_row);
+MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (nonnull_ptr<DbRow>) cache_row, (uint64_t) old_db_version);
 
 class DbService : public IService {
 public:
@@ -76,12 +60,18 @@ public:
 
     MILLION_MUT_MSG_HANDLE(DbRowTickSyncMsg, msg) {
         if (msg->cache_row->IsDirty()) {
-            // co_await期间可能会有新的DbRowPushMsg消息被处理，这里移动过来再回写
-            msg->tmp_row.MoveFrom(msg->cache_row.get());
-            auto res = co_await CallOrNull<SqlUpdateMsg>(sql_service_, &msg->tmp_row);
+            // co_await期间可能会有新的DbRowUpdateMsg消息被处理，这里复制过来再回写
+            // 可以考虑优化成移动
+            auto db_row = msg->cache_row->CopyDirtyTo();
+            auto old_db_version = msg->old_db_version;
+            msg->old_db_version = db_row.db_version();
+            auto res = co_await CallOrNull<SqlUpdateMsg>(sql_service_, &db_row, old_db_version);
             if (!res) {
                 logger().Err("SqlUpdateMsg Timeout.");
             }
+        }
+        else {
+            msg->old_db_version = msg->cache_row->db_version();
         }
         auto sync_tick = msg->sync_tick;
         Timeout(sync_tick, std::move(msg_));
@@ -113,46 +103,31 @@ public:
         auto tmp_row = DbRow(std::move(proto_msg));
         row = &tmp_row;
 
-        auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, row, false);
-        // Lock过程中res_msg->success也会返回false，不用担心获取到空数据
-        if (!res_msg->success) {
+        bool enable_cache = false;
+        bool query_sql = true;
+        if (options.has_cache()) {
+            enable_cache = options.cache().enable();
+            auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, row, false);
+            query_sql = !res_msg->success;
+        }
+        
+        if (query_sql) {
             auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, row, false);
             TaskAssert(res_msg->success, "SqlQueryMsg failed.");
+            if (enable_cache) {
+                row->MarkDirty();
+                co_await Call<CacheSetMsg>(cache_service_, row, row->db_version());
+                row->ClearDirty();
+            }
         }
 
-        // 仅查询的情况，不在db cache
-        msg->db_row.emplace(std::move(*row));
-        co_return std::move(msg_);
-    }
+        msg->db_row.emplace(*row);
 
-    MILLION_MUT_MSG_HANDLE(DbRowLockMsg, msg) {
-        auto& desc = msg->table_desc;
-
-        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
-        const MessageOptionsTable& options = desc.options().GetExtension(table);
-        auto& table_name = options.name();
-        TaskAssert(!table_name.empty(), "table_name is empty.");
-
-        // 这里用该行是否在redis中来判断是否被占用，存在已锁定，否则未锁定
-        auto lock_res = co_await Call<CacheLockMsg>(cache_service_, std::format("million:db:{}:{}", table_name, msg->primary_key), false);
-        if (!lock_res->success) {
-            // 已被锁定
-            co_return std::move(msg_);
-        }
-
-        auto proto_msg = imillion().proto_mgr().NewMessage(desc);
-        TaskAssert(proto_msg, "proto_mgr().NewMessage failed.");
-
-        auto row = DbRow(std::move(proto_msg));
-        auto sql_res = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, &row, false);
-        TaskAssert(sql_res->success, "SqlQueryMsg failed.");
-        
-        row.MarkDirty();
-        co_await Call<CacheSetMsg>(cache_service_, &row);
-        row.ClearDirty();
-
-        msg->db_row.emplace(row);
-        CacheDbRow(desc, std::move(msg->primary_key), std::move(row));
+        // 这里还有个问题要考虑，就是这里的row->db_version，可能不是sql的version
+        // 因为可能是从cache里读的，cache里的数据可能没有回写到sql中
+        // 一个解决方法是，cache里记录一个__sql_db_version__，从cache里取
+        // 否则才从row中取(这个时候row就是sql中读的)
+        CacheDbRow(desc, std::move(msg->primary_key), std::move(*row), row->db_version());
         co_return std::move(msg_);
     }
 
@@ -165,7 +140,7 @@ public:
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         auto& table_name = options.name();
-        TaskAssert(table_name.empty(), "table_name is empty.");
+        TaskAssert(!table_name.empty(), "table_name is empty.");
         
         auto table_iter = tables_.find(&desc);
         TaskAssert(table_iter != tables_.end(), "Table does not exist.");
@@ -179,12 +154,21 @@ public:
         auto row_iter = table_iter->second.find(primary_key);
         TaskAssert(row_iter != table_iter->second.end(), "Row does not exist.");
 
+        auto old_db_version = msg->db_row->db_version();
+        msg->db_row->set_db_version(old_db_version + 1);
         row_iter->second.CopyFromDirty(*msg->db_row);
 
-        // 先回写到redis，让redis保证数据可靠
-        co_await Call<CacheSetMsg>(cache_service_, msg->db_row);
+        bool enable_cache = false;
+        if (options.has_cache()) {
+            enable_cache = options.cache().enable();
+        }
+        if (enable_cache) {
+            // 根据配置选择是否回写到redis，让redis保证数据可靠
+            // 这里可以直接传递msg->db_row，外部需要等待
+            co_await Call<CacheSetMsg>(cache_service_, msg->db_row, old_db_version);
+        }
 
-        co_return nullptr;
+        co_return std::move(msg_);
     }
 
 private:
@@ -207,7 +191,7 @@ private:
         return &iter->second;
     }
 
-    bool CacheDbRow(const google::protobuf::Descriptor& desc, std::string&& primary_key, DbRow&& row) {
+    bool CacheDbRow(const google::protobuf::Descriptor& desc, std::string&& primary_key, DbRow&& row, uint64_t sql_db_version) {
         auto& table = GetTable(desc);
 
         auto res = table.emplace(std::move(primary_key), std::move(row));
@@ -216,10 +200,7 @@ private:
         const MessageOptionsTable& options = desc.options().GetExtension(::million::db::table);
         auto sync_tick = options.sync_tick();
 
-        auto tmp_msg = imillion().proto_mgr().NewMessage(desc);
-        TaskAssert(tmp_msg, "proto_mgr().NewMessage Failed.");
-        
-        Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, &res.first->second, DbRow(std::move(tmp_msg)));
+        Timeout<DbRowTickSyncMsg>(sync_tick, sync_tick, &res.first->second, sql_db_version);
         return true;
     }
 

@@ -44,7 +44,7 @@ message TableSqlOptions {
 
 // Cache 相关选项（Redis）
 message TableCacheOptions {
-    int32 ttl = 1;                   // 键的 TTL（过期时间，秒）
+    bool enable = 1;                   // 是否启用缓存，启用缓存后支持事务，每次Commit时会更新到Cache中
 }
 
 
