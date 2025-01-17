@@ -12,232 +12,62 @@ namespace db {
 
 class MILLION_DB_API DbRow {
 public:
-    DbRow(ProtoMsgUnique proto_msg)
-        : proto_msg_(std::move(proto_msg))
-    {
-        auto desc = proto_msg_->GetDescriptor();
-        if (!desc) {
-            throw std::invalid_argument("DbRow GetDescriptor is null.");
-        }
-        auto reflection = proto_msg_->GetReflection();
-        if (!reflection) {
-            throw std::invalid_argument("DbRow GetReflection is null.");
-        }
-        dirty_fields_.resize(desc->field_count(), false);
-    }
+    DbRow(ProtoMsgUnique proto_msg);
 
-    DbRow(const DbRow& rv) {
-        operator=(rv);
-    }
+    DbRow(const DbRow& rv);
 
-    DbRow(DbRow&& rv) noexcept {
-        operator=(std::move(rv));
-    }
+    DbRow(DbRow&& rv) noexcept;
 
-    void operator=(const DbRow& rv) {
-        auto* proto_msg = rv.proto_msg_->New();
-        if (proto_msg == nullptr) {
-            throw std::bad_alloc();
-        }
-        proto_msg->CopyFrom(*rv.proto_msg_);
-        proto_msg_.reset(proto_msg);
-        dirty_fields_ = rv.dirty_fields_;
-    }
+    void operator=(const DbRow& rv);
 
-    void operator=(DbRow&& rv) noexcept {
-        proto_msg_ = std::move(rv.proto_msg_);
-        dirty_fields_ = std::move(rv.dirty_fields_);
-    }
+    void operator=(DbRow&& rv) noexcept;
 
     template <typename T>
     T& get() const { return static_cast<T&>(get()); }
 
-    google::protobuf::Message& get() const { return *proto_msg_.get(); }
+    google::protobuf::Message& get() const;
 
-    const protobuf::Descriptor& GetDescriptor() const { return *proto_msg_->GetDescriptor(); }
+    const protobuf::Descriptor& GetDescriptor() const;
 
-    const protobuf::Reflection& GetReflection() const { return *proto_msg_->GetReflection(); }
+    const protobuf::Reflection& GetReflection() const;
 
-    void MoveFrom(DbRow* db_row) {
-        std::swap(proto_msg_, db_row->proto_msg_);
-        std::swap(dirty_fields_, db_row->dirty_fields_);
+    void MoveFrom(DbRow* db_row);
 
-        // db_row->proto_msg_->Clear();
-        db_row->ClearDirty();
-    }
+    DbRow MoveTo();
 
-    DbRow MoveTo() {
-        auto* proto_msg = proto_msg_->New();
-        if (proto_msg == nullptr) {
-            throw std::bad_alloc();
-        }
-        auto row = DbRow(ProtoMsgUnique(proto_msg));
-        row.MoveFrom(this);
-        return row;
-    }
+    //void CopyFrom(const google::protobuf::Message& msg);
 
-    //void CopyFrom(const google::protobuf::Message& msg) {
-    //    proto_msg_->CopyFrom(msg);
-    //    dirty_ = false;
-    //    dirty_fields_.clear();
-    //}
+    DbRow CopyDirtyTo();
 
-    DbRow CopyDirtyTo() {
-        auto* proto_msg = proto_msg_->New();
-        if (proto_msg == nullptr) {
-            throw std::bad_alloc();
-        }
-        auto row = DbRow(ProtoMsgUnique(proto_msg));
-        row.dirty_fields_ = dirty_fields_;
+    void CopyFromDirty(const DbRow& db_row);
 
-        row.CopyFromDirty(*this);
-        return row;
-    }
+    bool IsDirty() const;
 
-    void CopyFromDirty(const DbRow& db_row) {
-        const auto* reflection = proto_msg_->GetReflection();
-        for (size_t i = 0; i < dirty_fields_.size(); ++i) {
-            if (db_row.dirty_fields_[i]) {
-                CopyField(*db_row.proto_msg_, db_row.GetFieldByIndex(i), proto_msg_.get(), GetFieldByIndex(i));
-                dirty_fields_.at(i) = true;
-            }
-        }
-    }
+    void MarkDirty();
 
-    bool IsDirty() const {
-        for (size_t i = 0; i < dirty_fields_.size(); ++i) {
-            if (dirty_fields_[i]) {
-                return true;
-            }
-        }
-        return false;
-    }
+    void ClearDirty();
 
-    void MarkDirty() {
-        for (size_t i = 0; i < dirty_fields_.size(); ++i) {
-            dirty_fields_[i] = true;
-        }
-    }
+    bool IsDirtyFromFIeldNum(int32_t field_number) const;
 
-    void ClearDirty() {
-        for (size_t i = 0; i < dirty_fields_.size(); ++i) {
-            dirty_fields_[i] = false;
-        }
-    }
+    bool IsDirtyFromFIeldIndex(int32_t field_index) const;
 
-    bool IsDirtyFromFIeldNum(int32_t field_number) const {
-        return dirty_fields_.at(GetFieldByNumber(field_number).index());
-    }
+    void MarkDirtyByFieldNum(int32_t field_number);
 
-    bool IsDirtyFromFIeldIndex(int32_t field_index) const {
-        return dirty_fields_.at(field_index);
-    }
+    void MarkDirtyByFieldIndex(int32_t field_index);
 
-    void MarkDirtyByFieldNum(int32_t field_number) {
-        dirty_fields_.at(GetFieldByNumber(field_number).index()) = true;
-    }
+    void ClearDirtyByFieldNum(int32_t field_number);
 
-    void MarkDirtyByFieldIndex(int32_t field_index) {
-        dirty_fields_.at(field_index) = true;
-    }
+    void ClearDirtyByFieldIndex(int32_t field_index);
 
-    void ClearDirtyByFieldNum(int32_t field_number) {
-        dirty_fields_.at(GetFieldByNumber(field_number).index()) = false;
-    }
-
-    void ClearDirtyByFieldIndex(int32_t field_index) {
-        dirty_fields_.at(field_index) = false;
-    }
-
-    Task<> Commit() {
-        // 向dbservice提交当前DbRow的修改
-        co_return;
-    }
+    Task<> Commit(IService* self, const ServiceHandle& db);
 
 private:
-    const google::protobuf::FieldDescriptor& GetFieldByNumber(int32_t field_number) const {
-        auto field_desc = GetDescriptor().FindFieldByNumber(field_number);
-        if (!field_desc) {
-            TaskAbort("msg:{}, desc_.FindFieldByNumber:{}", GetDescriptor().name(), field_number);
-        }
-        return *field_desc;
-    }
+    const google::protobuf::FieldDescriptor& GetFieldByNumber(int32_t field_number) const;
 
-    const google::protobuf::FieldDescriptor& GetFieldByIndex(int32_t field_index) const {
-        auto field_desc = GetDescriptor().field(field_index);
-        if (!field_desc) {
-            TaskAbort("msg:{}, desc_.field:{}", GetDescriptor().name(), field_index);
-        }
-        return *field_desc;
-    }
+    const google::protobuf::FieldDescriptor& GetFieldByIndex(int32_t field_index) const;
 
     void CopyField(const google::protobuf::Message& proto_msg1, const google::protobuf::FieldDescriptor& field_desc1
-        , google::protobuf::Message* proto_msg2, const google::protobuf::FieldDescriptor& field_desc2) {
-
-        const auto* reflection1 = proto_msg1.GetReflection();
-        const auto* reflection2 = proto_msg2->GetReflection();
-
-        std::string value;
-        if (field_desc1.is_repeated()) {
-            TaskAbort("CopyField failed, db repeated fields are not supported: {}, {}.", GetDescriptor().name(), field_desc1.name());
-        }
-        else {
-            switch (field_desc1.type()) {
-            case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
-                reflection2->SetDouble(proto_msg2, &field_desc1, reflection1->GetDouble(proto_msg1, &field_desc2));
-                break;
-            }
-            case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-                reflection2->SetFloat(proto_msg2, &field_desc1, reflection1->GetFloat(proto_msg1, &field_desc2));
-                break;
-            }
-            case google::protobuf::FieldDescriptor::TYPE_INT64:
-            case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
-            case google::protobuf::FieldDescriptor::TYPE_SINT64: {
-                reflection2->SetInt64(proto_msg2, &field_desc1, reflection1->GetInt64(proto_msg1, &field_desc2));
-                break;
-            }
-            case google::protobuf::FieldDescriptor::TYPE_UINT64:
-            case google::protobuf::FieldDescriptor::TYPE_FIXED64: {
-                reflection2->SetUInt64(proto_msg2, &field_desc1, reflection1->GetUInt64(proto_msg1, &field_desc2));
-                break;
-            }
-            case google::protobuf::FieldDescriptor::TYPE_INT32:
-            case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
-            case google::protobuf::FieldDescriptor::TYPE_SINT32: {
-                reflection2->SetInt32(proto_msg2, &field_desc1, reflection1->GetInt32(proto_msg1, &field_desc2));
-                break;
-            }
-            case google::protobuf::FieldDescriptor::TYPE_UINT32:
-            case google::protobuf::FieldDescriptor::TYPE_FIXED32: {
-                reflection2->SetUInt32(proto_msg2, &field_desc1, reflection1->GetUInt32(proto_msg1, &field_desc2));
-                break;
-            }
-            case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-                reflection2->SetBool(proto_msg2, &field_desc1, reflection1->GetBool(proto_msg1, &field_desc2));
-                break;
-            }
-            case google::protobuf::FieldDescriptor::TYPE_STRING:
-            case google::protobuf::FieldDescriptor::TYPE_BYTES: {
-                reflection2->SetString(proto_msg2, &field_desc1, reflection1->GetString(proto_msg1, &field_desc2));
-                break;
-            }
-            case google::protobuf::FieldDescriptor::TYPE_ENUM: {
-                reflection2->SetEnumValue(proto_msg2, &field_desc1, reflection1->GetEnumValue(proto_msg1, &field_desc2));
-                break;
-            }
-            case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-                auto sub_msg2 = reflection2->MutableMessage(proto_msg2, &field_desc1);
-                const auto& sub_msg1 = reflection1->GetMessage(proto_msg1, &field_desc2);
-                sub_msg2->CopyFrom(sub_msg1);
-                break;
-            }
-            default: {
-                TaskAbort("CopyField failed, Unsupported field type: {}, {}.", GetDescriptor().name(), field_desc1.name());
-            }
-            }
-        }
-    }
+        , google::protobuf::Message* proto_msg2, const google::protobuf::FieldDescriptor& field_desc2);
 
 private:
     ProtoMsgUnique proto_msg_;
@@ -245,144 +75,8 @@ private:
 };
 
 
-
-static void SetField(google::protobuf::Message* proto_msg, const google::protobuf::FieldDescriptor& field, const std::string& value) {
-    const auto* desc = proto_msg->GetDescriptor();
-    const auto* reflection = proto_msg->GetReflection();
-
-    const MessageOptionsTable& options = desc->options().GetExtension(table);
-    const auto& table_name = options.name();
-
-    TaskAssert(!field.is_repeated(),
-        "db repeated fields are not supported: {}.{}", table_name, field.name());
-
-    switch (field.type()) {
-    case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
-        reflection->SetDouble(proto_msg, &field, std::stod(value));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-        reflection->SetFloat(proto_msg, &field, std::stof(value));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_INT64:
-    case google::protobuf::FieldDescriptor::TYPE_SINT64:
-    case google::protobuf::FieldDescriptor::TYPE_SFIXED64: {
-        reflection->SetInt64(proto_msg, &field, std::stoll(value));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_UINT64:
-    case google::protobuf::FieldDescriptor::TYPE_FIXED64: {
-        reflection->SetUInt64(proto_msg, &field, std::stoull(value));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_INT32:
-    case google::protobuf::FieldDescriptor::TYPE_SINT32:
-    case google::protobuf::FieldDescriptor::TYPE_SFIXED32: {
-        reflection->SetInt32(proto_msg, &field, std::stoi(value));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_UINT32:
-    case google::protobuf::FieldDescriptor::TYPE_FIXED32: {
-        reflection->SetUInt32(proto_msg, &field, static_cast<uint32_t>(std::stoul(value)));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-        reflection->SetBool(proto_msg, &field, value == "1" || value == "true");
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_STRING:
-    case google::protobuf::FieldDescriptor::TYPE_BYTES: {
-        reflection->SetString(proto_msg, &field, value);
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_ENUM: {
-        const google::protobuf::EnumValueDescriptor* enum_value =
-            field.enum_type()->FindValueByName(value);
-        reflection->SetEnum(proto_msg, &field, enum_value);
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-        google::protobuf::Message* sub_message = reflection->MutableMessage(proto_msg, &field);
-        sub_message->ParseFromString(value);
-        break;
-    }
-    default: {
-        TaskAbort("Unsupported field type: {}", field.name());
-    }
-    }
-
-}
-
-static std::string GetField(const google::protobuf::Message& proto_msg, const google::protobuf::FieldDescriptor& field) {
-    const auto* desc = proto_msg.GetDescriptor();
-    const auto* reflection = proto_msg.GetReflection();
-
-    const MessageOptionsTable& options = desc->options().GetExtension(table);
-    const auto& table_name = options.name();
-
-    std::string value;
-    TaskAssert(!field.is_repeated(),
-        "db repeated fields are not supported: {}.{}", table_name, field.name());
-
-    switch (field.type()) {
-    case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
-        value = std::to_string(reflection->GetDouble(proto_msg, &field));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-        value = std::to_string(reflection->GetFloat(proto_msg, &field));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_INT64:
-    case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
-    case google::protobuf::FieldDescriptor::TYPE_SINT64: {
-        value = std::to_string(reflection->GetInt64(proto_msg, &field));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_UINT64:
-    case google::protobuf::FieldDescriptor::TYPE_FIXED64: {
-        value = std::to_string(reflection->GetUInt64(proto_msg, &field));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_INT32:
-    case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
-    case google::protobuf::FieldDescriptor::TYPE_SINT32: {
-        value = std::to_string(reflection->GetInt32(proto_msg, &field));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_UINT32:
-    case google::protobuf::FieldDescriptor::TYPE_FIXED32: {
-        value = std::to_string(reflection->GetUInt32(proto_msg, &field));
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-        value = reflection->GetBool(proto_msg, &field) ? "true" : "false";
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_STRING:
-    case google::protobuf::FieldDescriptor::TYPE_BYTES: {
-        value = reflection->GetString(proto_msg, &field);
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_ENUM: {
-        int enum_value = reflection->GetEnumValue(proto_msg, &field);
-        value = std::to_string(enum_value);
-        break;
-    }
-    case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-        const google::protobuf::Message& sub_message = reflection->GetMessage(proto_msg, &field);
-        value = sub_message.SerializeAsString();
-        break;
-    }
-    default: {
-        TaskAbort("Unsupported field type: {}", field.name());
-    }
-    }
-
-    return value;
-}
-
+void SetField(google::protobuf::Message* proto_msg, const google::protobuf::FieldDescriptor& field, const std::string& value);
+std::string GetField(const google::protobuf::Message& proto_msg, const google::protobuf::FieldDescriptor& field);
 
 } // namespace db
 } // namespace million

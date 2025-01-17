@@ -36,20 +36,21 @@ public:
     }
 
     virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
-        auto user = million::make_proto_msg<million::db::example::User>();
-        user->set_id(100);
-        user->set_password_hash("sadawd");
-        user->set_is_active(true);
-        user->set_created_at(10000);
-        user->set_updated_at(13123);
-        user->set_email("sb@qq.com");
-
-        auto res = co_await Call<db::DbRowCreateMsg>(db_service_, std::move(user), std::nullopt);
+        //auto user = million::make_proto_msg<million::db::example::User>();
+        //user->set_id(100);
+        //user->set_password_hash("sadawd");
+        //user->set_is_active(true);
+        //user->set_created_at(10000);
+        //user->set_updated_at(13123);
+        //user->set_email("sb@qq.com");
+        //auto res = co_await Call<db::DbRowCreateMsg>(db_service_, std::move(user), std::nullopt);
 
         auto res2 = co_await Call<db::DbRowGetMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103", std::nullopt);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");
         }
+
+        res2->db_row->MarkDirty();
 
         // auto handle = imillion().GetServiceByName("SqlService");
         // co_await Call<db::SqlInsertMsg>(*handle, &row);

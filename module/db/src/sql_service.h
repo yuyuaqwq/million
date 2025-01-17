@@ -59,7 +59,7 @@ public:
         auto& table_name = options.name();
         TaskAssert(!table_name.empty(), "table_name is empty.");
 
-        uint32_t count = 0;
+        int32_t count = 0;
         // Query to check if the table exists in the current database
         sql_ << "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
             "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name",

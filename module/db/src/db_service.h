@@ -56,12 +56,12 @@ public:
         }
         sql_service_ = *handle;
 
-        //handle = imillion().GetServiceByName("CacheService");
-        //if (!handle) {
-        //    logger().Err("Unable to find SqlService.");
-        //    return false;
-        //}
-        //cache_service_ = *handle;
+        handle = imillion().GetServiceByName("CacheService");
+        if (!handle) {
+            logger().Err("Unable to find SqlService.");
+            return false;
+        }
+        cache_service_ = *handle;
 
         return true;
     }
@@ -131,15 +131,15 @@ public:
         auto tmp_row = DbRow(std::move(proto_msg));
         row = &tmp_row;
 
-        //auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, row, false);
-        //if (!res_msg->success) {
+        auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, row, false);
+        if (!res_msg->success) {
             auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, row, false);
             TaskAssert(res_msg->success, "SqlQueryMsg failed.");
             
             //row.MarkDirty();
             //co_await Call<CacheSetMsg>(cache_service_, row);
             //row.ClearDirty();
-        //}
+        }
 
         CacheDbRow(desc, std::move(msg->primary_key), std::move(*row));
         co_return std::move(msg_);
@@ -167,6 +167,9 @@ public:
         TaskAssert(row_iter != table_iter->second.end(), "Row does not exist.");
 
         row_iter->second.CopyFromDirty(*msg->db_row);
+
+        // 先回写到redis，让redis保证数据可靠
+        co_await Call<CacheSetMsg>(cache_service_, msg->db_row);
 
         co_return nullptr;
     }
@@ -217,7 +220,7 @@ private:
     using DbTable = std::unordered_map<std::string, DbRow>;
     std::unordered_map<const protobuf::Descriptor*, DbTable> tables_;
 
-    //ServiceHandle cache_service_;
+    ServiceHandle cache_service_;
     ServiceHandle sql_service_;
 
 
