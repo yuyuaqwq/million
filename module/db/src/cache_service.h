@@ -52,14 +52,11 @@ public:
         auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
-        if (!desc.options().HasExtension(table)) {
-            TaskAbort("HasExtension table failed.");
-        }
+
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         const auto& table_name = options.name();
-        if (table_name.empty()) {
-            TaskAbort("table_name is empty.");
-        }
+        TaskAssert(!table_name.empty(), "table_name is empty.");
 
         // 通过 Redis 哈希表存取 Protobuf 字段
         std::unordered_map<std::string, std::string> redis_hash;
@@ -93,14 +90,11 @@ public:
 
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
-        if (!desc.options().HasExtension(table)) {
-            TaskAbort("HasExtension table failed.");
-        }
+
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         const auto& table_name = options.name();
-        if (table_name.empty()) {
-            TaskAbort("table_name is empty.");
-        }
+        TaskAssert(!table_name.empty(), "table_name is empty.");
 
         int32_t ttl = 0;
         if (options.has_cache()) {
@@ -110,13 +104,12 @@ public:
         // options.tick_second();
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
-        if (!primary_key_field_desc) {
-            TaskAbort("FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
-        }
-        std::string primary_key = GetField(proto_msg, *primary_key_field_desc);
-        if (primary_key.empty()) {
-            TaskAbort("primary_key is empty:{}.{}", table_name, options.primary_key());
-        }
+
+        TaskAssert(primary_key_field_desc, 
+            "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
+        
+        auto primary_key = GetField(proto_msg, *primary_key_field_desc);
+        TaskAssert(!primary_key.empty(), "primary_key is empty:{}.{}", table_name, options.primary_key());
 
         // 使用 std::unordered_map 来存储要更新到 Redis 的字段和值
         std::unordered_map<std::string, std::string> redis_hash;

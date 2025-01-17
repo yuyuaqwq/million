@@ -157,14 +157,12 @@ public:
         auto table_iter = tables_.find(&desc);
         TaskAssert(table_iter != tables_.end(), "Table does not exist.");
         
-
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
         TaskAssert(primary_key_field_desc, "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
         
-        std::string primary_key;
-        primary_key = reflection.GetStringReference(db_row->get(), primary_key_field_desc, &primary_key);
-        TaskAssert(!primary_key.empty(), "primary_key is empty.");
-       
+        auto primary_key = GetField(db_row->get(), *primary_key_field_desc);
+        TaskAssert(!primary_key.empty(), "primary_key is empty:{}.{}", table_name, options.primary_key());
+
         auto row_iter = table_iter->second.find(primary_key);
         TaskAssert(row_iter != table_iter->second.end(), "Row does not exist.");
 
