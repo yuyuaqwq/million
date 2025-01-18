@@ -125,6 +125,8 @@ public:
 
         if (msg->need_write_back) {
             CacheDbRow(desc, std::move(msg->primary_key), std::move(*row), old_db_version);
+        }
+        else {
             // 不回写的行不允许Update
             row->set_db_version(0);
         }
