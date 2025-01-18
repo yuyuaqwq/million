@@ -421,6 +421,8 @@ public:
         stmt.define_and_bind();
 
         stmt.execute(true);
+        auto rows = stmt.get_affected_rows();
+        msg->success = rows > 0;
 
         co_return std::move(msg_);
     }
@@ -475,6 +477,8 @@ public:
         stmt.define_and_bind();
 
         stmt.execute(true);
+        auto rows = stmt.get_affected_rows();
+        msg->success = rows > 0;
 
         co_return std::move(msg_);
     }

@@ -67,7 +67,12 @@ public:
             msg->old_db_version = db_row.db_version();
             auto res = co_await CallOrNull<SqlUpdateMsg>(sql_service_, &db_row, old_db_version);
             if (!res) {
+                // 超时，可能只是sql暂时不能提供服务，可以重试
                 logger().Err("SqlUpdate Timeout.");
+            }
+            else {
+                // 如果为false，一般是回写失败，可能是当前行数据是低版本，无法入库，应用设计问题
+                TaskAssert(res->success, "SqlUpdate Write back failed.");
             }
         }
         auto sync_tick = msg->sync_tick;
