@@ -454,7 +454,7 @@ public:
         }
 
         sql += " WHERE ";
-        sql += std::format("__db_version__ = '{}'", msg->old_db_version);
+        sql += std::format("__db_version__ = '{}' AND __db_version__ < {} ", msg->old_db_version, msg->db_row->db_version());
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
         TaskAssert(primary_key_field_desc,

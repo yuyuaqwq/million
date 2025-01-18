@@ -59,7 +59,7 @@ public:
     MILLION_MSG_DISPATCH(DbService);
 
     MILLION_MUT_MSG_HANDLE(DbRowTickSyncMsg, msg) {
-        if (msg->cache_row->IsDirty()) {
+        if (msg->cache_row->db_version() > msg->old_db_version) {
             // co_await期间可能会有新的DbRowUpdateMsg消息被处理，这里复制过来再回写
             // 可以考虑优化成移动
             auto db_row = msg->cache_row->CopyDirtyTo();
@@ -67,11 +67,8 @@ public:
             msg->old_db_version = db_row.db_version();
             auto res = co_await CallOrNull<SqlUpdateMsg>(sql_service_, &db_row, old_db_version);
             if (!res) {
-                logger().Err("SqlUpdateMsg Timeout.");
+                logger().Err("SqlUpdate Timeout.");
             }
-        }
-        else {
-            msg->old_db_version = msg->cache_row->db_version();
         }
         auto sync_tick = msg->sync_tick;
         Timeout(sync_tick, std::move(msg_));
@@ -103,31 +100,24 @@ public:
         auto tmp_row = DbRow(std::move(proto_msg));
         row = &tmp_row;
 
-        bool enable_cache = false;
-        bool query_sql = true;
-        if (options.has_cache()) {
-            enable_cache = options.cache().enable();
-            auto res_msg = co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, row, false);
-            query_sql = !res_msg->success;
-        }
+        uint64_t old_db_version = 0;
+
+        auto sql_res = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, row, false);
+        TaskAssert(sql_res->success, "SqlQueryMsg failed.");
+        old_db_version = row->db_version();
         
-        if (query_sql) {
-            auto res_msg = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, row, false);
-            TaskAssert(res_msg->success, "SqlQueryMsg failed.");
-            if (enable_cache) {
-                row->MarkDirty();
-                co_await Call<CacheSetMsg>(cache_service_, row, row->db_version());
-                row->ClearDirty();
+        // 这里还有个问题要考虑，直接读cache的row->db_version，可能不是sql的version
+        // 因为cache里的数据可能没有回写到sql中，所以还是需要先向sql查询获取sql的db_version
+        if (options.has_cache()) {
+            // cache中可能有更新的数据
+            if (options.cache().enable()) {
+                co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, row, false);
             }
         }
 
         msg->db_row.emplace(*row);
 
-        // 这里还有个问题要考虑，就是这里的row->db_version，可能不是sql的version
-        // 因为可能是从cache里读的，cache里的数据可能没有回写到sql中
-        // 一个解决方法是，cache里记录一个__sql_db_version__，从cache里取
-        // 否则才从row中取(这个时候row就是sql中读的)
-        CacheDbRow(desc, std::move(msg->primary_key), std::move(*row), row->db_version());
+        CacheDbRow(desc, std::move(msg->primary_key), std::move(*row), old_db_version);
         co_return std::move(msg_);
     }
 
@@ -156,7 +146,6 @@ public:
 
         auto old_db_version = msg->db_row->db_version();
         msg->db_row->set_db_version(old_db_version + 1);
-        row_iter->second.CopyFromDirty(*msg->db_row);
 
         bool enable_cache = false;
         if (options.has_cache()) {
@@ -164,10 +153,13 @@ public:
         }
         if (enable_cache) {
             // 根据配置选择是否回写到redis，让redis保证数据可靠
-            // 这里可以直接传递msg->db_row，外部需要等待
-            co_await Call<CacheSetMsg>(cache_service_, msg->db_row, old_db_version);
-            // 如果db_version不匹配，则会超时
+            // 这里可以直接传递msg->db_row，因为外部需要等待
+            auto set_res = co_await Call<CacheSetMsg>(cache_service_, msg->db_row, old_db_version, false);
+            // 如果db_version不匹配，则会失败
+            TaskAssert(set_res->success, "CacheSet failed.");
         }
+
+        row_iter->second.CopyFromDirty(*msg->db_row);
 
         co_return std::move(msg_);
     }

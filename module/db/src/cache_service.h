@@ -86,12 +86,8 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MSG_HANDLE(CacheSetMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(CacheSetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
-        if (!msg->db_row->IsDirty()) {
-            co_return std::move(msg_);
-        }
-
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
 
@@ -122,8 +118,8 @@ public:
         auto redis_key = std::format("million:db:{}:{}", table_name, primary_key);
 
         std::vector<std::string> keys;
-        keys.push_back(redis_key);  // Redis键
-        keys.push_back(std::to_string(msg->old_db_version));  // 预期的 db_version 值
+        keys.push_back(redis_key);
+        keys.push_back(std::to_string(msg->old_db_version));
 
         std::vector<std::string> args;
 
@@ -168,8 +164,9 @@ public:
 
         std::string_view lua_script = R"(
             local unpack_func = (_VERSION == "Lua 5.1" or _VERSION == "Lua 5.2") and unpack or table.unpack
-            local db_version = redis.call('HGET', KEYS[1], '__db_version__')
-            if db_version == false or db_version == KEYS[2] then
+            local old_db_version = redis.call('HGET', KEYS[1], '__db_version__')
+            local new_db_version = ARGV[2]
+            if old_db_version == false or old_db_version == KEYS[2] and new_db_version > old_db_version then
                 return redis.call('HSET', KEYS[1], unpack_func(ARGV))
             else
                 return -1
@@ -177,12 +174,16 @@ public:
         )";
 
         auto res = redis_->eval<long long>(lua_script, keys.begin(), keys.end(), args.begin(), args.end());
-        TaskAssert(res >= 0, "HSET failed.");
+        if (res < 0) {
+            msg->success = false;
+            co_return std::move(msg_);
+        }
 
         //if (ttl > 0) {
         //    redis_->expire(redis_key.data(), ttl);
         //}
 
+        msg->success = true;
         co_return std::move(msg_);
     }
 
