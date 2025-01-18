@@ -55,7 +55,7 @@ public:
         // auto res = co_await Call<db::DbRowCreateMsg>(db_service_, std::move(user));
 
         auto res2 = co_await Call<db::DbRowQueryMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103"
-            , std::nullopt);
+            , std::nullopt, true);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");
         }

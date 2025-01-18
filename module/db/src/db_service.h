@@ -65,7 +65,7 @@ public:
             auto db_row = msg->cache_row->CopyDirtyTo();
             auto old_db_version = msg->old_db_version;
             msg->old_db_version = db_row.db_version();
-            auto res = co_await CallOrNull<SqlUpdateMsg>(sql_service_, &db_row, old_db_version);
+            auto res = co_await CallOrNull<SqlUpdateMsg>(sql_service_, &db_row, old_db_version, false);
             if (!res) {
                 // 超时，可能只是sql暂时不能提供服务，可以重试
                 logger().Err("SqlUpdate Timeout.");
@@ -82,7 +82,8 @@ public:
 
     MILLION_MUT_MSG_HANDLE(DbRowCreateMsg, msg) {
         auto db_row = DbRow(std::move(msg->row_msg));
-        co_await Call<SqlInsertMsg>(sql_service_, &db_row);
+        auto res = co_await Call<SqlInsertMsg>(sql_service_, &db_row, false);
+        TaskAssert(res->success, "SqlInsert failed.");
         co_return std::move(msg_);
     }
 
@@ -111,7 +112,7 @@ public:
         TaskAssert(sql_res->success, "SqlQueryMsg failed.");
         old_db_version = row->db_version();
         
-        // 这里还有个问题要考虑，直接读cache的row->db_version，可能不是sql的version
+        // 直接读cache的row->db_version，可能不是sql的version
         // 因为cache里的数据可能没有回写到sql中，所以还是需要先向sql查询获取sql的db_version
         if (options.has_cache()) {
             // cache中可能有更新的数据
@@ -122,7 +123,11 @@ public:
 
         msg->db_row.emplace(*row);
 
-        CacheDbRow(desc, std::move(msg->primary_key), std::move(*row), old_db_version);
+        if (msg->need_write_back) {
+            CacheDbRow(desc, std::move(msg->primary_key), std::move(*row), old_db_version);
+            // 不回写的行不允许Update
+            row->set_db_version(0);
+        }
         co_return std::move(msg_);
     }
 
@@ -148,6 +153,10 @@ public:
 
         auto row_iter = table_iter->second.find(primary_key);
         TaskAssert(row_iter != table_iter->second.end(), "Row does not exist.");
+
+        if (msg->db_row->db_version() <= row_iter->second.db_version()) {
+            TaskAbort("msg->db_row->db_version()  <= row_iter->second.db_version()", msg->db_row->db_version(), row_iter->second.db_version());
+        }
 
         auto old_db_version = msg->db_row->db_version();
         msg->db_row->set_db_version(old_db_version + 1);

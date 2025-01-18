@@ -22,7 +22,7 @@ MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_DB_API, DbRowCreateMsg, (ProtoMsgUnique) 
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DbRowQueryMsg
     , (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key
-    , (std::optional<DbRow>) db_row);
+    , (std::optional<DbRow>) db_row, (bool) need_write_back);
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DbRowUpdateMsg, (nonnull_ptr<DbRow>) db_row);
 
