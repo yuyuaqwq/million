@@ -93,6 +93,9 @@ private:
     std::mutex msgs_mutex_;
     std::queue<MsgElement> msgs_;
 
+    // 允许指定某个任务执行完成之前，其他任务不允许并发执行
+    // SessionId lock_task_ = kSessionIdInvalid;
+
     TaskExecutor excutor_;
 
     std::unique_ptr<IService> iservice_;

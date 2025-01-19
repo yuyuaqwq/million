@@ -44,7 +44,6 @@ message TableSqlOptions {
 
 // Cache 相关选项（Redis）
 message TableCacheOptions {
-    bool enable = 1;                   // 是否启用缓存，启用缓存后支持事务，每次Commit时会更新到Cache中
 }
 
 

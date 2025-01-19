@@ -61,7 +61,7 @@ public:
         }
 
         res2->db_row->MarkDirty();
-        auto res3 = co_await Call<db::DbRowUpdateMsg>(db_service_, &*res2->db_row);
+        co_await res2->db_row->Commit(this, db_service_, true);
 
 
         // auto handle = imillion().GetServiceByName("SqlService");

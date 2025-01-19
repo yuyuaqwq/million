@@ -50,6 +50,7 @@ void Service::ProcessMsg(MsgElement ele) {
     auto& sender = ele.sender;
     auto session_id = ele.session_id;
     auto& msg = ele.msg;
+
     if (msg.IsType<ServiceStartMsg>()) {
         if (!IsReady() && !IsStop()) {
             // 不是可开启服务的状态
@@ -132,6 +133,7 @@ void Service::ProcessMsg(MsgElement ele) {
         return;
     }
 
+
     // 非Running阶段不开启分发消息/恢复等待中的协程
     if (!IsRunning()) {
         return;
@@ -144,6 +146,9 @@ void Service::ProcessMsg(MsgElement ele) {
             return;
         }
         // 已完成的任务
+        //if (session_id == lock_task_) {
+        //    lock_task_ = kSessionIdInvalid;
+        //}
         ReplyMsg(&std::get<TaskElement>(res));
     }
     else if (SessionIsSendId(session_id)) {
@@ -208,6 +213,12 @@ std::optional<Service::MsgElement> Service::PopMsgWithLock() {
         return std::nullopt;
     }
     auto msg = std::move(msgs_.front());
+
+    // 如果指定任务上锁，只能调度该任务相关的消息
+    //if (lock_task_ != kSessionIdInvalid && msg.session_id == lock_task_) {
+    //    return std::nullopt;
+    //}
+
     msgs_.pop();
     assert(msg.msg);
     return msg;

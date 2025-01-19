@@ -87,9 +87,61 @@ public:
     }
 
     MILLION_MUT_MSG_HANDLE(CacheSetMsg, msg) {
-        auto& proto_msg = msg->db_row->get();
-        const auto& desc = msg->db_row->GetDescriptor();
-        const auto& reflection = msg->db_row->GetReflection();
+        std::vector<std::string> keys; 
+        std::vector<std::string> args;
+        MakeKeysAndArgs(msg->db_row.get(), msg->old_db_version, &keys, &args);
+        
+        auto res = redis_->eval<long long>(kLuaSetScript, keys.begin(), keys.end(), args.begin(), args.end());
+        if (res < 0) {
+            msg->success = false;
+            co_return std::move(msg_);
+        }
+
+        msg->success = true;
+        co_return std::move(msg_);
+    }
+
+    //MILLION_MUT_MSG_HANDLE(CacheBatchSetMsg, msg) {
+    //    TaskAssert(msg->db_rows.size() == msg->old_db_version_list.size(), "DbRows Parameter quantity mismatch.");
+
+    //    // redis_->watch();
+
+    //    auto trans = redis_->transaction();
+
+    //    std::vector<std::string> keys;
+    //    std::vector<std::string> args;
+    //    auto i = 0;
+    //    for (auto& db_row : msg->db_rows) {
+    //        keys.clear();
+    //        args.clear();
+    //        MakeKeysAndArgs(db_row.get(), msg->old_db_version_list[i], &keys, &args);
+    //        trans.eval(kLuaSetScript, keys.begin(), keys.end(), args.begin(), args.end());
+    //        ++i;
+    //    }
+
+    //    trans.exec();
+    //    co_return std::move(msg_);
+    //}
+
+    MILLION_MUT_MSG_HANDLE(CacheGetBytesMsg, msg) {
+        auto value =  redis_->get(msg->key_value);
+        if (!value) {
+            co_return std::move(msg_);
+        }
+        msg->key_value = std::move(*value);
+        co_return std::move(msg_);
+    }
+
+    MILLION_MUT_MSG_HANDLE(CacheSetBytesMsg, msg) {
+        msg->success = redis_->set(msg->key, msg->value);
+        co_return std::move(msg_);
+    }
+
+private:
+    void MakeKeysAndArgs(DbRow* db_row, uint64_t old_db_version, std::vector<std::string>* keys, std::vector<std::string>* args) {
+        auto& proto_msg = db_row->get();
+        const auto& desc = db_row->GetDescriptor();
+        const auto& reflection = db_row->GetReflection();
 
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
@@ -105,9 +157,9 @@ public:
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
 
-        TaskAssert(primary_key_field_desc, 
+        TaskAssert(primary_key_field_desc,
             "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
-        
+
         auto primary_key = GetField(proto_msg, *primary_key_field_desc);
         TaskAssert(!primary_key.empty(), "primary_key is empty:{}.{}", table_name, options.primary_key());
 
@@ -117,16 +169,13 @@ public:
         // 遍历 Protobuf 的所有字段，将字段和值存入 redis_hash 中
         auto redis_key = std::format("million:db:{}:{}", table_name, primary_key);
 
-        std::vector<std::string> keys;
-        keys.push_back(redis_key);
-        keys.push_back(std::to_string(msg->old_db_version));
+        keys->emplace_back(redis_key);
+        keys->emplace_back(std::to_string(old_db_version));
 
-        std::vector<std::string> args;
-
-        args.emplace_back("__db_version__");
-        args.emplace_back(std::to_string(msg->db_row->db_version()));
+        args->emplace_back("__db_version__");
+        args->emplace_back(std::to_string(db_row->db_version()));
         for (int i = 0; i < desc.field_count(); ++i) {
-            if (!msg->db_row->IsDirtyFromFIeldIndex(i)) {
+            if (!db_row->IsDirtyFromFIeldIndex(i)) {
                 continue;
             }
 
@@ -140,8 +189,8 @@ public:
 
             //redis_hash[field->name()] = GetField(proto_msg, *field);
 
-            args.emplace_back(field->name());
-            args.emplace_back(GetField(proto_msg, *field));
+            args->emplace_back(field->name());
+            args->emplace_back(GetField(proto_msg, *field));
 
             // 主键在上面获取
             //if (options.has_cache()) {
@@ -162,48 +211,24 @@ public:
 
         // redis_->hmset(redis_key, redis_hash.begin(), redis_hash.end());
 
-        std::string_view lua_script = R"(
-            local unpack_func = (_VERSION == "Lua 5.1" or _VERSION == "Lua 5.2") and unpack or table.unpack
-            local old_db_version = redis.call('HGET', KEYS[1], '__db_version__')
-            local new_db_version = ARGV[2]
-            if old_db_version == false or old_db_version == KEYS[2] and new_db_version > old_db_version then
-                return redis.call('HSET', KEYS[1], unpack_func(ARGV))
-            else
-                return -1
-            end
-        )";
-
-        auto res = redis_->eval<long long>(lua_script, keys.begin(), keys.end(), args.begin(), args.end());
-        if (res < 0) {
-            msg->success = false;
-            co_return std::move(msg_);
-        }
-
         //if (ttl > 0) {
         //    redis_->expire(redis_key.data(), ttl);
         //}
 
-        msg->success = true;
-        co_return std::move(msg_);
-    }
-
-    MILLION_MUT_MSG_HANDLE(CacheGetBytesMsg, msg) {
-        auto value =  redis_->get(msg->key_value);
-        if (!value) {
-            co_return std::move(msg_);
-        }
-        msg->key_value = std::move(*value);
-        co_return std::move(msg_);
-    }
-
-    MILLION_MUT_MSG_HANDLE(CacheSetBytesMsg, msg) {
-        msg->success = redis_->set(msg->key, msg->value);
-        co_return std::move(msg_);
     }
 
 private:
+    constexpr static std::string_view kLuaSetScript = R"(
+        local unpack_func = (_VERSION == "Lua 5.1" or _VERSION == "Lua 5.2") and unpack or table.unpack
+        local old_db_version = redis.call('HGET', KEYS[1], '__db_version__')
+        local new_db_version = ARGV[2]
+        if old_db_version == false or old_db_version == KEYS[2] and new_db_version > old_db_version then
+            return redis.call('HSET', KEYS[1], unpack_func(ARGV))
+        else
+            return -1
+        end
+    )";
 
-private:
     std::optional<sw::redis::Redis> redis_;
 };
 

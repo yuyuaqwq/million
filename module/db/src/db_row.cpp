@@ -53,29 +53,6 @@ const protobuf::Descriptor& DbRow::GetDescriptor() const { return *proto_msg_->G
 
 const protobuf::Reflection& DbRow::GetReflection() const { return *proto_msg_->GetReflection(); }
 
-//void DbRow::MoveFrom(DbRow* target) {
-//    std::swap(proto_msg_, target->proto_msg_);
-//    std::swap(dirty_fields_, target->dirty_fields_);
-//
-//    // target->proto_msg_->Clear();
-//    target->ClearDirty();
-//}
-
-//DbRow DbRow::MoveTo() {
-//    auto* proto_msg = proto_msg_->New();
-//    if (proto_msg == nullptr) {
-//        throw std::bad_alloc();
-//    }
-//    auto row = DbRow(ProtoMsgUnique(proto_msg));
-//    row.MoveFrom(this);
-//    return row;
-//}
-
-//void DbRow::CopyFrom(const google::protobuf::Message& msg) {
-//    proto_msg_->CopyFrom(msg);
-//    dirty_ = false;
-//    dirty_fields_.clear();
-//}
 
 DbRow DbRow::CopyDirtyTo() {
     auto* proto_msg = proto_msg_->New();
@@ -97,7 +74,7 @@ void DbRow::CopyFromDirty(const DbRow& target) {
             dirty_fields_.at(i) = true;
         }
     }
-    set_db_version(target.db_version());
+    db_version_ = target.db_version_;
 }
 
 bool DbRow::IsDirty() const {
@@ -146,8 +123,9 @@ void DbRow::ClearDirtyByFieldIndex(int32_t field_index) {
     dirty_fields_.at(field_index) = false;
 }
 
-Task<> DbRow::Commit(IService* self, const ServiceHandle& db) {
-    co_await self->Call<DbRowUpdateMsg>(db, this);
+Task<> DbRow::Commit(IService* self, const ServiceHandle& db, bool update_to_cache) {
+    auto old_db_version = db_version_++;
+    co_await self->Call<DbRowUpdateMsg>(db, *this, old_db_version, update_to_cache);
 }
 
 const google::protobuf::FieldDescriptor& DbRow::GetFieldByNumber(int32_t field_number) const {

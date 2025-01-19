@@ -31,10 +31,6 @@ public:
     const protobuf::Descriptor& GetDescriptor() const;
     const protobuf::Reflection& GetReflection() const;
 
-    void MoveFrom(DbRow* db_row);
-    DbRow MoveTo();
-
-    //void CopyFrom(const google::protobuf::Message& msg);
     DbRow CopyDirtyTo();
     void CopyFromDirty(const DbRow& db_row);
     
@@ -50,9 +46,11 @@ public:
     void ClearDirtyByFieldNum(int32_t field_number);
     void ClearDirtyByFieldIndex(int32_t field_index);
 
-    Task<> Commit(IService* self, const ServiceHandle& db);
+    Task<> Commit(IService* self, const ServiceHandle& db, bool update_to_cache);
 
     uint64_t db_version() const { return db_version_; }
+
+    // 应该只给Db服务内部用，未来看看改私有+友元
     void set_db_version(uint64_t db_version) { db_version_ = db_version; }
 
 private:

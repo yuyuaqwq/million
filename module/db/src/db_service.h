@@ -22,7 +22,10 @@
 namespace million {
 namespace db {
 
-// 通过redis来支持跨行事务，redis保证数据的可用性
+// 设计：
+// 本地db存储行，用于定期回写
+// cache可能存储行，版本 >= sql，并且基于redis的事务来支持批量写
+// sql存储行，版本一般都是最旧的
 
 MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (nonnull_ptr<DbRow>) cache_row, (uint64_t) old_db_version);
 
@@ -71,6 +74,8 @@ public:
                 logger().Err("SqlUpdate Timeout.");
             }
             else {
+                // todo: 这里未来考虑优化，比如回一个消息让原始服务得知db需要重新拉取版本
+
                 // 如果为false，一般是回写失败，可能是当前行数据是低版本，无法入库，应用设计问题
                 TaskAssert(res->success, "SqlUpdate Write back failed.");
             }
@@ -106,38 +111,20 @@ public:
         auto tmp_row = DbRow(std::move(proto_msg));
         row = &tmp_row;
 
-        uint64_t old_db_version = 0;
-
-        auto sql_res = co_await Call<SqlQueryMsg>(sql_service_, msg->primary_key, row, false);
-        TaskAssert(sql_res->success, "SqlQueryMsg failed.");
-        old_db_version = row->db_version();
-        
-        // 直接读cache的row->db_version，可能不是sql的version
-        // 因为cache里的数据可能没有回写到sql中，所以还是需要先向sql查询获取sql的db_version
-        if (options.has_cache()) {
-            // cache中可能有更新的数据
-            if (options.cache().enable()) {
-                co_await Call<CacheGetMsg>(cache_service_, msg->primary_key, row, false);
-            }
-        }
+        uint64_t sql_db_version = co_await QueryDbRow(msg->primary_key, row);
 
         msg->db_row.emplace(*row);
 
-        if (msg->need_write_back) {
-            CacheDbRow(desc, std::move(msg->primary_key), std::move(*row), old_db_version);
-        }
-        else {
-            // 不回写的行不允许Update
-            row->set_db_version(0);
+        if (msg->tick_write_back) {
+            CacheDbRow(desc, std::move(msg->primary_key), std::move(*row), sql_db_version);
         }
         co_return std::move(msg_);
     }
 
-
-    MILLION_MSG_HANDLE(DbRowUpdateMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(DbRowUpdateMsg, msg) {
         auto db_row = msg->db_row;
-        const auto& desc = db_row->GetDescriptor();
-        const auto& reflection = db_row->GetReflection();
+        const auto& desc = db_row.GetDescriptor();
+        const auto& reflection = db_row.GetReflection();
 
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
@@ -150,32 +137,28 @@ public:
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
         TaskAssert(primary_key_field_desc, "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
 
-        auto primary_key = GetField(db_row->get(), *primary_key_field_desc);
+        auto primary_key = GetField(db_row.get(), *primary_key_field_desc);
         TaskAssert(!primary_key.empty(), "primary_key is empty:{}.{}", table_name, options.primary_key());
 
         auto row_iter = table_iter->second.find(primary_key);
         TaskAssert(row_iter != table_iter->second.end(), "Row does not exist.");
 
-        if (msg->db_row->db_version() <= row_iter->second.db_version()) {
-            TaskAbort("msg->db_row->db_version()  <= row_iter->second.db_version()", msg->db_row->db_version(), row_iter->second.db_version());
+        if (msg->db_row.db_version() <= row_iter->second.db_version()) {
+            TaskAbort("msg->db_row->db_version() <= row_iter->second.db_version()", msg->db_row.db_version(), row_iter->second.db_version());
         }
 
-        auto old_db_version = msg->db_row->db_version();
-        msg->db_row->set_db_version(old_db_version + 1);
+        if (msg->update_to_cache) {
+            // 可以通过redis保证数据持久化
+            auto set_res = co_await Call<CacheSetMsg>(cache_service_, &msg->db_row, msg->old_db_version, false);
+            if (!set_res->success) {
+                // todo: 这里未来考虑优化，比如回一个消息让原始服务得知db需要重新拉取版本
 
-        bool enable_cache = false;
-        if (options.has_cache()) {
-            enable_cache = options.cache().enable();
-        }
-        if (enable_cache) {
-            // 根据配置选择是否回写到redis，让redis保证数据可靠
-            // 这里可以直接传递msg->db_row，因为外部需要等待
-            auto set_res = co_await Call<CacheSetMsg>(cache_service_, msg->db_row, old_db_version, false);
-            // 如果db_version不匹配，则会失败
-            TaskAssert(set_res->success, "CacheSet failed.");
+                // 如果db_version不匹配，给一个异常，让外部应该重新get并重试
+                TaskAbort("CacheSet failed.");
+            }
         }
 
-        row_iter->second.CopyFromDirty(*msg->db_row);
+        row_iter->second = std::move(msg->db_row);
 
         co_return std::move(msg_);
     }
@@ -213,6 +196,18 @@ private:
         return true;
     }
 
+    Task<uint64_t> QueryDbRow(const std::string& primary_key, DbRow* row) {
+        auto sql_res = co_await Call<SqlQueryMsg>(sql_service_, primary_key, row, false);
+        TaskAssert(sql_res->success, "SqlQueryMsg failed.");
+        auto sql_db_version = row->db_version();
+
+        // 直接读cache的row->db_version，可能不是sql的version
+        // 因为cache里的数据可能没有回写到sql中，所以还是需要先向sql查询获取sql的db_version
+        // 这里再读一遍cache是因为cache可能有更新的数据，读不到就还是使用sql的数据
+        co_await Call<CacheGetMsg>(cache_service_, primary_key, row, false);
+
+        co_return sql_db_version;
+    }
 
 private:
     using DbTable = std::unordered_map<std::string, DbRow>;

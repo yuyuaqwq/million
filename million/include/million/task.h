@@ -299,8 +299,9 @@ struct TaskPromise : public TaskPromiseBase {
         return Task<T>{ std::coroutine_handle<TaskPromise>::from_promise(*this) };
     }
 
-    void return_value(T&& value) noexcept {
-        result_value = std::forward<T>(value);
+    template <typename U>
+    void return_value(U&& value) noexcept {
+        result_value.emplace(std::forward<U>(value));
     }
 
     std::optional<T> result_value;
