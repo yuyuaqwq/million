@@ -51,17 +51,11 @@ public:
     MILLION_MUT_MSG_HANDLE(CacheGetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
-        const auto& reflection = msg->db_row->GetReflection();
 
-        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
-        const MessageOptionsTable& options = desc.options().GetExtension(table);
-
-        const auto& table_name = options.name();
-        TaskAssert(!table_name.empty(), "table_name is empty.");
+        auto redis_key = GetRedisKey(*msg->db_row);
 
         // 通过 Redis 哈希表存取 Protobuf 字段
         std::unordered_map<std::string, std::string> redis_hash;
-        auto redis_key = std::format("million:db:{}:{}", table_name, msg->primary_key);
         redis_->hgetall(redis_key, std::inserter(redis_hash, redis_hash.end()));
         if (redis_hash.empty()) {
             msg->success = false;
@@ -89,7 +83,7 @@ public:
     MILLION_MUT_MSG_HANDLE(CacheSetMsg, msg) {
         std::vector<std::string> keys; 
         std::vector<std::string> args;
-        MakeKeysAndArgs(msg->db_row.get(), msg->old_db_version, &keys, &args);
+        MakeKeysAndArgs(msg->db_row, msg->old_db_version, &keys, &args);
         
         auto res = redis_->eval<long long>(kLuaSetScript, keys.begin(), keys.end(), args.begin(), args.end());
         if (res < 0) {
@@ -100,6 +94,19 @@ public:
         msg->success = true;
         co_return std::move(msg_);
     }
+
+    MILLION_MUT_MSG_HANDLE(CacheDelMsg, msg) {
+        auto redis_key = GetRedisKey(msg->db_row);
+        auto db_version = std::to_string(msg->db_row.db_version());
+        auto res = redis_->eval<long long>(kLuaDelScript, { redis_key , db_version }, {});
+        if (res < 0) {
+            msg->success = false;
+            co_return std::move(msg_);
+        }
+        msg->success = true;
+        co_return std::move(msg_);
+    }
+
 
     //MILLION_MUT_MSG_HANDLE(CacheBatchSetMsg, msg) {
     //    TaskAssert(msg->db_rows.size() == msg->old_db_version_list.size(), "DbRows Parameter quantity mismatch.");
@@ -138,10 +145,9 @@ public:
     }
 
 private:
-    void MakeKeysAndArgs(DbRow* db_row, uint64_t old_db_version, std::vector<std::string>* keys, std::vector<std::string>* args) {
-        auto& proto_msg = db_row->get();
-        const auto& desc = db_row->GetDescriptor();
-        const auto& reflection = db_row->GetReflection();
+    std::string GetRedisKey(const DbRow& db_row) {
+        auto& proto_msg = db_row.get();
+        const auto& desc = db_row.GetDescriptor();
 
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
@@ -156,7 +162,6 @@ private:
         // options.tick_second();
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
-
         TaskAssert(primary_key_field_desc,
             "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
 
@@ -169,13 +174,22 @@ private:
         // 遍历 Protobuf 的所有字段，将字段和值存入 redis_hash 中
         auto redis_key = std::format("million:db:{}:{}", table_name, primary_key);
 
+        return redis_key;
+    }
+
+    void MakeKeysAndArgs(const DbRow& db_row, uint64_t old_db_version, std::vector<std::string>* keys, std::vector<std::string>* args) {
+        auto& proto_msg = db_row.get();
+        const auto& desc = db_row.GetDescriptor();
+
+        auto redis_key = GetRedisKey(db_row);
+
         keys->emplace_back(redis_key);
         keys->emplace_back(std::to_string(old_db_version));
 
         args->emplace_back("__db_version__");
-        args->emplace_back(std::to_string(db_row->db_version()));
+        args->emplace_back(std::to_string(db_row.db_version()));
         for (int i = 0; i < desc.field_count(); ++i) {
-            if (!db_row->IsDirtyFromFIeldIndex(i)) {
+            if (!db_row.IsDirtyFromFIeldIndex(i)) {
                 continue;
             }
 
@@ -217,6 +231,7 @@ private:
 
     }
 
+    
 private:
     constexpr static std::string_view kLuaSetScript = R"(
         local unpack_func = (_VERSION == "Lua 5.1" or _VERSION == "Lua 5.2") and unpack or table.unpack
@@ -224,6 +239,15 @@ private:
         local new_db_version = ARGV[2]
         if old_db_version == false or old_db_version == KEYS[2] and new_db_version > old_db_version then
             return redis.call('HSET', KEYS[1], unpack_func(ARGV))
+        else
+            return -1
+        end
+    )";
+    constexpr static std::string_view kLuaDelScript = R"(
+        local unpack_func = (_VERSION == "Lua 5.1" or _VERSION == "Lua 5.2") and unpack or table.unpack
+        local old_db_version = redis.call('HGET', KEYS[1], '__db_version__')
+        if old_db_version == KEYS[2] then
+            return redis.call('DEL', KEYS[1])
         else
             return -1
         end
