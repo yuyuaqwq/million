@@ -74,7 +74,7 @@ public:
                 logger().Err("SqlUpdate Timeout.");
             }
             else {
-                // todo: 这里未来考虑优化，比如回一个消息让原始服务得知db需要重新拉取版本
+                // todo: 这里未来考虑优化，比如回一个消息让原始服务得知指定行的db需要重新拉取版本
 
                 // 如果为false，一般是回写失败，可能是当前行数据是低版本，无法入库，应用设计问题
                 TaskAssert(res->success, "SqlUpdate Write back failed.");
@@ -151,7 +151,7 @@ public:
             // 可以通过redis保证数据持久化
             auto set_res = co_await Call<CacheSetMsg>(cache_service_, &msg->db_row, msg->old_db_version, false);
             if (!set_res->success) {
-                // todo: 这里未来考虑优化，比如回一个消息让原始服务得知db需要重新拉取版本
+                // todo: 这里未来考虑优化，比如回一个消息让原始服务得知指定行的db需要重新拉取版本
 
                 // 如果db_version不匹配，给一个异常，让外部应该重新get并重试
                 TaskAbort("CacheSet failed.");
