@@ -225,6 +225,9 @@ private:
         // if (cache_row.db_version() < sql_db_version) {
         //     co_await Call<CacheDelMsg>(cache_service_, cache_row, false);
         // }
+        // else {
+        //     *row = std::move(cache_row);
+        // }
 
         co_return sql_db_version;
     }
