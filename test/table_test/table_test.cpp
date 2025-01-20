@@ -4,6 +4,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <table/table.h>
 #include <table/table.pb.h>
 
 MILLION_MODULE_INIT();
@@ -20,17 +21,20 @@ public:
         : Base(imillion) {}
 
     virtual bool OnInit(million::MsgPtr msg) override {
-        auto handle = imillion().GetServiceByName("DescService");
+        auto handle = imillion().GetServiceByName("TableService");
         if (!handle) {
             logger().Err("Unable to find DescService.");
             return false;
         }
-        desc_service_ = *handle;
+        table_service_ = *handle;
 
         return true;
     }
 
     virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
+        auto res = co_await Call<table::TableQueryMsg>(table_service_, *table::ExampleKV::GetDescriptor(), std::nullopt);
+        auto table = *res->table;
+        logger().Info("ExampleKV:\n{}", table->DebugString());
 
         co_return nullptr;
     }
@@ -44,7 +48,7 @@ public:
     }
 
 private:
-    million::ServiceHandle desc_service_;
+    million::ServiceHandle table_service_;
 
 };
 

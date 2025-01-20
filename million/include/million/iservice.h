@@ -161,7 +161,7 @@ private:
             assert(res.second); \
             return true; \
         }(); \
-    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, CONST_ MSG_TYPE_* MSG_PTR_NAME_)
+    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr MSG_PTR_NAME_##_, CONST_ MSG_TYPE_* MSG_PTR_NAME_)
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
     MILLION_MSG_HANDLE_TEMPLATE(MSG_TYPE_, MSG_PTR_NAME_, GetMsg, const)

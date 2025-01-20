@@ -6,9 +6,7 @@
 
 #include <million/imillion.h>
 
-#include <table/api.h>
-
-#include <table/table.pb.h>
+#include <table/table.h>
 
 MILLION_MODULE_INIT();
 
@@ -19,15 +17,14 @@ namespace table {
 // 2.访问配置即返回共享指针，热更只需要重新赋值共享指针即可
 
 
-MILLION_MSG_DEFINE(MILLION_TABLE_API, TableQueryMsg, (std::optional<ProtoMsgShared>) table)
 
-class DescService : public IService {
+class TableService : public IService {
 public:
     using Base = IService;
     using Base::Base;
 
     virtual bool OnInit(MsgPtr msg) override {
-        if (!imillion().SetServiceName(service_handle(), "DescService")) {
+        if (!imillion().SetServiceName(service_handle(), "TableService")) {
             return false;
         }
 
@@ -82,9 +79,27 @@ public:
         
     }
 
-    //MILLION_MSG_HANDLE() {
+    MILLION_MSG_DISPATCH(TableService);
 
-    //}
+    MILLION_MUT_MSG_HANDLE(TableQueryMsg, msg) {
+        const auto& name = msg->table_desc.name();
+
+        auto iter = table_map_.find(name);
+        if (iter == table_map_.end()) {
+            co_return std::move(msg_);
+        }
+
+        msg->table.emplace(iter->second);
+        co_return std::move(msg_);
+    }
+
+    MILLION_MSG_HANDLE(TableUpdateMsg, msg) {
+        const auto& name = msg->table_desc.name();
+        if (!LoadTable(name)) {
+            logger().Err("LoadTable failed: {}.", name);
+        }
+        co_return std::move(msg_);
+    }
 
 private:
     std::optional<std::vector<char>> ReadPbb(const std::filesystem::path& pbb_path) {
@@ -143,8 +158,8 @@ private:
 extern "C" MILLION_TABLE_API bool MillionModuleInit(IMillion* imillion) {
     auto& config = imillion->YamlConfig();
     
-    auto cache_service_opt = imillion->NewService<DescService>();
-    if (!cache_service_opt) {
+    auto table_service_opt = imillion->NewService<TableService>();
+    if (!table_service_opt) {
         return false;
     }
 
