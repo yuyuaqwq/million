@@ -50,16 +50,14 @@ public:
         }
 
         const auto& name_config = cluster_config["name"];
-        if (!name_config)
-        {
+        if (!name_config) {
             logger().Err("cannot find 'cluster.name'.");
             return false;
         }
         node_name_ = name_config.as<std::string>();
 
         const auto& port_config = cluster_config["port"];
-        if (!port_config)
-        {
+        if (!port_config) {
             logger().Err("cannot find 'cluster.port'.");
             return false;
         }

@@ -1,8 +1,10 @@
-set PACKAGE=desc
+set PACKAGE=million.table
+
+mkdir ..\tablegen
 
 cd table
-..\tool\tabtoy -mode=v3 -index=Index.xlsx -package=%PACKAGE% -proto_out=../../proto/desc/desc.proto
-::..\tool\tabtoy -mode=v3 -index=Index.xlsx -package=%PACKAGE% -pbbin_out=../../descgen/descdata.pbb
-..\tool\tabtoy -mode=v3 -index=Index.xlsx -package=%PACKAGE% -pbbin_dir=../../descgen/
+..\tool\tabtoy -mode=v3 -index=Index.xlsx -package=%PACKAGE% -proto_out=../../proto/table/table.proto
+::..\tool\tabtoy -mode=v3 -index=Index.xlsx -package=%PACKAGE% -pbbin_out=../../tablegen/table.pbb
+..\tool\tabtoy -mode=v3 -index=Index.xlsx -package=%PACKAGE% -pbbin_dir=../../tablegen
 
 pause

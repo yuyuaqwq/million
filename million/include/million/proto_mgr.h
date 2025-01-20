@@ -28,8 +28,6 @@ private:
 
 private:
     ProtoCodec codec_;
-
-    std::unordered_map<std::string, const google::protobuf::Descriptor*> msg_name_map_;
 };
 
 
