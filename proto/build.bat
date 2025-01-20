@@ -8,7 +8,8 @@ mkdir %OUTPUT_DIR% 2>nul
 mkdir %TEMP_DIR% 2>nul
 
 :: 创建子目录，分别用于存放头文件和源文件
-mkdir %OUTPUT_DIR%\include\protogen 2>nul
+mkdir %OUTPUT_DIR%\include 2>nul
+::mkdir %OUTPUT_DIR%\include\protogen 2>nul
 mkdir %OUTPUT_DIR%\src 2>nul
 
 :: 遍历当前目录的所有子文件夹并生成 C++ 文件

@@ -94,7 +94,7 @@ public:
 
                 // 这里不匹配的原因，可能是其他节点回写了这行的数据到SQL，一般是应用设计问题
                 // 比如某玩家的基本数据，被两个节点的服务同时query并设置了回写，不是一个常见的场景
-                TaskAbort("Sql update failed, check the db version.");
+                TaskAbort("Sql tick sync failed, check the db version: {} -> {}.", msg->cache->sql_db_version, db_row.db_version());
             }
             else {
                 msg->cache->sql_db_version = db_row.db_version();
