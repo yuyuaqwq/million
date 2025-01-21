@@ -1,10 +1,13 @@
-set PACKAGE=million.table
+@echo off
+setlocal enabledelayedexpansion
 
-mkdir ..\tablegen
+rem 遍历 .\table 下的所有文件夹
+for /d %%D in (.\table\*) do (
+    echo Make %%~nxD
+    rem 执行 build.bat
+    call make.bat %%~nxD
+)
 
-cd table
-..\tool\tabtoy -mode=v3 -index=Index.xlsx -package=%PACKAGE% -proto_out=../../proto/table/table.proto
-::..\tool\tabtoy -mode=v3 -index=Index.xlsx -package=%PACKAGE% -pbbin_out=../../tablegen/table.pbb
-..\tool\tabtoy -mode=v3 -index=Index.xlsx -package=%PACKAGE% -pbbin_dir=../../tablegen
+endlocal
 
 pause

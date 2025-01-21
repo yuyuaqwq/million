@@ -5,12 +5,13 @@
 #include <yaml-cpp/yaml.h>
 
 #include <table/table.h>
-#include <table/table.pb.h>
+#include <table/example.pb.h>
 
 MILLION_MODULE_INIT();
 
 namespace protobuf = google::protobuf;
 namespace table = million::table;
+namespace example = million::example;
 
 MILLION_MSG_DEFINE_EMPTY(, Test1Msg)
 
@@ -23,7 +24,7 @@ public:
     virtual bool OnInit(million::MsgPtr msg) override {
         auto handle = imillion().GetServiceByName("TableService");
         if (!handle) {
-            logger().Err("Unable to find DescService.");
+            logger().Err("Unable to find TableService.");
             return false;
         }
         table_service_ = *handle;
@@ -32,7 +33,7 @@ public:
     }
 
     virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
-        auto res = co_await Call<table::TableQueryMsg>(table_service_, *table::ExampleKV::GetDescriptor(), std::nullopt);
+        auto res = co_await Call<table::TableQueryMsg>(table_service_, *example::ExampleKV::GetDescriptor(), std::nullopt);
         auto table = *res->table;
         logger().Info("ExampleKV:\n{}", table->DebugString());
 

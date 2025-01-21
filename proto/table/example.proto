@@ -2,7 +2,7 @@
 // DO NOT EDIT!!
 // Version: 3.1.4
 syntax = "proto3";
-package million.table;
+package million.example;
 
 
 enum ActorType
