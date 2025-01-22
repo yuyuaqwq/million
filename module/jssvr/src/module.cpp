@@ -1194,19 +1194,16 @@ extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
     }
 
     const auto& bootstarp_config = jssvr_config["bootstarp"];
-    if (!bootstarp_config) {
-        imillion->logger().Err("cannot find 'jssvr.bootstarp'.");
-        return false;
+    if (bootstarp_config) {
+        auto bootstarp = bootstarp_config.as<std::string>();
+        try {
+            handle = imillion->NewService<JsService>(ptr, bootstarp);
+        }
+        catch (const std::exception& e) {
+            imillion->logger().Err("New JsService failed.", e.what());
+        }
     }
-    auto bootstarp = bootstarp_config.as<std::string>();
 
-    try {
-        handle = imillion->NewService<JsService>(ptr, bootstarp);
-    }
-    catch (const std::exception& e) {
-        imillion->logger().Err("New JsService failed.", e.what());
-    }
-    
     return true;
 }
 
