@@ -1,6 +1,7 @@
 import * as std from 'std';
 import * as os from 'os';
 //import * as sb666 from 'sb666';
+import * as million from 'million';
 import * as service from 'service';
 import * as logger from 'logger';
 //import * as test from 'test';
@@ -40,6 +41,7 @@ function testFunction() {
 
 testFunction();
 
+million.newservice("sbsb");
 
 export async function onMsg(msg_type, msg) {
     logger.info(`onMsg: ${msg_type}, ${msg.value}`);

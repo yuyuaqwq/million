@@ -136,6 +136,9 @@ public:
     // std::unordered_map<std::filesystem::path, std::vector<uint8_t>> module_bytecodes_map_;
 };
 
+// JS_ToCString 可能存在内存泄漏，暂时懒得找了
+
+
 class JsService : public million::IService {
 public:
     using Base = IService;
@@ -164,10 +167,12 @@ public:
 
             JS_SetModuleLoaderFunc(js_rt_, nullptr, JsModuleLoader, nullptr);
 
-            if (!CreateServiceModule(js_ctx_)) {
+            if (!CreateMillionModule()) {
+                throw std::runtime_error("CreateLoggerModule failed.");
+            }
+            if (!CreateServiceModule()) {
                 throw std::runtime_error("CreateServiceModule failed.");
             }
-
             if (!CreateLoggerModule()) {
                 throw std::runtime_error("CreateLoggerModule failed.");
             }
@@ -790,8 +795,6 @@ private:
     }
 
 
-
-
     static JSModuleDef* JsModuleLoader(JSContext* ctx, const char* module_name, void* opaque) {
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
 
@@ -956,15 +959,15 @@ private:
         return JS_SetModuleExportList(ctx, m, list, count);
     }
 
-    JSModuleDef* CreateServiceModule(JSContext* js_ctx) {
-        JSModuleDef* module = JS_NewCModule(js_ctx, "service", ServiceModuleInit);
+    JSModuleDef* CreateServiceModule() {
+        JSModuleDef* module = JS_NewCModule(js_ctx_, "service", ServiceModuleInit);
         if (!module) {
             logger().Err("JS_NewCModule failed: {}.", "service");
             return nullptr;
         }
         size_t count = 0;
         auto list = ServiceModuleExportList(&count);
-        JS_AddModuleExportList(js_ctx, module, list, count);
+        JS_AddModuleExportList(js_ctx_, module, list, count);
         if (!AddModule("service", module)) {
             logger().Err("JsAddModule failed: {}.", "service");
             return nullptr;
@@ -1092,23 +1095,65 @@ private:
     }
 
 
-    JSModuleDef* CreateMillionModule(JSContext* js_ctx) {
-        //JSModuleDef* module = JS_NewCModule(js_ctx, "million", LoggerModuleInit);
-        //if (!module) {
-        //    logger().Err("JS_NewCModule failed: {}.", "million");
-        //    return nullptr;
-        //}
-        //size_t count = 0;
-        //auto list = LoggerModuleExportList(&count);
-        //JS_AddModuleExportList(js_ctx, module, list, count);
-        //if (!js_module_service_->AddModule(js_ctx, "logger", module)) {
-        //    logger().Err("JsAddModule failed: {}.", "logger");
-        //    return nullptr;
-        //}
-        //return module;
+
+    static JSValue MillionModuleNewService(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc < 1) {
+            return JS_ThrowTypeError(ctx, "MillionModuleNewService argc: %d.", argc);
+        }
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+        if (!JS_IsString(argv[0])) {
+            return JS_ThrowTypeError(ctx, "MillionModuleNewService 1 argument must be a string.");
+        }
+        auto module_name = JS_ToCString(ctx, argv[0]);
+        if (!module_name) {
+            return JS_ThrowInternalError(ctx, "MillionModuleNewService failed to convert first argument to string.");
+        }
+
+        try {
+            auto handle = service->imillion().NewService<JsService>(service->js_module_service_, module_name);
+            if (!handle) {
+                return JS_ThrowInternalError(ctx, "MillionModuleNewService New JsService failed.");
+            }
+        }
+        catch (const std::exception& e) {
+            return JS_ThrowInternalError(ctx, std::format("MillionModuleNewService New JsService failed: {}.", e.what()).c_str());
+        }
+        
+        return JS_UNDEFINED;
     }
 
+    static JSCFunctionListEntry* MillionModuleExportList(size_t* count) {
+        static JSCFunctionListEntry list[] = {
+            JS_CFUNC_DEF("newservice", 1, MillionModuleNewService),
+        };
+        *count = sizeof(list) / sizeof(JSCFunctionListEntry);
+        return list;
+    }
 
+    static int MillionModuleInit(JSContext* ctx, JSModuleDef* m) {
+        // 导出函数到模块
+        size_t count = 0;
+        auto list = MillionModuleExportList(&count);
+        return JS_SetModuleExportList(ctx, m, list, count);
+    }
+
+    JSModuleDef* CreateMillionModule() {
+        JSModuleDef* module = JS_NewCModule(js_ctx_, "million", MillionModuleInit);
+        if (!module) {
+            logger().Err("JS_NewCModule failed: {}.", "million");
+            return nullptr;
+        }
+        size_t count = 0;
+        auto list = MillionModuleExportList(&count);
+        JS_AddModuleExportList(js_ctx_, module, list, count);
+        if (!AddModule("million", module)) {
+            logger().Err("JsAddModule failed: {}.", "million");
+            return nullptr;
+        }
+        return module;
+    }
 
     bool AddModule(const std::string& module_name, JSModuleDef* module) {
         if (modules_.find(module_name) != modules_.end()) {
@@ -1141,14 +1186,27 @@ extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
     auto handle = imillion->NewService<JsModuleService>();
     auto ptr = handle->get_ptr<JsModuleService>(handle->lock());
 
+    auto config = imillion->YamlConfig();
+    const auto& jssvr_config = config["jssvr"];
+    if (!jssvr_config) {
+        imillion->logger().Err("cannot find 'jssvr'.");
+        return false;
+    }
+
+    const auto& bootstarp_config = jssvr_config["bootstarp"];
+    if (!bootstarp_config) {
+        imillion->logger().Err("cannot find 'jssvr.bootstarp'.");
+        return false;
+    }
+    auto bootstarp = bootstarp_config.as<std::string>();
+
     try {
-        handle = imillion->NewService<JsService>(ptr, "test");
+        handle = imillion->NewService<JsService>(ptr, bootstarp);
     }
     catch (const std::exception& e) {
         imillion->logger().Err("New JsService failed.", e.what());
     }
-    imillion->Send<ss::test::LoginReq>(*handle, *handle, "shabi");
-
+    
     return true;
 }
 
