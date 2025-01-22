@@ -42,7 +42,7 @@ public:
         return true;
     }
 
-    virtual void OnExit(ServiceHandle sender, SessionId session_id) override {
+    virtual void OnExit() override {
         redis_ = std::nullopt;
     }
 

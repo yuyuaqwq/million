@@ -124,7 +124,7 @@ protected:
     virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) { co_return nullptr; }
     virtual Task<MsgPtr> OnMsg(ServiceHandle sender, SessionId session_id, MsgPtr msg) { co_return nullptr; }
     virtual void OnStop(ServiceHandle sender, SessionId session_id) { }
-    virtual void OnExit(ServiceHandle sender, SessionId session_id) { }
+    virtual void OnExit() { }
 
 private:
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }

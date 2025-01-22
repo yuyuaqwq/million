@@ -93,7 +93,7 @@ void Service::ProcessMsg(MsgElement ele) {
         state_ = kExit;
         try {
             assert(SessionIsSendId(session_id));
-            iservice_->OnExit(ServiceHandle(sender), session_id);
+            iservice_->OnExit();
         }
         catch (const std::exception& e) {
             service_mgr_->million().logger().Err("Service OnExit exception occurred: {}", e.what());
