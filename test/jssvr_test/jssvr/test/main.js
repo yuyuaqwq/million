@@ -3,8 +3,9 @@ import * as os from 'os';
 //import * as sb666 from 'sb666';
 import * as service from 'service';
 import * as logger from 'logger';
+//import * as test from 'test';
 
-service.send()
+//service.send()
 var console = {}
 console.log = value => std.printf(value + "\n");
 console.log('ok')

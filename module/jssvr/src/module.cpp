@@ -45,145 +45,101 @@ private:
     }
 
 private:
-    JSValue FindModule(JSContext* js_ctx, std::filesystem::path path) {
-        auto iter = module_bytecodes_map_.find(path);
-        if (iter == module_bytecodes_map_.end()) {
-            return JS_UNDEFINED;
-        }
+    //JSValue FindModule(JSContext* js_ctx, std::filesystem::path path) {
+    //    auto iter = module_bytecodes_map_.find(path);
+    //    if (iter == module_bytecodes_map_.end()) {
+    //        return JS_UNDEFINED;
+    //    }
 
-        // js_std_eval_binary;
+    //    // js_std_eval_binary;
 
-        int flags = JS_READ_OBJ_BYTECODE;
-        JSValue module = JS_ReadObject(js_ctx, iter->second.data(), iter->second.size(), flags);
-        if (JS_VALUE_GET_TAG(module) == JS_TAG_MODULE) {
-            if (JS_ResolveModule(js_ctx, module) < 0) {
-                JS_FreeValue(js_ctx, module);
-                return  JS_ThrowTypeError(js_ctx, "JS_ResolveModule < 0.");
-            }
-            js_module_set_import_meta(js_ctx, module, false, true);
-            auto result = JS_EvalFunction(js_ctx, module);
-            if (JS_IsException(result)) {
-                return result;
-            }
-            // result = js_std_await(ctx, result);
-        }
-        return module;
-    }
+    //    int flags = JS_READ_OBJ_BYTECODE;
+    //    JSValue module = JS_ReadObject(js_ctx, iter->second.data(), iter->second.size(), flags);
+    //    if (JS_VALUE_GET_TAG(module) == JS_TAG_MODULE) {
+    //        if (JS_ResolveModule(js_ctx, module) < 0) {
+    //            JS_FreeValue(js_ctx, module);
+    //            return  JS_ThrowTypeError(js_ctx, "JS_ResolveModule < 0.");
+    //        }
+    //        js_module_set_import_meta(js_ctx, module, false, true);
+    //        auto result = JS_EvalFunction(js_ctx, module);
+    //        if (JS_IsException(result)) {
+    //            return result;
+    //        }
+    //        // result = js_std_await(ctx, result);
+    //    }
+    //    return module;
+    //}
 
-    std::optional<std::string> ReadModuleScript(const std::filesystem::path& module_path) {
-        auto file = std::ifstream(module_path);
-        if (!file) {
-            return std::nullopt;
-        }
-        auto content = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        file.close();
-        return content;
-    }
+    //JSValue LoadModule(JSContext* js_ctx, std::string* cur_path, const std::string& full_name) {
+
+
+    //    auto script = ReadModuleScript(path);
+    //    if (!script) {
+    //        // 当前路径找不到，去配置路径找
+    //        for (const auto& dir : jssvr_dirs_) {
+    //            path = dir;
+    //            path /= full_name + ".js";
+    //            module = FindModule(js_ctx, path);
+    //            if (!JS_IsUndefined(module)) {
+    //                return module;
+    //            }
+    //        }
+
+    //        for (const auto& dir : jssvr_dirs_) {
+    //            path = dir;
+    //            path /= full_name + ".js";
+    //            script = ReadModuleScript(path);
+    //            if (script) {
+    //                *cur_path = dir;
+    //                break;
+    //            }
+    //        }
+    //        if (!script) {
+    //            return JS_ThrowTypeError(js_ctx, "LoadModule failed: %s.", full_name.c_str());
+    //        }
+    //    }
+
+    //    module = JS_Eval(js_ctx, script->data(), script->size(), full_name.c_str(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    //    if (JS_IsException(module)) {
+    //        return module;
+    //    }
+
+    //    // 保存到已加载模块
+    //    iter->second.emplace(full_name, module);
+
+    //    uint8_t* out_buf;
+    //    size_t out_buf_len;
+    //    int flags = JS_WRITE_OBJ_BYTECODE;
+    //    out_buf = JS_WriteObject(js_ctx, &out_buf_len, module, flags);
+    //    if (!out_buf) {
+    //        return JS_ThrowTypeError(js_ctx, "JS_WriteObject failed: %s.", full_name.c_str());
+    //    }
+
+    //    auto bytecodes = std::vector<uint8_t>(out_buf_len);
+    //    std::memcpy(bytecodes.data(), out_buf, out_buf_len);
+    //    js_free(js_ctx, out_buf);
+
+    //    auto res = module_bytecodes_map_.emplace(std::move(path), std::move(bytecodes));
+    //    assert(res.second);
+
+    //    auto result = JS_EvalFunction(js_ctx, module);
+    //    if (JS_IsException(result)) {
+    //        return result;
+    //    }
+
+    //    return module;
+    //}
+
 
 public:
-    void InitModule(JSContext* js_ctx) {
-        auto res = loaded_module_.emplace(js_ctx,  std::unordered_map<std::string, JSValue>());
-        assert(res.second);
-    }
-
-    bool AddModule(JSContext* ctx, const std::string& module_name, JSModuleDef* module) {
-        auto iter = loaded_module_.find(ctx);
-        if (iter == loaded_module_.end()) {
-            return false;
-        }
-        if (iter->second.find(module_name) != iter->second.end()) {
-            logger().Err("Module already exists: {}.", module_name);
-            return false;
-        }
-        JSValue module_obj = JS_GetImportMeta(ctx, module);
-        auto res = iter->second.emplace(module_name, module_obj);
-        assert(res.second);
-
-        // static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(func_val))
-        return true;
-    }
-
-    JSValue LoadModule(JSContext* js_ctx, std::filesystem::path cur_path, const std::string& module_name) {
-        // 首先找已加载模块
-        auto iter = loaded_module_.find(js_ctx);
-        if (iter == loaded_module_.end()) {
-            return JS_ThrowTypeError(js_ctx, "Uninitialized module.");
-        }
-        auto iter2 = iter->second.find(module_name);
-        if (iter2 != iter->second.end()) {
-            return iter2->second;
-        }
-
-        // 其次从当前路径找模块
-        cur_path /= module_name + ".js";
-        auto module = FindModule(js_ctx, cur_path);
-        if (!JS_IsUndefined(module)) {
-            return module;
-        }
-        auto script = ReadModuleScript(cur_path);
-        if (!script) {
-            // 当前路径找不到，去配置路径找
-            for (const auto& dir : jssvr_dirs_) {
-                cur_path = dir;
-                cur_path /= module_name + ".js";
-                module = FindModule(js_ctx, cur_path);
-                if (!JS_IsUndefined(module)) {
-                    return module;
-                }
-            }
-
-            for (const auto& dir : jssvr_dirs_) {
-                cur_path = dir;
-                cur_path /= module_name + ".js";
-                script = ReadModuleScript(cur_path);
-                if (script) break;
-            }
-            if (!script) {
-                return JS_ThrowTypeError(js_ctx, "LoadModule failed: %s.", module_name.c_str());
-            }
-        }
-
-        module = JS_Eval(js_ctx, script->data(), script->size(), module_name.data(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
-        if (JS_IsException(module)) {
-            return module;
-        }
-
-        // 保存到已加载模块
-        iter->second.emplace(module_name, module);
-
-        uint8_t* out_buf;
-        size_t out_buf_len;
-        int flags = JS_WRITE_OBJ_BYTECODE;
-        out_buf = JS_WriteObject(js_ctx, &out_buf_len, module, flags);
-        if (!out_buf) {
-            return JS_ThrowTypeError(js_ctx, "JS_WriteObject failed: %s.", module_name.c_str());
-        }
-
-        auto bytecodes = std::vector<uint8_t>(out_buf_len);
-        std::memcpy(bytecodes.data(), out_buf, out_buf_len);
-        js_free(js_ctx, out_buf);
-
-        auto res = module_bytecodes_map_.emplace(std::move(cur_path), std::move(bytecodes));
-        assert(res.second);
-
-        auto result = JS_EvalFunction(js_ctx, module);
-        if (JS_IsException(result)) {
-            return result;
-        }
-
-        return module;
-    }
-
-private:
     std::vector<std::string> jssvr_dirs_;
-    std::unordered_map<JSContext*, std::unordered_map<std::string, JSValue>> loaded_module_;
-    std::unordered_map<std::filesystem::path, std::vector<uint8_t>> module_bytecodes_map_;
+    // std::unordered_map<std::filesystem::path, std::vector<uint8_t>> module_bytecodes_map_;
 };
 
 class JsService : public million::IService {
 public:
     using Base = IService;
-    JsService(million::IMillion* imillion, JsModuleService* js_module_service, std::string_view module_path, std::string_view module_)
+    JsService(million::IMillion* imillion, JsModuleService* js_module_service, std::string package)
         : Base(imillion)
         , js_module_service_(js_module_service)
     {
@@ -208,16 +164,15 @@ public:
 
             JS_SetModuleLoaderFunc(js_rt_, nullptr, JsModuleLoader, nullptr);
 
-            js_module_service_->InitModule(js_ctx_);
             if (!CreateServiceModule(js_ctx_)) {
                 throw std::runtime_error("CreateServiceModule failed.");
             }
 
-            if (!CreateLoggerModule(js_ctx_)) {
+            if (!CreateLoggerModule()) {
                 throw std::runtime_error("CreateLoggerModule failed.");
             }
 
-            js_main_module_ = js_module_service_->LoadModule(js_ctx_, module_path, module_.data());
+            js_main_module_ = ModuleLoader(package + "/main");
 
             if (!JsCheckException(js_main_module_)) {
                 throw std::runtime_error("LoadModule JsCheckException failed.");
@@ -240,6 +195,10 @@ public:
     }
 
     using Base::Base;
+
+    virtual ::million::Task<::million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
+        co_return nullptr;
+    }
 
     virtual void OnStop(::million::ServiceHandle sender, ::million::SessionId session_id) override {
 
@@ -821,8 +780,8 @@ private:
         if (JS_IsException(value)) {
             JSValue exception = JS_GetException(js_ctx_);
             const char* error = JS_ToCString(js_ctx_, exception);
-            logger().Err("JS Exception: {}.", error);
-            // std::cout << error << std::endl;
+            // logger().Err("JS Exception: {}.", error);
+            std::cout << error << std::endl;
             JS_FreeCString(js_ctx_, error);
             JS_FreeValue(js_ctx_, exception);
             return false;
@@ -830,21 +789,87 @@ private:
         return true;
     }
 
+
+
+
     static JSModuleDef* JsModuleLoader(JSContext* ctx, const char* module_name, void* opaque) {
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
 
-        // 获取一下当前路径
-        auto module = service->js_module_service_->LoadModule(ctx, "", module_name);
-        if (service->JsCheckException(module)) return nullptr;
+        auto module_ = service->ModuleLoader(module_name);
+        if (JS_IsException(module_)) {
+            return nullptr;
+        }
 
-        return static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(module));
+        return static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(module_));
+    }
+
+    JSValue ModuleLoader(const std::string& module_name) {
+        // 首先找已加载的模块
+        //auto iter2 = iter->second.find(full_name);
+        //if (iter2 != iter->second.end()) {
+        //    return iter2->second;
+        //}
+
+        std::string module_name_ = module_name;
+        std::filesystem::path path = cur_path_;
+        // 从模块所在路径找模块
+        path /= module_name_ + ".js";
+        auto script = ReadModuleScript(path);
+        if (!script) {
+            // 当前路径找不到，去配置路径找
+            for (const auto& dir : js_module_service_->jssvr_dirs_) {
+                path = dir;
+                path /= module_name_ + ".js";
+                script = ReadModuleScript(path);
+                if (script) {
+                    if (cur_path_.empty()) {
+                        cur_path_ = path.parent_path();
+                    }
+                    break;
+                }
+            }
+
+            if (!script) {
+                return JS_ThrowTypeError(js_ctx_, "LoadModule failed: %s.", module_name_.c_str());
+            }
+        }
+
+        auto module_ = JS_Eval(js_ctx_, script->data(), script->size(), module_name_.c_str(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        if (!JsCheckException(module_)) {
+            return module_;
+        }
+
+        auto result = JS_EvalFunction(js_ctx_, module_);
+        if (JS_IsException(result)) {
+            return result;
+        }
+
+        //// 获取一下当前路径
+        //auto module = service->js_module_service_->LoadModule(ctx, &service->cur_path_, module_name);
+        //if (service->JsCheckException(module)) return nullptr;
+        return module_;;
+    }
+
+    std::optional<std::string> ReadModuleScript(const std::filesystem::path& module_path) {
+        auto file = std::ifstream(module_path);
+        if (!file) {
+            return std::nullopt;
+        }
+        auto content = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        file.close();
+        return content;
     }
 
 
     static JSValue ServiceModuleSend(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        JsService* service = static_cast<JsService*>(JS_GetContextOpaque(ctx));
+        auto res = ServiceModuleCall(ctx, this_val, argc, argv);
+        
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+        auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
+        func_ctx->waiting_session_id = million::kSessionIdInvalid;
 
-        return JSValue();
+        // 未来考虑改掉，这样返回的会可以co_await，并且错误提示也有点问题
+        return res;
     }
 
     static JSValue ServiceModuleCall(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -940,7 +965,7 @@ private:
         size_t count = 0;
         auto list = ServiceModuleExportList(&count);
         JS_AddModuleExportList(js_ctx, module, list, count);
-        if (!js_module_service_->AddModule(js_ctx, "service", module)) {
+        if (!AddModule("service", module)) {
             logger().Err("JsAddModule failed: {}.", "service");
             return nullptr;
         }
@@ -1050,28 +1075,62 @@ private:
         return JS_SetModuleExportList(ctx, m, list, count);
     }
 
-    JSModuleDef* CreateLoggerModule(JSContext* js_ctx) {
-        JSModuleDef* module = JS_NewCModule(js_ctx, "logger", LoggerModuleInit);
+    JSModuleDef* CreateLoggerModule() {
+        JSModuleDef* module = JS_NewCModule(js_ctx_, "logger", LoggerModuleInit);
         if (!module) {
             logger().Err("JS_NewCModule failed: {}.", "logger");
             return nullptr;
         }
         size_t count = 0;
         auto list = LoggerModuleExportList(&count);
-        JS_AddModuleExportList(js_ctx, module, list, count);
-        if (!js_module_service_->AddModule(js_ctx, "logger", module)) {
+        JS_AddModuleExportList(js_ctx_, module, list, count);
+        if (!AddModule("logger", module)) {
             logger().Err("JsAddModule failed: {}.", "logger");
             return nullptr;
         }
         return module;
     }
 
+
+    JSModuleDef* CreateMillionModule(JSContext* js_ctx) {
+        //JSModuleDef* module = JS_NewCModule(js_ctx, "million", LoggerModuleInit);
+        //if (!module) {
+        //    logger().Err("JS_NewCModule failed: {}.", "million");
+        //    return nullptr;
+        //}
+        //size_t count = 0;
+        //auto list = LoggerModuleExportList(&count);
+        //JS_AddModuleExportList(js_ctx, module, list, count);
+        //if (!js_module_service_->AddModule(js_ctx, "logger", module)) {
+        //    logger().Err("JsAddModule failed: {}.", "logger");
+        //    return nullptr;
+        //}
+        //return module;
+    }
+
+
+
+    bool AddModule(const std::string& module_name, JSModuleDef* module) {
+        if (modules_.find(module_name) != modules_.end()) {
+            logger().Err("Module already exists: {}.", module_name);
+            return false;
+        }
+        JSValue module_obj = JS_GetImportMeta(js_ctx_, module);
+        auto res = modules_.emplace(module_name, module_obj);
+        assert(res.second);
+
+        // static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(func_val))
+    return true;
+}
+
 private:
     JsModuleService* js_module_service_;
 
+    std::unordered_map<std::string, JSValue> modules_;
     JSRuntime* js_rt_ = nullptr;
     JSContext* js_ctx_ = nullptr;
     JSValue js_main_module_ = JS_UNDEFINED;
+    std::filesystem::path cur_path_;
 };
 
 
@@ -1083,7 +1142,7 @@ extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
     auto ptr = handle->get_ptr<JsModuleService>(handle->lock());
 
     try {
-        handle = imillion->NewService<JsService>(ptr, "", "test/main");
+        handle = imillion->NewService<JsService>(ptr, "test");
     }
     catch (const std::exception& e) {
         imillion->logger().Err("New JsService failed.", e.what());
