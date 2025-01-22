@@ -25,7 +25,7 @@ public:
 
     ServiceId AllocServiceId();
 
-    std::optional<ServiceShared> AddService(std::unique_ptr<IService> service, MsgPtr init_msg);
+    std::optional<ServiceShared> AddService(std::unique_ptr<IService> service);
     void DeleteService(Service* service);
 
     std::optional<SessionId> StartService(const ServiceShared& service);

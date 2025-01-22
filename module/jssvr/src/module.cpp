@@ -27,7 +27,7 @@ public:
     using Base::Base;
 
 private:
-    virtual bool OnInit(million::MsgPtr msg) override {
+    virtual bool OnInit() override {
         const auto& config = imillion().YamlConfig();
 
         const auto& jssvr_config = config["jssvr"];
@@ -183,21 +183,16 @@ private:
 class JsService : public million::IService {
 public:
     using Base = IService;
-    JsService(million::IMillion* imillion, JsModuleService* js_module_service)
+    JsService(million::IMillion* imillion, JsModuleService* js_module_service, std::string_view module_path, std::string_view module_)
         : Base(imillion)
-        , js_module_service_(js_module_service) {}
-
-    using Base::Base;
-
-    virtual bool OnInit(million::MsgPtr msg) override {
-        bool success = false;
-        do {
+        , js_module_service_(js_module_service)
+    {
+        try {
             js_rt_ = JS_NewRuntime();
             // JS_SetDumpFlags(js_rt_, 1);
 
             if (!js_rt_) {
-                logger().Err("JS_NewRuntime failed.");
-                break;
+                throw std::runtime_error("JS_NewRuntime failed.");
             }
             JS_SetRuntimeOpaque(js_rt_, this);
 
@@ -205,8 +200,7 @@ public:
 
             js_ctx_ = JS_NewContext(js_rt_);
             if (!js_ctx_) {
-                logger().Err("JS_NewContext failed.");
-                break;
+                throw std::runtime_error("JS_NewContext failed.");
             }
 
             js_init_module_std(js_ctx_, "std");
@@ -216,23 +210,20 @@ public:
 
             js_module_service_->InitModule(js_ctx_);
             if (!CreateServiceModule(js_ctx_)) {
-                logger().Err("CreateServiceModule failed.");
-                break;
+                throw std::runtime_error("CreateServiceModule failed.");
             }
 
             if (!CreateLoggerModule(js_ctx_)) {
-                logger().Err("CreateLoggerModule failed.");
-                break;
+                throw std::runtime_error("CreateLoggerModule failed.");
             }
 
-            js_main_module_ = js_module_service_->LoadModule(js_ctx_, "", "test/main");
+            js_main_module_ = js_module_service_->LoadModule(js_ctx_, module_path, module_.data());
 
-            if (!JsCheckException(js_main_module_)) break;
-            
-            success = true;
-        } while (false);
-       
-        if (!success) {
+            if (!JsCheckException(js_main_module_)) {
+                throw std::runtime_error("LoadModule JsCheckException failed.");
+            }
+        } 
+        catch (...) {
             if (!JS_IsUndefined(js_main_module_)) {
                 JS_FreeValue(js_ctx_, js_main_module_);
             }
@@ -244,10 +235,11 @@ public:
                 JS_FreeRuntime(js_rt_);
                 js_rt_ = nullptr;
             }
+            throw;
         }
-
-        return success;
     }
+
+    using Base::Base;
 
     virtual void OnStop(::million::ServiceHandle sender, ::million::SessionId session_id) override {
 
@@ -829,8 +821,8 @@ private:
         if (JS_IsException(value)) {
             JSValue exception = JS_GetException(js_ctx_);
             const char* error = JS_ToCString(js_ctx_, exception);
-            // logger().Err("JS Exception: {}.", error);
-            std::cout << error << std::endl;
+            logger().Err("JS Exception: {}.", error);
+            // std::cout << error << std::endl;
             JS_FreeCString(js_ctx_, error);
             JS_FreeValue(js_ctx_, exception);
             return false;
@@ -841,6 +833,7 @@ private:
     static JSModuleDef* JsModuleLoader(JSContext* ctx, const char* module_name, void* opaque) {
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
 
+        // 获取一下当前路径
         auto module = service->js_module_service_->LoadModule(ctx, "", module_name);
         if (service->JsCheckException(module)) return nullptr;
 
@@ -1087,9 +1080,14 @@ namespace jssvr {
 
 extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
     auto handle = imillion->NewService<JsModuleService>();
+    auto ptr = handle->get_ptr<JsModuleService>(handle->lock());
 
-    handle = imillion->NewService<JsService>(handle->get_ptr<JsModuleService>(handle->lock()));
-
+    try {
+        handle = imillion->NewService<JsService>(ptr, "", "test/main");
+    }
+    catch (const std::exception& e) {
+        imillion->logger().Err("New JsService failed.", e.what());
+    }
     imillion->Send<ss::test::LoginReq>(*handle, *handle, "shabi");
 
     return true;

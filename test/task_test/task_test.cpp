@@ -15,7 +15,7 @@ class TestService : public million::IService {
     using Base = million::IService;
     using Base::Base;
 
-    virtual bool OnInit(million::MsgPtr msg) override {
+    virtual bool OnInit() override {
         //auto start = std::chrono::high_resolution_clock::now();
         //int j = 0;
         ////for (int i = 0; i < 100; i++) {

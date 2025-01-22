@@ -26,7 +26,7 @@ public:
     void Start();
     void Stop();
 
-    std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice, MsgPtr init_msg);
+    std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice);
 
     std::optional<SessionId> StartService(const ServiceShared& service);
     std::optional<SessionId> StopService(const ServiceShared& service);

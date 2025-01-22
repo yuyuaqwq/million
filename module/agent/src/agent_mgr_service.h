@@ -15,7 +15,7 @@ public:
     using Base = IService;
     using Base::Base;
 
-    virtual bool OnInit(::million::MsgPtr msg) override {
+    virtual bool OnInit() override {
         auto handle = imillion().GetServiceByName("NodeMgrService");
         if (!handle) {
             logger().Err("NodeMgrService not found.");

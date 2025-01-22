@@ -31,7 +31,7 @@ public:
         : Base(imillion)
         , server_(imillion) { }
 
-    virtual bool OnInit(::million::MsgPtr msg) override {
+    virtual bool OnInit() override {
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
             Send<ClusterTcpConnectionMsg>(service_handle(), std::move(std::static_pointer_cast<NodeSession>(connection)));

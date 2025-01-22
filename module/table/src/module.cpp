@@ -29,7 +29,7 @@ public:
     using Base = IService;
     using Base::Base;
 
-    virtual bool OnInit(MsgPtr msg) override {
+    virtual bool OnInit() override {
         if (!imillion().SetServiceName(service_handle(), "TableService")) {
             return false;
         }

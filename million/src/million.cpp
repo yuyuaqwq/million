@@ -189,8 +189,8 @@ void Million::Stop() {
 }
 
 
-std::optional<ServiceShared> Million::AddService(std::unique_ptr<IService> iservice, MsgPtr init_msg) {
-    return service_mgr_->AddService(std::move(iservice), std::move(init_msg));
+std::optional<ServiceShared> Million::AddService(std::unique_ptr<IService> iservice) {
+    return service_mgr_->AddService(std::move(iservice));
 }
 
 

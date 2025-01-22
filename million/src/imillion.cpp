@@ -22,8 +22,8 @@ void IMillion::Start() {
 }
 
 
-std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iservice, MsgPtr init_msg) {
-    auto shared = impl_->AddService(std::move(iservice), std::move(init_msg));
+std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iservice) {
+    auto shared = impl_->AddService(std::move(iservice));
     if (!shared) {
         return std::nullopt;
     }

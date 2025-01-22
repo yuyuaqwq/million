@@ -21,7 +21,7 @@ public:
     TestService(million::IMillion* imillion)
         : Base(imillion) {}
 
-    virtual bool OnInit(million::MsgPtr msg) override {
+    virtual bool OnInit() override {
         auto handle = imillion().GetServiceByName("TableService");
         if (!handle) {
             logger().Err("Unable to find TableService.");

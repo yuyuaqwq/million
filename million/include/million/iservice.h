@@ -120,7 +120,7 @@ public:
     const ServiceHandle& service_handle() const { return service_handle_; }
 
 protected:
-    virtual bool OnInit(MsgPtr init_msg) { return true; }
+    virtual bool OnInit() { return true; }
     virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) { co_return nullptr; }
     virtual Task<MsgPtr> OnMsg(ServiceHandle sender, SessionId session_id, MsgPtr msg) { co_return nullptr; }
     virtual void OnStop(ServiceHandle sender, SessionId session_id) { }

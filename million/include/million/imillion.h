@@ -34,19 +34,11 @@ public:
     bool Init(std::string_view config_path);
     void Start();
 
-    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice, MsgPtr init_msg);
-    template <typename IServiceT, typename ...Args>
-    std::optional<ServiceHandle> NewServiceWithMsg(MsgPtr init_msg, Args&&... args) {
-        auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
-        auto handle = AddService(std::move(iservice), std::move(init_msg));
-        if (!handle) return std::nullopt;
-        StartService(*handle);
-        return handle;
-    }
+    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice);
     template <typename IServiceT, typename ...Args>
     std::optional<ServiceHandle> NewService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
-        auto handle = AddService(std::move(iservice), MsgPtr());
+        auto handle = AddService(std::move(iservice));
         if (!handle) return std::nullopt;
         StartService(*handle);
         return handle;

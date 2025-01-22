@@ -48,7 +48,7 @@ public:
     DbService(IMillion* imillion)
         : Base(imillion) {}
 
-    virtual bool OnInit(MsgPtr msg) override {
+    virtual bool OnInit() override {
         logger().Info("DbService Init");
 
         auto handle = imillion().GetServiceByName("SqlService");
