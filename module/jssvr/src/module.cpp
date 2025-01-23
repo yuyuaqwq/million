@@ -201,14 +201,6 @@ public:
 
     using Base::Base;
 
-    virtual ::million::Task<::million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
-        co_return nullptr;
-    }
-
-    virtual void OnStop(::million::ServiceHandle sender, ::million::SessionId session_id) override {
-
-    }
-
     virtual million::Task<million::MsgPtr> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr msg) override {
         if (!msg.IsProtoMsg()) {
             // 只处理proto msg
@@ -313,6 +305,8 @@ public:
                 }
 
                 auto desc = imillion().proto_mgr().FindMessageTypeByName(msg_name_cstr);
+                JS_FreeCString(js_ctx_, msg_name_cstr);
+
                 if (!desc) {
                     logger().Err("Invalid message type.");
                     break;
@@ -345,6 +339,20 @@ public:
         JS_FreeValue(js_ctx_, result);
         
         co_return nullptr;
+    }
+
+    virtual void OnExit() override {
+        if (!JS_IsUndefined(js_main_module_)) {
+            JS_FreeValue(js_ctx_, js_main_module_);
+        }
+        if (js_ctx_) {
+            JS_FreeContext(js_ctx_);
+            js_ctx_ = nullptr;
+        }
+        if (js_rt_) {
+            JS_FreeRuntime(js_rt_);
+            js_rt_ = nullptr;
+        }
     }
 
 private:
@@ -883,44 +891,42 @@ private:
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
         auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
 
-        const char* service_name = nullptr;
-        const char* msg_name = nullptr;
-
         JSValue result = func_ctx->promise_cap;
         do {
             if (!JS_IsString(argv[0])) {
                 result = JS_ThrowTypeError(ctx, "ServiceModuleCall 1 argument must be a string.");
                 break;
             }
-            service_name = JS_ToCString(ctx, argv[0]);
+            if (!JS_IsString(argv[1])) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleCall 2 argument must be a string.");
+                break;
+            }
+            if (!JS_IsObject(argv[2])) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleCall 3 argument must be a object.");
+                break;
+            }
+
+            auto service_name = JS_ToCString(ctx, argv[0]);
             if (!service_name) {
                 result = JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
                 break;
             }
 
             auto target = service->imillion().GetServiceByName(service_name);
+            JS_FreeCString(ctx, service_name);
             if (!target) {
                 result = JS_ThrowInternalError(ctx, "ServiceModuleCall Service does not exist: %s .", service_name);
                 break;
             }
 
-
-            if (!JS_IsString(argv[1])) {
-                result = JS_ThrowTypeError(ctx, "ServiceModuleCall 2 argument must be a string.");
-                break;
-            }
-            msg_name = JS_ToCString(ctx, argv[1]);
+            auto msg_name = JS_ToCString(ctx, argv[1]);
             if (!msg_name) {
                 result = JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert 2 argument to string.");
                 break;
             }
 
-            if (!JS_IsObject(argv[2])) {
-                result = JS_ThrowTypeError(ctx, "ServiceModuleCall 3 argument must be a object.");
-                break;
-            }
-
             auto desc = service->imillion().proto_mgr().FindMessageTypeByName(msg_name);
+            JS_FreeCString(ctx, msg_name);
             if (!desc) {
                 result = JS_ThrowTypeError(ctx, "ServiceModuleCall 2 argument Invalid message type.");
                 break;
@@ -936,9 +942,6 @@ private:
             func_ctx->waiting_session_id = service->Send(*target, std::move(msg));
 
         } while (false);
-        
-        JS_FreeCString(ctx, service_name);
-        JS_FreeCString(ctx, msg_name);
 
         return result;
     }
@@ -993,6 +996,7 @@ private:
         }
 
         service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_DEBUG, info);
+        JS_FreeCString(ctx, info);
 
         return JS_UNDEFINED;
     }
@@ -1014,6 +1018,7 @@ private:
         }
 
         service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_INFO, info);
+        JS_FreeCString(ctx, info);
 
         return JS_UNDEFINED;
     }
@@ -1035,6 +1040,7 @@ private:
         }
 
         service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_WARN, info);
+        JS_FreeCString(ctx, info);
 
         return JS_UNDEFINED;
     }
@@ -1056,6 +1062,7 @@ private:
         }
 
         service->logger().Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_ERR, info);
+        JS_FreeCString(ctx, info);
 
         return JS_UNDEFINED;
     }
@@ -1113,14 +1120,16 @@ private:
 
         try {
             auto handle = service->imillion().NewService<JsService>(service->js_module_service_, module_name);
+            JS_FreeCString(ctx, module_name);
             if (!handle) {
                 return JS_ThrowInternalError(ctx, "MillionModuleNewService New JsService failed.");
             }
         }
         catch (const std::exception& e) {
+            JS_FreeCString(ctx, module_name);
             return JS_ThrowInternalError(ctx, std::format("MillionModuleNewService New JsService failed: {}.", e.what()).c_str());
         }
-        
+
         return JS_UNDEFINED;
     }
 
