@@ -26,15 +26,11 @@ target_include_directories(${MILLION_LIB} PUBLIC ${MILLION_HEADER_DIR})
 target_include_directories(${MILLION_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_include_directories(${MILLION_LIB} PUBLIC ${META_HEADER_DIR})
-
-target_link_libraries(${MILLION_LIB} PUBLIC ${PROTOGEN_LIB})
-
-target_include_directories(${MILLION_LIB} PRIVATE ${SPDLOG_HEADER_DIR})
-target_link_libraries(${MILLION_LIB} PRIVATE ${SPDLOG_LIB})
-
 target_include_directories(${MILLION_LIB} PUBLIC ${ASIO_HEADER_DIR})
-
-target_include_directories(${MILLION_LIB} PUBLIC ${YAML_CPP_HEADER_DIR})
+#target_link_libraries(${MILLION_LIB} INTERFACE ${META_LIB})
+#target_link_libraries(${MILLION_LIB} INTERFACE ${ASIO_LIB})
+target_link_libraries(${MILLION_LIB} PUBLIC ${PROTOGEN_LIB})
+target_link_libraries(${MILLION_LIB} PRIVATE ${SPDLOG_LIB})
 target_link_libraries(${MILLION_LIB} PUBLIC ${YAML_CPP_LIB})
 
 find_package(Threads)

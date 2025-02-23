@@ -25,6 +25,4 @@ target_include_directories(${JSSVR_LIB} PUBLIC ${JSSVR_HEADER_DIR})
 target_include_directories(${JSSVR_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(${JSSVR_LIB} PRIVATE ${MILLION_LIB})
-
-target_include_directories(${JSSVR_LIB} PRIVATE ${QUICK_JS_HEADER_DIR})
 target_link_libraries(${JSSVR_LIB} PRIVATE ${QUICK_JS_LIB})
