@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(${DB_LIB})
-
-set(CMAKE_CXX_STANDARD 20)
+set(DB_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/db/include CACHE STRING "db header dir")
+set(DB_LIB db CACHE STRING "db lib")
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 

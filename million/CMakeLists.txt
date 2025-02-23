@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(${MILLION_LIB})
-
-set(CMAKE_CXX_STANDARD 20)
+set(MILLION_HEADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/million/include;${CMAKE_CURRENT_SOURCE_DIR};${META_HEADER_DIR}" CACHE STRING "million header dir")
+set(MILLION_LIB million CACHE STRING "million lib")
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 

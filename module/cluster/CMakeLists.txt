@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(${CLUSTER_LIB})
-
-set(CMAKE_CXX_STANDARD 20)
+set(CLUSTER_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cluster/include CACHE STRING "cluster header dir")
+set(CLUSTER_LIB cluster CACHE STRING "cluster lib")
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 

@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(${GATEWAY_LIB})
-
-set(CMAKE_CXX_STANDARD 20)
+set(GATEWAY_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/gateway/include CACHE STRING "gateway header dir")
+set(GATEWAY_LIB gateway CACHE STRING "gateway lib")
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 

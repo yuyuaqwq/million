@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(${AGENT_LIB})
-
-set(CMAKE_CXX_STANDARD 20)
+set(AGENT_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/agent/include CACHE STRING "agent header dir")
+set(AGENT_LIB agent CACHE STRING "agent lib")
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 

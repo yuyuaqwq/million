@@ -1,5 +1,12 @@
-cmake_minimum_required(VERSION 3.10)
-project(${PROTOGEN_LIB})
+if (WIN32)
+    set(PROTOGEN_COMPILE_DEFINITIONS PROTOGEN_API=__declspec\(dllimport\) CACHE STRING "protobuf compile definitions")
+elseif(UNIX)
+    set(PROTOGEN_COMPILE_DEFINITIONS PROTOGEN_API=__attribute__\(\(visibility\(\"hidden\"\)\)\) CACHE STRING "protobuf compile definitions")
+endif()
+set(PROTOGEN_HEADER_DIR 
+    ${CMAKE_CURRENT_SOURCE_DIR}/protogen/include
+    CACHE STRING "protobuf header dir")
+set(PROTOGEN_LIB protogen CACHE STRING "protobuf lib")
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 

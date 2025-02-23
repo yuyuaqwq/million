@@ -1,32 +1,21 @@
-cmake_minimum_required(VERSION 3.10)
-project(table_test)
-
-set(CMAKE_CXX_STANDARD 20)
+set(TABLE_TEST table_test)
 
 link_directories(${LIB_PATH})
 
-add_executable(table_test table_test.cpp)
+add_executable(${TABLE_TEST} table_test.cpp)
 
-target_include_directories(table_test PRIVATE ${MILLION_HEADER_DIR})
-target_link_libraries(table_test PRIVATE ${MILLION_LIB})
+target_include_directories(${TABLE_TEST} PRIVATE ${MILLION_HEADER_DIR})
+target_link_libraries(${TABLE_TEST} PRIVATE ${MILLION_LIB})
 
-target_include_directories(table_test PRIVATE ${TABLE_HEADER_DIR})
-target_link_libraries(table_test PRIVATE ${TABLE_LIB})
+target_include_directories(${TABLE_TEST} PRIVATE ${TABLE_HEADER_DIR})
+target_link_libraries(${TABLE_TEST} PRIVATE ${TABLE_LIB})
 
-target_include_directories(table_test PRIVATE ${PROTOGEN_HEADER_DIR})
-target_link_libraries(table_test PRIVATE ${PROTOGEN_LIB})
-target_compile_definitions(table_test PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
+target_include_directories(${TABLE_TEST} PRIVATE ${PROTOGEN_HEADER_DIR})
+target_link_libraries(${TABLE_TEST} PRIVATE ${PROTOGEN_LIB})
+target_compile_definitions(${TABLE_TEST} PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
 
-target_include_directories(table_test PRIVATE ${YAML_CPP_HEADER_DIR})
-target_link_libraries(table_test PRIVATE ${YAML_CPP_LIB})
+target_include_directories(${TABLE_TEST} PRIVATE ${YAML_CPP_HEADER_DIR})
+target_link_libraries(${TABLE_TEST} PRIVATE ${YAML_CPP_LIB})
 
-target_include_directories(table_test PRIVATE ${PROTOBUF_INCLUDE_DIR})
-target_link_libraries(table_test PRIVATE ${PROTOBUF_LIB})
-
-find_package(Threads)
-target_link_libraries(table_test PRIVATE Threads::Threads)
-
-if (UNIX)
-    find_library(DL_LIBRARIES dl)
-    target_link_libraries(table_test PRIVATE ${DL_LIBRARIES})
-endif()
+target_include_directories(${TABLE_TEST} PRIVATE ${PROTOBUF_INCLUDE_DIR})
+target_link_libraries(${TABLE_TEST} PRIVATE ${PROTOBUF_LIB})

@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(${JSSVR_LIB})
-
-set(CMAKE_CXX_STANDARD 20)
+set(JSSVR_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jssvr/include CACHE STRING "jssvr header dir")
+set(JSSVR_LIB jssvr CACHE STRING "jssvr lib")
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 

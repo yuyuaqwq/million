@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(${TABLE_LIB})
-
-set(CMAKE_CXX_STANDARD 20)
+set(TABLE_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/table/include CACHE STRING "table header dir")
+set(TABLE_LIB table CACHE STRING "table lib")
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 
