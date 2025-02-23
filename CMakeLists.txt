@@ -8,10 +8,6 @@ set(MILLION_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build)
 set(LIBRARY_OUTPUT_PATH ${MILLION_BUILD_DIR}/lib)
 set(EXECUTABLE_OUTPUT_PATH ${MILLION_BUILD_DIR}/bin)
 
-# desc
-set(MILLION_DESCGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/descgen/include CACHE STRING "descgen header dir")
-set(MILLION_DESCGEN_LIB million_descgen CACHE STRING "descgen lib")
-
 # add
 add_subdirectory(third_party)
 add_subdirectory(protogen)
