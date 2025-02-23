@@ -1,4 +1,4 @@
-set(CLUSTER_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cluster/include CACHE STRING "cluster header dir")
+set(CLUSTER_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE STRING "cluster header dir")
 set(CLUSTER_LIB cluster CACHE STRING "cluster lib")
 
 if(WIN32)
@@ -21,23 +21,7 @@ file(GLOB SRC
     ./src/**/*.cpp)
 add_library(${CLUSTER_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
+target_include_directories(${CLUSTER_LIB} PUBLIC ${CLUSTER_HEADER_DIR})
 target_include_directories(${CLUSTER_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${CLUSTER_LIB} PRIVATE ${CLUSTER_HEADER_DIR})
 
-target_include_directories(${CLUSTER_LIB} PRIVATE ${MILLION_HEADER_DIR})
 target_link_libraries(${CLUSTER_LIB} PRIVATE ${MILLION_LIB})
-
-target_include_directories(${CLUSTER_LIB} PRIVATE ${ASIO_HEADER_DIR})
-
-target_compile_definitions(${CLUSTER_LIB} PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
-target_include_directories(${CLUSTER_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
-target_link_libraries(${CLUSTER_LIB} PRIVATE ${PROTOGEN_LIB})
-
-find_package(Threads)
-target_link_libraries(${CLUSTER_LIB} PRIVATE Threads::Threads)
-
-target_include_directories(${CLUSTER_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
-target_link_libraries(${CLUSTER_LIB} PRIVATE ${YAML_CPP_LIB})
-
-target_include_directories(${CLUSTER_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
-target_link_libraries(${CLUSTER_LIB} PRIVATE ${PROTOBUF_LIB})

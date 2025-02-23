@@ -13,8 +13,8 @@ set(MILLION_DESCGEN_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/descgen/include CACHE
 set(MILLION_DESCGEN_LIB million_descgen CACHE STRING "descgen lib")
 
 # add
+add_subdirectory(third_party)
+add_subdirectory(protogen)
 add_subdirectory(million)
 add_subdirectory(module)
 add_subdirectory(test)
-add_subdirectory(protogen)
-add_subdirectory(third_party)

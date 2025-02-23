@@ -1,6 +1,6 @@
 add_subdirectory(cluster)
 add_subdirectory(db)
 add_subdirectory(table)
-add_subdirectory(agent)
 add_subdirectory(gateway)
+add_subdirectory(agent)
 add_subdirectory(jssvr)

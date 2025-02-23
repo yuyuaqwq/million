@@ -1,4 +1,4 @@
-set(GATEWAY_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/gateway/include CACHE STRING "gateway header dir")
+set(GATEWAY_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE STRING "gateway header dir")
 set(GATEWAY_LIB gateway CACHE STRING "gateway lib")
 
 if(WIN32)
@@ -21,23 +21,7 @@ file(GLOB SRC
     ./src/**/*.cpp)
 add_library(${GATEWAY_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
+target_include_directories(${GATEWAY_LIB} PUBLIC ${GATEWAY_HEADER_DIR})
 target_include_directories(${GATEWAY_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${GATEWAY_LIB} PRIVATE ${GATEWAY_HEADER_DIR})
 
-target_include_directories(${GATEWAY_LIB} PRIVATE ${MILLION_HEADER_DIR})
 target_link_libraries(${GATEWAY_LIB} PRIVATE ${MILLION_LIB})
-
-target_include_directories(${GATEWAY_LIB} PRIVATE ${ASIO_HEADER_DIR})
-
-target_compile_definitions(${GATEWAY_LIB} PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
-target_include_directories(${GATEWAY_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
-target_link_libraries(${GATEWAY_LIB} PRIVATE ${PROTOGEN_LIB})
-
-find_package(Threads)
-target_link_libraries(${GATEWAY_LIB} PRIVATE Threads::Threads)
-
-target_include_directories(${GATEWAY_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
-target_link_libraries(${GATEWAY_LIB} PRIVATE ${YAML_CPP_LIB})
-
-target_include_directories(${GATEWAY_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
-target_link_libraries(${GATEWAY_LIB} PRIVATE ${PROTOBUF_LIB})

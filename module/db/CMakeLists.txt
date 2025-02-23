@@ -1,4 +1,4 @@
-set(DB_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/db/include CACHE STRING "db header dir")
+set(DB_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE STRING "db header dir")
 set(DB_LIB db CACHE STRING "db lib")
 
 if(WIN32)
@@ -21,18 +21,10 @@ file(GLOB SRC
     ./src/**/*.cpp)
 add_library(${DB_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
+target_include_directories(${DB_LIB} PUBLIC ${DB_HEADER_DIR})
 target_include_directories(${DB_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${DB_LIB} PRIVATE ${DB_HEADER_DIR})
 
-target_include_directories(${DB_LIB} PRIVATE ${MILLION_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${MILLION_LIB})
-
-target_include_directories(${DB_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
-target_link_libraries(${DB_LIB} PRIVATE ${PROTOGEN_LIB})
-target_compile_definitions(${DB_LIB} PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
-
-target_include_directories(${DB_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
-target_link_libraries(${DB_LIB} PRIVATE ${YAML_CPP_LIB})
 
 target_include_directories(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_LIB})
@@ -41,6 +33,3 @@ target_link_libraries(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_LIB})
 #target_link_libraries(${DB_LIB} PRIVATE ${MYSQL_LIB})
 target_include_directories(${DB_LIB} PRIVATE ${SOCI_HEADER_DIR})
 target_link_libraries(${DB_LIB} PRIVATE ${SOCI_LIB})
-
-target_include_directories(${DB_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
-target_link_libraries(${DB_LIB} PRIVATE ${PROTOBUF_LIB})

@@ -1,4 +1,4 @@
-set(JSSVR_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jssvr/include CACHE STRING "jssvr header dir")
+set(JSSVR_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE STRING "jssvr header dir")
 set(JSSVR_LIB jssvr CACHE STRING "jssvr lib")
 
 if(WIN32)
@@ -21,21 +21,10 @@ file(GLOB SRC
     ./src/**/*.cpp)
 add_library(${JSSVR_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
+target_include_directories(${JSSVR_LIB} PUBLIC ${JSSVR_HEADER_DIR})
 target_include_directories(${JSSVR_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${JSSVR_LIB} PRIVATE ${JSSVR_HEADER_DIR})
 
-target_include_directories(${JSSVR_LIB} PRIVATE ${MILLION_HEADER_DIR})
 target_link_libraries(${JSSVR_LIB} PRIVATE ${MILLION_LIB})
-
-target_include_directories(${JSSVR_LIB} PRIVATE ${PROTOGEN_HEADER_DIR})
-target_link_libraries(${JSSVR_LIB} PRIVATE ${PROTOGEN_LIB})
-target_compile_definitions(${JSSVR_LIB} PRIVATE ${PROTOGEN_COMPILE_DEFINITIONS})
 
 target_include_directories(${JSSVR_LIB} PRIVATE ${QUICK_JS_HEADER_DIR})
 target_link_libraries(${JSSVR_LIB} PRIVATE ${QUICK_JS_LIB})
-
-target_include_directories(${JSSVR_LIB} PRIVATE ${YAML_CPP_HEADER_DIR})
-target_link_libraries(${JSSVR_LIB} PRIVATE ${YAML_CPP_LIB})
-
-target_include_directories(${JSSVR_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
-target_link_libraries(${JSSVR_LIB} PRIVATE ${PROTOBUF_LIB})
