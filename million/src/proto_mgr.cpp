@@ -6,9 +6,10 @@ ProtoMgr::ProtoMgr()
     : codec_(*this) {}
 
 void ProtoMgr::Init() {
+    // 目前无意义，调试用，protogen dll可能延迟加载，所以这里没有定义属于正常现象
+    // 保证所有模块都通过dll加载protobuf
     std::vector<std::string> file_names;
-    auto ptr = &file_names;
-    desc_db().FindAllFileNames(ptr);
+    desc_db().FindAllFileNames(&file_names);
     for (const std::string& file_name : file_names) {
         const protobuf::FileDescriptor* file_desc = desc_pool().FindFileByName(file_name);
     }

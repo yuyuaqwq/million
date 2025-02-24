@@ -39,5 +39,4 @@ elseif(UNIX)
     target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_API=__attribute__\(\(visibility\(\"default\"\)\)\))
  endif()
 
-target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOBUF_USE_DLLS)
-target_link_libraries(${PROTOGEN_LIB} PRIVATE ${PROTOBUF_LIB})
+target_link_libraries(${PROTOGEN_LIB} PUBLIC ${PROTOBUF_LIB})

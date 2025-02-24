@@ -25,3 +25,4 @@ target_include_directories(${CLUSTER_LIB} PUBLIC ${CLUSTER_HEADER_DIR})
 target_include_directories(${CLUSTER_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(${CLUSTER_LIB} PUBLIC ${MILLION_LIB})
+target_link_libraries(${CLUSTER_LIB} PUBLIC ${PROTOGEN_LIB})

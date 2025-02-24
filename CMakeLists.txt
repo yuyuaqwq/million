@@ -10,7 +10,7 @@ set(EXECUTABLE_OUTPUT_PATH ${MILLION_BUILD_DIR}/bin)
 
 # add
 add_subdirectory(third_party)
-add_subdirectory(protogen)
 add_subdirectory(million)
+add_subdirectory(protogen)
 add_subdirectory(module)
 add_subdirectory(test)

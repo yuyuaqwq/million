@@ -25,3 +25,4 @@ target_include_directories(${TABLE_LIB} PUBLIC ${TABLE_HEADER_DIR})
 target_include_directories(${TABLE_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(${TABLE_LIB} PUBLIC ${MILLION_LIB})
+target_link_libraries(${TABLE_LIB} PUBLIC ${PROTOGEN_LIB})
