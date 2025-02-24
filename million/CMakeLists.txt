@@ -27,9 +27,8 @@ target_include_directories(${MILLION_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/sr
 
 target_link_libraries(${MILLION_LIB} PUBLIC ${META_LIB})
 target_link_libraries(${MILLION_LIB} PUBLIC ${ASIO_LIB})
-target_link_libraries(${MILLION_LIB} PUBLIC ${PROTOGEN_LIB})
-target_link_libraries(${MILLION_LIB} PRIVATE ${SPDLOG_LIB})
 target_link_libraries(${MILLION_LIB} PUBLIC ${YAML_CPP_LIB})
+target_link_libraries(${MILLION_LIB} PUBLIC ${PROTOGEN_LIB})
 
 find_package(Threads)
 target_link_libraries(${MILLION_LIB} PRIVATE Threads::Threads)

@@ -7,42 +7,58 @@
 #include <million/msg.h>
 #include <million/service_handle.h>
 
-#include <ss/ss_logger.pb.h>
-
 namespace million {
 
 class Million;
 class MILLION_API Logger {
+public:
+    enum Level {
+        kTrace,
+        kDebug,
+        kInfo,
+        kWarn,
+        kErr,
+        kCritical,
+        kOff,
+    };
+
 public:
     Logger(Million* million);
     ~Logger();
 
     bool Init();
 
-    template <typename... Args>
-    void Log(const std::source_location& source, ss::logger::LogLevel level, const std::string& str) {
-        Log(logger_handle_, source, level, str);
+    void BindService(ServiceHandle logger_svr_handle) {
+        logger_svr_handle_ = logger_svr_handle;
     }
 
-    void SetLevel(ss::logger::LogLevel level) {
-        SetLevel(logger_handle_, level);
+    template <typename... Args>
+    void Log(const std::source_location& source, Level level, const std::string& str) {
+        Log(logger_svr_handle_, source, level, str);
+    }
+
+    void SetLevel(Level level) {
+        SetLevel(logger_svr_handle_, level);
     }
 
 private:
-    void Log(const ServiceHandle& sender, const std::source_location& source, ss::logger::LogLevel level, const std::string& str);
-    void SetLevel(const ServiceHandle& sender, ss::logger::LogLevel level);
+    void Log(const ServiceHandle& sender, const std::source_location& source, Level level, const std::string& str);
+    void SetLevel(const ServiceHandle& sender, Level level);
 
 private:
     Million* million_;
-    ServiceHandle logger_handle_;
+    ServiceHandle logger_svr_handle_;
 };
 
-#define Trace(fmt, ...) Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_TRACE, ::std::format(fmt, __VA_ARGS__))
-#define Debug(fmt, ...) Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_DEBUG, ::std::format(fmt, __VA_ARGS__))
-#define Info(fmt, ...) Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_INFO, ::std::format(fmt, __VA_ARGS__))
-#define Warn(fmt, ...) Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_WARN, ::std::format(fmt, __VA_ARGS__))
-#define Err(fmt, ...) Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_ERR, ::std::format(fmt, __VA_ARGS__))
-#define Critical(fmt, ...) Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_CRITICAL, ::std::format(fmt, __VA_ARGS__))
-#define Off(fmt, ...) Log(std::source_location::current(), ::million::ss::logger::LOG_LEVEL_OFF, ::std::format(fmt, __VA_ARGS__))
+MILLION_MSG_DEFINE(MILLION_API, LoggerLog, (const std::source_location) source, (Logger::Level) level, (const std::string) msg);
+MILLION_MSG_DEFINE(MILLION_API, LoggerSetLevel, (Logger::Level) new_level);
+
+#define Trace(fmt, ...) Log(std::source_location::current(), ::million::Logger::kTrace, ::std::format(fmt, __VA_ARGS__))
+#define Debug(fmt, ...) Log(std::source_location::current(), ::million::Logger::kDebug, ::std::format(fmt, __VA_ARGS__))
+#define Info(fmt, ...) Log(std::source_location::current(), ::million::Logger::kInfo, ::std::format(fmt, __VA_ARGS__))
+#define Warn(fmt, ...) Log(std::source_location::current(), ::million::Logger::kWarn, ::std::format(fmt, __VA_ARGS__))
+#define Err(fmt, ...) Log(std::source_location::current(), ::million::Logger::kErr, ::std::format(fmt, __VA_ARGS__))
+#define Critical(fmt, ...) Log(std::source_location::current(), ::million::Logger::kCritical, ::std::format(fmt, __VA_ARGS__))
+#define Off(fmt, ...) Log(std::source_location::current(), ::million::Logger::kOff, ::std::format(fmt, __VA_ARGS__))
 
 } // namespace million

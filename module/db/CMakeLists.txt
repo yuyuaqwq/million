@@ -24,7 +24,7 @@ add_library(${DB_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 target_include_directories(${DB_LIB} PUBLIC ${DB_HEADER_DIR})
 target_include_directories(${DB_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${DB_LIB} PRIVATE ${MILLION_LIB})
+target_link_libraries(${DB_LIB} PUBLIC ${MILLION_LIB})
 
 target_link_libraries(${DB_LIB} PRIVATE ${REDIS_PLUS_PLUS_LIB})
 target_link_libraries(${DB_LIB} PRIVATE ${SOCI_LIB})

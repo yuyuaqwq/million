@@ -24,4 +24,4 @@ add_library(${GATEWAY_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 target_include_directories(${GATEWAY_LIB} PUBLIC ${GATEWAY_HEADER_DIR})
 target_include_directories(${GATEWAY_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${GATEWAY_LIB} PRIVATE ${MILLION_LIB})
+target_link_libraries(${GATEWAY_LIB} PUBLIC ${MILLION_LIB})

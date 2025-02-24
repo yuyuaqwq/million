@@ -7,7 +7,8 @@ ProtoMgr::ProtoMgr()
 
 void ProtoMgr::Init() {
     std::vector<std::string> file_names;
-    desc_db().FindAllFileNames(&file_names);
+    auto ptr = &file_names;
+    desc_db().FindAllFileNames(ptr);
     for (const std::string& file_name : file_names) {
         const protobuf::FileDescriptor* file_desc = desc_pool().FindFileByName(file_name);
     }

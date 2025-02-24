@@ -1,3 +1,4 @@
+add_subdirectory(logger)
 add_subdirectory(cluster)
 add_subdirectory(db)
 add_subdirectory(table)

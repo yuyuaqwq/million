@@ -24,5 +24,5 @@ add_library(${AGENT_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 target_include_directories(${AGENT_LIB} PUBLIC ${AGENT_HEADER_DIR})
 target_include_directories(${AGENT_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${AGENT_LIB} PRIVATE ${MILLION_LIB})
-target_link_libraries(${AGENT_LIB} PRIVATE ${GATEWAY_LIB})
+target_link_libraries(${AGENT_LIB} PUBLIC ${MILLION_LIB})
+target_link_libraries(${AGENT_LIB} PUBLIC ${GATEWAY_LIB})
