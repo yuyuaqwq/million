@@ -40,5 +40,4 @@ elseif(UNIX)
  endif()
 
 target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOBUF_USE_DLLS)
-target_include_directories(${PROTOGEN_LIB} PRIVATE ${PROTOBUF_INCLUDE_DIR})
 target_link_libraries(${PROTOGEN_LIB} PRIVATE ${PROTOBUF_LIB})
