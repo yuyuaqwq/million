@@ -7,7 +7,8 @@ ProtoMgr::ProtoMgr()
 
 void ProtoMgr::Init() {
     // 目前无意义，调试用，protogen dll可能延迟加载，所以这里没有定义属于正常现象
-    // 保证所有模块都通过dll加载protobuf
+    // 保证所有使用protobuf的模块，都通过dll加载同一个protobuf
+    // 即可确保google::protobuf::DescriptorPool::generated_pool()等接口获取的都是同一个对象
     std::vector<std::string> file_names;
     desc_db().FindAllFileNames(&file_names);
     for (const std::string& file_name : file_names) {
