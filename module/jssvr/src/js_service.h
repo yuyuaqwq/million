@@ -242,20 +242,17 @@ public:
                     break;
                 }
 
-                if (!func_ctx.waiting_session_id) {
-                    // logger
-                    break;
+                if (func_ctx.waiting_session_id) {
+                    auto res_msg = co_await Recv<million::ProtoMsg>(*func_ctx.waiting_session_id);
+
+                    // res_msg转js对象，唤醒
+                    JSValue msg_obj = ProtoMsgToJsObj(*res_msg);
+                    result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
+                    JS_FreeValue(js_ctx_, msg_obj);
+                    if (!JsCheckException(result)) break;
+
+                    func_ctx.waiting_session_id.reset();
                 }
-
-                auto res_msg = co_await Recv<million::ProtoMsg>(*func_ctx.waiting_session_id);
-
-                // res_msg转js对象，唤醒
-                JSValue msg_obj = ProtoMsgToJsObj(*res_msg);
-                result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
-                JS_FreeValue(js_ctx_, msg_obj);
-                if (!JsCheckException(result)) break;
-
-                func_ctx.waiting_session_id.reset();
 
                 // 手动触发事件循环，确保异步操作继续执行
                 JSContext* ctx_ = nullptr;
