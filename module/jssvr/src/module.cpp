@@ -7,6 +7,8 @@
 
 #include <million/imillion.h>
 
+#include <jssvr/jssvr.h>
+
 #include "js_service.h"
 
 namespace million {
