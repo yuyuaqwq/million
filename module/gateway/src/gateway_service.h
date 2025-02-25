@@ -151,6 +151,8 @@ public:
         }
 
         // if (session->token == kInvaildToken) {
+
+        // 指定user_session_id，目标在通过Reply回包时，会在GatewayPersistentUserSessionMsg中循环接收处理
         if (!user_session.agent().lock()) {
             logger().Trace("packet send to user service.");
             SendTo(user_service_, user_session_id, std::move(res->msg));
