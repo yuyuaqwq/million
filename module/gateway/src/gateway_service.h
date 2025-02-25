@@ -59,7 +59,7 @@ public:
 
     MILLION_MSG_DISPATCH(GatewayService);
 
-    MILLION_MSG_HANDLE(GatewayPersistentUserSessionMsg, msg) {
+    MILLION_MUT_MSG_HANDLE(GatewayPersistentUserSessionMsg, msg) {
         auto& user_session = *msg->user_session;
         do {
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
