@@ -1130,10 +1130,46 @@ private:
 
         return JS_UNDEFINED;
     }
+    
+    static JSValue MillionModuleMakeMsg(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc < 2) {
+            return JS_ThrowTypeError(ctx, "MillionModuleMakeMsg argc: %d.", argc);
+        }
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+        if (!JS_IsString(argv[0])) {
+            return JS_ThrowTypeError(ctx, "MillionModuleMakeMsg 1 argument must be a string.");
+        }
+        //auto message_name = JS_ToCString(ctx, argv[0]);
+        //if (!message_name) {
+        //    return JS_ThrowInternalError(ctx, "MillionModuleMakeMsg failed to convert first argument to string.");
+        //}
+        // JS_FreeCString(ctx, message_name);
+
+        if (!JS_IsObject(argv[1])) {
+            return JS_ThrowTypeError(ctx, "MillionModuleMakeMsg 2 argument must be a object.");
+        }
+
+        JSValue dup_arg0 = JS_DupValue(ctx, argv[0]);
+        JSValue dup_arg1 = JS_DupValue(ctx, argv[1]);
+
+        JSValue array = JS_NewArray(ctx);
+
+        JS_SetPropertyUint32(ctx, array, 0, argv[0]);
+        JS_SetPropertyUint32(ctx, array, 1, argv[1]);
+
+        //JS_FreeValue(ctx, dup_arg0);
+        //JS_FreeValue(ctx, dup_arg1);
+
+        return array;
+    }
 
     static JSCFunctionListEntry* MillionModuleExportList(size_t* count) {
         static JSCFunctionListEntry list[] = {
             JS_CFUNC_DEF("newservice", 1, MillionModuleNewService),
+            JS_CFUNC_DEF("makemsg", 2, MillionModuleMakeMsg),
+
         };
         *count = sizeof(list) / sizeof(JSCFunctionListEntry);
         return list;
