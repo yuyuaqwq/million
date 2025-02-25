@@ -59,7 +59,7 @@ public:
 
     MILLION_MSG_DISPATCH(GatewayService);
 
-    MILLION_MUT_MSG_HANDLE(GatewayPersistentUserSessionMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayPersistentUserSessionMsg, msg) {
         auto& user_session = *msg->user_session;
         do {
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
@@ -89,7 +89,7 @@ public:
                 user_session.Send(std::move(msg->packet), span, 0);
             }
             else if (recv_msg.IsType<GatewaySureAgentMsg>()) {
-                auto msg = recv_msg.GetMsg<GatewaySureAgentMsg>();
+                auto msg = recv_msg.GetMutableMsg<GatewaySureAgentMsg>();
                 user_session.set_agent(std::move(msg->agent_service));
             }
             else if (recv_msg.IsType<GatewayPersistentUserSessionMsg>()) {
@@ -136,11 +136,17 @@ public:
         }
         // 没有token
 
+        if (msg->packet.size() < kGatewayHeaderSize){
+            logger().Warn("GatewayTcpRecvPacketMsg size err: {}, {}.", user_session_id, msg->packet.size());
+            co_return nullptr;
+        }
+
         auto span = net::PacketSpan(msg->packet.begin() + kGatewayHeaderSize, msg->packet.end());
 
         // 将消息转发给本机节点的其他服务
         auto res = imillion().proto_mgr().codec().DecodeMessage(span);
         if (!res) {
+            logger().Warn("GatewayTcpRecvPacketMsg unresolvable message: {}, {}.", user_session_id, msg->packet.size());
             co_return nullptr;
         }
 
