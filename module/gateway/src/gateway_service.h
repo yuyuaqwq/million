@@ -19,10 +19,8 @@ MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (UserSessionShared) user_session, 
 
 MILLION_MSG_DEFINE(, GatewayPersistentUserSessionMsg, (UserSessionShared) user_session);
 
-// 网关服务有两种模式
-// 集群、非集群
-// 集群模式：
-    // 网关服务分为主服务及代理服务，主服务负责收包，部署在单节点上
+// 跨节点：
+    // 网关服务分为主服务及代理服务，主服务负责收包，部署在网关节点上
     // 其他需要接收网关转发的包的节点，需要部署一个代理服务，代理服务负责接收集群服务转发来的网关主服务发的包，再转发给节点内的其他服务
 class GatewayService : public IService {
 public:
@@ -32,7 +30,7 @@ public:
         , server_(imillion) { }
 
     virtual bool OnInit() override {
-        logger().Info("Gateway init start.");
+        // logger().Info("Gateway init start.");
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
             Send<GatewayTcpConnectionMsg>(service_handle(), std::move(std::static_pointer_cast<UserSession>(connection)));
@@ -55,7 +53,7 @@ public:
             return false;
         }
         server_.Start(port_config.as<uint16_t>());
-        logger().Info("Gateway init success.");
+        // logger().Info("Gateway init success.");
         return true;
     }
 
