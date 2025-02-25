@@ -9,8 +9,6 @@
 MILLION_MODULE_INIT();
 
 class TestApp : public million::IMillion {
-    //using Base = million::IMillion;
-    //using Base::Base;
 };
 
 namespace ss = million::ss;
@@ -20,10 +18,6 @@ public:
     using Base = million::IService;
     TestService(million::IMillion* imillion)
         : Base(imillion) {}
-
-    //TestService(million::IMillion* imillion)
-    //    : proto_codec_(0)
-    //    , Base(imillion) {}
 
     virtual bool OnInit() override {
         imillion().SetServiceName(service_handle(), "TestService");
