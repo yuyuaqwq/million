@@ -21,8 +21,8 @@ public:
         return handler;
     }
 
-    void Init(nonnull_ptr<IMillion> imillion) {
-        imillion_ = imillion.get();
+    void Init(IMillion* imillion) {
+        imillion_ = imillion;
         for (auto& func : logic_init_queue_) {
             func();
         }

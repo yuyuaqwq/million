@@ -40,7 +40,7 @@ struct DbRowCache {
 };
 using DbTable = std::unordered_map<std::string, DbRowCache>;
 
-MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (nonnull_ptr<DbRowCache>) cache);
+MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (DbRowCache*) cache);
 
 class DbService : public IService {
 public:
@@ -79,7 +79,7 @@ public:
             // co_await期间可能会有新的DbRowUpdateMsg消息被处理，这里复制过来再回写
             // 可以考虑优化成移动
             auto db_row = msg->cache->db_row.CopyDirtyTo();
-            auto res = co_await CallOrNull<SqlUpdateMsg>(sql_service_, &db_row, msg->cache->sql_db_version, false);
+            auto res = co_await CallOrNull<SqlUpdateMsg>(sql_service_, db_row, msg->cache->sql_db_version, false);
             if (!res) {
                 // 超时，可能只是sql暂时不能提供服务，可以重试
                 logger().Err("SqlUpdate Timeout.");
@@ -102,7 +102,7 @@ public:
 
     MILLION_MUT_MSG_HANDLE(DbRowCreateMsg, msg) {
         auto db_row = DbRow(std::move(msg->row_msg));
-        auto res = co_await Call<SqlInsertMsg>(sql_service_, &db_row, false);
+        auto res = co_await Call<SqlInsertMsg>(sql_service_, db_row, false);
         TaskAssert(res->success, "SqlInsert failed.");
         co_return std::move(msg_);
     }

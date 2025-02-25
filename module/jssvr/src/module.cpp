@@ -18,7 +18,7 @@ std::optional<ServiceHandle> NewJsService(IMillion* imillion, std::string_view p
     auto lock = s_js_module_service.lock();
     auto ptr = s_js_module_service.get_ptr<JsModuleService>(lock);
     try {
-        auto handle = imillion->NewService<JsService>(ptr, package);
+        auto handle = imillion->NewService<JsService>(ptr, std::string(package));
         return handle;
     }
     catch (const std::exception& e) {

@@ -11,7 +11,7 @@
 namespace million {
 namespace db {
 
-MILLION_MSG_DEFINE(MILLION_DB_API, CacheGetMsg, (std::string_view) primary_key, (nonnull_ptr<DbRow>) db_row, (bool) success)
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheGetMsg, (std::string_view) primary_key, (DbRow*) db_row, (bool) success)
 MILLION_MSG_DEFINE(MILLION_DB_API, CacheSetMsg, (const DbRow&) db_row, (uint64_t) old_db_version, (bool) success)
 MILLION_MSG_DEFINE(MILLION_DB_API, CacheDelMsg, (const DbRow&) db_row, (bool) success)
 MILLION_MSG_DEFINE(MILLION_DB_API, CacheBatchSetMsg, (std::vector<std::reference_wrapper<const DbRow>>) db_rows, (std::vector<uint64_t>) old_db_version_list, (bool) success)

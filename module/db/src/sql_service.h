@@ -360,9 +360,9 @@ public:
     }
 
     MILLION_MUT_MSG_HANDLE(SqlInsertMsg, msg) {
-        const auto& proto_msg = msg->db_row->get();
-        const auto& desc = msg->db_row->GetDescriptor();
-        const auto& reflection = msg->db_row->GetReflection();
+        const auto& proto_msg = msg->db_row.get();
+        const auto& desc = msg->db_row.GetDescriptor();
+        const auto& reflection = msg->db_row.GetReflection();
 
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
@@ -428,9 +428,9 @@ public:
     }
 
     MILLION_MUT_MSG_HANDLE(SqlUpdateMsg, msg) {
-        const auto& proto_msg = msg->db_row->get();
-        const auto& desc = msg->db_row->GetDescriptor();
-        const auto& reflection = msg->db_row->GetReflection();
+        const auto& proto_msg = msg->db_row.get();
+        const auto& desc = msg->db_row.GetDescriptor();
+        const auto& reflection = msg->db_row.GetReflection();
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         if (options.has_sql()) {
@@ -445,7 +445,7 @@ public:
 
         soci::statement stmt(sql_);
 
-        sql += std::format("__db_version__ = '{}',", msg->db_row->db_version());
+        sql += std::format("__db_version__ = '{}',", msg->db_row.db_version());
         for (int i = 0; i < desc.field_count(); ++i) {
             const auto* field = desc.field(i);
             sql += field->name() + " = :" + field->name() + ",";
@@ -456,7 +456,7 @@ public:
         }
 
         sql += " WHERE ";
-        sql += std::format("__db_version__ = '{}' AND __db_version__ < {} ", msg->old_db_version, msg->db_row->db_version());
+        sql += std::format("__db_version__ = '{}' AND __db_version__ < {} ", msg->old_db_version, msg->db_row.db_version());
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
         TaskAssert(primary_key_field_desc,

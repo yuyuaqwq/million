@@ -5,7 +5,7 @@
 namespace million {
 namespace jssvr {
 
-std::optional<ServiceHandle> NewJsService(IMillion*imillion, std::string_view package) ;
+std::optional<ServiceHandle> NewJsService(IMillion* imillion, std::string_view package) ;
 
 } // namespace jssvr
 } // namespace million
