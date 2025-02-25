@@ -157,7 +157,7 @@ public:
         }
         else {
             logger().Trace("packet send to agent service.");
-            Send(user_session.agent(), std::move(res->msg));
+            SendTo(user_session.agent(), user_session_id, std::move(res->msg));
         }
         co_return nullptr;
     }
