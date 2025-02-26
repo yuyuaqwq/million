@@ -1,8 +1,2 @@
-include/comm
-include/cs
-include/ss
-include/db
-src/comm
-src/cs
-src/ss
-src/db
+include
+src
