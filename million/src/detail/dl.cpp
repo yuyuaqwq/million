@@ -23,6 +23,9 @@ bool Dll::Load(const std::filesystem::path& path) {
     handle_ = ::LoadLibraryW(path.c_str());
 #endif
     if (handle_ == nullptr) {
+#ifdef WIN32
+        throw std::system_error(static_cast<int>(GetLastError()), std::system_category());
+#endif
         return false;
     }
     return true;
