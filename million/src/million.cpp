@@ -168,10 +168,14 @@ bool Million::Init(std::string_view config_path) {
 
     std::cout << "[million] [error] init failed." << std::endl;
 
+    config_.reset();
     return false;
 }
 
 void Million::Start() {
+    if (!config_) {
+        throw std::runtime_error("not initialized.");
+    }
     worker_mgr_->Start();
     io_context_mgr_->Start();
     session_monitor_->Start();
