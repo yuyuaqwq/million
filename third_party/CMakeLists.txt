@@ -1,17 +1,31 @@
 # protobuf
-find_library(PROTOBUF_PROTOC_LIB libprotocd find_library PATHS ${PROTOBUF_LIB_DIR})
-find_library(PROTOBUF_CORE_LIB libprotobufd find_library PATHS ${PROTOBUF_LIB_DIR})
 set(PROTOBUF_LIB protobuf_million CACHE STRING "protobuf lib")
 add_library(${PROTOBUF_LIB} INTERFACE)
 if (WIN32)
     message(STATUS "Compiling on Windows")
+
+    find_library(PROTOBUF_PROTOC_LIB libprotocd find_library PATHS ${PROTOBUF_LIB_DIR})
+    find_library(PROTOBUF_CORE_LIB libprotobufd find_library PATHS ${PROTOBUF_LIB_DIR})
+
+    # 检查是否找到 protoc 库
+    if(NOT PROTOBUF_PROTOC_LIB)
+        message(FATAL_ERROR "Failed to find Protobuf protoc library in ${PROTOBUF_LIB_DIR}")
+    endif()
+
+    # 检查是否找到 protobuf 核心库
+    if(NOT PROTOBUF_CORE_LIB)
+        message(FATAL_ERROR "Failed to find Protobuf core library in ${PROTOBUF_LIB_DIR}")
+    endif()
+
     target_compile_definitions(${PROTOBUF_LIB} INTERFACE PROTOBUF_USE_DLLS)
+    target_include_directories(${PROTOBUF_LIB} INTERFACE ${PROTOBUF_INCLUDE_DIR})
     target_link_libraries(${PROTOBUF_LIB} INTERFACE ${PROTOBUF_PROTOC_LIB})
     target_link_libraries(${PROTOBUF_LIB} INTERFACE ${PROTOBUF_CORE_LIB})
-    # target_include_directories(${PROTOBUF_LIB} INTERFACE ${PROTOBUF_INCLUDE_DIR})
 elseif(UNIX)
     message(STATUS "Compiling on Linux")
+
     find_package(Protobuf REQUIRED)
+
     set(PROTOBUF_INCLUDE_DIR PRIVATE ${Protobuf_INCLUDE_DIRS} CACHE STRING "protobuf header dir")
     target_include_directories(${PROTOBUF_LIB} INTERFACE ${PROTOBUF_INCLUDE_DIR})
     target_link_libraries(${PROTOBUF_LIB} INTERFACE ${Protobuf_LIBRARIES})
