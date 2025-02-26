@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.10)
-
 # protobuf
 find_library(PROTOBUF_PROTOC_LIB libprotocd find_library PATHS ${PROTOBUF_LIB_DIR})
 find_library(PROTOBUF_CORE_LIB libprotobufd find_library PATHS ${PROTOBUF_LIB_DIR})
@@ -78,11 +76,11 @@ add_subdirectory(redis-plus-plus)
 # soci
 set(SOCI_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/soci/include CACHE STRING "soci header dir")
 set(SOCI_LIB soci_million CACHE STRING "soci lib")
+set(MYSQL_INCLUDE_DIR "${MYSQL_HEADER_DIR}")
+set(MYSQL_LIBRARIES "${MYSQL_LIB}")
 add_subdirectory(soci)
 add_library(${SOCI_LIB} INTERFACE)
 target_link_libraries(${SOCI_LIB} INTERFACE soci_core_static)
 target_link_libraries(${SOCI_LIB} INTERFACE soci_mysql_static)
-set(MYSQL_INCLUDE_DIR "${MYSQL_HEADER_DIR}")
-set(MYSQL_LIBRARIES "${MYSQL_LIB}")
 target_include_directories(${SOCI_LIB} INTERFACE ${MYSQL_HEADER_DIR})
 # target_include_directories(${SOCI_LIB} INTERFACE ${SOCI_HEADER_DIR})
