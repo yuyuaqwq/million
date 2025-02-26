@@ -58,6 +58,13 @@ public:
 private:
     IMillion* imillion_;
 
+    enum Stage {
+        kUninitialized,
+        kReady,
+        kRunning,
+    };
+    Stage stage_ = kUninitialized;
+
     std::unique_ptr<YAML::Node> config_;
 
     std::unique_ptr<ServiceMgr> service_mgr_;

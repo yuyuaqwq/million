@@ -74,7 +74,7 @@ private:
     std::list<ServiceShared>::iterator iter_;
 
     // std::optional<Task<>> on_start_task_;
-    enum State {
+    enum Stage {
         // 已就绪，可以开启服务
         kReady,
         // 开启中，只能处理OnStart相关的消息及调度OnStart协程
@@ -86,7 +86,7 @@ private:
         // 退出后，不会开启新协程，不会调度已有协程，不会触发已有协程的超时(希望执行完所有协程再退出，则需要在Stop状态等待所有协程处理完毕，即使用TaskExecutorIsEmpty)
         kExit,
     };
-    State state_ = kReady;
+    Stage stage_ = kReady;
 
     bool in_queue_ = false;
 

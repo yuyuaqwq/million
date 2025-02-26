@@ -56,13 +56,13 @@ void Service::ProcessMsg(MsgElement ele) {
             // 不是可开启服务的状态
             return;
         }
-        state_ = kStarting;
+        stage_ = kStarting;
         assert(SessionIsSendId(session_id));
         auto task = iservice_->OnStart(ServiceHandle(sender), session_id);
         auto ele = excutor_.AddTask(TaskElement(std::move(sender), session_id, std::move(task)));
         if (ele) {
             // 已完成OnStart
-            state_ = kRunning;
+            stage_ = kRunning;
             ReplyMsg(&*ele);
         }
         return;
@@ -72,7 +72,7 @@ void Service::ProcessMsg(MsgElement ele) {
             // 不是可关闭服务的状态
             return;
         }
-        state_ = kStop;
+        stage_ = kStop;
         try {
             assert(SessionIsSendId(session_id));
             iservice_->OnStop(ServiceHandle(sender), session_id);
@@ -90,7 +90,7 @@ void Service::ProcessMsg(MsgElement ele) {
             // 不是可退出服务的状态
             return;
         }
-        state_ = kExit;
+        stage_ = kExit;
         try {
             assert(SessionIsSendId(session_id));
             iservice_->OnExit();
@@ -110,7 +110,7 @@ void Service::ProcessMsg(MsgElement ele) {
         auto&& [task, has_exception] = excutor_.TaskTimeout(msg_ptr->timeout_id);
         if (IsStarting() || has_exception) {
             // 异常退出的OnStart，默认回收当前服务
-            state_ = kStop;
+            stage_ = kStop;
             Exit();
         }
         return;
@@ -128,7 +128,7 @@ void Service::ProcessMsg(MsgElement ele) {
         }
 
         // 已完成OnStart
-        state_ = kRunning;
+        stage_ = kRunning;
         ReplyMsg(&std::get<TaskElement>(res));
         return;
     }
@@ -256,23 +256,23 @@ std::optional<SessionId> Service::Exit() {
 
 
 bool Service::IsReady() const {
-    return state_ == kReady;
+    return stage_ == kReady;
 }
 
 bool Service::IsStarting() const {
-    return state_ == kStarting;
+    return stage_ == kStarting;
 }
 
 bool Service::IsRunning() const {
-    return state_ == kRunning;
+    return stage_ == kRunning;
 }
 
 bool Service::IsStop() const {
-    return state_ == kStop;
+    return stage_ == kStop;
 }
 
 bool Service::IsExit() const {
-    return state_ == kExit;
+    return stage_ == kExit;
 }
 
 

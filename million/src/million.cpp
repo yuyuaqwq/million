@@ -43,6 +43,10 @@ Million::~Million() {
 }
 
 bool Million::Init(std::string_view config_path) {
+    if (stage_ != kUninitialized) {
+        throw std::runtime_error("Repeat initialization.");
+    }
+
     config_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(config_path)));
     const auto& config = *config_;
 
@@ -162,19 +166,19 @@ bool Million::Init(std::string_view config_path) {
         module_mgr_->Init();
 
         std::cout << "[million] [info] init success." << std::endl;
+
+        stage_ = kReady;
         return true;
 
     } while (false);
 
     std::cout << "[million] [error] init failed." << std::endl;
-
-    config_.reset();
     return false;
 }
 
 void Million::Start() {
-    if (!config_) {
-        throw std::runtime_error("not initialized.");
+    if (stage_ != kReady) {
+        throw std::runtime_error("Not initialized.");
     }
     worker_mgr_->Start();
     io_context_mgr_->Start();
