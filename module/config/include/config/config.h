@@ -5,7 +5,7 @@
 namespace million {
 namespace config {
 
-MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryMsg, (const google::protobuf::Descriptor&) config_desc, (std::optional<ProtoMsgWeak>) config)
+MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryMsg, (const std::string) module_name, (const google::protobuf::Descriptor&) config_desc, (std::optional<ProtoMsgWeak>) config)
 MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigUpdateMsg, (const google::protobuf::Descriptor&) config_desc)
 
 

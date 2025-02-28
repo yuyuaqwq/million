@@ -10,7 +10,7 @@ module:
         - ../../build/lib/Debug
     loads:
         - logger
-        - table
+        - config
 
 timer:
     ms_per_tick: 10
@@ -26,6 +26,6 @@ logger:
 
 config:
     namespace: million
-    pbb_dir_path: C:\Users\yuyu\Desktop\mmo-pokemon-server2\million\config
+    pbb_dir_path: C:\Users\yuyu\Desktop\mmo-pokemon-server2\million\configgen
     modules:
         - example

@@ -63,8 +63,8 @@ public:
         }
         for (auto module_settings : modules_settings) {
             Config config;
-            auto module_ = module_settings.as<std::string>();
-            auto config_msg_name = namespace_ + "." + module_ + ".Config";
+            auto module_name = module_settings.as<std::string>();
+            auto config_msg_name = namespace_ + "." + module_name + ".Table";
             auto config_msg_desc = imillion().proto_mgr().FindMessageTypeByName(config_msg_name);
             if (!config_msg_desc) {
                 logger().Err("Unable to find message: top_msg_name -> {}.", config_msg_name);
@@ -83,10 +83,10 @@ public:
                 }
 
                 const auto& name = field_desc->name();
-                LoadConfig(module_, &config, name);
+                LoadConfig(module_name, &config, name);
             }
 
-            config_map_[module_] = std::move(config);
+            module_map_[module_name] = std::move(config);
         }
         return true;
     }
@@ -98,20 +98,24 @@ public:
     MILLION_MSG_DISPATCH(ConfigService);
 
     MILLION_MUT_MSG_HANDLE(ConfigQueryMsg, msg) {
-        const auto& name = msg->config_desc.full_name();
+        auto module_iter = module_map_.find(msg->module_name);
+        if (module_iter == module_map_.end()) {
+            co_return std::move(msg_);
+        }
 
-        //auto iter = config_map_.find(name);
-        //if (iter == config_map_.end()) {
-        //    co_return std::move(msg_);
-        //}
+        const auto& msg_name = msg->config_desc.name();
+        auto config_iter = module_iter->second.config_map.find(msg_name);
+        if (config_iter == module_iter->second.config_map.end()) {
+            co_return std::move(msg_);
+        }
 
-        //msg->config.emplace(iter->second);
+        msg->config.emplace(config_iter->second);
         co_return std::move(msg_);
     }
 
     MILLION_MSG_HANDLE(ConfigUpdateMsg, msg) {
         //const auto& name = msg->config_desc.name();
-        //if (!LoadConfig(name)) {
+        //if (!LoadConfig(name, )) {
         //    logger().Err("LoadConfig failed: {}.", name);
         //}
         co_return std::move(msg_);
@@ -137,37 +141,37 @@ private:
         return content;
     }
 
-    bool LoadConfig(const std::string& module_, Config* config, const std::string& name) {
+    bool LoadConfig(const std::string& module_name, Config* config, const std::string& config_name) {
         // 加载对应文件
         std::filesystem::path pbb_path = pbb_dir_path_;
-        pbb_path /= module_;
-        pbb_path /= name + ".pbb";
+        pbb_path /= module_name;
+        pbb_path /= config_name + ".pbb";
         auto data = ReadPbb(pbb_path);
         if (!data) {
-            logger().Err("ReadPbb failed: {}.{}.", module_, name);
+            logger().Err("ReadPbb failed: {}.{}.", module_name, config_name);
             return false;
         }
 
         auto config_msg = imillion().proto_mgr().NewMessage(*config->config_msg_desc);
         if (!config_msg) {
-            logger().Err("NewMessage failed: {}.{}.", module_, name);
+            logger().Err("NewMessage failed: {}.{}.", module_name, config_name);
             return false;
         }
 
         if (!config_msg->ParseFromArray(data->data(), data->size())) {
-            logger().Err("ParseFromString failed: {}.{}.", module_, name);
+            logger().Err("ParseFromString failed: {}.{}.", module_name, config_name);
             return false;
         }
-        logger().Debug("Config '{}.{}' debug string:\n {}", module_, name, config_msg->DebugString());
+        logger().Debug("Config '{}.{}' debug string:\n {}", module_name, config_name, config_msg->DebugString());
 
-        config->config_map[name] = ProtoMsgShared(config_msg.release());
+        config->config_map[config_name] = ProtoMsgShared(config_msg.release());
 
         return true;
     }
 
 private:
     std::string pbb_dir_path_;
-    std::unordered_map<std::string, Config> config_map_;
+    std::unordered_map<std::string, Config> module_map_;
 };
 
 extern "C" MILLION_CONFIG_API bool MillionModuleInit(IMillion* imillion) {

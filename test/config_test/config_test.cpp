@@ -33,7 +33,7 @@ public:
     }
 
     virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
-        auto res = co_await Call<config::ConfigQueryMsg>(config_service_, *example::ExampleKV::GetDescriptor(), std::nullopt);
+        auto res = co_await Call<config::ConfigQueryMsg>(config_service_, "example", *example::ExampleKV::GetDescriptor(), std::nullopt);
         
         auto config = config::GetConfig(*example::ExampleKV::GetDescriptor(), &*res->config);
         logger().Info("ExampleKV:\n{}", config->DebugString());
