@@ -1,1 +1,7 @@
 build
+/.vscode
+/.vscode/settings.json
+/configgen/example
+/configgen/example/ExampleData.pbb
+/configgen/example/ExampleKV.pbb
+/configgen/example/ExtendData.pbb
