@@ -13,7 +13,7 @@ cd .\table\%1
 set PACKAGE=million.%1
 set TOOL_PATH=..\..\tool\tabtoy
 set INDEX_PATH=Index.xlsx
-set PROTO_OUT=../../../proto/table/%1.proto
+set PROTO_OUT=../../../proto/config/%1.proto
 set PBBIN_OUT=../../../configgen/%1.pbb
 set PBBIN_DIR=..\..\..\configgen\%1
 
