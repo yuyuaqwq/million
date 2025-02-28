@@ -13,8 +13,8 @@ IMillion::~IMillion() {
     delete impl_;
 }
 
-bool IMillion::Init(std::string_view config_path) {
-    return impl_->Init(config_path);
+bool IMillion::Init(std::string_view settings_path) {
+    return impl_->Init(settings_path);
 }
 
 void IMillion::Start() {
@@ -95,8 +95,8 @@ bool IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, 
 }
 
 
-const YAML::Node& IMillion::YamlConfig() const {
-    return impl_->YamlConfig();
+const YAML::Node& IMillion::YamlSettings() const {
+    return impl_->YamlSettings();
 }
 
 bool IMillion::Timeout(uint32_t tick, const ServiceHandle& service, MsgPtr msg) {

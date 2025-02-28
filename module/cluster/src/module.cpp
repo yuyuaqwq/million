@@ -12,7 +12,7 @@ namespace million {
 namespace cluster {
 
 extern "C" MILLION_CLUSTER_API bool MillionModuleInit(IMillion* imillion) {
-    auto& config = imillion->YamlConfig();
+    auto& settings = imillion->YamlSettings();
     auto handle = imillion->NewService<ClusterService>();
     if (!handle) {
         return false;

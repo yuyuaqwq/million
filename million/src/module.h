@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include "detail/dl.h"
+#include "internal/dl.h"
 
 #include <million/noncopyable.h>
 
@@ -32,7 +32,7 @@ public:
 
 private:
     Million* million_;
-    detail::Dll dll_;
+    internal::Dll dll_;
     bool init_ = false;
 };
 

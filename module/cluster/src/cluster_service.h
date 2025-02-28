@@ -42,26 +42,26 @@ public:
             co_return;
         });
 
-        const auto& config = imillion().YamlConfig();
-        const auto& cluster_config = config["cluster"];
-        if (!cluster_config) {
+        const auto& settings = imillion().YamlSettings();
+        const auto& cluster_settings = settings["cluster"];
+        if (!cluster_settings) {
             logger().Err("cannot find 'cluster'.");
             return false;
         }
 
-        const auto& name_config = cluster_config["name"];
-        if (!name_config) {
+        const auto& name_settings = cluster_settings["name"];
+        if (!name_settings) {
             logger().Err("cannot find 'cluster.name'.");
             return false;
         }
-        node_name_ = name_config.as<std::string>();
+        node_name_ = name_settings.as<std::string>();
 
-        const auto& port_config = cluster_config["port"];
-        if (!port_config) {
+        const auto& port_settings = cluster_settings["port"];
+        if (!port_settings) {
             logger().Err("cannot find 'cluster.port'.");
             return false;
         }
-        server_.Start(port_config.as<uint16_t>());
+        server_.Start(port_settings.as<uint16_t>());
         return true;
     }
 
@@ -182,7 +182,7 @@ public:
 
             // 完成连接，发送所有队列包
             for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
-                auto msg = iter->GetMutableMsg<ClusterSendMsg>();
+                auto msg = iter->GetMutMsg<ClusterSendMsg>();
                 if (msg->target_node == res.target_node()) {
                     PacketForward(&node_session, std::move(msg->src_service)
                         , std::move(msg->target_service), *msg->msg);
@@ -241,7 +241,7 @@ public:
             co_return nullptr;
         }
 
-        auto ep = FindNodeConfig(msg->target_node);
+        auto ep = FindNodeSettings(msg->target_node);
         if (!ep) {
             logger().Err("Node cannot be found: {}.", msg->target_node);
             co_return nullptr;
@@ -333,15 +333,15 @@ private:
         std::string ip;
         std::string port;
     };
-    std::optional<EndPoint> FindNodeConfig(NodeName node_name) {
-        const auto& config = imillion().YamlConfig();
-        const auto& cluster_config = config["cluster"];
-        if (!cluster_config) {
+    std::optional<EndPoint> FindNodeSettings(NodeName node_name) {
+        const auto& settings = imillion().YamlSettings();
+        const auto& cluster_settings = settings["cluster"];
+        if (!cluster_settings) {
             logger().Err("cannot find 'cluster'.");
             return std::nullopt;
         }
 
-        const auto& nodes = cluster_config["nodes"];
+        const auto& nodes = cluster_settings["nodes"];
         if (!nodes) {
             logger().Err("cannot find 'cluster.nodes'.");
             return std::nullopt;

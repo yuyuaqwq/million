@@ -71,7 +71,7 @@ class TestApp : public million::IMillion {
 
 int main() {
     auto test_app = std::make_unique<TestApp>();
-    if (!test_app->Init("cluster_test_config.yaml")) {
+    if (!test_app->Init("cluster_test_settings.yaml")) {
         return 0;
     }
     test_app->Start();
@@ -90,8 +90,8 @@ int main() {
 
     auto req = million::make_proto_msg<ss::test::LoginReq>("LoginReq req");
 
-    const auto& config = test_app->YamlConfig();
-    if (config["cluster"]["name"].as<std::string>() == "node1") {
+    const auto& settings = test_app->YamlSettings();
+    if (settings["cluster"]["name"].as<std::string>() == "node1") {
         test_app->Send<TestMsg>(service_handle, service_handle, "node2", std::move(req));
     }
     else {

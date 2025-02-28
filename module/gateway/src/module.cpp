@@ -12,7 +12,7 @@ namespace million {
 namespace gateway {
 
 extern "C" MILLION_GATEWAY_API bool MillionModuleInit(IMillion* imillion) {
-    auto& config = imillion->YamlConfig();
+    auto& settings = imillion->YamlSettings();
     auto handle = imillion->NewService<GatewayService>();
     if (!handle) {
         return false;

@@ -10,8 +10,8 @@
 #include <million/session_def.h>
 #include <million/msg.h>
 
-#include "detail/wheel_timer.hpp"
-#include "detail/heap_timer.hpp"
+#include "internal/wheel_timer.hpp"
+#include "internal/heap_timer.hpp"
 
 namespace million {
 
@@ -33,8 +33,8 @@ private:
         ServiceShared service;
         MsgPtr msg;
     };
-    detail::HeapTimer<TimedMsg> tasks_;
-    //detail::WheelTimer<TimedMsg> tasks_;
+    internal::HeapTimer<TimedMsg> tasks_;
+    //internal::WheelTimer<TimedMsg> tasks_;
     std::atomic_bool run_ = false;
 };
 

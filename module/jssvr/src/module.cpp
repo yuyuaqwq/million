@@ -33,16 +33,16 @@ extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
     auto handle = imillion->NewService<JsModuleService>();
     s_js_module_service = *handle;
 
-    auto config = imillion->YamlConfig();
-    const auto& jssvr_config = config["jssvr"];
-    if (!jssvr_config) {
+    auto settings = imillion->YamlSettings();
+    const auto& jssvr_settings = settings["jssvr"];
+    if (!jssvr_settings) {
         imillion->logger().Err("cannot find 'jssvr'.");
         return false;
     }
 
-    const auto& bootstarp_config = jssvr_config["bootstarp"];
-    if (bootstarp_config) {
-        auto bootstarp = bootstarp_config.as<std::string>();
+    const auto& bootstarp_settings = jssvr_settings["bootstarp"];
+    if (bootstarp_settings) {
+        auto bootstarp = bootstarp_settings.as<std::string>();
 
         handle = NewJsService(imillion, bootstarp);
     }

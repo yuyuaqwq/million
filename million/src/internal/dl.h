@@ -9,7 +9,7 @@
 
 namespace million {
 
-namespace detail {
+namespace internal {
 
 class Dll : noncopyable {
 public:
@@ -52,6 +52,6 @@ private:
     void* handle_ = nullptr;
 };
 
-} // namespace detail
+} // namespace internal
 
 } // namespace million

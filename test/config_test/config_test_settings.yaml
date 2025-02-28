@@ -24,8 +24,8 @@ logger:
     level: debug
     console_level: debug
 
-table:
+config:
     namespace: million
-    pbb_dir_path: C:\Users\yuyu\Desktop\mmo-pokemon-server2\million\tablegen
+    pbb_dir_path: C:\Users\yuyu\Desktop\mmo-pokemon-server2\million\config
     modules:
         - example

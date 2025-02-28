@@ -40,19 +40,19 @@ public:
             Send<GatewayTcpRecvPacketMsg>(service_handle(), std::move(std::static_pointer_cast<UserSession>(connection)), std::move(packet));
             co_return;
         });
-        const auto& config = imillion().YamlConfig();
-        const auto& gateway_config = config["gateway"];
-        if (!gateway_config) {
+        const auto& settings = imillion().YamlSettings();
+        const auto& gateway_settings = settings["gateway"];
+        if (!gateway_settings) {
             logger().Err("cannot find 'gateway'.");
             return false;
         }
-        const auto& port_config = gateway_config["port"];
-        if (!port_config)
+        const auto& port_settings = gateway_settings["port"];
+        if (!port_settings)
         {
             logger().Err("cannot find 'gateway.port'.");
             return false;
         }
-        server_.Start(port_config.as<uint16_t>());
+        server_.Start(port_settings.as<uint16_t>());
         // logger().Info("Gateway init success.");
         return true;
     }
@@ -82,14 +82,14 @@ public:
             else if (recv_msg.IsType<GatewaySendPacketMsg>()) {
                 logger().Trace("GatewaySendPacketMsg: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
-                auto msg = recv_msg.GetMutableMsg<GatewaySendPacketMsg>();
+                auto msg = recv_msg.GetMutMsg<GatewaySendPacketMsg>();
                 auto span = net::PacketSpan(header_packet);
                 user_session.Send(std::move(header_packet), span, header_packet.size() + msg->packet.size());
                 span = net::PacketSpan(msg->packet);
                 user_session.Send(std::move(msg->packet), span, 0);
             }
             else if (recv_msg.IsType<GatewaySureAgentMsg>()) {
-                auto msg = recv_msg.GetMutableMsg<GatewaySureAgentMsg>();
+                auto msg = recv_msg.GetMutMsg<GatewaySureAgentMsg>();
                 user_session.set_agent(std::move(msg->agent_service));
             }
             else if (recv_msg.IsType<GatewayPersistentUserSessionMsg>()) {

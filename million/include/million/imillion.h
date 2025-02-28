@@ -30,7 +30,7 @@ public:
     IMillion();
     virtual ~IMillion();
 
-    bool Init(std::string_view config_path);
+    bool Init(std::string_view settings_path);
     void Start();
 
     std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice);
@@ -65,7 +65,7 @@ public:
 
     template <typename MsgT>
     SessionAwaiter<MsgT> Recv(SessionId session_id) {
-        // 0表示默认超时时间
+        // 0锟斤拷示默锟较筹拷时时锟斤拷
         return SessionAwaiter<MsgT>(session_id, 0, false);
     }
 
@@ -76,7 +76,7 @@ public:
 
     template <typename MsgT>
     SessionAwaiter<MsgT> RecvOrNull(SessionId session_id) {
-        // 0表示默认超时时间
+        // 0锟斤拷示默锟较筹拷时时锟斤拷
         return SessionAwaiter<MsgT>(session_id, 0, true);
     }
 
@@ -88,7 +88,7 @@ public:
     bool Timeout(uint32_t tick, const ServiceHandle& service, MsgPtr msg);
     void EnableSeparateWorker(const ServiceHandle& service);
 
-    const YAML::Node& YamlConfig() const;
+    const YAML::Node& YamlSettings() const;
     asio::io_context& NextIoContext();
     
     Logger& logger();

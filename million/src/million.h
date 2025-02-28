@@ -22,7 +22,7 @@ public:
     Million(IMillion* imillion);
     ~Million();
 
-    bool Init(std::string_view config_path);
+    bool Init(std::string_view settings_path);
     void Start();
     void Stop();
 
@@ -39,7 +39,7 @@ public:
     bool SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgPtr msg);
     std::optional<SessionId> Send(const ServiceShared& sender, const ServiceShared& target, MsgPtr msg);
 
-    const YAML::Node& YamlConfig() const;
+    const YAML::Node& YamlSettings() const;
     void Timeout(uint32_t tick, const ServiceShared& service, MsgPtr msg);
     asio::io_context& NextIoContext();
     void EnableSeparateWorker(const ServiceShared& service);
@@ -65,7 +65,7 @@ private:
     };
     Stage stage_ = kUninitialized;
 
-    std::unique_ptr<YAML::Node> config_;
+    std::unique_ptr<YAML::Node> settings_;
 
     std::unique_ptr<ServiceMgr> service_mgr_;
     std::unique_ptr<SessionMgr> session_mgr_;

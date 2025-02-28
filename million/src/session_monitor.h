@@ -10,7 +10,7 @@
 #include <million/session_def.h>
 #include <million/cpp_msg.h>
 
-#include "detail/wheel_timer.hpp"
+#include "internal/wheel_timer.hpp"
 
 namespace million {
 
@@ -35,7 +35,7 @@ private:
         ServiceShared service;
         SessionId session_id;
     };
-    detail::WheelTimer<TimedMsg> tasks_;
+    internal::WheelTimer<TimedMsg> tasks_;
     std::atomic_bool run_ = false;
 };
 

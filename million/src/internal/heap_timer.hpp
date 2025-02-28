@@ -9,7 +9,7 @@
 #include <mutex>
 
 namespace million {
-namespace detail {
+namespace internal {
 
 template <typename T>
 class HeapTimer : noncopyable {
@@ -102,5 +102,5 @@ private:
     std::condition_variable cv_;
 };
 
-} // namespace detail
+} // namespace internal
 } // namespace million

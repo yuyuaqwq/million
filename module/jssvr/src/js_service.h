@@ -27,18 +27,18 @@ public:
 
 private:
     virtual bool OnInit() override {
-        const auto& config = imillion().YamlConfig();
+        const auto& settings = imillion().YamlSettings();
 
-        const auto& jssvr_config = config["jssvr"];
-        if (!jssvr_config) {
+        const auto& jssvr_settings = settings["jssvr"];
+        if (!jssvr_settings) {
             logger().Err("cannot find 'jssvr'.");
             return false;
         }
-        if (!jssvr_config["dirs"]) {
+        if (!jssvr_settings["dirs"]) {
             logger().Err("cannot find 'jssvr.dirs'.");
             return false;
         }
-        jssvr_dirs_ = jssvr_config["dirs"].as<std::vector<std::string>>();
+        jssvr_dirs_ = jssvr_settings["dirs"].as<std::vector<std::string>>();
 
         return true;
     }
@@ -74,7 +74,7 @@ private:
 
     //    auto script = ReadModuleScript(path);
     //    if (!script) {
-    //        // µ±Ç°Â·¾¶ÕÒ²»µ½£¬È¥ÅäÖÃÂ·¾¶ÕÒ
+    //        // å½“å‰è·¯å¾„æ‰¾ä¸åˆ°ï¼Œå»é…ç½®è·¯å¾„æ‰¾
     //        for (const auto& dir : jssvr_dirs_) {
     //            path = dir;
     //            path /= full_name + ".js";
@@ -103,7 +103,7 @@ private:
     //        return module;
     //    }
 
-    //    // ±£´æµ½ÒÑ¼ÓÔØÄ£¿é
+    //    // ä¿å­˜åˆ°å·²åŠ è½½æ¨¡å—
     //    iter->second.emplace(full_name, module);
 
     //    uint8_t* out_buf;
@@ -135,7 +135,7 @@ public:
     // std::unordered_map<std::filesystem::path, std::vector<uint8_t>> module_bytecodes_map_;
 };
 
-// JS_ToCString ¿ÉÄÜ´æÔÚÄÚ´æĞ¹Â©£¬ÔİÊ±ÀÁµÃÕÒÁË
+// JS_ToCString å¯èƒ½å­˜åœ¨å†…å­˜æ³„æ¼ï¼Œæš‚æ—¶æ‡’å¾—æ‰¾äº†
 
 class JsService : public million::IService {
 public:
@@ -201,7 +201,7 @@ public:
 
     virtual million::Task<million::MsgPtr> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr msg) override {
         if (!msg.IsProtoMsg()) {
-            // Ö»´¦Àíproto msg
+            // åªå¤„ç†proto msg
             co_return nullptr;
         }
         auto proto_msg = std::move(msg.GetProtoMsg());
@@ -216,7 +216,7 @@ public:
         JSValue result = JS_UNDEFINED;
 
         do {
-            // »ñÈ¡Ä£¿éµÄ namespace ¶ÔÏó
+            // è·å–æ¨¡å—çš„ namespace å¯¹è±¡
             space = JS_GetModuleNamespace(js_ctx_, js_main_module);
             if (!JsCheckException(space)) break;
 
@@ -245,7 +245,7 @@ public:
                 if (func_ctx.waiting_session_id) {
                     auto res_msg = co_await Recv<million::ProtoMsg>(*func_ctx.waiting_session_id);
 
-                    // res_msg×ªjs¶ÔÏó£¬»½ĞÑ
+                    // res_msgè½¬jså¯¹è±¡ï¼Œå”¤é†’
                     JSValue msg_obj = ProtoMsgToJsObj(*res_msg);
                     result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
                     JS_FreeValue(js_ctx_, msg_obj);
@@ -254,15 +254,15 @@ public:
                     func_ctx.waiting_session_id.reset();
                 }
 
-                // ÊÖ¶¯´¥·¢ÊÂ¼şÑ­»·£¬È·±£Òì²½²Ù×÷¼ÌĞøÖ´ĞĞ
+                // æ‰‹åŠ¨è§¦å‘äº‹ä»¶å¾ªç¯ï¼Œç¡®ä¿å¼‚æ­¥æ“ä½œç»§ç»­æ‰§è¡Œ
                 JSContext* ctx_ = nullptr;
                 while (JS_ExecutePendingJob(js_rt_, &ctx_)) {
-                    // Ö´ĞĞÊÂ¼şÑ­»·£¬Ö±µ½Ã»ÓĞ¸ü¶àµÄÒì²½ÈÎÎñ
+                    // æ‰§è¡Œäº‹ä»¶å¾ªç¯ï¼Œç›´åˆ°æ²¡æœ‰æ›´å¤šçš„å¼‚æ­¥ä»»åŠ¡
                 }
             } while (true);
 
             if (state == JS_PROMISE_FULFILLED) {
-                // »ñÈ¡·µ»ØÖµ
+                // è·å–è¿”å›å€¼
                 result = JS_PromiseResult(js_ctx_, promise);
                 if (!JsCheckException(result)) break;
 
@@ -286,7 +286,7 @@ public:
                     break;
                 }
 
-                // ½âÎöresult£¬µÚÒ»¸öÊÇmessage name£¬µÚ¶ş¸öÊÇjs_obj
+                // è§£æresultï¼Œç¬¬ä¸€ä¸ªæ˜¯message nameï¼Œç¬¬äºŒä¸ªæ˜¯js_obj
                 auto msg_name = JS_GetPropertyUint32(js_ctx_, result, 0);
 
                 if (!JS_IsString(msg_name)) {
@@ -407,7 +407,7 @@ private:
             break;
         }
         default:
-            js_value = JS_UNDEFINED;  // Î´ÖªÀàĞÍ£¬·µ»ØÎ´¶¨Òå
+            js_value = JS_UNDEFINED;  // æœªçŸ¥ç±»å‹ï¼Œè¿”å›æœªå®šä¹‰
             break;
         }
         return js_value;
@@ -470,7 +470,7 @@ private:
             break;
         }
         default:
-            js_value = JS_UNDEFINED;  // Î´ÖªÀàĞÍ£¬·µ»ØÎ´¶¨Òå
+            js_value = JS_UNDEFINED;  // æœªçŸ¥ç±»å‹ï¼Œè¿”å›æœªå®šä¹‰
             break;
         }
         return js_value;
@@ -488,13 +488,13 @@ private:
                 JSValue js_array = JS_NewArray(js_ctx_);
                 for (size_t j = 0; j < reflection->FieldSize(msg, field_desc); ++j) {
                     JSValue js_value = GetJsValueByProtoMsgRepeatedField(msg, *reflection, *field_desc, j);
-                    JS_SetPropertyUint32(js_ctx_, js_array, j, js_value);  // Ìí¼Óµ½Êı×éÖĞ
+                    JS_SetPropertyUint32(js_ctx_, js_array, j, js_value);  // æ·»åŠ åˆ°æ•°ç»„ä¸­
                 }
                 JS_SetPropertyStr(js_ctx_, obj, field_desc->name().c_str(), js_array);
             }
             else {
                 JSValue js_value = GetJsValueByProtoMsgField(msg, *reflection, *field_desc);
-                JS_SetPropertyStr(js_ctx_, obj, field_desc->name().c_str(), js_value);  // Ìí¼Ó×Ö¶Îµ½¶ÔÏóÖĞ
+                JS_SetPropertyStr(js_ctx_, obj, field_desc->name().c_str(), js_value);  // æ·»åŠ å­—æ®µåˆ°å¯¹è±¡ä¸­
             }
         }
 
@@ -769,7 +769,7 @@ private:
             JSValue field_value = JS_GetPropertyStr(js_ctx_, obj, field_desc->name().c_str());
 
             if (JS_IsUndefined(field_value)) {
-                continue;  // Èç¹û JS ¶ÔÏóÃ»ÓĞ¸ÃÊôĞÔ£¬ÔòÌø¹ı
+                continue;  // å¦‚æœ JS å¯¹è±¡æ²¡æœ‰è¯¥å±æ€§ï¼Œåˆ™è·³è¿‡
             }
 
             if (field_desc->is_repeated()) {
@@ -810,7 +810,7 @@ private:
     }
 
     JSValue ModuleLoader(const std::string& module_name) {
-        // Ê×ÏÈÕÒÒÑ¼ÓÔØµÄÄ£¿é
+        // é¦–å…ˆæ‰¾å·²åŠ è½½çš„æ¨¡å—
         //auto iter2 = iter->second.find(full_name);
         //if (iter2 != iter->second.end()) {
         //    return iter2->second;
@@ -818,11 +818,11 @@ private:
 
         std::string module_name_ = module_name;
         std::filesystem::path path = cur_path_;
-        // ´ÓÄ£¿éËùÔÚÂ·¾¶ÕÒÄ£¿é
+        // ä»æ¨¡å—æ‰€åœ¨è·¯å¾„æ‰¾æ¨¡å—
         path /= module_name_ + ".js";
         auto script = ReadModuleScript(path);
         if (!script) {
-            // µ±Ç°Â·¾¶ÕÒ²»µ½£¬È¥ÅäÖÃÂ·¾¶ÕÒ
+            // å½“å‰è·¯å¾„æ‰¾ä¸åˆ°ï¼Œå»é…ç½®è·¯å¾„æ‰¾
             for (const auto& dir : js_module_service_->jssvr_dirs_) {
                 path = dir;
                 path /= module_name_ + ".js";
@@ -850,7 +850,7 @@ private:
             return result;
         }
 
-        //// »ñÈ¡Ò»ÏÂµ±Ç°Â·¾¶
+        //// è·å–ä¸€ä¸‹å½“å‰è·¯å¾„
         //auto module = service->js_module_service_->LoadModule(ctx, &service->cur_path_, module_name);
         //if (service->JsCheckException(module)) return nullptr;
         return module_;;
@@ -874,7 +874,7 @@ private:
         auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
         func_ctx->waiting_session_id = million::kSessionIdInvalid;
 
-        // Î´À´¿¼ÂÇ¸Äµô£¬ÕâÑù·µ»ØµÄ»á¿ÉÒÔco_await£¬²¢ÇÒ´íÎóÌáÊ¾Ò²ÓĞµãÎÊÌâ
+        // æœªæ¥è€ƒè™‘æ”¹æ‰ï¼Œè¿™æ ·è¿”å›çš„ä¼šå¯ä»¥co_awaitï¼Œå¹¶ä¸”é”™è¯¯æç¤ºä¹Ÿæœ‰ç‚¹é—®é¢˜
         return res;
     }
 
@@ -933,7 +933,7 @@ private:
                 break;
             }
 
-            // ·¢ËÍÏûÏ¢£¬²¢½«session_id´«»Ø
+            // å‘é€æ¶ˆæ¯ï¼Œå¹¶å°†session_idä¼ å›
             func_ctx->waiting_session_id = service->Send(*target, std::move(msg));
 
         } while (false);
@@ -951,7 +951,7 @@ private:
     }
 
     static int ServiceModuleInit(JSContext* ctx, JSModuleDef* m) {
-        // µ¼³öº¯Êıµ½Ä£¿é
+        // å¯¼å‡ºå‡½æ•°åˆ°æ¨¡å—
         size_t count = 0;
         auto list = ServiceModuleExportList(&count);
         return JS_SetModuleExportList(ctx, m, list, count);
@@ -1074,7 +1074,7 @@ private:
     }
 
     static int LoggerModuleInit(JSContext* ctx, JSModuleDef* m) {
-        // µ¼³öº¯Êıµ½Ä£¿é
+        // å¯¼å‡ºå‡½æ•°åˆ°æ¨¡å—
         size_t count = 0;
         auto list = LoggerModuleExportList(&count);
         return JS_SetModuleExportList(ctx, m, list, count);
@@ -1173,7 +1173,7 @@ private:
     }
 
     static int MillionModuleInit(JSContext* ctx, JSModuleDef* m) {
-        // µ¼³öº¯Êıµ½Ä£¿é
+        // å¯¼å‡ºå‡½æ•°åˆ°æ¨¡å—
         size_t count = 0;
         auto list = MillionModuleExportList(&count);
         return JS_SetModuleExportList(ctx, m, list, count);

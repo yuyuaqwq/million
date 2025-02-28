@@ -42,13 +42,13 @@ Million::~Million() {
     Stop();
 }
 
-bool Million::Init(std::string_view config_path) {
+bool Million::Init(std::string_view settings_path) {
     if (stage_ != kUninitialized) {
         throw std::runtime_error("Repeat initialization.");
     }
 
-    config_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(config_path)));
-    const auto& config = *config_;
+    settings_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(settings_path)));
+    const auto& settings = *settings_;
 
     std::cout << "[million] [info] init start." << std::endl;
 
@@ -57,74 +57,74 @@ bool Million::Init(std::string_view config_path) {
         session_mgr_ = std::make_unique<SessionMgr>(this);
         logger_ = std::make_unique<Logger>(this);
 
-        std::cout << "[worker_mgr] [info] load 'worker_mgr' config." << std::endl;
+        std::cout << "[worker_mgr] [info] load 'worker_mgr' settings." << std::endl;
 
-        const auto& worker_mgr_config = config["worker_mgr"];
-        if (!worker_mgr_config) {
+        const auto& worker_mgr_settings = settings["worker_mgr"];
+        if (!worker_mgr_settings) {
             std::cerr << "[worker_mgr] [error] cannot find 'worker_mgr'." << std::endl;
             return false;
         }
-        if (!worker_mgr_config["num"]) {
+        if (!worker_mgr_settings["num"]) {
             std::cerr << "[worker_mgr] [error] cannot find 'worker_mgr.num'." << std::endl;
             return false;
         }
-        auto worker_num = worker_mgr_config["num"].as<size_t>();
+        auto worker_num = worker_mgr_settings["num"].as<size_t>();
         worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
 
 
-        std::cout << "[io_context_mgr] [info] load 'io_context_mgr' config." << std::endl;
+        std::cout << "[io_context_mgr] [info] load 'io_context_mgr' settings." << std::endl;
 
-        const auto& io_context_mgr_config = config["io_context_mgr"];
-        if (!io_context_mgr_config) {
+        const auto& io_context_mgr_settings = settings["io_context_mgr"];
+        if (!io_context_mgr_settings) {
             std::cerr << "[io_context_mgr] [error] cannot find 'io_context_mgr'." << std::endl;
             break;
         }
-        if (!io_context_mgr_config["num"]) {
+        if (!io_context_mgr_settings["num"]) {
             std::cerr << "[io_context_mgr] [error] cannot find 'io_context_mgr.num'." << std::endl;
             break;
         }
-        auto io_context_num = io_context_mgr_config["num"].as<size_t>();
+        auto io_context_num = io_context_mgr_settings["num"].as<size_t>();
         io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
 
 
-        std::cout << "[session_monitor] [info] load 'session_monitor' config." << std::endl;
+        std::cout << "[session_monitor] [info] load 'session_monitor' settings." << std::endl;
 
-        const auto& session_monitor_config = config["session_monitor"];
-        if (!session_monitor_config) {
-            std::cerr << "[session_monitor] [error] cannot find 'session_monitor_config'." << std::endl;
+        const auto& session_monitor_settings = settings["session_monitor"];
+        if (!session_monitor_settings) {
+            std::cerr << "[session_monitor] [error] cannot find 'session_monitor_settings'." << std::endl;
             break;
         }
-        if (!session_monitor_config["s_per_tick"]) {
-            std::cerr << "[session_monitor] [error] cannot find 'session_monitor_config.s_per_tick'." << std::endl;
+        if (!session_monitor_settings["s_per_tick"]) {
+            std::cerr << "[session_monitor] [error] cannot find 'session_monitor_settings.s_per_tick'." << std::endl;
             break;
         }
-        auto tick_s = session_monitor_config["s_per_tick"].as<uint32_t>();
-        if (!session_monitor_config["timeout_tick"]) {
-            std::cerr << "[session_monitor] [error] cannot find 'session_monitor_config.timeout_tick'." << std::endl;
+        auto tick_s = session_monitor_settings["s_per_tick"].as<uint32_t>();
+        if (!session_monitor_settings["timeout_tick"]) {
+            std::cerr << "[session_monitor] [error] cannot find 'session_monitor_settings.timeout_tick'." << std::endl;
             break;
         }
-        auto timeout_s = session_monitor_config["timeout_tick"].as<uint32_t>();
+        auto timeout_s = session_monitor_settings["timeout_tick"].as<uint32_t>();
         session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
 
 
-        std::cout << "[timer] [info] load 'proto_mgr' config." << std::endl;
+        std::cout << "[timer] [info] load 'proto_mgr' settings." << std::endl;
 
         proto_mgr_ = std::make_unique<ProtoMgr>();
         proto_mgr_->Init();
 
 
-        std::cout << "[timer] [info] load 'timer' config." << std::endl;
+        std::cout << "[timer] [info] load 'timer' settings." << std::endl;
 
-        const auto& timer_config = config["timer"];
-        if (!timer_config) {
+        const auto& timer_settings = settings["timer"];
+        if (!timer_settings) {
             std::cerr << "[timer] [error] cannot find 'timer'." << std::endl;
             break;
         }
-        if (!timer_config["ms_per_tick"]) {
+        if (!timer_settings["ms_per_tick"]) {
             std::cerr << "[timer] [error] cannot find 'timer.ms_per_tick'." << std::endl;
             break;
         }
-        auto ms_per_tick = timer_config["ms_per_tick"].as<uint32_t>();
+        auto ms_per_tick = timer_settings["ms_per_tick"].as<uint32_t>();
         timer_ = std::make_unique<Timer>(this, ms_per_tick);
 
         if (!logger_->Init()) {
@@ -132,24 +132,24 @@ bool Million::Init(std::string_view config_path) {
         }
 
 
-        std::cout << "[module] [info] load 'module' config." << std::endl;
+        std::cout << "[module] [info] load 'module' settings." << std::endl;
 
-        const auto& module_config = config["module"];
-        if (!module_config) {
+        const auto& module_settings = settings["module"];
+        if (!module_settings) {
             std::cerr << "[module] [error] cannot find 'module'." << std::endl;
             break;
         }
-        if (!module_config["dirs"]) {
+        if (!module_settings["dirs"]) {
             std::cerr << "[module] [error] cannot find 'module.dirs'." << std::endl;
             break;
         }
-        auto module_dirs = module_config["dirs"].as<std::vector<std::string>>();
+        auto module_dirs = module_settings["dirs"].as<std::vector<std::string>>();
         module_mgr_ = std::make_unique<ModuleMgr>(this, module_dirs);
-        const auto& loads = module_config["loads"];
+        const auto& loads = module_settings["loads"];
         if (loads) {
             bool success = true;
-            for (auto name_config : loads) {
-                auto name = name_config.as<std::string>();
+            for (auto name_settings : loads) {
+                auto name = name_settings.as<std::string>();
                 if (!module_mgr_->Load(name)) {
                     std::cerr << "[module] [error] load module '" << name << "' failed." << std::endl;
                     success = false;
@@ -239,8 +239,8 @@ std::optional<SessionId> Million::Send(const ServiceShared& sender, const Servic
 }
 
 
-const YAML::Node& Million::YamlConfig() const {
-    return *config_;
+const YAML::Node& Million::YamlSettings() const {
+    return *settings_;
 }
 
 void Million::Timeout(uint32_t tick, const ServiceShared& service, MsgPtr msg) {

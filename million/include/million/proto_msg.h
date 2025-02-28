@@ -17,6 +17,7 @@ namespace protobuf = google::protobuf;
 using ProtoMsg = protobuf::Message;
 using ProtoMsgUnique = std::unique_ptr<ProtoMsg>;
 using ProtoMsgShared = std::shared_ptr<const ProtoMsg>;
+using ProtoMsgWeak = std::weak_ptr<const ProtoMsg>;
 
 inline const google::protobuf::FieldDescriptor& GetFieldDescriptor(const google::protobuf::Descriptor& desc, int index) {
     const auto* field_desc = desc.field(index);

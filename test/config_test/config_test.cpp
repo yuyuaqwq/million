@@ -4,13 +4,13 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <table/table.h>
-#include <table/example.pb.h>
+#include <config/config.h>
+#include <config/example.pb.h>
 
 MILLION_MODULE_INIT();
 
 namespace protobuf = google::protobuf;
-namespace table = million::table;
+namespace config = million::config;
 namespace example = million::example;
 
 MILLION_MSG_DEFINE_EMPTY(, Test1Msg)
@@ -22,20 +22,21 @@ public:
         : Base(imillion) {}
 
     virtual bool OnInit() override {
-        auto handle = imillion().GetServiceByName("TableService");
+        auto handle = imillion().GetServiceByName("ConfigService");
         if (!handle) {
-            logger().Err("Unable to find TableService.");
+            logger().Err("Unable to find ConfigService.");
             return false;
         }
-        table_service_ = *handle;
+        config_service_ = *handle;
 
         return true;
     }
 
     virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
-        auto res = co_await Call<table::TableQueryMsg>(table_service_, *example::ExampleKV::GetDescriptor(), std::nullopt);
-        auto table = *res->table;
-        logger().Info("ExampleKV:\n{}", table->DebugString());
+        auto res = co_await Call<config::ConfigQueryMsg>(config_service_, *example::ExampleKV::GetDescriptor(), std::nullopt);
+        
+        auto config = config::GetConfig(*example::ExampleKV::GetDescriptor(), &*res->config);
+        logger().Info("ExampleKV:\n{}", config->DebugString());
 
         co_return nullptr;
     }
@@ -49,7 +50,7 @@ public:
     }
 
 private:
-    million::ServiceHandle table_service_;
+    million::ServiceHandle config_service_;
 
 };
 
@@ -60,7 +61,7 @@ class TestApp : public million::IMillion {
 
 int main() {
     auto test_app = std::make_unique<TestApp>();
-    if (!test_app->Init("table_test_config.yaml")) {
+    if (!test_app->Init("config_test_settings.yaml")) {
         return 0;
     }
     test_app->Start();

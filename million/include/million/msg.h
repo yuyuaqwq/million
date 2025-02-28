@@ -124,13 +124,13 @@ public:
     }
 
     template<typename MsgT>
-    MsgT* GetMutableMsg() const {
+    MsgT* GetMutMsg() const {
         assert(IsType<MsgT>());
         if constexpr (is_proto_msg_v<MsgT>) {
-            return static_cast<MsgT*>(GetMutableProtoMsg());
+            return static_cast<MsgT*>(GetMutProtoMsg());
         }
         else if constexpr (is_cpp_msg_v<MsgT>) {
-            return static_cast<MsgT*>(GetMutableCppMsg());
+            return static_cast<MsgT*>(GetMutCppMsg());
         }
         else {
             static_assert(is_proto_msg_v<MsgT> || is_cpp_msg_v<MsgT>,
@@ -162,11 +162,11 @@ public:
         }
     }
 
-    ProtoMsg* GetMutableProtoMsg() const {
+    ProtoMsg* GetMutProtoMsg() const {
         return GetProtoMsgUnique().get();
     }
 
-    CppMsg* GetMutableCppMsg() const {
+    CppMsg* GetMutCppMsg() const {
         return GetCppMsgUnique().get();
     }
 

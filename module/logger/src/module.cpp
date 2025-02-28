@@ -32,41 +32,41 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        auto& config = imillion().YamlConfig();
+        auto& settings = imillion().YamlSettings();
 
-        std::cout << "[logger] [info] load 'logger' config." << std::endl;
+        std::cout << "[logger] [info] load 'logger' settings." << std::endl;
 
-        auto logger_config = config["logger"];
-        if (!logger_config) {
+        auto logger_settings = settings["logger"];
+        if (!logger_settings) {
             std::cerr << "[logger] [error] cannot find 'logger'." << std::endl;
             return false;
         }
-        if (!logger_config["log_file"]) {
+        if (!logger_settings["log_file"]) {
             std::cerr << "[logger] [error] cannot find 'logger.log_file'." << std::endl;
             return false;
         }
-        auto log_file = logger_config["log_file"].as<std::string>();
+        auto log_file = logger_settings["log_file"].as<std::string>();
 
-        if (!logger_config["level"]) {
+        if (!logger_settings["level"]) {
             std::cerr << "[logger] [error] cannot find 'logger.level'." << std::endl;
             return false;
         }
-        auto level_str = logger_config["level"].as<std::string>();
+        auto level_str = logger_settings["level"].as<std::string>();
         auto level = spdlog::level::from_str(level_str);
         
         std::string pattern = "[%Y-%m-%d %H:%M:%S.%e] [tid %t] [%^%l%$] [%s:%#] [%!] %v";
-        if (logger_config["pattern"]) {
-            pattern = logger_config["pattern"].as<std::string>();
+        if (logger_settings["pattern"]) {
+            pattern = logger_settings["pattern"].as<std::string>();
         }
 
         int flush_every = 1;
-        if (logger_config["flush_every_s"]) {
-            flush_every = logger_config["flush_every_s"].as<int>();
+        if (logger_settings["flush_every_s"]) {
+            flush_every = logger_settings["flush_every_s"].as<int>();
         }
 
         auto console_level = spdlog::level::level_enum::off;;
-        if (logger_config["console_level"]) {
-            auto level_str = logger_config["console_level"].as<std::string>();
+        if (logger_settings["console_level"]) {
+            auto level_str = logger_settings["console_level"].as<std::string>();
             console_level = spdlog::level::from_str(level_str);;
         }
 
@@ -110,7 +110,7 @@ private:
 };
 
 extern "C" MILLION_LOGGER_API bool MillionModuleInit(IMillion* imillion) {
-    auto& config = imillion->YamlConfig();
+    auto& settings = imillion->YamlSettings();
     
     auto logger_service_opt = imillion->NewService<LoggerService>();
     if (!logger_service_opt) {

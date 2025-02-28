@@ -33,7 +33,7 @@ public:
     MILLION_MSG_HANDLE(LoginReq, req) {
         logger().Info("ss::test::LoginReq, value:{}", req->value());
 
-        // »ØÒ»¸öLoginRes
+        // å›žä¸€ä¸ªLoginRes
         co_return million::make_proto_msg<ss::test::LoginRes>("LoginRes res");
     }
 
@@ -47,7 +47,7 @@ public:
 
 int main() {
     auto test_app = std::make_unique<TestApp>();
-    if (!test_app->Init("jssvr_test_config.yaml")) {
+    if (!test_app->Init("jssvr_test_settings.yaml")) {
         return 0;
     }
     test_app->NewService<TestService>();

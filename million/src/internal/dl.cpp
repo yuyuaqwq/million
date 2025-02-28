@@ -1,4 +1,4 @@
-#include "detail/dl.h"
+#include "internal/dl.h"
 
 #ifdef __linux__
 #include <dlfcn.h>
@@ -7,7 +7,7 @@
 #endif
 
 namespace million {
-namespace detail {
+namespace internal {
 
 Dll::Dll() = default;
 
@@ -63,5 +63,5 @@ void* Dll::GetFuncAddr(std::string_view func_name) const {
     return func;
 }
 
-} // namespace detail
+} // namespace internal
 } // namespace million

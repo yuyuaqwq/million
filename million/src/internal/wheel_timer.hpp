@@ -10,7 +10,7 @@
 #include <mutex>
 
 namespace million {
-namespace detail {
+namespace internal {
 
 template <typename T>
 class WheelTimer : noncopyable {
@@ -131,5 +131,5 @@ protected:
     TaskQueue backup_adds_;
 };
 
-} // namespace detail
+} // namespace internal
 } // namespace million
