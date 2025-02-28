@@ -5,18 +5,20 @@
 namespace million {
 namespace config {
 
-MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryMsg, (const std::string) module_name, (const google::protobuf::Descriptor&) config_desc, (std::optional<ProtoMsgWeak>) config)
+using ConfigWeak = ProtoMsgWeak;
+using ConfigShared = ProtoMsgShared;
+
+MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryMsg, (const std::string) module_name, (const google::protobuf::Descriptor&) config_desc, (std::optional<ConfigWeak>) config)
 MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigUpdateMsg, (const google::protobuf::Descriptor&) config_desc)
 
-
-static ProtoMsgShared GetConfig(const google::protobuf::Descriptor& desc, ProtoMsgWeak* weak_config) {
-    auto shared_config = weak_config->lock();
-    if (!shared_config) {
+static ConfigShared GetConfig(const google::protobuf::Descriptor& desc, ConfigWeak* config_weak) {
+    auto config_shared = config_weak->lock();
+    if (!config_shared) {
         // 提升失败，说明配置有更新
         // ConfigQueryMsg
-        // *weak_config = ;
+        // *config_weak = ;
     }
-    return shared_config;
+    return config_shared;
 }
 
 } // namespace config

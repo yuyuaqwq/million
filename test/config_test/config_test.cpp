@@ -35,9 +35,7 @@ public:
     virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
         auto res = co_await Call<config::ConfigQueryMsg>(config_service_, "example", *example::ExampleKV::GetDescriptor(), std::nullopt);
         
-        auto config = config::GetConfig(*example::ExampleKV::GetDescriptor(), &*res->config);
-        logger().Info("ExampleKV:\n{}", config->DebugString());
-
+        example_kv_config_ = *res->config;
         co_return nullptr;
     }
 
@@ -45,13 +43,15 @@ public:
     MILLION_MSG_DISPATCH(TestService);
 
     MILLION_MSG_HANDLE(Test1Msg, msg) {
-
+        auto config = config::GetConfig(*example::ExampleKV::GetDescriptor(), &example_kv_config_);
+        logger().Info("ExampleKV:\n{}", config->DebugString());
         co_return nullptr;
     }
 
 private:
     million::ServiceHandle config_service_;
 
+    million::config::ConfigWeak example_kv_config_;
 };
 
 class TestApp : public million::IMillion {
@@ -72,7 +72,9 @@ int main() {
     }
     auto service_handle = *service_opt;
 
-    //test_app->Send<Test1Msg>(service_handle, service_handle);
+    test_app->Send<Test1Msg>(service_handle, service_handle);
+
+
     //for (int i = 0; i < 10000; i++) {
     //    auto msg2 = std::make_unique<Test1Msg>();
     //    test_app->Timeout(1, service_handle, std::move(msg2));

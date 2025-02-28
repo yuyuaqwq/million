@@ -18,9 +18,9 @@ namespace config {
 
 class ConfigService : public IService {
 private:
-    struct Config {
+    struct ConfigModule {
         const google::protobuf::Descriptor* config_msg_desc;
-        std::unordered_map<std::string, ProtoMsgShared> config_map;
+        std::unordered_map<std::string, ConfigShared> config_map;
     };
 
 public:
@@ -62,7 +62,7 @@ public:
             return false;
         }
         for (auto module_settings : modules_settings) {
-            Config config;
+            ConfigModule config_module;
             auto module_name = module_settings.as<std::string>();
             auto config_msg_name = namespace_ + "." + module_name + ".Table";
             auto config_msg_desc = imillion().proto_mgr().FindMessageTypeByName(config_msg_name);
@@ -70,7 +70,7 @@ public:
                 logger().Err("Unable to find message: top_msg_name -> {}.", config_msg_name);
                 return false;
             }
-            config.config_msg_desc = config_msg_desc;
+            config_module.config_msg_desc = config_msg_desc;
             for (int i = 0; i < config_msg_desc->field_count(); ++i) {
                 auto field_desc = config_msg_desc->field(i);
                 if (!field_desc) {
@@ -83,10 +83,10 @@ public:
                 }
 
                 const auto& name = field_desc->name();
-                LoadConfig(module_name, &config, name);
+                LoadConfig(module_name, &config_module, name);
             }
 
-            module_map_[module_name] = std::move(config);
+            module_map_[module_name] = std::move(config_module);
         }
         return true;
     }
@@ -141,7 +141,7 @@ private:
         return content;
     }
 
-    bool LoadConfig(const std::string& module_name, Config* config, const std::string& config_name) {
+    bool LoadConfig(const std::string& module_name, ConfigModule* config_module, const std::string& config_name) {
         // 加载对应文件
         std::filesystem::path pbb_path = pbb_dir_path_;
         pbb_path /= module_name;
@@ -152,7 +152,7 @@ private:
             return false;
         }
 
-        auto config_msg = imillion().proto_mgr().NewMessage(*config->config_msg_desc);
+        auto config_msg = imillion().proto_mgr().NewMessage(*config_module->config_msg_desc);
         if (!config_msg) {
             logger().Err("NewMessage failed: {}.{}.", module_name, config_name);
             return false;
@@ -164,14 +164,14 @@ private:
         }
         logger().Debug("Config '{}.{}' debug string:\n {}", module_name, config_name, config_msg->DebugString());
 
-        config->config_map[config_name] = ProtoMsgShared(config_msg.release());
+        config_module->config_map[config_name] = ProtoMsgShared(config_msg.release());
 
         return true;
     }
 
 private:
     std::string pbb_dir_path_;
-    std::unordered_map<std::string, Config> module_map_;
+    std::unordered_map<std::string, ConfigModule> module_map_;
 };
 
 extern "C" MILLION_CONFIG_API bool MillionModuleInit(IMillion* imillion) {
