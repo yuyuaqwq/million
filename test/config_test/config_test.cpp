@@ -36,6 +36,9 @@ public:
         auto res = co_await Call<config::ConfigQueryMsg>(config_service_, *example::ExampleKV::GetDescriptor(), std::nullopt);
         
         example_kv_config_ = *res->config;
+
+        Send<Test1Msg>(service_handle());
+
         co_return nullptr;
     }
 
@@ -72,8 +75,7 @@ int main() {
     }
     auto service_handle = *service_opt;
 
-    test_app->Send<Test1Msg>(service_handle, service_handle);
-
+    
 
     //for (int i = 0; i < 10000; i++) {
     //    auto msg2 = std::make_unique<Test1Msg>();
