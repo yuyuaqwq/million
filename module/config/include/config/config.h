@@ -8,7 +8,7 @@ namespace config {
 using ConfigWeak = ProtoMsgWeak;
 using ConfigShared = ProtoMsgShared;
 
-MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryMsg, (const std::string) module_name, (const google::protobuf::Descriptor&) config_desc, (std::optional<ConfigWeak>) config)
+MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryMsg, (const google::protobuf::Descriptor&) config_desc, (std::optional<ConfigWeak>) config)
 MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigUpdateMsg, (const google::protobuf::Descriptor&) config_desc)
 
 static ConfigShared GetConfig(const google::protobuf::Descriptor& desc, ConfigWeak* config_weak) {

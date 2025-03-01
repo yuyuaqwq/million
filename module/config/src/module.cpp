@@ -17,12 +17,6 @@ namespace config {
 // 2.访问配置即返回共享指针，热更只需要重新赋值共享指针即可
 
 class ConfigService : public IService {
-private:
-    struct ConfigModule {
-        const google::protobuf::Descriptor* config_msg_desc;
-        std::unordered_map<std::string, ConfigShared> config_map;
-    };
-
 public:
     using Base = IService;
     using Base::Base;
@@ -55,38 +49,44 @@ public:
         }
         auto namespace_ = namespace_settings.as<std::string>();
 
-
         const auto& modules_settings = config_settings["modules"];
         if (!modules_settings) {
             logger().Err("cannot find 'config.modules'.");
             return false;
         }
         for (auto module_settings : modules_settings) {
-            ConfigModule config_module;
             auto module_name = module_settings.as<std::string>();
-            auto config_msg_name = namespace_ + "." + module_name + ".Table";
-            auto config_msg_desc = imillion().proto_mgr().FindMessageTypeByName(config_msg_name);
-            if (!config_msg_desc) {
-                logger().Err("Unable to find message: top_msg_name -> {}.", config_msg_name);
+            auto table_msg_name = namespace_ + "." + module_name + ".Table";
+            auto table_desc = imillion().proto_mgr().FindMessageTypeByName(table_msg_name);
+            if (!table_desc) {
+                logger().Err("Unable to find message desc: top_msg_name -> {}.", table_msg_name);
                 return false;
             }
-            config_module.config_msg_desc = config_msg_desc;
-            for (int i = 0; i < config_msg_desc->field_count(); ++i) {
-                auto field_desc = config_msg_desc->field(i);
+
+            for (int i = 0; i < table_desc->field_count(); ++i) {
+                auto field_desc = table_desc->field(i);
                 if (!field_desc) {
-                    logger().Err("top_msg_desc->field failed: {}.{}: Unable to retrieve field description.", config_msg_name, i);
-                    continue;
-                }
-                if (!field_desc->is_repeated()) {
-                    logger().Err("top_msg_desc->field: Field at index {} in message '{}' is not repeated. Expected a repeated field.", i, config_msg_name);
+                    logger().Err("table_desc->field failed: {}.{}: Unable to retrieve field description.", table_msg_name, i);
                     continue;
                 }
 
-                const auto& name = field_desc->name();
-                LoadConfig(module_name, &config_module, name);
+                if (!field_desc->is_repeated()) {
+                    logger().Err("table_desc->field: Field at index {} in message '{}' is not repeated. Expected a repeated field.", i, table_msg_name);
+                    continue;
+                }
+
+                if (field_desc->type() != google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
+                    continue;
+                }
+
+                const auto* config_desc = field_desc->message_type();
+                if (!config_desc) {
+                    logger().Err("field_desc->message_type() is nullptr: Field at index {} in message '{}'.", i, table_msg_name);
+                    continue;
+                }
+                LoadConfig(module_name, *table_desc, *config_desc);
             }
 
-            module_map_[module_name] = std::move(config_module);
         }
         return true;
     }
@@ -98,14 +98,8 @@ public:
     MILLION_MSG_DISPATCH(ConfigService);
 
     MILLION_MUT_MSG_HANDLE(ConfigQueryMsg, msg) {
-        auto module_iter = module_map_.find(msg->module_name);
-        if (module_iter == module_map_.end()) {
-            co_return std::move(msg_);
-        }
-
-        const auto& msg_name = msg->config_desc.name();
-        auto config_iter = module_iter->second.config_map.find(msg_name);
-        if (config_iter == module_iter->second.config_map.end()) {
+        auto config_iter = config_map_.find(&msg->config_desc);
+        if (config_iter == config_map_.end()) {
             co_return std::move(msg_);
         }
 
@@ -141,37 +135,37 @@ private:
         return content;
     }
 
-    bool LoadConfig(const std::string& module_name, ConfigModule* config_module, const std::string& config_name) {
+    bool LoadConfig(const std::string module_name, const google::protobuf::Descriptor& table_desc, const google::protobuf::Descriptor& config_desc) {
         // 加载对应文件
         std::filesystem::path pbb_path = pbb_dir_path_;
         pbb_path /= module_name;
-        pbb_path /= config_name + ".pbb";
+        pbb_path /= config_desc.name() + ".pbb";
         auto data = ReadPbb(pbb_path);
         if (!data) {
-            logger().Err("ReadPbb failed: {}.{}.", module_name, config_name);
+            logger().Err("ReadPbb failed: {}.", config_desc.full_name());
             return false;
         }
 
-        auto config_msg = imillion().proto_mgr().NewMessage(*config_module->config_msg_desc);
+        auto config_msg = imillion().proto_mgr().NewMessage(table_desc);
         if (!config_msg) {
-            logger().Err("NewMessage failed: {}.{}.", module_name, config_name);
+            logger().Err("NewMessage failed: {}.", table_desc.full_name());
             return false;
         }
 
         if (!config_msg->ParseFromArray(data->data(), data->size())) {
-            logger().Err("ParseFromString failed: {}.{}.", module_name, config_name);
+            logger().Err("ParseFromString failed: {}.", table_desc.full_name());
             return false;
         }
-        logger().Debug("Config '{}.{}' debug string:\n {}", module_name, config_name, config_msg->DebugString());
+        logger().Debug("Config '{}.{}' debug string:\n {}", config_desc.full_name(), config_desc.full_name(), config_msg->DebugString());
 
-        config_module->config_map[config_name] = ProtoMsgShared(config_msg.release());
+        config_map_[&config_desc] = ProtoMsgShared(config_msg.release());
 
         return true;
     }
 
 private:
     std::string pbb_dir_path_;
-    std::unordered_map<std::string, ConfigModule> module_map_;
+    std::unordered_map<const google::protobuf::Descriptor*, ConfigShared> config_map_;
 };
 
 extern "C" MILLION_CONFIG_API bool MillionModuleInit(IMillion* imillion) {
