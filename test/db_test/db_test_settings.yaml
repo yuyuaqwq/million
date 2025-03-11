@@ -5,11 +5,11 @@ worker_mgr:
 io_context_mgr:
     num: 1
 
-module:
-    dirs: 
-        - ../../build/lib/Debug
-    loads:
-        - db
+module_mgr:
+    - 
+        dir: ../../build/lib/Debug
+        loads:
+            - db
 
 timer:
     ms_per_tick: 10

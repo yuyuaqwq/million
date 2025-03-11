@@ -5,11 +5,11 @@ worker_mgr:
 io_context_mgr:
     num: 1
 
-module:
-    dirs: 
-        - ../../lib/Debug
-    loads:
-        # - gateway
+module_mgr:
+    - 
+        dir: ../../lib/Debug
+        loads:
+            # - gateway
 
 timer:
     ms_per_tick: 10

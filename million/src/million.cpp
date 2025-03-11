@@ -132,37 +132,48 @@ bool Million::Init(std::string_view settings_path) {
         }
 
 
-        std::cout << "[module] [info] load 'module' settings." << std::endl;
+        std::cout << "[module] [info] load 'module_mgr' settings." << std::endl;
 
-        const auto& module_settings = settings["module"];
-        if (!module_settings) {
-            std::cerr << "[module] [error] cannot find 'module'." << std::endl;
+        const auto& module_mgr_settings = settings["module_mgr"];
+        if (!module_mgr_settings) {
+            std::cerr << "[module] [error] cannot find 'module_mgr'." << std::endl;
             break;
         }
-        if (!module_settings["dirs"]) {
-            std::cerr << "[module] [error] cannot find 'module.dirs'." << std::endl;
-            break;
-        }
-        auto module_dirs = module_settings["dirs"].as<std::vector<std::string>>();
-        module_mgr_ = std::make_unique<ModuleMgr>(this, module_dirs);
-        const auto& loads = module_settings["loads"];
-        if (loads) {
-            bool success = true;
-            for (auto name_settings : loads) {
+
+        module_mgr_ = std::make_unique<ModuleMgr>(this);
+
+        bool success = true;
+        for (const auto& module_settings : module_mgr_settings) {
+            if (!module_settings["dir"]) {
+                std::cerr << "[module] [error] cannot find 'dir' in module settings." << std::endl;
+                continue; // 跳过当前模块，继续下一个
+            }
+
+            std::string module_dir = module_settings["dir"].as<std::string>();
+
+            const auto& loads = module_settings["loads"];
+            if (!loads) {
+                continue;
+            }
+            for (const auto& name_settings : loads) {
                 auto name = name_settings.as<std::string>();
-                if (!module_mgr_->Load(name)) {
-                    std::cerr << "[module] [error] load module '" << name << "' failed." << std::endl;
+                if (!module_mgr_->Load(module_dir, name)) {
+                    std::cerr << "[module] [error] load module '" << module_dir <<  " -> " << name << "' failed." << std::endl;
                     success = false;
                     break;
                 }
                 else {
-                    std::cout << "[module] [info] load module '" << name << "' success." << std::endl;
+                    std::cout << "[module] [info] load module '" << module_dir << " -> " << name << "' success." << std::endl;
                 }
             }
             if (!success) {
                 break;
             }
         }
+        if (!success) {
+            break;
+        }
+
         module_mgr_->Init();
 
         std::cout << "[million] [info] init success." << std::endl;

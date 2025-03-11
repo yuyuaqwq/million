@@ -5,11 +5,11 @@ worker_mgr:
 io_context_mgr:
     num: 1
 
-module:
-    dirs: 
-        - ../../build/lib/Debug
-    loads:
-        - cluster
+module_mgr:
+    - 
+        dir: ../../build/lib/Debug
+        loads:
+            - cluster
 
 timer:
     ms_per_tick: 10

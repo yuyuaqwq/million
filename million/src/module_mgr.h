@@ -11,9 +11,9 @@ namespace million {
 class Million;
 class ModuleMgr {
 public:
-    ModuleMgr(Million* million, const std::vector<std::string>& module_dirs);
+    ModuleMgr(Million* million);
 
-    bool Load(const std::string& module_name);
+    bool Load(const std::string& module_dir, const std::string& module_name);
 
     bool Init();
     void Start();
@@ -21,7 +21,6 @@ public:
 
 private:
     Million* million_;
-    std::vector<std::string> module_dirs_;
     std::unordered_map<std::string, std::unique_ptr<Module>> modules_;
 };
 
