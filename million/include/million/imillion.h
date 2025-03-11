@@ -33,7 +33,6 @@ public:
     bool Init(std::string_view settings_path);
     void Start();
 
-    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice);
     template <typename IServiceT, typename ...Args>
     std::optional<ServiceHandle> NewService(Args&&... args) {
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
@@ -41,6 +40,12 @@ public:
         if (!handle) return std::nullopt;
         StartService(*handle);
         return handle;
+    }
+
+    template <typename IServiceT, typename ...Args>
+    std::optional<ServiceHandle> NewServiceWithoutStart(Args&&... args) {
+        auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
+        return AddService(std::move(iservice));
     }
 
     std::optional<SessionId> StartService(const ServiceHandle& service);
@@ -65,7 +70,7 @@ public:
 
     template <typename MsgT>
     SessionAwaiter<MsgT> Recv(SessionId session_id) {
-        // 0��ʾĬ�ϳ�ʱʱ��
+        // 0表示默认超时时间
         return SessionAwaiter<MsgT>(session_id, 0, false);
     }
 
@@ -76,7 +81,7 @@ public:
 
     template <typename MsgT>
     SessionAwaiter<MsgT> RecvOrNull(SessionId session_id) {
-        // 0��ʾĬ�ϳ�ʱʱ��
+        // 0表示默认超时时间
         return SessionAwaiter<MsgT>(session_id, 0, true);
     }
 
@@ -94,6 +99,9 @@ public:
     Logger& logger();
     ProtoMgr& proto_mgr();
     Million& impl() { return *impl_; }
+
+private:
+    std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice);
 
 private:
     Million* impl_;
