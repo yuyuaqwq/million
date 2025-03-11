@@ -16,21 +16,23 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
+        imillion().SetServiceName(service_handle(), "AgentMgrService");
+        return true;
+    }
+
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) {
         auto handle = imillion().GetServiceByName("NodeMgrService");
         if (!handle) {
-            logger().Err("NodeMgrService not found.");
-            return false;
+            TaskAbort("NodeMgrService not found.");
         }
         node_mgr_ = *handle;
 
         handle = imillion().GetServiceByName("GatewayService");
         if (!handle) {
-            logger().Err("GatewayService not found.");
-            return false;
+            TaskAbort("GatewayService not found.");
         }
         gateway_ = *handle;
-
-        imillion().SetServiceName(service_handle(), "AgentMgrService");
+        co_return nullptr;
     }
 
     MILLION_MSG_DISPATCH(AgentMgrService);
