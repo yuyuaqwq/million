@@ -173,7 +173,6 @@ bool Million::Init(std::string_view settings_path) {
         if (!success) {
             break;
         }
-
         module_mgr_->Init();
 
         std::cout << "[million] [info] init success." << std::endl;
