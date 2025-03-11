@@ -30,31 +30,35 @@ public:
         , server_(imillion) { }
 
     virtual bool OnInit() override {
-        // logger().Info("Gateway init start.");
+        return true;
+    }
+
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) {
+        const auto& settings = imillion().YamlSettings();
+        const auto& gateway_settings = settings["gateway"];
+        if (!gateway_settings) {
+            TaskAbort("cannot find 'gateway'.");
+            co_return nullptr;
+        }
+        const auto& port_settings = gateway_settings["port"];
+        if (!port_settings) {
+            TaskAbort("cannot find 'gateway.port'.");
+            co_return nullptr;
+        }
+        const auto port = port_settings.as<uint16_t>();
+
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
             Send<GatewayTcpConnectionMsg>(service_handle(), std::move(std::static_pointer_cast<UserSession>(connection)));
             co_return;
-        });
+            });
         server_.set_on_msg([this](auto&& connection, auto&& packet) -> asio::awaitable<void> {
             Send<GatewayTcpRecvPacketMsg>(service_handle(), std::move(std::static_pointer_cast<UserSession>(connection)), std::move(packet));
             co_return;
-        });
-        const auto& settings = imillion().YamlSettings();
-        const auto& gateway_settings = settings["gateway"];
-        if (!gateway_settings) {
-            logger().Err("cannot find 'gateway'.");
-            return false;
-        }
-        const auto& port_settings = gateway_settings["port"];
-        if (!port_settings)
-        {
-            logger().Err("cannot find 'gateway.port'.");
-            return false;
-        }
-        server_.Start(port_settings.as<uint16_t>());
-        // logger().Info("Gateway init success.");
-        return true;
+            });
+        server_.Start(port);
+        logger().Info("Gateway start.");
+        co_return nullptr;
     }
 
     MILLION_MSG_DISPATCH(GatewayService);
