@@ -29,6 +29,11 @@ public:
     static inline const std::string_view port = "6379";
 
     virtual bool OnInit() override {
+        imillion().EnableSeparateWorker(service_handle());
+        return true;
+    }
+
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) override {
         try {
             // 创建 Redis 对象并连接到 Redis 服务器
             redis_.emplace(std::format("tcp://{}:{}", host, port));
@@ -36,13 +41,10 @@ public:
         catch (const sw::redis::Error& e) {
             logger().Err("Redis error:{}", e.what());
         }
-
-        imillion().EnableSeparateWorker(service_handle());
-
-        return true;
+        co_return nullptr;
     }
 
-    virtual void OnExit() override {
+    virtual void OnStop(ServiceHandle sender, SessionId session_id) override {
         redis_ = std::nullopt;
     }
 

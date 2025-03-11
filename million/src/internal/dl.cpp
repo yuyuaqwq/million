@@ -47,7 +47,6 @@ bool Dll::Loaded() const {
     return handle_;
 }
 
-
 void* Dll::GetFuncAddr(std::string_view func_name) const {
     if (handle_ == nullptr) {
         return nullptr;

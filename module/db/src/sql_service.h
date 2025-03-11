@@ -33,16 +33,19 @@ public:
     static inline const std::string_view password = "You_Yu666";
 
     virtual bool OnInit() override {
+        imillion().EnableSeparateWorker(service_handle());
+        return true;
+    }
+
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) override {
         try {
             sql_ = soci::session(soci::mysql, std::format("db={} user={} password={} host={}", db, user, password, host));
         }
         catch (const soci::mysql_soci_error& e) {
             logger().Err("MySQL error : {}", e.what());
-        } 
+        }
 
-        imillion().EnableSeparateWorker(service_handle());
-
-        return true;
+        co_return nullptr;
     }
 
     virtual void OnStop(ServiceHandle sender, SessionId session_id) override {

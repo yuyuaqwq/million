@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <million/imillion.h>
+#include <jssvr/jssvr.h>
 
 #include <yaml-cpp/yaml.h>
 
@@ -50,9 +51,14 @@ int main() {
     if (!test_app->Init("jssvr_test_settings.yaml")) {
         return 0;
     }
-    test_app->NewService<TestService>();
+    auto svr = test_app->NewService<TestService>();
     
     test_app->Start();
+
+    auto js_svr = million::jssvr::NewJsService(test_app.get(), "test2");
+    test_app->Send<ss::test::LoginReq>(*svr, *js_svr, "test_value");
+
+    // test_app->Send(*service, *service, );
 
     std::this_thread::sleep_for(std::chrono::seconds(10000));
 

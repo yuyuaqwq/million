@@ -25,6 +25,3 @@
 [submodule "third_party/quickjs/quickjs"]
 	path = third_party/quickjs/quickjs
 	url = git@github.com:quickjs-ng/quickjs.git
-[submodule "third_party/websocketpp"]
-	path = third_party/websocketpp
-	url = https://github.com/zaphoyd/websocketpp.git

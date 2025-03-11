@@ -93,7 +93,6 @@ Task<> EventMgr::Call(const ServiceHandle& caller, MsgPtr msg, std::function<boo
 			}
 		}
 		++service_iter;
-		
 	}
 }
 
