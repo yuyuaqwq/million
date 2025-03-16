@@ -20,8 +20,7 @@ bool Logger::Init() {
 
 void Logger::Log(const ServiceHandle& sender, const std::source_location& source, LogLevel level, const std::string& msg) {
     if (!is_bind_) {
-        switch (level)
-        {
+        switch (level) {
             case LogLevel::kTrace:
                 std::cout << "[million] [init] [trace] " << "[" << source.function_name() << "] " << msg << std::endl;
                 break;
