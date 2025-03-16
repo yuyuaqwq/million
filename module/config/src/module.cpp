@@ -33,8 +33,6 @@ public:
             return false;
         }
 
-       
-
         const auto& pbb_dir_path_settings = config_settings["pbb_dir_path"];
         if (!pbb_dir_path_settings) {
             logger().Err("cannot find 'config.pbb_dir_path'.");

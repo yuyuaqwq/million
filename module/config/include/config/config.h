@@ -39,20 +39,13 @@ private:
 };
 
 template <typename ConfigMsgT>
-static Task<ConfigWeak<ConfigMsgT>> QueryConfig(ServiceHandle config_service) {
-    auto service_lock = config_service.lock();
-    if (!service_lock) {
-        TaskAbort("Invalid config service.");
-    }
-
-    auto iservice = config_service.get_ptr(service_lock);
-
+static Task<ConfigWeak<ConfigMsgT>> QueryConfig(IService* this_service, ServiceHandle config_service) {
     auto desc = ConfigMsgT::GetDescriptor();
     if (!desc) {
         TaskAbort("Unable to obtain descriptor: {}.", typeid(ConfigMsgT).name());
     }
 
-    auto msg = co_await iservice->Call<ConfigQueryMsg>(config_service, *desc, std::nullopt);
+    auto msg = co_await this_service->Call<ConfigQueryMsg>(config_service, *desc, std::nullopt);
     if (!msg->config) {
         TaskAbort("Query config failed: {}.", desc->full_name());
     }
@@ -82,11 +75,11 @@ private:
 };
 
 template <typename ConfigWeakT, typename ConfigMsgT = ConfigWeakT::ConfigMsgType>
-static Task<ConfigShared<ConfigMsgT>> MakeConfigLock(ServiceHandle config_service, ConfigWeakT* config_weak) {
+static Task<ConfigShared<ConfigMsgT>> MakeConfigLock(IService* this_service, ServiceHandle config_service, ConfigWeakT* config_weak) {
     auto config_lock = config_weak->lock();
     while (!config_lock) {
         // 提升失败，说明配置有更新，重新拉取
-        auto weak = co_await QueryConfig<ConfigMsgT>(config_service);
+        auto weak = co_await QueryConfig<ConfigMsgT>(this_service, config_service);
         config_lock = weak.lock();
     }
     co_return ConfigShared<ConfigMsgT>(std::move(config_lock));
