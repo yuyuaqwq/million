@@ -56,7 +56,7 @@ public:
         }
         for (auto module_settings : modules_settings) {
             auto module_name = module_settings.as<std::string>();
-            auto table_msg_name = namespace_ + "." + module_name + ".Table";
+            auto table_msg_name = namespace_ + ".config." + module_name + ".Table";
             auto table_desc = imillion().proto_mgr().FindMessageTypeByName(table_msg_name);
             if (!table_desc) {
                 logger().Err("Unable to find message desc: top_msg_name -> {}.", table_msg_name);
