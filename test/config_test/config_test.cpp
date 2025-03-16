@@ -46,8 +46,10 @@ public:
     MILLION_MSG_DISPATCH(TestService);
 
     MILLION_MSG_HANDLE(Test1Msg, msg) {
-        auto config = config::GetConfig(*example::ExampleKV::GetDescriptor(), &example_kv_config_);
+        auto config = co_await config::MakeConfigLock<config::example::ExampleKV>(config_service_, &example_kv_config_);
+
         logger().Info("ExampleKV:\n{}", config->DebugString());
+
         co_return nullptr;
     }
 
