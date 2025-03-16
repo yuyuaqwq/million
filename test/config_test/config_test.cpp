@@ -11,7 +11,7 @@ MILLION_MODULE_INIT();
 
 namespace protobuf = google::protobuf;
 namespace config = million::config;
-namespace example = million::example;
+namespace example = config::example;
 
 MILLION_MSG_DEFINE_EMPTY(, Test1Msg)
 

@@ -10,7 +10,7 @@ if "%1"=="" (
 cd .\table\%1
 
 :: 设置基本参数，使用传入的参数替代
-set PACKAGE=million.%1
+set PACKAGE=million.config.%1
 set TOOL_PATH=..\..\tool\tabtoy
 set INDEX_PATH=Index.xlsx
 set PROTO_OUT=../../../proto/config/%1.proto
