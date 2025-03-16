@@ -33,7 +33,7 @@ public:
     }
 
     virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
-        example_kv_config_ = co_await config::QueryConfig<config::example::Table>(this, config_service_);
+        example_kv_config_ = co_await config::QueryConfig<config::example::Table, config::example::ExampleKV>(this, config_service_);
 
         Send<Test1Msg>(service_handle());
 
@@ -53,7 +53,7 @@ public:
 
 private:
     million::ServiceHandle config_service_;
-    million::config::ConfigWeak<config::example::Table> example_kv_config_;
+    million::config::ConfigWeak<config::example::Table, config::example::ExampleKV> example_kv_config_;
 };
 
 class TestApp : public million::IMillion {
