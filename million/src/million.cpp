@@ -132,11 +132,11 @@ bool Million::Init(std::string_view settings_path) {
         }
 
 
-        std::cout << "[module] [info] load 'module_mgr' settings." << std::endl;
+        std::cout << "[module_mgr] [info] load 'module_mgr' settings." << std::endl;
 
         const auto& module_mgr_settings = settings["module_mgr"];
         if (!module_mgr_settings) {
-            std::cerr << "[module] [error] cannot find 'module_mgr'." << std::endl;
+            std::cerr << "[module_mgr] [error] cannot find 'module_mgr'." << std::endl;
             break;
         }
 
@@ -145,7 +145,7 @@ bool Million::Init(std::string_view settings_path) {
         bool success = true;
         for (const auto& module_settings : module_mgr_settings) {
             if (!module_settings["dir"]) {
-                std::cerr << "[module] [error] cannot find 'dir' in module settings." << std::endl;
+                std::cerr << "[module_mgr] [error] cannot find 'dir' in module settings." << std::endl;
                 continue; // 跳过当前模块，继续下一个
             }
 
@@ -158,12 +158,12 @@ bool Million::Init(std::string_view settings_path) {
             for (const auto& name_settings : loads) {
                 auto name = name_settings.as<std::string>();
                 if (!module_mgr_->Load(module_dir, name)) {
-                    std::cerr << "[module] [error] load module '" << module_dir <<  " -> " << name << "' failed." << std::endl;
+                    std::cerr << "[module_mgr] [error] load module '" << module_dir <<  " -> " << name << "' failed." << std::endl;
                     success = false;
                     break;
                 }
                 else {
-                    std::cout << "[module] [info] load module '" << module_dir << " -> " << name << "' success." << std::endl;
+                    std::cout << "[module_mgr] [info] load module '" << module_dir << " -> " << name << "' success." << std::endl;
                 }
             }
             if (!success) {
@@ -173,7 +173,10 @@ bool Million::Init(std::string_view settings_path) {
         if (!success) {
             break;
         }
-        module_mgr_->Init();
+        if (!module_mgr_->Init()) {
+            std::cerr << "[module_mgr] [error] module mgr init failed." << std::endl;
+            break;
+        }
 
         std::cout << "[million] [info] init success." << std::endl;
 
