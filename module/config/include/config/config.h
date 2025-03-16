@@ -5,7 +5,7 @@
 namespace million {
 namespace config {
 
-#define MILLION_CONFIG_SERVICE_NAME "ConsigService"
+constexpr const char* kConfigServiceName = "ConfigService";
 
 using ConfigWeak = ProtoMsgWeak;
 using ConfigShared = ProtoMsgShared;

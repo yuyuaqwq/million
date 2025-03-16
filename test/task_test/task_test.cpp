@@ -26,7 +26,7 @@ class TestService : public million::IService {
         //auto duratioin = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         //std::cout << "Elapsed time: " << duratioin.count() << "ms:" << j << " seconds\n";
 
-        /*auto handle = imillion().GetServiceByName(MILLION_GATEWAY_SERVICE_NAME);
+        /*auto handle = imillion().GetServiceByName(million::gateway::kGatewayServiceName);
         if (!handle) {
             logger().Err("GatewayService not found.");
             return false;

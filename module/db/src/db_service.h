@@ -51,16 +51,16 @@ public:
     virtual bool OnInit() override {
         logger().Info("DbService Init");
 
-        imillion().SetServiceName(service_handle(), MILLION_DB_SERVICE_NAME);
+        imillion().SetServiceName(service_handle(), kDbServiceName);
 
-        auto handle = imillion().GetServiceByName(MILLION_SQL_SERVICE_NAME);
+        auto handle = imillion().GetServiceByName(kSqlServiceName);
         if (!handle) {
             logger().Err("Unable to find SqlService.");
             return false;
         }
         sql_service_ = *handle;
 
-        handle = imillion().GetServiceByName(MILLION_CACHE_SERVICE_NAME);
+        handle = imillion().GetServiceByName(kCacheServiceName);
         if (!handle) {
             logger().Err("Unable to find SqlService.");
             return false;

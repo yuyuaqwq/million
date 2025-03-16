@@ -30,7 +30,7 @@ public:
         , server_(imillion) { }
 
     virtual bool OnInit() override {
-        return imillion().SetServiceName(service_handle(), MILLION_GATEWAY_SERVICE_NAME);
+        return imillion().SetServiceName(service_handle(), kGatewayServiceName);
     }
 
 

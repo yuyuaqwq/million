@@ -13,7 +13,7 @@
 namespace million {
 namespace db {
 
-#define MILLION_DB_SERVICE_NAME "DbService"
+constexpr const char* kDbServiceName = "DbService";
 
 using BatchId = uint64_t;
 constexpr BatchId kBatchIdNull = 0;

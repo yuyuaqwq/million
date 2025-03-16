@@ -18,7 +18,7 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        imillion().SetServiceName(service_handle(), MILLION_AGENT_MGR_SERVICE_NAME);
+        imillion().SetServiceName(service_handle(), kAgentMgrServiceName);
         return true;
     }
 
@@ -29,7 +29,7 @@ public:
         }
         node_mgr_ = *handle;
 
-        handle = imillion().GetServiceByName(MILLION_GATEWAY_SERVICE_NAME);
+        handle = imillion().GetServiceByName(gateway::kGatewayServiceName);
         if (!handle) {
             TaskAbort("GatewayService not found.");
         }

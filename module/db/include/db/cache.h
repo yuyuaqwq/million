@@ -11,6 +11,7 @@
 namespace million {
 namespace db {
 
+    constexpr const char* kCacheServiceName = "CacheService";
 #define MILLION_CACHE_SERVICE_NAME "CacheService"
 
 MILLION_MSG_DEFINE(MILLION_DB_API, CacheGetMsg, (std::string_view) primary_key, (DbRow*) db_row, (bool) success)

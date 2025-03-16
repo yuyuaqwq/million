@@ -22,7 +22,7 @@ public:
         : Base(imillion) {}
 
     virtual bool OnInit() override {
-        auto handle = imillion().GetServiceByName(MILLION_CONFIG_SERVICE_NAME);
+        auto handle = imillion().GetServiceByName(config::kConfigServiceName);
         if (!handle) {
             logger().Err("Unable to find ConfigService.");
             return false;

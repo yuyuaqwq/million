@@ -13,7 +13,7 @@
 namespace million {
 namespace cluster {
 
-#define MILLION_CLUSTER_SERVICE_NAME "ClusterService"
+constexpr const char* kClusterServiceName = "ClusterService";
 
 using NodeName = std::string;
 
