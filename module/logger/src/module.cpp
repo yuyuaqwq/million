@@ -82,12 +82,15 @@ public:
 
         spdlog::flush_every(std::chrono::seconds(flush_every));
 
-        imillion().logger().BindService(service_handle());
-
         return true;
     }
 
-    virtual void OnStop(ServiceHandle sender, SessionId session_id) override  {
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) override {
+        imillion().logger().BindService(service_handle());
+        co_return nullptr;
+    }
+
+    virtual void OnStop(ServiceHandle sender, SessionId session_id) override {
         logger_->flush();
     }
 
