@@ -40,6 +40,7 @@ bool ModuleMgr::Init() {
             return false;
         }
     }
+    return true;
 }
 
 void ModuleMgr::Start() {
