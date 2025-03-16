@@ -990,7 +990,7 @@ private:
             return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
         }
 
-        service->logger().Log(std::source_location::current(), ::million::Logger::Level::kDebug, info);
+        service->logger().Log(std::source_location::current(), ::million::Logger::LogLevel::kDebug, info);
         JS_FreeCString(ctx, info);
 
         return JS_UNDEFINED;
@@ -1012,7 +1012,7 @@ private:
             return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
         }
 
-        service->logger().Log(std::source_location::current(), ::million::Logger::Level::kInfo, info);
+        service->logger().Log(std::source_location::current(), ::million::Logger::LogLevel::kInfo, info);
         JS_FreeCString(ctx, info);
 
         return JS_UNDEFINED;
@@ -1034,7 +1034,7 @@ private:
             return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
         }
 
-        service->logger().Log(std::source_location::current(), ::million::Logger::Level::kWarn, info);
+        service->logger().Log(std::source_location::current(), ::million::Logger::LogLevel::kWarn, info);
         JS_FreeCString(ctx, info);
 
         return JS_UNDEFINED;
@@ -1056,7 +1056,7 @@ private:
             return JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
         }
 
-        service->logger().Log(std::source_location::current(), ::million::Logger::Level::kErr, info);
+        service->logger().Log(std::source_location::current(), ::million::Logger::LogLevel::kErr, info);
         JS_FreeCString(ctx, info);
 
         return JS_UNDEFINED;

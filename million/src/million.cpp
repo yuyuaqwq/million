@@ -50,93 +50,93 @@ bool Million::Init(std::string_view settings_path) {
     settings_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(settings_path)));
     const auto& settings = *settings_;
 
-    std::cout << "[million] [info] init start." << std::endl;
-
     do {
+        logger_ = std::make_unique<Logger>(this);
+        if (!logger_->Init()) {
+            std::cerr << "[million] logger init failed." << std::endl;
+            break;
+        }
+
+        logger_->Info("init start.");
+
         service_mgr_ = std::make_unique<ServiceMgr>(this);
         session_mgr_ = std::make_unique<SessionMgr>(this);
-        logger_ = std::make_unique<Logger>(this);
 
-        std::cout << "[worker_mgr] [info] load 'worker_mgr' settings." << std::endl;
+        logger_->Info("load 'worker_mgr' settings.");
 
         const auto& worker_mgr_settings = settings["worker_mgr"];
         if (!worker_mgr_settings) {
-            std::cerr << "[worker_mgr] [error] cannot find 'worker_mgr'." << std::endl;
+            logger_->Err("cannot find 'worker_mgr'.");
             return false;
         }
         if (!worker_mgr_settings["num"]) {
-            std::cerr << "[worker_mgr] [error] cannot find 'worker_mgr.num'." << std::endl;
+            logger_->Err("cannot find 'worker_mgr.num'.");
             return false;
         }
         auto worker_num = worker_mgr_settings["num"].as<size_t>();
         worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
 
 
-        std::cout << "[io_context_mgr] [info] load 'io_context_mgr' settings." << std::endl;
+        logger_->Info("load 'io_context_mgr' settings.");
 
         const auto& io_context_mgr_settings = settings["io_context_mgr"];
         if (!io_context_mgr_settings) {
-            std::cerr << "[io_context_mgr] [error] cannot find 'io_context_mgr'." << std::endl;
+            logger_->Err("cannot find 'io_context_mgr'.");
             break;
         }
         if (!io_context_mgr_settings["num"]) {
-            std::cerr << "[io_context_mgr] [error] cannot find 'io_context_mgr.num'." << std::endl;
+            logger_->Err("cannot find 'io_context_mgr.num'.");
             break;
         }
         auto io_context_num = io_context_mgr_settings["num"].as<size_t>();
         io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
 
 
-        std::cout << "[session_monitor] [info] load 'session_monitor' settings." << std::endl;
+        logger_->Info("load 'session_monitor' settings.");
 
         const auto& session_monitor_settings = settings["session_monitor"];
         if (!session_monitor_settings) {
-            std::cerr << "[session_monitor] [error] cannot find 'session_monitor_settings'." << std::endl;
+            logger_->Err("cannot find 'session_monitor_settings'.");
             break;
         }
         if (!session_monitor_settings["s_per_tick"]) {
-            std::cerr << "[session_monitor] [error] cannot find 'session_monitor_settings.s_per_tick'." << std::endl;
+            logger_->Err("cannot find 'session_monitor_settings.s_per_tick'.");
             break;
         }
         auto tick_s = session_monitor_settings["s_per_tick"].as<uint32_t>();
         if (!session_monitor_settings["timeout_tick"]) {
-            std::cerr << "[session_monitor] [error] cannot find 'session_monitor_settings.timeout_tick'." << std::endl;
+            logger_->Err("cannot find 'session_monitor_settings.timeout_tick'.");
             break;
         }
         auto timeout_s = session_monitor_settings["timeout_tick"].as<uint32_t>();
         session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
 
 
-        std::cout << "[timer] [info] load 'proto_mgr' settings." << std::endl;
+        logger_->Info("load 'proto_mgr' settings.");
 
         proto_mgr_ = std::make_unique<ProtoMgr>();
         proto_mgr_->Init();
 
 
-        std::cout << "[timer] [info] load 'timer' settings." << std::endl;
+        logger_->Info("load 'timer' settings.");
 
         const auto& timer_settings = settings["timer"];
         if (!timer_settings) {
-            std::cerr << "[timer] [error] cannot find 'timer'." << std::endl;
+            logger_->Err("cannot find 'timer'.");
             break;
         }
         if (!timer_settings["ms_per_tick"]) {
-            std::cerr << "[timer] [error] cannot find 'timer.ms_per_tick'." << std::endl;
+            logger_->Err("cannot find 'timer.ms_per_tick'.");
             break;
         }
         auto ms_per_tick = timer_settings["ms_per_tick"].as<uint32_t>();
         timer_ = std::make_unique<Timer>(this, ms_per_tick);
 
-        if (!logger_->Init()) {
-            break;
-        }
-
-
-        std::cout << "[module_mgr] [info] load 'module_mgr' settings." << std::endl;
+        logger_->Info("load 'module_mgr' settings.");
 
         const auto& module_mgr_settings = settings["module_mgr"];
         if (!module_mgr_settings) {
-            std::cerr << "[module_mgr] [error] cannot find 'module_mgr'." << std::endl;
+            logger_->Err("cannot find 'module_mgr'.");
             break;
         }
 
@@ -145,7 +145,7 @@ bool Million::Init(std::string_view settings_path) {
         bool success = true;
         for (const auto& module_settings : module_mgr_settings) {
             if (!module_settings["dir"]) {
-                std::cerr << "[module_mgr] [error] cannot find 'dir' in module settings." << std::endl;
+                logger_->Err("cannot find 'dir' in module settings.");
                 continue; // 跳过当前模块，继续下一个
             }
 
@@ -158,12 +158,12 @@ bool Million::Init(std::string_view settings_path) {
             for (const auto& name_settings : loads) {
                 auto name = name_settings.as<std::string>();
                 if (!module_mgr_->Load(module_dir, name)) {
-                    std::cerr << "[module_mgr] [error] load module '" << module_dir <<  " -> " << name << "' failed." << std::endl;
+                    logger_->Err("load module '{} -> {}' failed.", module_dir, name);
                     success = false;
                     break;
                 }
                 else {
-                    std::cout << "[module_mgr] [info] load module '" << module_dir << " -> " << name << "' success." << std::endl;
+                    logger_->Info("load module '{} -> {}' success.", module_dir, name);
                 }
             }
             if (!success) {
@@ -174,18 +174,18 @@ bool Million::Init(std::string_view settings_path) {
             break;
         }
         if (!module_mgr_->Init()) {
-            std::cerr << "[module_mgr] [error] module mgr init failed." << std::endl;
+            logger_->Err("module mgr init failed.");
             break;
         }
 
-        std::cout << "[million] [info] init success." << std::endl;
+        logger_->Info("init success.");
 
         stage_ = kReady;
         return true;
 
     } while (false);
 
-    std::cout << "[million] [error] init failed." << std::endl;
+    logger_->Err("init failed.");
     return false;
 }
 

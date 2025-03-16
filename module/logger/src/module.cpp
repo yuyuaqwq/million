@@ -18,13 +18,13 @@ MILLION_MODULE_INIT();
 namespace million {
 namespace logger {
 
-static_assert(static_cast<uint32_t>(Logger::kTrace) == spdlog::level::level_enum::trace);
-static_assert(static_cast<uint32_t>(Logger::kDebug) == spdlog::level::level_enum::debug);
-static_assert(static_cast<uint32_t>(Logger::kInfo) == spdlog::level::level_enum::info);
-static_assert(static_cast<uint32_t>(Logger::kWarn) == spdlog::level::level_enum::warn);
-static_assert(static_cast<uint32_t>(Logger::kErr) == spdlog::level::level_enum::err);
-static_assert(static_cast<uint32_t>(Logger::kCritical) == spdlog::level::level_enum::critical);
-static_assert(static_cast<uint32_t>(Logger::kOff) == spdlog::level::level_enum::off);
+static_assert(static_cast<uint32_t>(Logger::LogLevel::kTrace) == spdlog::level::level_enum::trace);
+static_assert(static_cast<uint32_t>(Logger::LogLevel::kDebug) == spdlog::level::level_enum::debug);
+static_assert(static_cast<uint32_t>(Logger::LogLevel::kInfo) == spdlog::level::level_enum::info);
+static_assert(static_cast<uint32_t>(Logger::LogLevel::kWarn) == spdlog::level::level_enum::warn);
+static_assert(static_cast<uint32_t>(Logger::LogLevel::kErr) == spdlog::level::level_enum::err);
+static_assert(static_cast<uint32_t>(Logger::LogLevel::kCritical) == spdlog::level::level_enum::critical);
+static_assert(static_cast<uint32_t>(Logger::LogLevel::kOff) == spdlog::level::level_enum::off);
 
 class LoggerService : public IService {
 public:
@@ -34,21 +34,21 @@ public:
     virtual bool OnInit() override {
         auto& settings = imillion().YamlSettings();
 
-        std::cout << "[logger] [info] load 'logger' settings." << std::endl;
+        logger().Info("load 'logger' settings.");
 
         auto logger_settings = settings["logger"];
         if (!logger_settings) {
-            std::cerr << "[logger] [error] cannot find 'logger'." << std::endl;
+            logger().Err("cannot find 'logger'.");
             return false;
         }
         if (!logger_settings["log_file"]) {
-            std::cerr << "[logger] [error] cannot find 'logger.log_file'." << std::endl;
+            logger().Err("cannot find 'logger.log_file'.");
             return false;
         }
         auto log_file = logger_settings["log_file"].as<std::string>();
 
         if (!logger_settings["level"]) {
-            std::cerr << "[logger] [error] cannot find 'logger.level'." << std::endl;
+            logger().Err("cannot find 'logger.level'.");
             return false;
         }
         auto level_str = logger_settings["level"].as<std::string>();
