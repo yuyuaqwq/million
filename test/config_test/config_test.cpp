@@ -5,7 +5,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <config/config.h>
-#include <config/example.pb.h>
+#include <config/cfg_example.pb.h>
 
 MILLION_MODULE_INIT();
 
