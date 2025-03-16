@@ -165,7 +165,7 @@ private:
 
 private:
     std::string pbb_dir_path_;
-    std::unordered_map<const google::protobuf::Descriptor*, ConfigShared> config_map_;
+    std::unordered_map<const google::protobuf::Descriptor*, ProtoMsgShared> config_map_;
 };
 
 extern "C" MILLION_CONFIG_API bool MillionModuleInit(IMillion* imillion) {

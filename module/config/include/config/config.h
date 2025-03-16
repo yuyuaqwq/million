@@ -7,47 +7,89 @@ namespace config {
 
 constexpr const char* kConfigServiceName = "ConfigService";
 
-using ConfigWeak = ProtoMsgWeak;
-using ConfigShared = ProtoMsgShared;
-
-MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryMsg, (const google::protobuf::Descriptor&) config_desc, (std::optional<ConfigWeak>) config)
+MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryMsg, (const google::protobuf::Descriptor&) config_desc, (std::optional<ProtoMsgWeak>) config)
 MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigUpdateMsg, (const google::protobuf::Descriptor&) config_desc)
 
 
 template <typename ConfigMsgT>
-class ConfigLock {
+class ConfigWeak : public noncopyable {
 public:
-    explicit ConfigLock(ConfigShared&& config_shared)
-        : config_shared_(std::move(config_shared)) {}
+    using ConfigMsgType = ConfigMsgT;
 
-    const ConfigMsgT* operator->() const {
-        return static_cast<const ConfigMsgT*>(config_shared_.get());
+public:
+    ConfigWeak() = default;
+    ~ConfigWeak() = default;
+
+    explicit ConfigWeak(ProtoMsgWeak&& msg_weak)
+        : weak_(std::move(msg_weak)) {}
+
+    ConfigWeak(ConfigWeak&& other)
+        : weak_(std::move(other.weak_)) {}
+
+    void operator=(ConfigWeak&& other) {
+        weak_ = std::move(other.weak_);
+    }
+
+    auto lock() const {
+        return weak_.lock();
     }
 
 private:
-    ConfigShared config_shared_;
+    ProtoMsgWeak weak_;
 };
 
 template <typename ConfigMsgT>
-static Task<ConfigLock<ConfigMsgT>> MakeConfigLock(ServiceHandle config_service, ConfigWeak* config_weak) {
+static Task<ConfigWeak<ConfigMsgT>> QueryConfig(ServiceHandle config_service) {
+    auto service_lock = config_service.lock();
+    if (!service_lock) {
+        TaskAbort("Invalid config service.");
+    }
+
+    auto iservice = config_service.get_ptr(service_lock);
+
+    auto desc = ConfigMsgT::GetDescriptor();
+    if (!desc) {
+        TaskAbort("Unable to obtain descriptor: {}.", typeid(ConfigMsgT).name());
+    }
+
+    auto msg = co_await iservice->Call<ConfigQueryMsg>(config_service, *desc, std::nullopt);
+    if (!msg->config) {
+        TaskAbort("Query config failed: {}.", desc->full_name());
+    }
+    co_return ConfigWeak<ConfigMsgT>(std::move(*msg->config));
+}
+
+template <typename ConfigMsgT>
+class ConfigShared : public noncopyable {
+public:
+    explicit ConfigShared(ProtoMsgShared&& msg_shared)
+        : shared_(std::move(msg_shared)) {}
+
+    const ConfigMsgT* operator->() const {
+        return static_cast<const ConfigMsgT*>(shared_.get());
+    }
+
+    ConfigShared(ConfigShared&& other)
+        : shared_(std::move(other.shared_)) {}
+
+    void operator=(ConfigShared&& other) {
+        shared_ = std::move(other.shared_);
+    }
+
+
+private:
+    ProtoMsgShared shared_;
+};
+
+template <typename ConfigWeakT, typename ConfigMsgT = ConfigWeakT::ConfigMsgType>
+static Task<ConfigShared<ConfigMsgT>> MakeConfigLock(ServiceHandle config_service, ConfigWeakT* config_weak) {
     auto config_lock = config_weak->lock();
     while (!config_lock) {
         // 提升失败，说明配置有更新，重新拉取
-        auto service_lock = config_service.lock();
-        auto iservice = config_service.get_ptr(service_lock);
-
-        auto desc = ConfigMsgT::GetDescriptor();
-        if (!desc) {
-            TaskAbort("unable to obtain descriptor: {}.", typeid(ConfigMsgT).name());
-        }
-
-        auto msg = co_await iservice->Call<ConfigQueryMsg>(config_service, *desc, std::nullopt);
-        if (!msg->config) {
-            TaskAbort("query config failed: {}.", desc->full_name());
-        }
-        config_lock = msg->config->lock();
+        auto weak = co_await QueryConfig<ConfigMsgT>(config_service);
+        config_lock = weak.lock();
     }
-    co_return ConfigLock<ConfigMsgT>(std::move(config_lock));
+    co_return ConfigShared<ConfigMsgT>(std::move(config_lock));
 }
 
 } // namespace config
