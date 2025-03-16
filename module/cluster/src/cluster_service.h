@@ -32,6 +32,8 @@ public:
         , server_(imillion) { }
 
     virtual bool OnInit() override {
+        imillion().SetServiceName(service_handle(), MILLION_CLUSTER_SERVICE_NAME);
+
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
             Send<ClusterTcpConnectionMsg>(service_handle(), std::move(std::static_pointer_cast<NodeSession>(connection)));

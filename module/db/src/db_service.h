@@ -51,14 +51,16 @@ public:
     virtual bool OnInit() override {
         logger().Info("DbService Init");
 
-        auto handle = imillion().GetServiceByName("SqlService");
+        imillion().SetServiceName(service_handle(), MILLION_DB_SERVICE_NAME);
+
+        auto handle = imillion().GetServiceByName(MILLION_SQL_SERVICE_NAME);
         if (!handle) {
             logger().Err("Unable to find SqlService.");
             return false;
         }
         sql_service_ = *handle;
 
-        handle = imillion().GetServiceByName("CacheService");
+        handle = imillion().GetServiceByName(MILLION_CACHE_SERVICE_NAME);
         if (!handle) {
             logger().Err("Unable to find SqlService.");
             return false;

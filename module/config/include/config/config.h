@@ -5,6 +5,8 @@
 namespace million {
 namespace config {
 
+#define MILLION_CONFIG_SERVICE_NAME "ConsigService"
+
 using ConfigWeak = ProtoMsgWeak;
 using ConfigShared = ProtoMsgShared;
 

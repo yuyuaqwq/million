@@ -33,6 +33,7 @@ public:
     static inline const std::string_view password = "You_Yu666";
 
     virtual bool OnInit() override {
+        imillion().SetServiceName(service_handle(), MILLION_SQL_SERVICE_NAME);
         imillion().EnableSeparateWorker(service_handle());
         return true;
     }

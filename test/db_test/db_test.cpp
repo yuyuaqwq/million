@@ -25,14 +25,14 @@ public:
 
     virtual bool OnInit() override {
         
-        auto handle = imillion().GetServiceByName("DbService");
+        auto handle = imillion().GetServiceByName(MILLION_DB_SERVICE_NAME);
         if (!handle) {
             logger().Err("Unable to find DbService.");
             return false;
         }
         db_service_ = *handle;
 
-        handle = imillion().GetServiceByName("SqlService");
+        handle = imillion().GetServiceByName(MILLION_SQL_SERVICE_NAME);
         if (!handle) {
             logger().Err("Unable to find SqlService.");
             return false;
@@ -64,7 +64,7 @@ public:
         co_await res2->db_row->Commit(this, db_service_, true);
 
 
-        // auto handle = imillion().GetServiceByName("SqlService");
+        // auto handle = imillion().GetServiceByName(MILLION_SQL_SERVICE_NAME);
         // co_await Call<db::SqlInsertMsg>(*handle, &row);
 
         co_return nullptr;

@@ -26,7 +26,7 @@ public:
     virtual bool OnInit() override {
         imillion().SetServiceName(service_handle(), "TestService");
 
-        auto handle = imillion().GetServiceByName("ClusterService");
+        auto handle = imillion().GetServiceByName(MILLION_CLUSTER_SERVICE_NAME);
         if (!handle) {
             return false;
         }

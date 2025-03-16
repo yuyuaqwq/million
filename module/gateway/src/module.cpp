@@ -17,7 +17,6 @@ extern "C" MILLION_GATEWAY_API bool MillionModuleInit(IMillion* imillion) {
     if (!handle) {
         return false;
     }
-    imillion->SetServiceName(*handle, "GatewayService");
 
     return true;
 }

@@ -17,7 +17,6 @@ extern "C" MILLION_CLUSTER_API bool MillionModuleInit(IMillion* imillion) {
     if (!handle) {
         return false;
     }
-    imillion->SetServiceName(*handle, "ClusterService");
     return true;
 }
 

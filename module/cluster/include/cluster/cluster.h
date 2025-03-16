@@ -13,6 +13,8 @@
 namespace million {
 namespace cluster {
 
+#define MILLION_CLUSTER_SERVICE_NAME "ClusterService"
+
 using NodeName = std::string;
 
 MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterSendMsg, (ServiceName) src_service, (NodeName) target_node, (ServiceName) target_service, (ProtoMsgUnique) msg)

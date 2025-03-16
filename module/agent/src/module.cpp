@@ -17,7 +17,7 @@ extern "C" MILLION_AGENT_API bool MillionModuleInit(IMillion* imillion) {
 }
 
 extern "C" MILLION_AGENT_API void MillionModuleStart(IMillion* imillion) {
-    auto handle = imillion->GetServiceByName("AgentMgrService");
+    auto handle = imillion->GetServiceByName(MILLION_AGENT_MGR_SERVICE_NAME);
     if (handle) {
         imillion->StartService(*handle);
     }

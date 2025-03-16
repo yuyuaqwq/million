@@ -22,19 +22,16 @@ extern "C" MILLION_DB_API bool MillionModuleInit(IMillion* imillion) {
     if (!cache_service_opt) {
         return false;
     }
-    imillion->SetServiceName(*cache_service_opt, "CacheService");
 
     auto sql_service_opt = imillion->NewService<SqlService>();
     if (!sql_service_opt) {
         return false;
     }
-    imillion->SetServiceName(*sql_service_opt, "SqlService");
 
     auto db_service_opt = imillion->NewService<DbService>();
     if (!db_service_opt) {
         return false;
     }
-    imillion->SetServiceName(*db_service_opt, "DbService");
 
     return true;
 }

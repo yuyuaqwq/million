@@ -11,6 +11,8 @@
 namespace million {
 namespace db {
 
+#define MILLION_CACHE_SERVICE_NAME "CacheService"
+
 MILLION_MSG_DEFINE(MILLION_DB_API, CacheGetMsg, (std::string_view) primary_key, (DbRow*) db_row, (bool) success)
 MILLION_MSG_DEFINE(MILLION_DB_API, CacheSetMsg, (const DbRow&) db_row, (uint64_t) old_db_version, (bool) success)
 MILLION_MSG_DEFINE(MILLION_DB_API, CacheDelMsg, (const DbRow&) db_row, (bool) success)

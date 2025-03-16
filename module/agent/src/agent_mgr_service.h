@@ -4,6 +4,8 @@
 
 #include <million/imillion.h>
 
+#include <gateway/gateway.h>
+
 #include <agent/api.h>
 #include <agent/agent.h>
 
@@ -16,7 +18,7 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        imillion().SetServiceName(service_handle(), "AgentMgrService");
+        imillion().SetServiceName(service_handle(), MILLION_AGENT_MGR_SERVICE_NAME);
         return true;
     }
 
@@ -27,7 +29,7 @@ public:
         }
         node_mgr_ = *handle;
 
-        handle = imillion().GetServiceByName("GatewayService");
+        handle = imillion().GetServiceByName(MILLION_GATEWAY_SERVICE_NAME);
         if (!handle) {
             TaskAbort("GatewayService not found.");
         }

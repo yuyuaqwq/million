@@ -22,7 +22,7 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        if (!imillion().SetServiceName(service_handle(), "ConfigService")) {
+        if (!imillion().SetServiceName(service_handle(), MILLION_CONFIG_SERVICE_NAME)) {
             return false;
         }
 

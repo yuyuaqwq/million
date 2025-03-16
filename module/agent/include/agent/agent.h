@@ -9,6 +9,9 @@
 namespace million {
 namespace agent {
 
+#define MILLION_AGENT_SERVICE_NAME "AgentService"
+#define MILLION_AGENT_MGR_SERVICE_NAME "AgentMgrService"
+
 MILLION_MSG_DEFINE(MILLION_AGENT_API, NewAgentMsg, (SessionId) user_session_id, (std::optional<ServiceHandle>) agent_handle);
 
 class AgentService;

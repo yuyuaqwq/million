@@ -30,8 +30,9 @@ public:
         , server_(imillion) { }
 
     virtual bool OnInit() override {
-        return true;
+        return imillion().SetServiceName(service_handle(), MILLION_GATEWAY_SERVICE_NAME);
     }
+
 
     virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) {
         const auto& settings = imillion().YamlSettings();

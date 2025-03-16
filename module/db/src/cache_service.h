@@ -29,6 +29,7 @@ public:
     static inline const std::string_view port = "6379";
 
     virtual bool OnInit() override {
+        imillion().SetServiceName(service_handle(), MILLION_CACHE_SERVICE_NAME);
         imillion().EnableSeparateWorker(service_handle());
         return true;
     }
