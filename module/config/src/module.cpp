@@ -156,7 +156,7 @@ private:
             logger().Err("ParseFromString failed: {}.", table_desc.full_name());
             return false;
         }
-        logger().Debug("Config '{}.{}' debug string:\n {}", config_desc.full_name(), config_desc.full_name(), config_msg->DebugString());
+        // logger().Debug("Config '{}.{}' debug string:\n {}", config_desc.full_name(), config_desc.full_name(), config_msg->DebugString());
 
         config_map_[&config_desc] = ProtoMsgShared(config_msg.release());
 
