@@ -10,6 +10,10 @@
 #include <million/logger.h>
 #include <million/proto_mgr.h>
 
+#ifdef WIN32
+#undef StartService
+#endif
+
 namespace YAML {
 
 class Node;

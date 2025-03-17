@@ -14,6 +14,10 @@
 #include "io_context_mgr.h"
 #include "timer.h"
 
+#ifdef WIN32
+#undef StartService
+#endif
+
 MILLION_MODULE_INIT();
 
 namespace million {
@@ -146,7 +150,7 @@ bool Million::Init(std::string_view settings_path) {
         for (const auto& module_settings : module_mgr_settings) {
             if (!module_settings["dir"]) {
                 logger_->Err("cannot find 'dir' in module settings.");
-                continue; // Ìø¹ýµ±Ç°Ä£¿é£¬¼ÌÐøÏÂÒ»¸ö
+                continue; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°Ä£ï¿½é£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
             }
 
             std::string module_dir = module_settings["dir"].as<std::string>();
@@ -215,7 +219,6 @@ std::optional<ServiceShared> Million::AddService(std::unique_ptr<IService> iserv
 }
 
 
-#undef StartService
 std::optional<SessionId> Million::StartService(const ServiceShared& service) {
     return service_mgr_->StartService(service);
 }

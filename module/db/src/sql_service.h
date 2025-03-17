@@ -7,7 +7,9 @@
 
 #include <soci/soci.h>
 #include <soci/mysql/soci-mysql.h>
+#ifdef WIN32
 #undef GetMessage
+#endif
 
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
