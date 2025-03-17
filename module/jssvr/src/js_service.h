@@ -138,9 +138,10 @@ public:
 class JsService : public million::IService {
 public:
     using Base = IService;
-    JsService(million::IMillion* imillion, JsModuleService* js_module_service)
+    JsService(million::IMillion* imillion, JsModuleService* js_module_service, const std::string& package)
         : Base(imillion)
-        , js_module_service_(js_module_service) {}
+        , js_module_service_(js_module_service)
+        , package_(package) {}
 
     using Base::Base;
 
@@ -198,18 +199,25 @@ public:
         }
     }
 
-    virtual million::Task<million::MsgPtr> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr msg) {
-        if (msg.IsType<JsServiceLoadScriptMsg>()) {
-            auto load_msg = msg.GetMsg<JsServiceLoadScriptMsg>();
-            if (!load_msg) {
-                co_return nullptr;
-            }
-            LoadScript(load_msg->package);
-            co_return nullptr;
-        }
+    virtual bool OnInit() override {
+        LoadScript(package_);
+        return true;
+    }
+
+    virtual million::Task<million::MsgPtr> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr with_msg) override {
+        co_return co_await CallFunc(std::move(with_msg), "onStart");
     }
 
     virtual million::Task<million::MsgPtr> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr msg) override {
+        co_return co_await CallFunc(std::move(msg), "onMsg");
+    }
+
+    virtual million::Task<million::MsgPtr> OnStop(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr with_msg) override {
+        co_return co_await CallFunc(std::move(with_msg), "onStop");
+    }
+
+
+    million::Task<million::MsgPtr> CallFunc(million::MsgPtr msg, std::string_view func_name) {
         if (!msg.IsProtoMsg()) {
             // 只分发proto msg
             co_return nullptr;
@@ -231,7 +239,7 @@ public:
             space = JS_GetModuleNamespace(js_ctx_, js_main_module);
             if (!JsCheckException(space)) break;
 
-            onMsg_func = JS_GetPropertyStr(js_ctx_, space, "onMsg");
+            onMsg_func = JS_GetPropertyStr(js_ctx_, space, func_name.data());
             if (!JsCheckException(onMsg_func)) break;
             if (!JS_IsFunction(js_ctx_, onMsg_func)) break;
 
@@ -1216,6 +1224,7 @@ private:
 private:
     JsModuleService* js_module_service_;
 
+    std::string package_;
     std::unordered_map<std::string, JSValue> modules_;
     JSRuntime* js_rt_ = nullptr;
     JSContext* js_ctx_ = nullptr;

@@ -32,43 +32,44 @@ public:
 
     MsgPtr(std::nullptr_t) {}
 
-    MsgPtr(MsgPtr&&) = default;
+    MsgPtr(MsgPtr&& other) noexcept 
+        : msg_ptr_(std::move(other.msg_ptr_)){}
 
-    void operator=(MsgPtr&& rv) noexcept {
-        msg_ptr_ = std::move(rv.msg_ptr_);
+    void operator=(MsgPtr&& other) noexcept {
+        msg_ptr_ = std::move(other.msg_ptr_);
     }
 
     template <typename T>
         requires is_proto_msg_v<T>
-    MsgPtr(std::unique_ptr<T>&& rv) noexcept
-        : msg_ptr_(ProtoMsgUnique(std::move(rv))) {}
+    MsgPtr(std::unique_ptr<T>&& other) noexcept
+        : msg_ptr_(ProtoMsgUnique(std::move(other))) {}
 
     template <typename T>
         requires is_proto_msg_v<T>
-    void operator=(std::unique_ptr<T>&& rv) noexcept {
-        msg_ptr_ = ProtoMsgUnique(std::move(rv));
+    void operator=(std::unique_ptr<T>&& other) noexcept {
+        msg_ptr_ = ProtoMsgUnique(std::move(other));
     }
 
     template <typename T>
         requires is_cpp_msg_v<T>
-    MsgPtr(std::unique_ptr<T>&& rv) noexcept
-        : msg_ptr_(CppMsgUnique(std::move(rv))) {}
+    MsgPtr(std::unique_ptr<T>&& other) noexcept
+        : msg_ptr_(CppMsgUnique(std::move(other))) {}
 
     template <typename T>
         requires is_cpp_msg_v<T>
-    void operator=(std::unique_ptr<T>&& rv) noexcept {
-        msg_ptr_ = CppMsgUnique(std::move(rv));
+    void operator=(std::unique_ptr<T>&& other) noexcept {
+        msg_ptr_ = CppMsgUnique(std::move(other));
     }
 
     template <typename T>
         requires is_proto_msg_v<T> || is_cpp_msg_v<T>
-    MsgPtr(std::shared_ptr<const T>&& rv) noexcept
-        : msg_ptr_(std::move(rv)){}
+    MsgPtr(std::shared_ptr<const T>&& other) noexcept
+        : msg_ptr_(std::move(other)){}
 
     template <typename T>
         requires is_proto_msg_v<T> || is_cpp_msg_v<T>
-    void operator=(std::shared_ptr<const T>&& rv) noexcept {
-        msg_ptr_ = std::move(rv);
+    void operator=(std::shared_ptr<const T>&& other) noexcept {
+        msg_ptr_ = std::move(other);
     }
 
     template <typename T>

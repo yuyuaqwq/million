@@ -20,12 +20,12 @@ std::optional<ServiceHandle> NewJsService(IMillion* imillion, std::string_view p
     auto lock = s_js_module_service.lock();
     auto ptr = s_js_module_service.get_ptr<JsModuleService>(lock);
 
-    auto handle = imillion->NewServiceWithoutStart<JsService>(ptr);
+    auto handle = imillion->NewService<JsService>(ptr, std::string(package));
     if (!handle) {
         return std::nullopt;
     }
 
-    imillion->StartService<JsServiceLoadScriptMsg>(*handle, std::string(package));
+    // imillion->StartService<JsServiceLoadScriptMsg>(*handle, std::string(package));
     return std::nullopt;
 }
 
