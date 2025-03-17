@@ -55,6 +55,17 @@ public:
     std::optional<SessionId> StartService(const ServiceHandle& service, MsgPtr with_msg);
     std::optional<SessionId> StopService(const ServiceHandle& service, MsgPtr with_msg);
 
+    template <typename MsgT>
+    SessionAwaiter<MsgT> StartServiceSync(const ServiceHandle& service, MsgPtr with_msg) {
+        auto session_id = StartService(service, std::move(with_msg));
+        return Recv<MsgT>(session_id.value());
+    }
+    template <typename MsgT>
+    SessionAwaiter<MsgT> StopServiceSync(const ServiceHandle& service, MsgPtr with_msg) {
+        auto session_id = StopService(service, std::move(with_msg));
+        return Recv<MsgT>(session_id.value());
+    }
+
     bool SetServiceName(const ServiceHandle& service, const ServiceName& name);
     std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
 
