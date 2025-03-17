@@ -45,8 +45,9 @@ public:
         co_return nullptr;
     }
 
-    virtual void OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+    virtual Task<MsgPtr> OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         redis_ = std::nullopt;
+        co_return nullptr;
     }
 
     MILLION_MSG_DISPATCH(CacheService);

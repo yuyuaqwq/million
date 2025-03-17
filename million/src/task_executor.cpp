@@ -8,14 +8,14 @@
 #include <million/logger.h>
 #include <million/exception.h>
 
-#include "service.h"
+#include "service_impl.h"
 #include "service_mgr.h"
 #include "session_monitor.h"
 #include "million.h"
 
 namespace million {
 
-TaskExecutor::TaskExecutor(Service* service)
+TaskExecutor::TaskExecutor(ServiceImpl* service)
     : service_(service) {}
 
 TaskExecutor::~TaskExecutor() = default;

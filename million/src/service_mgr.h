@@ -7,7 +7,7 @@
 #include <list>
 #include <queue>
 
-#include "service.h"
+#include "service_impl.h"
 
 namespace million {
 
@@ -26,14 +26,14 @@ public:
     ServiceId AllocServiceId();
 
     std::optional<ServiceShared> AddService(std::unique_ptr<IService> service);
-    void DeleteService(Service* service);
+    void DeleteService(ServiceImpl* service);
 
     std::optional<SessionId> StartService(const ServiceShared& service, MsgPtr with_msg);
     std::optional<SessionId> StopService(const ServiceShared& service, MsgPtr with_msg);
     std::optional<SessionId> ExitService(const ServiceShared& service);
 
-    void PushService(Service* service);
-    Service* PopService();
+    void PushService(ServiceImpl* service);
+    ServiceImpl* PopService();
 
     bool SetServiceName(const ServiceShared& handle, const ServiceName& name);
     std::optional<ServiceShared> GetServiceByName(const ServiceName& name);
@@ -61,7 +61,7 @@ private:
 
     std::mutex service_queue_mutex_;
     bool run_ = true;
-    std::queue<Service*> service_queue_;
+    std::queue<ServiceImpl*> service_queue_;
     std::condition_variable service_queue_cv_;
 };
 

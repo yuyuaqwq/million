@@ -27,10 +27,10 @@ struct TaskElement {
     Task<MsgPtr> task;
 };
 
-class Service;
+class ServiceImpl;
 class TaskExecutor {
 public:
-    TaskExecutor(Service* service);
+    TaskExecutor(ServiceImpl* service);
     ~TaskExecutor();
 
     // 尝试调度
@@ -54,7 +54,7 @@ private:
     TaskElement* RePush(SessionId old_id, SessionId new_id);
 
 private:
-    Service* service_;
+    ServiceImpl* service_;
     std::unordered_map<SessionId, TaskElement> tasks_;
 };
 

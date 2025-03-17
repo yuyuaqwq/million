@@ -89,10 +89,6 @@ public:
         return true;
     }
 
-    virtual void OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
-        
-    }
-
     MILLION_MSG_DISPATCH(ConfigService);
 
     MILLION_MUT_MSG_HANDLE(ConfigQueryMsg, msg) {

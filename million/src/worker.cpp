@@ -4,7 +4,7 @@
 
 #include "million.h"
 #include "service_mgr.h"
-#include "service.h"
+#include "service_impl.h"
 
 namespace million {
 
@@ -28,7 +28,7 @@ void Worker::Start() {
                 service_mgr.PushService(service);
                 continue;
             }
-            if (service->IsExit()) {
+            if (service->IsExited()) {
                 // 服务已退出，销毁
                 service_mgr.DeleteService(service);
             }

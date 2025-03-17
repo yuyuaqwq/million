@@ -90,8 +90,9 @@ public:
         co_return nullptr;
     }
 
-    virtual void OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+    virtual Task<MsgPtr> OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         logger_->flush();
+        co_return nullptr;
     }
 
     MILLION_MSG_DISPATCH(LoggerService);

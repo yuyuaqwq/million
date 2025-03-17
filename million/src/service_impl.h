@@ -17,7 +17,7 @@
 namespace million {
 
 class ServiceMgr;
-class Service : noncopyable {
+class ServiceImpl : noncopyable {
 public:
     struct MsgElement{
         ServiceShared sender;
@@ -26,8 +26,8 @@ public:
     };
 
 public:
-    Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
-    ~Service();
+    ServiceImpl(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
+    ~ServiceImpl();
 
     bool PushMsg(const ServiceShared& sender, SessionId session_id, MsgPtr msg);
     std::optional<MsgElement> PopMsg();
@@ -46,7 +46,7 @@ public:
     ServiceShared shared() const { return *iter_; }
 
     auto iter() const { return iter_; }
-    void set_iter(std::list<std::shared_ptr<Service>>::iterator iter) { iter_ = iter; }
+    void set_iter(std::list<std::shared_ptr<ServiceImpl>>::iterator iter) { iter_ = iter; }
 
     bool in_queue() const { return in_queue_; }
     void set_in_queue(bool in_queue) { in_queue_ = in_queue; }
@@ -60,12 +60,13 @@ public:
     bool IsReady() const;
     bool IsStarting() const;
     bool IsRunning() const;
-    bool IsStop() const;
-    bool IsExit() const;
+    bool IsStopping() const;
+    bool IsStopped() const;
+    bool IsExited() const;
 
 private:
     void SeparateThreadHandle();
-    std::optional<Service::MsgElement> PopMsgWithLock();
+    std::optional<ServiceImpl::MsgElement> PopMsgWithLock();
 
     void ReplyMsg(TaskElement* ele);
 
@@ -74,19 +75,21 @@ private:
     std::list<ServiceShared>::iterator iter_;
 
     // std::optional<Task<>> on_start_task_;
-    enum Stage {
+    enum class ServiceStage {
         // 已就绪，可以开启服务
         kReady,
-        // 开启中，只能处理OnStart相关的消息及调度OnStart协程
+        // 启动中，只能处理OnStart相关的消息及调度OnStart协程
         kStarting,
         // 运行中，可以接收及处理任何消息、调度已有协程
         kRunning,
-        // 关闭后，不会开启新协程，不会调度已有协程，会触发已有协程的超时
-        kStop,
+        // 停止中，只能处理OnStart相关的消息及调度OnStart协程
+        kStopping,
+        // 已停止，不会开启新协程，不会调度已有协程，会触发已有协程的超时
+        kStopped,
         // 退出后，不会开启新协程，不会调度已有协程，不会触发已有协程的超时(希望执行完所有协程再退出，则需要在Stop状态等待所有协程处理完毕，即使用TaskExecutorIsEmpty)
-        kExit,
+        kExited,
     };
-    Stage stage_ = kReady;
+    ServiceStage stage_ = ServiceStage::kReady;
 
     bool in_queue_ = false;
 

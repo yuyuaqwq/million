@@ -1,4 +1,4 @@
-#include "service.h"
+#include "service_impl.h"
 
 #include <cassert>
 
@@ -10,24 +10,22 @@
 
 namespace million {
 
-
-Service::Service(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
+ServiceImpl::ServiceImpl(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
     : service_mgr_(service_mgr)
     , iservice_(std::move(iservice))
     , excutor_(this) {}
 
-Service::~Service() = default;
+ServiceImpl::~ServiceImpl() = default;
 
 
-
-bool Service::PushMsg(const ServiceShared& sender, SessionId session_id, MsgPtr msg) {
+bool ServiceImpl::PushMsg(const ServiceShared& sender, SessionId session_id, MsgPtr msg) {
     assert(msg);
     {
         auto lock = std::lock_guard(msgs_mutex_);
         if (!IsReady() && !IsStarting() && !IsRunning() && !msg.IsType<ServiceExitMsg>()) {
             return false;
         }
-        Service::MsgElement ele{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
+        ServiceImpl::MsgElement ele{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
         msgs_.emplace(std::move(ele));
     }
     if (HasSeparateWorker()) {
@@ -36,27 +34,27 @@ bool Service::PushMsg(const ServiceShared& sender, SessionId session_id, MsgPtr 
     return true;
 }
 
-std::optional<Service::MsgElement> Service::PopMsg() {
+std::optional<ServiceImpl::MsgElement> ServiceImpl::PopMsg() {
     auto lock = std::lock_guard(msgs_mutex_);
     return PopMsgWithLock();
 }
 
-bool Service::MsgQueueIsEmpty() {
+bool ServiceImpl::MsgQueueIsEmpty() {
     std::lock_guard guard(msgs_mutex_);
     return msgs_.empty();
 }
 
-void Service::ProcessMsg(MsgElement ele) {
+void ServiceImpl::ProcessMsg(MsgElement ele) {
     auto& sender = ele.sender;
     auto session_id = ele.session_id;
     auto& msg = ele.msg;
 
     if (msg.IsType<ServiceStartMsg>()) {
-        if (!IsReady() && !IsStop()) {
+        if (!IsReady() && !IsStopped()) {
             // 不是可开启服务的状态
             return;
         }
-        stage_ = kStarting;
+        stage_ = ServiceStage::kStarting;
         if (!SessionIsSendId(session_id)) {
             service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
             return;
@@ -70,7 +68,7 @@ void Service::ProcessMsg(MsgElement ele) {
         auto ele = excutor_.AddTask(TaskElement(std::move(sender), session_id, std::move(task)));
         if (ele) {
             // 已完成OnStart
-            stage_ = kRunning;
+            stage_ = ServiceStage::kRunning;
             ReplyMsg(&*ele);
         }
         return;
@@ -80,33 +78,31 @@ void Service::ProcessMsg(MsgElement ele) {
             // 不是可关闭服务的状态
             return;
         }
-        stage_ = kStop;
-        try {
-            if (!SessionIsSendId(session_id)) {
-                service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
-                return;
-            }
-            auto stop_msg = msg.GetMutMsg<ServiceStopMsg>();
-            if (!stop_msg) {
-                service_mgr_->million().logger().Err("Get service stop msg err.");
-                return;
-            }
-            iservice_->OnStop(ServiceHandle(sender), session_id, std::move(stop_msg->with_msg));
+        stage_ = ServiceStage::kStopping;
+        if (!SessionIsSendId(session_id)) {
+            service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
+            return;
         }
-        catch (const std::exception& e) {
-            service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", e.what());
+        auto stop_msg = msg.GetMutMsg<ServiceStopMsg>();
+        if (!stop_msg) {
+            service_mgr_->million().logger().Err("Get service stop msg err.");
+            return;
         }
-        catch (...) {
-            service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", "unknown exception.");
+        auto task = iservice_->OnStop(ServiceHandle(sender), session_id, std::move(stop_msg->with_msg));
+        auto ele = excutor_.AddTask(TaskElement(std::move(sender), session_id, std::move(task)));
+        if (ele) {
+            // 已完成OnStop
+            stage_ = ServiceStage::kStopped;
+            ReplyMsg(&*ele);
         }
         return;
     }
     else if (msg.IsType<ServiceExitMsg>()) {
-        if (!IsStop()) {
+        if (!IsStopped()) {
             // 不是可退出服务的状态
             return;
         }
-        stage_ = kExit;
+        stage_ = ServiceStage::kExited;
         try {
             if (!SessionIsSendId(session_id)) {
                 service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
@@ -127,9 +123,9 @@ void Service::ProcessMsg(MsgElement ele) {
     if (msg.IsType<SessionTimeoutMsg>()) {
         auto msg_ptr = msg.GetMsg<SessionTimeoutMsg>();
         auto&& [task, has_exception] = excutor_.TaskTimeout(msg_ptr->timeout_id);
-        if (IsStarting() || has_exception) {
-            // 异常退出的OnStart，默认回收当前服务
-            stage_ = kStop;
+        if (IsStarting() || IsStopping() || has_exception) {
+            // 异常退出的OnStart/OnStop，默认回收当前服务
+            stage_ = ServiceStage::kStopped;
             Exit();
         }
         return;
@@ -147,7 +143,24 @@ void Service::ProcessMsg(MsgElement ele) {
         }
 
         // 已完成OnStart
-        stage_ = kRunning;
+        stage_ = ServiceStage::kRunning;
+        ReplyMsg(&std::get<TaskElement>(res));
+        return;
+    }
+
+    if (IsStopping()) {
+        // OnStop未完成，只能尝试调度已有协程
+        if (!SessionIsReplyId(session_id)) {
+            return;
+        }
+        session_id = SessionReplyToSendId(session_id);
+        auto res = excutor_.TrySchedule(session_id, std::move(msg));
+        if (!std::holds_alternative<TaskElement>(res)) {
+            return;
+        }
+
+        // 已完成OnStop
+        stage_ = ServiceStage::kStopped;
         ReplyMsg(&std::get<TaskElement>(res));
         return;
     }
@@ -181,9 +194,9 @@ void Service::ProcessMsg(MsgElement ele) {
     }
 }
 
-void Service::ProcessMsgs(size_t count) {
+void ServiceImpl::ProcessMsgs(size_t count) {
     // 如果处理了Exit，则直接抛弃所有消息及未完成的任务(包括未触发超时的任务)
-    for (size_t i = 0; i < count && !IsExit(); ++i) {
+    for (size_t i = 0; i < count && !IsExited(); ++i) {
         auto msg_opt = PopMsg();
         if (!msg_opt) {
             break;
@@ -192,23 +205,23 @@ void Service::ProcessMsgs(size_t count) {
     }
 }
 
-bool Service::TaskExecutorIsEmpty() const {
+bool ServiceImpl::TaskExecutorIsEmpty() const {
     return excutor_.TaskQueueIsEmpty();
 }
 
-void Service::EnableSeparateWorker() {
+void ServiceImpl::EnableSeparateWorker() {
     separate_worker_ = std::make_unique<SeparateWorker>([this] {
         SeparateThreadHandle();
     });
 }
 
-bool Service::HasSeparateWorker() const {
+bool ServiceImpl::HasSeparateWorker() const {
     return separate_worker_.operator bool();
 }
 
-void Service::SeparateThreadHandle() {
+void ServiceImpl::SeparateThreadHandle() {
     while (true) {
-        std::optional<Service::MsgElement> msg;
+        std::optional<ServiceImpl::MsgElement> msg;
         {
             auto lock = std::unique_lock(msgs_mutex_);
             while (msgs_.empty()) {
@@ -218,7 +231,7 @@ void Service::SeparateThreadHandle() {
         }
         do {
             ProcessMsg(std::move(*msg));
-            if (IsExit()) {
+            if (IsExited()) {
                 // 服务已退出，销毁
                 service_mgr_->DeleteService(this);
                 break;
@@ -227,7 +240,7 @@ void Service::SeparateThreadHandle() {
     }
 }
 
-std::optional<Service::MsgElement> Service::PopMsgWithLock() {
+std::optional<ServiceImpl::MsgElement> ServiceImpl::PopMsgWithLock() {
     if (msgs_.empty()) {
         return std::nullopt;
     }
@@ -243,7 +256,7 @@ std::optional<Service::MsgElement> Service::PopMsgWithLock() {
     return msg;
 }
 
-void Service::ReplyMsg(TaskElement* ele) {
+void ServiceImpl::ReplyMsg(TaskElement* ele) {
     if (ele->task.has_exception()) {
         return;
     }
@@ -261,38 +274,41 @@ void Service::ReplyMsg(TaskElement* ele) {
 }
 
 
-std::optional<SessionId> Service::Start(MsgPtr msg) {
+std::optional<SessionId> ServiceImpl::Start(MsgPtr msg) {
     return iservice_->Send<ServiceStartMsg>(iservice_->service_handle(), std::move(msg));
 }
 
-std::optional<SessionId> Service::Stop(MsgPtr msg) {
+std::optional<SessionId> ServiceImpl::Stop(MsgPtr msg) {
     return iservice_->Send<ServiceStopMsg>(iservice_->service_handle(), std::move(msg));
 }
 
-std::optional<SessionId> Service::Exit() {
+std::optional<SessionId> ServiceImpl::Exit() {
     return iservice_->Send<ServiceExitMsg>(iservice_->service_handle());
 }
 
 
-bool Service::IsReady() const {
-    return stage_ == kReady;
+bool ServiceImpl::IsReady() const {
+    return stage_ == ServiceStage::kReady;
 }
 
-bool Service::IsStarting() const {
-    return stage_ == kStarting;
+bool ServiceImpl::IsStarting() const {
+    return stage_ == ServiceStage::kStarting;
 }
 
-bool Service::IsRunning() const {
-    return stage_ == kRunning;
+bool ServiceImpl::IsRunning() const {
+    return stage_ == ServiceStage::kRunning;
 }
 
-bool Service::IsStop() const {
-    return stage_ == kStop;
+bool ServiceImpl::IsStopping() const {
+    return stage_ == ServiceStage::kStopping;
 }
 
-bool Service::IsExit() const {
-    return stage_ == kExit;
+bool ServiceImpl::IsStopped() const {
+    return stage_ == ServiceStage::kStopped;
 }
 
+bool ServiceImpl::IsExited() const {
+    return stage_ == ServiceStage::kExited;
+}
 
 } // namespace million

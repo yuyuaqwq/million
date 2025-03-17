@@ -14,9 +14,9 @@ using ServiceId = uint64_t;
 using ServiceName = std::string;
 
 class IService;
-class Service;
-using ServiceShared = std::shared_ptr<Service>;
-using ServiceWeak = std::weak_ptr<Service>;
+class ServiceImpl;
+using ServiceShared = std::shared_ptr<ServiceImpl>;
+using ServiceWeak = std::weak_ptr<ServiceImpl>;
 
 class MILLION_API ServiceHandle {
 public:

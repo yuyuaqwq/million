@@ -123,14 +123,14 @@ protected:
     virtual bool OnInit() { return true; }
     virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) { co_return nullptr; }
     virtual Task<MsgPtr> OnMsg(ServiceHandle sender, SessionId session_id, MsgPtr msg) { co_return nullptr; }
-    virtual void OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) { }
+    virtual Task<MsgPtr> OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) { co_return nullptr; }
     virtual void OnExit() { }
 
 private:
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
 
 private:
-    friend class Service;
+    friend class ServiceImpl;
     friend class ServiceMgr;
 
     IMillion* imillion_;

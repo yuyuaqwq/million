@@ -70,10 +70,6 @@ public:
         return true;
     }
 
-    virtual void OnStop(::million::ServiceHandle sender, ::million::SessionId session_id, MsgPtr with_msg) override {
-        
-    }
-
     MILLION_MSG_DISPATCH(DbService);
 
     MILLION_MUT_MSG_HANDLE(DbRowTickSyncMsg, msg) {
