@@ -228,7 +228,7 @@ public:
         JSModuleDef* js_main_module = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(js_main_module_));
 
         JSValue space = JS_UNDEFINED;
-        JSValue onMsg_func = JS_UNDEFINED;
+        JSValue func = JS_UNDEFINED;
         JSValue par[2] = { JS_UNDEFINED };
         ServiceFuncContext func_ctx;
         JSValue promise = JS_UNDEFINED;
@@ -239,9 +239,9 @@ public:
             space = JS_GetModuleNamespace(js_ctx_, js_main_module);
             if (!JsCheckException(space)) break;
 
-            onMsg_func = JS_GetPropertyStr(js_ctx_, space, func_name.data());
-            if (!JsCheckException(onMsg_func)) break;
-            if (!JS_IsFunction(js_ctx_, onMsg_func)) break;
+            func = JS_GetPropertyStr(js_ctx_, space, func_name.data());
+            if (!JsCheckException(func)) break;
+            if (!JS_IsFunction(js_ctx_, func)) break;
 
             JS_SetContextOpaque(js_ctx_, &func_ctx);
 
@@ -251,7 +251,7 @@ public:
 
             par[0] = JS_NewString(js_ctx_, proto_msg->GetDescriptor()->full_name().c_str());
             par[1] = ProtoMsgToJsObj(*proto_msg);
-            promise = JS_Call(js_ctx_, onMsg_func, JS_UNDEFINED, 2, par);
+            promise = JS_Call(js_ctx_, func, JS_UNDEFINED, 2, par);
             if (!JsCheckException(promise)) break;
 
             JSPromiseStateEnum state;
@@ -345,7 +345,7 @@ public:
         } while (false);
 
         JS_FreeValue(js_ctx_, space);
-        JS_FreeValue(js_ctx_, onMsg_func);
+        JS_FreeValue(js_ctx_, func);
         JS_FreeValue(js_ctx_, par[0]);
         JS_FreeValue(js_ctx_, par[1]);
         JS_FreeValue(js_ctx_, func_ctx.promise_cap);

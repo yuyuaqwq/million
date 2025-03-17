@@ -26,7 +26,7 @@ std::optional<ServiceHandle> NewJsService(IMillion* imillion, std::string_view p
     }
 
     // imillion->StartService<JsServiceLoadScriptMsg>(*handle, std::string(package));
-    return std::nullopt;
+    return *handle;
 }
 
 extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
