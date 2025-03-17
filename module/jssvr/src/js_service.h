@@ -198,7 +198,7 @@ public:
         }
     }
 
-    virtual million::Task<million::MsgPtr> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr msg) override {
+    virtual million::Task<million::MsgPtr> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr msg) {
         if (msg.IsType<JsServiceLoadScriptMsg>()) {
             auto load_msg = msg.GetMsg<JsServiceLoadScriptMsg>();
             if (!load_msg) {
@@ -207,9 +207,9 @@ public:
             LoadScript(load_msg->package);
             co_return nullptr;
         }
-        
+    }
 
-        
+    virtual million::Task<million::MsgPtr> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr msg) override {
         if (!msg.IsProtoMsg()) {
             // 只分发proto msg
             co_return nullptr;

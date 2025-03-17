@@ -53,17 +53,26 @@ public:
     }
 
     std::optional<SessionId> StartService(const ServiceHandle& service, MsgPtr with_msg);
-    std::optional<SessionId> StopService(const ServiceHandle& service, MsgPtr with_msg);
-
-    template <typename MsgT>
-    SessionAwaiter<MsgT> StartServiceSync(const ServiceHandle& service, MsgPtr with_msg) {
-        auto session_id = StartService(service, std::move(with_msg));
-        return Recv<MsgT>(session_id.value());
+    template <typename MsgT, typename ...Args>
+    std::optional<SessionId> StartService(const ServiceHandle& service, Args&&... args) {
+        return StartService(service, make_msg<MsgT>(std::forward<Args>(args)...));
     }
-    template <typename MsgT>
-    SessionAwaiter<MsgT> StopServiceSync(const ServiceHandle& service, MsgPtr with_msg) {
-        auto session_id = StopService(service, std::move(with_msg));
-        return Recv<MsgT>(session_id.value());
+
+    std::optional<SessionId> StopService(const ServiceHandle& service, MsgPtr with_msg);
+    template <typename MsgT, typename ...Args>
+    std::optional<SessionId> StopService(const ServiceHandle& service, Args&&... args) {
+        return StopService(service, make_msg<MsgT>(std::forward<Args>(args)...));
+    }
+
+    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
+    SessionAwaiter<RecvMsgT> StartServiceSync(const ServiceHandle& service, Args&&... args) {
+        auto session_id = StartService<SendMsgT>(service, std::forward<Args>(args)...);
+        return Recv<RecvMsgT>(session_id.value());
+    }
+    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
+    SessionAwaiter<RecvMsgT> StopServiceSync(const ServiceHandle& service, Args&&... args) {
+        auto session_id = StopService<SendMsgT>(service, std::forward<Args>(args)...);
+        return Recv<RecvMsgT>(session_id.value());
     }
 
     bool SetServiceName(const ServiceHandle& service, const ServiceName& name);
