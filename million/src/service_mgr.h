@@ -11,8 +11,8 @@
 
 namespace million {
 
-MILLION_MSG_DEFINE_EMPTY(, ServiceStartMsg);
-MILLION_MSG_DEFINE_EMPTY(, ServiceStopMsg);
+MILLION_MSG_DEFINE_NONCOPYABLE(, ServiceStartMsg, (MsgPtr) with_msg);
+MILLION_MSG_DEFINE_NONCOPYABLE(, ServiceStopMsg, (MsgPtr) with_msg);
 MILLION_MSG_DEFINE_EMPTY(, ServiceExitMsg);
 
 class Million;
@@ -28,8 +28,8 @@ public:
     std::optional<ServiceShared> AddService(std::unique_ptr<IService> service);
     void DeleteService(Service* service);
 
-    std::optional<SessionId> StartService(const ServiceShared& service);
-    std::optional<SessionId> StopService(const ServiceShared& service);
+    std::optional<SessionId> StartService(const ServiceShared& service, MsgPtr with_msg);
+    std::optional<SessionId> StopService(const ServiceShared& service, MsgPtr with_msg);
     std::optional<SessionId> ExitService(const ServiceShared& service);
 
     void PushService(Service* service);

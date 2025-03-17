@@ -135,21 +135,22 @@ public:
     // std::unordered_map<std::filesystem::path, std::vector<uint8_t>> module_bytecodes_map_;
 };
 
-// JS_ToCString 可能存在内存泄漏，暂时懒得找了
-
 class JsService : public million::IService {
 public:
     using Base = IService;
-    JsService(million::IMillion* imillion, JsModuleService* js_module_service, std::string package)
+    JsService(million::IMillion* imillion, JsModuleService* js_module_service)
         : Base(imillion)
-        , js_module_service_(js_module_service)
-    {
+        , js_module_service_(js_module_service) {}
+
+    using Base::Base;
+
+    void LoadScript(const std::string& package) {
         try {
             js_rt_ = JS_NewRuntime();
             // JS_SetDumpFlags(js_rt_, 1);
 
             if (!js_rt_) {
-                throw std::runtime_error("JS_NewRuntime failed.");
+                TaskAbort("JS_NewRuntime failed.");
             }
             JS_SetRuntimeOpaque(js_rt_, this);
 
@@ -157,7 +158,7 @@ public:
 
             js_ctx_ = JS_NewContext(js_rt_);
             if (!js_ctx_) {
-                throw std::runtime_error("JS_NewContext failed.");
+                TaskAbort("JS_NewContext failed.");
             }
 
             js_init_module_std(js_ctx_, "std");
@@ -166,19 +167,19 @@ public:
             JS_SetModuleLoaderFunc(js_rt_, nullptr, JsModuleLoader, nullptr);
 
             if (!CreateMillionModule()) {
-                throw std::runtime_error("CreateLoggerModule failed.");
+                TaskAbort("CreateLoggerModule failed.");
             }
             if (!CreateServiceModule()) {
-                throw std::runtime_error("CreateServiceModule failed.");
+                TaskAbort("CreateServiceModule failed.");
             }
             if (!CreateLoggerModule()) {
-                throw std::runtime_error("CreateLoggerModule failed.");
+                TaskAbort("CreateLoggerModule failed.");
             }
 
             js_main_module_ = ModuleLoader(package + "/main");
 
             if (!JsCheckException(js_main_module_)) {
-                throw std::runtime_error("LoadModule JsCheckException failed.");
+                TaskAbort("LoadModule JsCheckException failed.");
             }
         }
         catch (...) {
@@ -197,13 +198,23 @@ public:
         }
     }
 
-    using Base::Base;
-
     virtual million::Task<million::MsgPtr> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr msg) override {
-        if (!msg.IsProtoMsg()) {
-            // 只处理proto msg
+        if (msg.IsType<JsServiceLoadScriptMsg>()) {
+            auto load_msg = msg.GetMsg<JsServiceLoadScriptMsg>();
+            if (!load_msg) {
+                co_return nullptr;
+            }
+            LoadScript(load_msg->package);
             co_return nullptr;
         }
+        
+
+        
+        if (!msg.IsProtoMsg()) {
+            // 只分发proto msg
+            co_return nullptr;
+        }
+
         auto proto_msg = std::move(msg.GetProtoMsg());
 
         JSModuleDef* js_main_module = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(js_main_module_));
@@ -1113,16 +1124,10 @@ private:
             return JS_ThrowInternalError(ctx, "MillionModuleNewService failed to convert first argument to string.");
         }
 
-        try {
-            auto handle = service->imillion().NewService<JsService>(service->js_module_service_, module_name);
-            JS_FreeCString(ctx, module_name);
-            if (!handle) {
-                return JS_ThrowInternalError(ctx, "MillionModuleNewService New JsService failed.");
-            }
-        }
-        catch (const std::exception& e) {
-            JS_FreeCString(ctx, module_name);
-            return JS_ThrowInternalError(ctx, std::format("MillionModuleNewService New JsService failed: {}.", e.what()).c_str());
+        auto handle = NewJsService(&service->imillion(), module_name);
+        JS_FreeCString(ctx, module_name);
+        if (!handle) {
+            return JS_ThrowInternalError(ctx, "MillionModuleNewService New JsService failed.");
         }
 
         return JS_UNDEFINED;

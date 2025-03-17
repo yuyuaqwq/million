@@ -32,7 +32,7 @@ public:
         return true;
     }
 
-    virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id) override {
+    virtual million::Task<million::MsgPtr> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr with_msg) override {
         example_kv_config_ = co_await config::QueryConfig<config::example::Table, config::example::ExampleKV>(this, config_service_);
 
         Send<Test1Msg>(service_handle());

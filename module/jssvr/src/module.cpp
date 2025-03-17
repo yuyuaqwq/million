@@ -19,13 +19,13 @@ static ServiceHandle s_js_module_service;
 std::optional<ServiceHandle> NewJsService(IMillion* imillion, std::string_view package) {
     auto lock = s_js_module_service.lock();
     auto ptr = s_js_module_service.get_ptr<JsModuleService>(lock);
-    try {
-        auto handle = imillion->NewService<JsService>(ptr, std::string(package));
-        return handle;
+
+    auto handle = imillion->NewService<JsService>(ptr);
+    if (!handle) {
+        return std::nullopt;
     }
-    catch (const std::exception& e) {
-        imillion->logger().Err("New JsService failed.", e.what());
-    }
+
+    imillion->Send<JsServiceLoadScriptMsg>(*handle, *handle, std::string(package));
     return std::nullopt;
 }
 

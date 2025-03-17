@@ -36,7 +36,7 @@ class TestService : public million::IService {
         return true;
     }
 
-    virtual million::Task<million::MsgPtr> OnStart(million::ServiceHandle sender, million::SessionId session_id) override {
+    virtual million::Task<million::MsgPtr> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr with_msg) override {
         /*auto res = co_await Call<gateway::GatewayRegisterUserServiceMsg>(gateway_, service_handle());
         logger().Info("GatewayRegisterUserServiceMsg success.");*/
         co_return nullptr;

@@ -57,8 +57,16 @@ void Service::ProcessMsg(MsgElement ele) {
             return;
         }
         stage_ = kStarting;
-        assert(SessionIsSendId(session_id));
-        auto task = iservice_->OnStart(ServiceHandle(sender), session_id);
+        if (!SessionIsSendId(session_id)) {
+            service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
+            return;
+        }
+        auto start_msg = msg.GetMutMsg<ServiceStartMsg>();
+        if (!start_msg) {
+            service_mgr_->million().logger().Err("Get service start msg err.");
+            return;
+        }
+        auto task = iservice_->OnStart(ServiceHandle(sender), session_id, std::move(start_msg->with_msg));
         auto ele = excutor_.AddTask(TaskElement(std::move(sender), session_id, std::move(task)));
         if (ele) {
             // 已完成OnStart
@@ -74,8 +82,16 @@ void Service::ProcessMsg(MsgElement ele) {
         }
         stage_ = kStop;
         try {
-            assert(SessionIsSendId(session_id));
-            iservice_->OnStop(ServiceHandle(sender), session_id);
+            if (!SessionIsSendId(session_id)) {
+                service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
+                return;
+            }
+            auto stop_msg = msg.GetMutMsg<ServiceStopMsg>();
+            if (!stop_msg) {
+                service_mgr_->million().logger().Err("Get service stop msg err.");
+                return;
+            }
+            iservice_->OnStop(ServiceHandle(sender), session_id, std::move(stop_msg->with_msg));
         }
         catch (const std::exception& e) {
             service_mgr_->million().logger().Err("Service OnStop exception occurred: {}", e.what());
@@ -92,7 +108,10 @@ void Service::ProcessMsg(MsgElement ele) {
         }
         stage_ = kExit;
         try {
-            assert(SessionIsSendId(session_id));
+            if (!SessionIsSendId(session_id)) {
+                service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
+                return;
+            }
             iservice_->OnExit();
         }
         catch (const std::exception& e) {
@@ -242,12 +261,12 @@ void Service::ReplyMsg(TaskElement* ele) {
 }
 
 
-std::optional<SessionId> Service::Start() {
-    return iservice_->Send<ServiceStartMsg>(iservice_->service_handle());
+std::optional<SessionId> Service::Start(MsgPtr msg) {
+    return iservice_->Send<ServiceStartMsg>(iservice_->service_handle(), std::move(msg));
 }
 
-std::optional<SessionId> Service::Stop() {
-    return iservice_->Send<ServiceStopMsg>(iservice_->service_handle());
+std::optional<SessionId> Service::Stop(MsgPtr msg) {
+    return iservice_->Send<ServiceStopMsg>(iservice_->service_handle(), std::move(msg));
 }
 
 std::optional<SessionId> Service::Exit() {

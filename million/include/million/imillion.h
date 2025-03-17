@@ -42,7 +42,7 @@ public:
         auto iservice = std::make_unique<IServiceT>(this, std::forward<Args>(args)...);
         auto handle = AddService(std::move(iservice));
         if (!handle) return std::nullopt;
-        StartService(*handle);
+        StartService(*handle, nullptr);
         return handle;
     }
 
@@ -52,8 +52,8 @@ public:
         return AddService(std::move(iservice));
     }
 
-    std::optional<SessionId> StartService(const ServiceHandle& service);
-    std::optional<SessionId> StopService(const ServiceHandle& service);
+    std::optional<SessionId> StartService(const ServiceHandle& service, MsgPtr with_msg);
+    std::optional<SessionId> StopService(const ServiceHandle& service, MsgPtr with_msg);
 
     bool SetServiceName(const ServiceHandle& service, const ServiceName& name);
     std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);

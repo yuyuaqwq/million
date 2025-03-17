@@ -7,5 +7,7 @@ namespace jssvr {
 
 MILLION_JSSVR_API std::optional<ServiceHandle> NewJsService(IMillion* imillion, std::string_view package);
 
+MILLION_MSG_DEFINE(MILLION_JSSVR_API, JsServiceLoadScriptMsg, (const std::string) package)
+
 } // namespace jssvr
 } // namespace million

@@ -89,7 +89,7 @@ public:
         return true;
     }
 
-    virtual void OnStop(ServiceHandle sender, SessionId session_id) override {
+    virtual void OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         
     }
 

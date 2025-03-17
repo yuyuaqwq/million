@@ -85,12 +85,12 @@ public:
         return true;
     }
 
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) override {
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         imillion().logger().BindService(service_handle());
         co_return nullptr;
     }
 
-    virtual void OnStop(ServiceHandle sender, SessionId session_id) override {
+    virtual void OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         logger_->flush();
     }
 

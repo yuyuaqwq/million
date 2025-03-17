@@ -28,8 +28,8 @@ public:
 
     std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice);
 
-    std::optional<SessionId> StartService(const ServiceShared& service);
-    std::optional<SessionId> StopService(const ServiceShared& service);
+    std::optional<SessionId> StartService(const ServiceShared& service, MsgPtr with_msg);
+    std::optional<SessionId> StopService(const ServiceShared& service, MsgPtr with_msg);
 
     bool SetServiceName(const ServiceShared& service, const ServiceName& name);
     std::optional<ServiceShared> GetServiceByName(const ServiceName& name);

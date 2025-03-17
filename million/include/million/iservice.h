@@ -121,9 +121,9 @@ public:
 
 protected:
     virtual bool OnInit() { return true; }
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) { co_return nullptr; }
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) { co_return nullptr; }
     virtual Task<MsgPtr> OnMsg(ServiceHandle sender, SessionId session_id, MsgPtr msg) { co_return nullptr; }
-    virtual void OnStop(ServiceHandle sender, SessionId session_id) { }
+    virtual void OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) { }
     virtual void OnExit() { }
 
 private:

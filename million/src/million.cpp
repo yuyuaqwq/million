@@ -219,12 +219,12 @@ std::optional<ServiceShared> Million::AddService(std::unique_ptr<IService> iserv
 }
 
 
-std::optional<SessionId> Million::StartService(const ServiceShared& service) {
-    return service_mgr_->StartService(service);
+std::optional<SessionId> Million::StartService(const ServiceShared& service, MsgPtr with_msg) {
+    return service_mgr_->StartService(service, std::move(with_msg));
 }
 
-std::optional<SessionId> Million::StopService(const ServiceShared& service) {
-    return service_mgr_->StopService(service);
+std::optional<SessionId> Million::StopService(const ServiceShared& service, MsgPtr with_msg) {
+    return service_mgr_->StopService(service, std::move(with_msg));
 }
 
 

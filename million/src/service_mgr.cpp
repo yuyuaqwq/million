@@ -19,7 +19,7 @@ void ServiceMgr::Stop() {
     }
     service_queue_cv_.notify_all();
     for (auto& service : services_) {
-        service->Stop();
+        service->Stop(nullptr);
         service->Exit();
     }
 }
@@ -74,12 +74,12 @@ void ServiceMgr::DeleteService(Service* service) {
 }
 
 
-std::optional<SessionId> ServiceMgr::StartService(const ServiceShared& service) {
-    return service->Start();
+std::optional<SessionId> ServiceMgr::StartService(const ServiceShared& service, MsgPtr msg) {
+    return service->Start(std::move(msg));
 }
 
-std::optional<SessionId> ServiceMgr::StopService(const ServiceShared& service) {
-    return service->Stop();
+std::optional<SessionId> ServiceMgr::StopService(const ServiceShared& service, MsgPtr msg) {
+    return service->Stop(std::move(msg));
 }
 
 std::optional<SessionId> ServiceMgr::ExitService(const ServiceShared& service) {

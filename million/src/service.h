@@ -53,8 +53,8 @@ public:
 
     IService& iservice() const { assert(iservice_); return *iservice_; }
 
-    std::optional<SessionId> Start();
-    std::optional<SessionId> Stop();
+    std::optional<SessionId> Start(MsgPtr msg);
+    std::optional<SessionId> Stop(MsgPtr msg);
     std::optional<SessionId> Exit();
 
     bool IsReady() const;

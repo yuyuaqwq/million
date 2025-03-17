@@ -34,7 +34,7 @@ public:
         return true;
     }
 
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) override {
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         try {
             // 创建 Redis 对象并连接到 Redis 服务器
             redis_.emplace(std::format("tcp://{}:{}", host, port));
@@ -45,7 +45,7 @@ public:
         co_return nullptr;
     }
 
-    virtual void OnStop(ServiceHandle sender, SessionId session_id) override {
+    virtual void OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         redis_ = std::nullopt;
     }
 

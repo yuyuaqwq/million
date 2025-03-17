@@ -31,20 +31,20 @@ std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iser
 }
 
 
-std::optional<SessionId> IMillion::StartService(const ServiceHandle& service) {
+std::optional<SessionId> IMillion::StartService(const ServiceHandle& service, MsgPtr with_msg) {
     auto lock = service.lock();
     if (!lock) {
         return std::nullopt;
     }
-    return impl_->StartService(lock);
+    return impl_->StartService(lock, std::move(with_msg));
 }
 
-std::optional<SessionId> IMillion::StopService(const ServiceHandle& service) {
+std::optional<SessionId> IMillion::StopService(const ServiceHandle& service, MsgPtr with_msg) {
     auto lock = service.lock();
     if (!lock) {
         return std::nullopt;
     }
-    return impl_->StopService(lock);
+    return impl_->StopService(lock, std::move(with_msg));
 }
 
 
