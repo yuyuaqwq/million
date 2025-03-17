@@ -34,7 +34,7 @@ public:
     }
 
 
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) {
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         const auto& settings = imillion().YamlSettings();
         const auto& gateway_settings = settings["gateway"];
         if (!gateway_settings) {

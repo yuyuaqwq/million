@@ -22,7 +22,7 @@ public:
         return true;
     }
 
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id) {
+    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         auto handle = imillion().GetServiceByName("NodeMgrService");
         if (!handle) {
             TaskAbort("NodeMgrService not found.");

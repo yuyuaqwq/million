@@ -150,7 +150,7 @@ bool Million::Init(std::string_view settings_path) {
         for (const auto& module_settings : module_mgr_settings) {
             if (!module_settings["dir"]) {
                 logger_->Err("cannot find 'dir' in module settings.");
-                continue; // ������ǰģ�飬������һ��
+                continue; // 跳过
             }
 
             std::string module_dir = module_settings["dir"].as<std::string>();

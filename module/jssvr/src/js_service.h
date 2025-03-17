@@ -229,7 +229,7 @@ public:
 
         JSValue space = JS_UNDEFINED;
         JSValue func = JS_UNDEFINED;
-        JSValue par[2] = { JS_UNDEFINED };
+        JSValue par[2] = { JS_UNDEFINED, JS_UNDEFINED };
         ServiceFuncContext func_ctx;
         JSValue promise = JS_UNDEFINED;
         JSValue result = JS_UNDEFINED;
@@ -249,8 +249,11 @@ public:
             func_ctx.promise_cap = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
             JSValue resolve_func = resolving_funcs[0];
 
-            par[0] = JS_NewString(js_ctx_, proto_msg->GetDescriptor()->full_name().c_str());
-            par[1] = ProtoMsgToJsObj(*proto_msg);
+            if (proto_msg) {
+                par[0] = JS_NewString(js_ctx_, proto_msg->GetDescriptor()->full_name().c_str());
+                par[1] = ProtoMsgToJsObj(*proto_msg);
+            }
+            
             promise = JS_Call(js_ctx_, func, JS_UNDEFINED, 2, par);
             if (!JsCheckException(promise)) break;
 
