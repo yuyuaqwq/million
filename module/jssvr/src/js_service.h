@@ -159,7 +159,7 @@ public:
                 TaskAbort("CreateLoggerModule failed.");
             }
 
-            js_service_module_ = ModuleLoader(package + "/service");
+            js_service_module_ = ModuleLoader(package);
 
             if (!JsCheckException(js_service_module_)) {
                 TaskAbort("LoadModule JsCheckException failed.");

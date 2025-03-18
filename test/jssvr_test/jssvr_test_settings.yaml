@@ -25,6 +25,6 @@ logger:
     console_level: debug
 
 jssvr:
-    bootstarp: test
+    bootstarp: test/service.js
     dirs: 
         - .\jssvr
