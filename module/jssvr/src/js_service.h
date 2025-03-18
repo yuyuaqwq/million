@@ -43,93 +43,6 @@ private:
         return true;
     }
 
-private:
-    //JSValue FindModule(JSContext* js_ctx, std::filesystem::path path) {
-    //    auto iter = module_bytecodes_map_.find(path);
-    //    if (iter == module_bytecodes_map_.end()) {
-    //        return JS_UNDEFINED;
-    //    }
-
-    //    // js_std_eval_binary;
-
-    //    int flags = JS_READ_OBJ_BYTECODE;
-    //    JSValue module = JS_ReadObject(js_ctx, iter->second.data(), iter->second.size(), flags);
-    //    if (JS_VALUE_GET_TAG(module) == JS_TAG_MODULE) {
-    //        if (JS_ResolveModule(js_ctx, module) < 0) {
-    //            JS_FreeValue(js_ctx, module);
-    //            return  JS_ThrowTypeError(js_ctx, "JS_ResolveModule < 0.");
-    //        }
-    //        js_module_set_import_meta(js_ctx, module, false, true);
-    //        auto result = JS_EvalFunction(js_ctx, module);
-    //        if (JS_IsException(result)) {
-    //            return result;
-    //        }
-    //        // result = js_std_await(ctx, result);
-    //    }
-    //    return module;
-    //}
-
-    //JSValue LoadModule(JSContext* js_ctx, std::string* cur_path, const std::string& full_name) {
-
-
-    //    auto script = ReadModuleScript(path);
-    //    if (!script) {
-    //        // 当前路径找不到，去配置路径找
-    //        for (const auto& dir : jssvr_dirs_) {
-    //            path = dir;
-    //            path /= full_name + ".js";
-    //            module = FindModule(js_ctx, path);
-    //            if (!JS_IsUndefined(module)) {
-    //                return module;
-    //            }
-    //        }
-
-    //        for (const auto& dir : jssvr_dirs_) {
-    //            path = dir;
-    //            path /= full_name + ".js";
-    //            script = ReadModuleScript(path);
-    //            if (script) {
-    //                *cur_path = dir;
-    //                break;
-    //            }
-    //        }
-    //        if (!script) {
-    //            return JS_ThrowTypeError(js_ctx, "LoadModule failed: %s.", full_name.c_str());
-    //        }
-    //    }
-
-    //    module = JS_Eval(js_ctx, script->data(), script->size(), full_name.c_str(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
-    //    if (JS_IsException(module)) {
-    //        return module;
-    //    }
-
-    //    // 保存到已加载模块
-    //    iter->second.emplace(full_name, module);
-
-    //    uint8_t* out_buf;
-    //    size_t out_buf_len;
-    //    int flags = JS_WRITE_OBJ_BYTECODE;
-    //    out_buf = JS_WriteObject(js_ctx, &out_buf_len, module, flags);
-    //    if (!out_buf) {
-    //        return JS_ThrowTypeError(js_ctx, "JS_WriteObject failed: %s.", full_name.c_str());
-    //    }
-
-    //    auto bytecodes = std::vector<uint8_t>(out_buf_len);
-    //    std::memcpy(bytecodes.data(), out_buf, out_buf_len);
-    //    js_free(js_ctx, out_buf);
-
-    //    auto res = module_bytecodes_map_.emplace(std::move(path), std::move(bytecodes));
-    //    assert(res.second);
-
-    //    auto result = JS_EvalFunction(js_ctx, module);
-    //    if (JS_IsException(result)) {
-    //        return result;
-    //    }
-
-    //    return module;
-    //}
-
-
 public:
     std::vector<std::string> jssvr_dirs_;
     // std::unordered_map<std::filesystem::path, std::vector<uint8_t>> module_bytecodes_map_;
@@ -840,13 +753,13 @@ private:
         std::string module_name_ = module_name;
         std::filesystem::path path = cur_path_;
         // 从模块所在路径找模块
-        path /= module_name_ + ".js";
+        path /= module_name_;
         auto script = ReadModuleScript(path);
         if (!script) {
             // 当前路径找不到，去配置路径找
             for (const auto& dir : js_module_service_->jssvr_dirs_) {
                 path = dir;
-                path /= module_name_ + ".js";
+                path /= module_name_;
                 script = ReadModuleScript(path);
                 if (script) {
                     if (cur_path_.empty()) {
