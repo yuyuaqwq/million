@@ -137,6 +137,8 @@ public:
 
         auto proto_msg = std::move(msg.GetProtoMsg());
 
+        million::MsgPtr ret_msg;
+
         JSModuleDef* js_service_module = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(js_service_module_));
 
         JSValue space = JS_UNDEFINED;
@@ -241,8 +243,8 @@ public:
                     break;
                 }
 
-                auto ret_msg = imillion().proto_mgr().NewMessage(*desc);
-                if (!ret_msg) {
+                auto ret_proto_msg = imillion().proto_mgr().NewMessage(*desc);
+                if (!ret_proto_msg) {
                     logger().Err("New message failed.");
                     break;
                 }
@@ -253,10 +255,16 @@ public:
                     break;
                 }
 
-                JsObjToProtoMsg(ret_msg.get(), msg_obj);
-                co_return std::move(ret_msg);
-            }
+                JsObjToProtoMsg(ret_proto_msg.get(), msg_obj);
 
+                ret_msg = std::move(ret_proto_msg);
+            }
+            else if (state == JS_PROMISE_REJECTED) {
+                // Promise 被拒绝，获取错误
+                JSValue error = JS_Throw(js_ctx_, JS_PromiseResult(js_ctx_, promise));
+                JsCheckException(error);
+                // 处理错误
+            }
         } while (false);
 
         JS_FreeValue(js_ctx_, space);
@@ -267,7 +275,7 @@ public:
         JS_FreeValue(js_ctx_, promise);
         JS_FreeValue(js_ctx_, result);
 
-        co_return nullptr;
+        co_return std::move(ret_msg);
     }
 
     virtual void OnExit() override {
@@ -722,8 +730,8 @@ private:
         if (JS_IsException(value)) {
             JSValue exception = JS_GetException(js_ctx_);
             const char* error = JS_ToCString(js_ctx_, exception);
-            // logger().Err("JS Exception: {}.", error);
-            std::cout << error << std::endl;
+            logger().Err("JS Exception: {}.", error);
+            // std::cout << error << std::endl;
             JS_FreeCString(js_ctx_, error);
             JS_FreeValue(js_ctx_, exception);
             return false;
