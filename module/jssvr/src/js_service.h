@@ -177,15 +177,15 @@ public:
                 TaskAbort("CreateLoggerModule failed.");
             }
 
-            js_main_module_ = ModuleLoader(package + "/main");
+            js_service_module_ = ModuleLoader(package + "/service");
 
-            if (!JsCheckException(js_main_module_)) {
+            if (!JsCheckException(js_service_module_)) {
                 TaskAbort("LoadModule JsCheckException failed.");
             }
         }
         catch (...) {
-            if (!JS_IsUndefined(js_main_module_)) {
-                JS_FreeValue(js_ctx_, js_main_module_);
+            if (!JS_IsUndefined(js_service_module_)) {
+                JS_FreeValue(js_ctx_, js_service_module_);
             }
             if (js_ctx_) {
                 JS_FreeContext(js_ctx_);
@@ -225,7 +225,7 @@ public:
 
         auto proto_msg = std::move(msg.GetProtoMsg());
 
-        JSModuleDef* js_main_module = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(js_main_module_));
+        JSModuleDef* js_service_module = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(js_service_module_));
 
         JSValue space = JS_UNDEFINED;
         JSValue func = JS_UNDEFINED;
@@ -236,7 +236,7 @@ public:
 
         do {
             // 获取模块的 namespace 对象
-            space = JS_GetModuleNamespace(js_ctx_, js_main_module);
+            space = JS_GetModuleNamespace(js_ctx_, js_service_module);
             if (!JsCheckException(space)) break;
 
             func = JS_GetPropertyStr(js_ctx_, space, func_name.data());
@@ -359,8 +359,8 @@ public:
     }
 
     virtual void OnExit() override {
-        if (!JS_IsUndefined(js_main_module_)) {
-            JS_FreeValue(js_ctx_, js_main_module_);
+        if (!JS_IsUndefined(js_service_module_)) {
+            JS_FreeValue(js_ctx_, js_service_module_);
         }
         if (js_ctx_) {
             JS_FreeContext(js_ctx_);
@@ -1231,7 +1231,7 @@ private:
     std::unordered_map<std::string, JSValue> modules_;
     JSRuntime* js_rt_ = nullptr;
     JSContext* js_ctx_ = nullptr;
-    JSValue js_main_module_ = JS_UNDEFINED;
+    JSValue js_service_module_ = JS_UNDEFINED;
     std::filesystem::path cur_path_;
 };
 
