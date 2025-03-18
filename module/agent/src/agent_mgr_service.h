@@ -41,6 +41,9 @@ public:
 
     MILLION_MUT_MSG_HANDLE(AgentMgrLoginMsg, msg) {
         auto agent_msg = co_await Call<NewAgentMsg>(node_mgr_, msg->user_session_id, std::nullopt);
+        if (!msg->agent_handle) {
+            TaskAbort("New agent failed.");
+        }
         msg->agent_handle = std::move(agent_msg->agent_handle);
         Reply<gateway::GatewaySureAgentMsg>(gateway_, msg->user_session_id, *msg->agent_handle);
         co_return std::move(msg_);

@@ -147,24 +147,6 @@ public:
 
     void LoadScript(const std::string& package) {
         try {
-            js_rt_ = JS_NewRuntime();
-            // JS_SetDumpFlags(js_rt_, 1);
-
-            if (!js_rt_) {
-                TaskAbort("JS_NewRuntime failed.");
-            }
-            JS_SetRuntimeOpaque(js_rt_, this);
-
-            js_std_init_handlers(js_rt_);
-
-            js_ctx_ = JS_NewContext(js_rt_);
-            if (!js_ctx_) {
-                TaskAbort("JS_NewContext failed.");
-            }
-
-            js_init_module_std(js_ctx_, "std");
-            js_init_module_os(js_ctx_, "os");
-
             JS_SetModuleLoaderFunc(js_rt_, nullptr, JsModuleLoader, nullptr);
 
             if (!CreateMillionModule()) {
@@ -191,15 +173,32 @@ public:
                 JS_FreeContext(js_ctx_);
                 js_ctx_ = nullptr;
             }
-            if (js_rt_) {
-                JS_FreeRuntime(js_rt_);
-                js_rt_ = nullptr;
-            }
             throw;
         }
     }
 
     virtual bool OnInit() override {
+        js_rt_ = JS_NewRuntime();
+        // JS_SetDumpFlags(js_rt_, 1);
+
+        if (!js_rt_) {
+            return false;
+        }
+
+        JS_SetRuntimeOpaque(js_rt_, this);
+
+        js_std_init_handlers(js_rt_);
+
+        js_ctx_ = JS_NewContext(js_rt_);
+        if (!js_ctx_) {
+            JS_FreeRuntime(js_rt_);
+            js_rt_ = nullptr;
+            return false;
+        }
+
+        js_init_module_std(js_ctx_, "std");
+        js_init_module_os(js_ctx_, "os");
+
         LoadScript(package_);
         return true;
     }
