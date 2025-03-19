@@ -17,7 +17,7 @@
 namespace million {
 
 class ServiceMgr;
-class ServiceImpl : noncopyable {
+class ServiceCore : noncopyable {
 public:
     struct MsgElement{
         ServiceShared sender;
@@ -26,8 +26,8 @@ public:
     };
 
 public:
-    ServiceImpl(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
-    ~ServiceImpl();
+    ServiceCore(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
+    ~ServiceCore();
 
     bool PushMsg(const ServiceShared& sender, SessionId session_id, MsgPtr msg);
     std::optional<MsgElement> PopMsg();
@@ -46,7 +46,7 @@ public:
     ServiceShared shared() const { return *iter_; }
 
     auto iter() const { return iter_; }
-    void set_iter(std::list<std::shared_ptr<ServiceImpl>>::iterator iter) { iter_ = iter; }
+    void set_iter(std::list<std::shared_ptr<ServiceCore>>::iterator iter) { iter_ = iter; }
 
     bool in_queue() const { return in_queue_; }
     void set_in_queue(bool in_queue) { in_queue_ = in_queue; }
@@ -66,7 +66,7 @@ public:
 
 private:
     void SeparateThreadHandle();
-    std::optional<ServiceImpl::MsgElement> PopMsgWithLock();
+    std::optional<ServiceCore::MsgElement> PopMsgWithLock();
 
     void ReplyMsg(TaskElement* ele);
 

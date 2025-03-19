@@ -1,4 +1,4 @@
-#include "service_impl.h"
+#include "service_core.h"
 
 #include <cassert>
 
@@ -10,22 +10,22 @@
 
 namespace million {
 
-ServiceImpl::ServiceImpl(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
+ServiceCore::ServiceCore(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
     : service_mgr_(service_mgr)
     , iservice_(std::move(iservice))
     , excutor_(this) {}
 
-ServiceImpl::~ServiceImpl() = default;
+ServiceCore::~ServiceCore() = default;
 
 
-bool ServiceImpl::PushMsg(const ServiceShared& sender, SessionId session_id, MsgPtr msg) {
+bool ServiceCore::PushMsg(const ServiceShared& sender, SessionId session_id, MsgPtr msg) {
     assert(msg);
     {
         auto lock = std::lock_guard(msgs_mutex_);
         if (!IsReady() && !IsStarting() && !IsRunning() && !msg.IsType<ServiceExitMsg>()) {
             return false;
         }
-        ServiceImpl::MsgElement ele{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
+        ServiceCore::MsgElement ele{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
         msgs_.emplace(std::move(ele));
     }
     if (HasSeparateWorker()) {
@@ -34,17 +34,17 @@ bool ServiceImpl::PushMsg(const ServiceShared& sender, SessionId session_id, Msg
     return true;
 }
 
-std::optional<ServiceImpl::MsgElement> ServiceImpl::PopMsg() {
+std::optional<ServiceCore::MsgElement> ServiceCore::PopMsg() {
     auto lock = std::lock_guard(msgs_mutex_);
     return PopMsgWithLock();
 }
 
-bool ServiceImpl::MsgQueueIsEmpty() {
+bool ServiceCore::MsgQueueIsEmpty() {
     std::lock_guard guard(msgs_mutex_);
     return msgs_.empty();
 }
 
-void ServiceImpl::ProcessMsg(MsgElement ele) {
+void ServiceCore::ProcessMsg(MsgElement ele) {
     auto& sender = ele.sender;
     auto session_id = ele.session_id;
     auto& msg = ele.msg;
@@ -194,7 +194,7 @@ void ServiceImpl::ProcessMsg(MsgElement ele) {
     }
 }
 
-void ServiceImpl::ProcessMsgs(size_t count) {
+void ServiceCore::ProcessMsgs(size_t count) {
     // 如果处理了Exit，则直接抛弃所有消息及未完成的任务(包括未触发超时的任务)
     for (size_t i = 0; i < count && !IsExited(); ++i) {
         auto msg_opt = PopMsg();
@@ -205,23 +205,23 @@ void ServiceImpl::ProcessMsgs(size_t count) {
     }
 }
 
-bool ServiceImpl::TaskExecutorIsEmpty() const {
+bool ServiceCore::TaskExecutorIsEmpty() const {
     return excutor_.TaskQueueIsEmpty();
 }
 
-void ServiceImpl::EnableSeparateWorker() {
+void ServiceCore::EnableSeparateWorker() {
     separate_worker_ = std::make_unique<SeparateWorker>([this] {
         SeparateThreadHandle();
     });
 }
 
-bool ServiceImpl::HasSeparateWorker() const {
+bool ServiceCore::HasSeparateWorker() const {
     return separate_worker_.operator bool();
 }
 
-void ServiceImpl::SeparateThreadHandle() {
+void ServiceCore::SeparateThreadHandle() {
     while (true) {
-        std::optional<ServiceImpl::MsgElement> msg;
+        std::optional<ServiceCore::MsgElement> msg;
         {
             auto lock = std::unique_lock(msgs_mutex_);
             while (msgs_.empty()) {
@@ -240,7 +240,7 @@ void ServiceImpl::SeparateThreadHandle() {
     }
 }
 
-std::optional<ServiceImpl::MsgElement> ServiceImpl::PopMsgWithLock() {
+std::optional<ServiceCore::MsgElement> ServiceCore::PopMsgWithLock() {
     if (msgs_.empty()) {
         return std::nullopt;
     }
@@ -256,7 +256,7 @@ std::optional<ServiceImpl::MsgElement> ServiceImpl::PopMsgWithLock() {
     return msg;
 }
 
-void ServiceImpl::ReplyMsg(TaskElement* ele) {
+void ServiceCore::ReplyMsg(TaskElement* ele) {
     if (ele->task.has_exception()) {
         return;
     }
@@ -274,40 +274,40 @@ void ServiceImpl::ReplyMsg(TaskElement* ele) {
 }
 
 
-std::optional<SessionId> ServiceImpl::Start(MsgPtr msg) {
+std::optional<SessionId> ServiceCore::Start(MsgPtr msg) {
     return iservice_->Send<ServiceStartMsg>(iservice_->service_handle(), std::move(msg));
 }
 
-std::optional<SessionId> ServiceImpl::Stop(MsgPtr msg) {
+std::optional<SessionId> ServiceCore::Stop(MsgPtr msg) {
     return iservice_->Send<ServiceStopMsg>(iservice_->service_handle(), std::move(msg));
 }
 
-std::optional<SessionId> ServiceImpl::Exit() {
+std::optional<SessionId> ServiceCore::Exit() {
     return iservice_->Send<ServiceExitMsg>(iservice_->service_handle());
 }
 
 
-bool ServiceImpl::IsReady() const {
+bool ServiceCore::IsReady() const {
     return stage_ == ServiceStage::kReady;
 }
 
-bool ServiceImpl::IsStarting() const {
+bool ServiceCore::IsStarting() const {
     return stage_ == ServiceStage::kStarting;
 }
 
-bool ServiceImpl::IsRunning() const {
+bool ServiceCore::IsRunning() const {
     return stage_ == ServiceStage::kRunning;
 }
 
-bool ServiceImpl::IsStopping() const {
+bool ServiceCore::IsStopping() const {
     return stage_ == ServiceStage::kStopping;
 }
 
-bool ServiceImpl::IsStopped() const {
+bool ServiceCore::IsStopped() const {
     return stage_ == ServiceStage::kStopped;
 }
 
-bool ServiceImpl::IsExited() const {
+bool ServiceCore::IsExited() const {
     return stage_ == ServiceStage::kExited;
 }
 

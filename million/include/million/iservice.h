@@ -130,7 +130,7 @@ private:
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
 
 private:
-    friend class ServiceImpl;
+    friend class ServiceCore;
     friend class ServiceMgr;
 
     IMillion* imillion_;

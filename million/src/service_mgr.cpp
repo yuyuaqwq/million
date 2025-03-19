@@ -3,7 +3,7 @@
 #include "service_mgr.h"
 
 #include "million.h"
-#include "service_impl.h"
+#include "service_core.h"
 
 namespace million {
 
@@ -34,7 +34,7 @@ ServiceId ServiceMgr::AllocServiceId() {
 
 std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
     decltype(services_)::iterator iter;
-    auto service_shared = std::make_shared<ServiceImpl>(this, std::move(iservice));
+    auto service_shared = std::make_shared<ServiceCore>(this, std::move(iservice));
     auto handle = ServiceHandle(service_shared);
     service_shared->iservice().set_service_handle(handle);
     auto service_ptr = service_shared.get();
@@ -64,7 +64,7 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
     return service_shared;
 }
 
-void ServiceMgr::DeleteService(ServiceImpl* service) {
+void ServiceMgr::DeleteService(ServiceCore* service) {
     {
         // todo: 如果存在，先从name_map_和id_map_中移除
     }
@@ -87,7 +87,7 @@ std::optional<SessionId> ServiceMgr::ExitService(const ServiceShared& service) {
 }
 
 
-void ServiceMgr::PushService(ServiceImpl* service) {
+void ServiceMgr::PushService(ServiceCore* service) {
     if (service->HasSeparateWorker()) {
         return;
     }
@@ -107,7 +107,7 @@ void ServiceMgr::PushService(ServiceImpl* service) {
     }
 }
 
-ServiceImpl* ServiceMgr::PopService() {
+ServiceCore* ServiceMgr::PopService() {
     auto lock = std::unique_lock(service_queue_mutex_);
     while (run_ && service_queue_.empty()) {
         service_queue_cv_.wait(lock);
