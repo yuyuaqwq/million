@@ -86,7 +86,7 @@ public:
     }
 
     virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
-        imillion().logger().BindService(service_handle());
+        logger().BindService(service_handle());
         co_return nullptr;
     }
 
