@@ -38,7 +38,9 @@ private:
 #endif
 };
 
-#define TaskAssert(condition, fmt, ...)  if (!(condition)) throw ::million::TaskAbortException(::std::format(fmt, __VA_ARGS__))
-#define TaskAbort(fmt, ...)  throw ::million::TaskAbortException(::std::format(fmt, __VA_ARGS__))
+#define TaskAssert(condition, fmt, ...) do { \
+    throw ::million::TaskAbortException(::std::format(fmt, __VA_ARGS__)); \
+} while (false)
+#define TaskAbort(fmt, ...) TaskAssert(false, fmt, __VA_ARGS__)
 
 } // namespace million

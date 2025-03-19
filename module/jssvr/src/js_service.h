@@ -147,7 +147,7 @@ public:
         ServiceFuncContext func_ctx;
         JSValue promise = JS_UNDEFINED;
         JSValue result = JS_UNDEFINED;
-
+        
         do {
             // 获取模块的 namespace 对象
             space = JS_GetModuleNamespace(js_ctx_, js_service_module);
