@@ -546,13 +546,34 @@ private:
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
-            if (!JS_IsNumber(repeated_value)) {
-                TaskAbort("Field {}.{}[{}] is not a number.", desc.name(), field_desc.name(), j);
+            if (!JS_IsString(repeated_value)) {
+                TaskAbort("Field {}.{} is not a string(enum).", desc.name(), field_desc.name());
             }
-            int32_t value;
-            if (JS_ToInt32(js_ctx_, &value, repeated_value) == 0) {
-                reflection.AddEnumValue(msg, &field_desc, value);
+            const char* str = JS_ToCString(js_ctx_, repeated_value);
+            if (!str) {
+                TaskAbort("Field {}.{} to cstring failed.", desc.name(), field_desc.name());
             }
+
+            // 获取枚举描述符
+            const google::protobuf::EnumDescriptor* enum_desc = field_desc.enum_type();
+            if (!enum_desc) {
+                JS_FreeCString(js_ctx_, str);
+                TaskAbort("Field {}.{} has no enum descriptor.", desc.name(), field_desc.name());
+            }
+
+            // 通过字符串查找枚举值
+            const google::protobuf::EnumValueDescriptor* enum_value = enum_desc->FindValueByName(str);
+            if (!enum_value) {
+                JS_FreeCString(js_ctx_, str);
+                TaskAbort("Field {}.{} has no enum value named {}.", desc.name(), field_desc.name(), str);
+            }
+
+            // 设置枚举值
+            reflection.AddEnum(msg, &field_desc, enum_value);
+
+            // 释放C字符串
+            JS_FreeCString(js_ctx_, str);
+
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
@@ -675,13 +696,33 @@ private:
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
-            if (!JS_IsNumber(repeated_value)) {
-                TaskAbort("Field {}.{} is not a number.", desc.name(), field_desc.name());
+            if (!JS_IsString(repeated_value)) {
+                TaskAbort("Field {}.{} is not a string(enum).", desc.name(), field_desc.name());
             }
-            int32_t value;
-            if (JS_ToInt32(js_ctx_, &value, repeated_value) == 0) {
-                reflection.SetEnumValue(msg, &field_desc, value);
+            const char* str = JS_ToCString(js_ctx_, repeated_value);
+            if (!str) {
+                TaskAbort("Field {}.{} to cstring failed.", desc.name(), field_desc.name());
             }
+            
+            // 获取枚举描述符
+            const google::protobuf::EnumDescriptor* enum_desc = field_desc.enum_type();
+            if (!enum_desc) {
+                JS_FreeCString(js_ctx_, str);
+                TaskAbort("Field {}.{} has no enum descriptor.", desc.name(), field_desc.name());
+            }
+
+            // 通过字符串查找枚举值
+            const google::protobuf::EnumValueDescriptor* enum_value = enum_desc->FindValueByName(str);
+            if (!enum_value) {
+                JS_FreeCString(js_ctx_, str);
+                TaskAbort("Field {}.{} has no enum value named {}.", desc.name(), field_desc.name(), str);
+            }
+
+            // 设置枚举值
+            reflection.SetEnum(msg, &field_desc, enum_value);
+
+            // 释放C字符串
+            JS_FreeCString(js_ctx_, str);
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
