@@ -112,15 +112,15 @@ public:
         auto port = std::to_string(ep.port());
 
         if (user_session.Connected()) {
-            // 开启持久会话
-            auto user_session_id = Send<GatewayPersistentUserSessionMsg>(service_handle(), std::move(msg->user_session));
-            user_session.set_user_session_id(user_session_id.value());
+            // 开启持久会话，这里设计上，Send 创建的 session_id，则视作 agent_id
+            auto agent_id = Send<GatewayPersistentUserSessionMsg>(service_handle(), std::move(msg->user_session));
+            user_session.set_agent_id(agent_id.value());
 
-            logger().Debug("Gateway connection establishment, user_session_id:{}, ip: {}, port: {}", user_session.user_session_id(), ip, port);
+            logger().Debug("Gateway connection establishment, agent_id:{}, ip: {}, port: {}", user_session.agent_id(), ip, port);
         }
         else {
             // 停止持久会话
-            Reply<GatewayPersistentUserSessionMsg>(service_handle(), user_session.user_session_id(), std::move(msg->user_session));
+            Reply<GatewayPersistentUserSessionMsg>(service_handle(), user_session.agent_id(), std::move(msg->user_session));
 
             logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
@@ -129,9 +129,9 @@ public:
 
     MILLION_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
         auto& user_session = *msg->user_session;
-        auto user_session_id = user_session.user_session_id();
+        auto agent_id = user_session.agent_id();
 
-        logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", user_session_id, msg->packet.size());
+        logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", agent_id, msg->packet.size());
 
         if (user_session.token() == kInvaildToken) {
             // 连接没token，但是发来了token，当成断线重连处理
@@ -142,7 +142,7 @@ public:
         // 没有token
 
         if (msg->packet.size() < kGatewayHeaderSize){
-            logger().Warn("GatewayTcpRecvPacketMsg size err: {}, {}.", user_session_id, msg->packet.size());
+            logger().Warn("GatewayTcpRecvPacketMsg size err: {}, {}.", agent_id, msg->packet.size());
             co_return nullptr;
         }
 
@@ -151,7 +151,7 @@ public:
         // 将消息转发给本机节点的其他服务
         auto res = imillion().proto_mgr().codec().DecodeMessage(span);
         if (!res) {
-            logger().Warn("GatewayTcpRecvPacketMsg unresolvable message: {}, {}.", user_session_id, msg->packet.size());
+            logger().Warn("GatewayTcpRecvPacketMsg unresolvable message: {}, {}.", agent_id, msg->packet.size());
             co_return nullptr;
         }
 
@@ -160,11 +160,11 @@ public:
         // 指定user_session_id，目标在通过Reply回包时，会在GatewayPersistentUserSessionMsg中循环接收处理
         if (!user_session.agent().lock()) {
             logger().Trace("packet send to user service.");
-            SendTo(user_service_, user_session_id, std::move(res->msg));
+            SendTo(user_service_, agent_id, std::move(res->msg));
         }
         else {
             logger().Trace("packet send to agent service.");
-            SendTo(user_session.agent(), user_session_id, std::move(res->msg));
+            SendTo(user_session.agent(), agent_id, std::move(res->msg));
         }
         co_return nullptr;
     }

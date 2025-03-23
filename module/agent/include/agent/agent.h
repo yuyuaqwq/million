@@ -70,14 +70,14 @@ private:
     std::vector<std::function<void()>> logic_init_queue_;
 };
 
-MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (SessionId) user_session_id, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (SessionId) agent_id, (std::optional<ServiceHandle>) agent_handle);
 
 class MILLION_AGENT_API AgentService : public IService {
 public:
     using Base = IService;
-    AgentService(IMillion* imillion, uint64_t user_session_id)
+    AgentService(IMillion* imillion, uint64_t agent_id)
         : Base(imillion)
-        , user_session_id_(user_session_id) {}
+        , agent_id_(agent_id) {}
 
 private:
     virtual Task<MsgPtr> OnMsg(ServiceHandle sender, SessionId session_id, MsgPtr msg) override {
@@ -94,14 +94,14 @@ private:
 
 public:
     void SendToClient(ProtoMsgUnique proto_msg) {
-        Reply(gateway_, user_session_id_, std::move(proto_msg));
+        Reply(gateway_, agent_id_, std::move(proto_msg));
     }
 
-    SessionId agent_id() const { return user_session_id_; }
+    SessionId agent_id() const { return agent_id_; }
 
 private:
     ServiceHandle gateway_;
-    SessionId user_session_id_;
+    SessionId agent_id_;
 };
 
 #define MILLION_AGENT_LOGIC_REGISTER_PROTO(PROTO_FILE_NAME, MSG_EXT_ID_, SUB_MSG_EXT_ID_) \

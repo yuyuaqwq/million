@@ -13,11 +13,11 @@
 namespace million {
 namespace gateway {
 
-struct UserSessionInfo {
-    Token token = kInvaildToken;
-    million::SessionId user_session_id = kSessionIdInvalid;
-    ServiceHandle agent_;
-};
+//struct UserSessionInfo {
+//    Token token = kInvaildToken;
+//    million::SessionId agent_id = kSessionIdInvalid;
+//    ServiceHandle agent_;
+//};
 
 class UserSession : public net::TcpConnection {
 public:
@@ -27,15 +27,15 @@ public:
     const Token& token() const { return token_; }
     void set_token(const Token& token) { token_ = token; }
 
-    SessionId user_session_id() const { return user_session_id_; }
-    void set_user_session_id(SessionId user_session_id) { user_session_id_ = user_session_id; }
+    SessionId agent_id() const { return agent_id_; }
+    void set_agent_id(SessionId agent_id) { agent_id_ = agent_id; }
 
     const ServiceHandle& agent() const { return agent_; }
     void set_agent(const ServiceHandle& agent) { agent_ = agent; }
 
 private:
     Token token_ = kInvaildToken;
-    million::SessionId user_session_id_ = kSessionIdInvalid;
+    million::SessionId agent_id_ = kSessionIdInvalid;    // agent_id
     ServiceHandle agent_;
 };
 
