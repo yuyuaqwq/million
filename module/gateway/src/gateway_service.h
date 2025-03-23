@@ -95,7 +95,7 @@ public:
             }
             else if (recv_msg.IsType<GatewaySureAgentMsg>()) {
                 auto msg = recv_msg.GetMutMsg<GatewaySureAgentMsg>();
-                user_session.set_agent(std::move(msg->agent_service));
+                user_session.set_agent_handle(std::move(msg->agent_service));
             }
             else if (recv_msg.IsType<GatewayPersistentUserSessionMsg>()) {
                 break;
@@ -158,13 +158,13 @@ public:
         // if (session->token == kInvaildToken)
 
         // 指定user_session_id，目标在通过Reply回包时，会在GatewayPersistentUserSessionMsg中循环接收处理
-        if (!user_session.agent().lock()) {
+        if (!user_session.agent_handle().lock()) {
             logger().Trace("packet send to user service.");
             SendTo(user_service_, agent_id, std::move(res->msg));
         }
         else {
             logger().Trace("packet send to agent service.");
-            SendTo(user_session.agent(), agent_id, std::move(res->msg));
+            SendTo(user_session.agent_handle(), agent_id, std::move(res->msg));
         }
         co_return nullptr;
     }

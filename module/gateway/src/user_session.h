@@ -16,7 +16,7 @@ namespace gateway {
 //struct UserSessionInfo {
 //    Token token = kInvaildToken;
 //    million::SessionId agent_id = kSessionIdInvalid;
-//    ServiceHandle agent_;
+//    ServiceHandle agent_handle;
 //};
 
 class UserSession : public net::TcpConnection {
@@ -30,13 +30,13 @@ public:
     SessionId agent_id() const { return agent_id_; }
     void set_agent_id(SessionId agent_id) { agent_id_ = agent_id; }
 
-    const ServiceHandle& agent() const { return agent_; }
-    void set_agent(const ServiceHandle& agent) { agent_ = agent; }
+    const ServiceHandle& agent_handle() const { return agent_handle_; }
+    void set_agent_handle(const ServiceHandle& agent_handle) { agent_handle_ = agent_handle; }
 
 private:
     Token token_ = kInvaildToken;
     million::SessionId agent_id_ = kSessionIdInvalid;    // agent_id
-    ServiceHandle agent_;
+    ServiceHandle agent_handle_;
 };
 
 } // namespace gateway
