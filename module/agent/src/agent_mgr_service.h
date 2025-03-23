@@ -24,15 +24,13 @@ public:
 
     virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         auto handle = imillion().GetServiceByName("NodeMgrService");
-        if (!handle) {
-            TaskAbort("NodeMgrService not found.");
-        }
+        TaskAssert(handle, "NodeMgrService not found.");
+        
         node_mgr_ = *handle;
 
         handle = imillion().GetServiceByName(gateway::kGatewayServiceName);
-        if (!handle) {
-            TaskAbort("GatewayService not found.");
-        }
+        TaskAssert(handle, "GatewayService not found.");
+        
         gateway_ = *handle;
         co_return nullptr;
     }
