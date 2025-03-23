@@ -115,6 +115,11 @@ public:
     }
 
     bool Timeout(uint32_t tick, const ServiceHandle& service, MsgPtr msg);
+    template <typename MsgT, typename ...Args>
+    std::optional<SessionId> Timeout(uint32_t tick, const ServiceHandle& service, Args&&... args) {
+        return Timeout(tick, service, make_msg<MsgT>(std::forward<Args>(args)...));
+    }
+
     void EnableSeparateWorker(const ServiceHandle& service);
 
     const YAML::Node& YamlSettings() const;
