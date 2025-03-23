@@ -924,10 +924,30 @@ private:
         return result;
     }
 
+    //static JSValue ServiceModuleReply(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    //    if (argc < 3) {
+    //        return JS_ThrowTypeError(ctx, "ServiceModuleReply argc: %d.", argc);
+    //    }
+
+    //    JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+    //    auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
+
+    //    do {
+
+    //        // 发送消息，并将session_id传回
+    //        func_ctx->waiting_session_id = service->Reply(*target, , std::move(msg));
+
+    //    } while (false);
+
+    //    // return result;
+    //}
+
+
     static JSCFunctionListEntry* ServiceModuleExportList(size_t* count) {
         static JSCFunctionListEntry list[] = {
             JS_CFUNC_DEF("send", 2, ServiceModuleSend),
             JS_CFUNC_DEF("call", 2, ServiceModuleCall),
+            // JS_CFUNC_DEF("reply", 2, ServiceModuleReply),
         };
         *count = sizeof(list) / sizeof(JSCFunctionListEntry);
         return list;
