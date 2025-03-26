@@ -916,6 +916,8 @@ private:
                 break;
             }
 
+            service->JsObjToProtoMsg(msg.get(), argv[2]);
+
             // 发送消息，并将session_id传回
             func_ctx->waiting_session_id = service->Send(*target, std::move(msg));
 
@@ -924,30 +926,87 @@ private:
         return result;
     }
 
-    //static JSValue ServiceModuleReply(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    //    if (argc < 3) {
-    //        return JS_ThrowTypeError(ctx, "ServiceModuleReply argc: %d.", argc);
-    //    }
+    static JSValue ServiceModuleReply(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc < 4) {
+            return JS_ThrowTypeError(ctx, "ServiceModuleReply argc: %d.", argc);
+        }
 
-    //    JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
-    //    auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+        auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
 
-    //    do {
+        JSValue result = func_ctx->promise_cap;
+        do {
+            if (!JS_IsString(argv[0])) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleReply 1 argument must be a string.");
+                break;
+            }
+            if (!JS_IsBigInt(ctx, argv[1])) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleReply 2 argument must be a string.");
+                break;
+            }
+            if (!JS_IsString(argv[2])) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleReply 2 argument must be a string.");
+                break;
+            }
+            if (!JS_IsObject(argv[3])) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleReply 3 argument must be a object.");
+                break;
+            }
 
-    //        // 发送消息，并将session_id传回
-    //        func_ctx->waiting_session_id = service->Reply(*target, , std::move(msg));
+            auto service_name = JS_ToCString(ctx, argv[0]);
+            if (!service_name) {
+                result = JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert first argument to string.");
+                break;
+            }
 
-    //    } while (false);
+            auto target = service->imillion().GetServiceByName(service_name);
+            JS_FreeCString(ctx, service_name);
+            if (!target) {
+                result = JS_ThrowInternalError(ctx, "ServiceModuleCall Service does not exist: %s .", service_name);
+                break;
+            }
 
-    //    // return result;
-    //}
+            auto msg_name = JS_ToCString(ctx, argv[2]);
+            if (!msg_name) {
+                result = JS_ThrowInternalError(ctx, "ServiceModuleCall failed to convert 2 argument to string.");
+                break;
+            }
+
+            auto desc = service->imillion().proto_mgr().FindMessageTypeByName(msg_name);
+            JS_FreeCString(ctx, msg_name);
+            if (!desc) {
+                result = JS_ThrowTypeError(ctx, "ServiceModuleCall 2 argument Invalid message type.");
+                break;
+            }
+
+            auto msg = service->imillion().proto_mgr().NewMessage(*desc);
+            if (!msg) {
+                result = JS_ThrowTypeError(ctx, "new message failed.");
+                break;
+            }
+
+            service->JsObjToProtoMsg(msg.get(), argv[3]);
+
+            uint64_t value;
+            if (JS_ToBigUint64(ctx, &value, argv[1]) != 0) {
+                result = JS_ThrowTypeError(ctx, "to big uint64 failed.");
+                break;
+            }
+
+            // 发送消息，并将session_id传回
+            func_ctx->waiting_session_id = service->Reply(*target, value, std::move(msg));
+
+        } while (false);
+
+        // return result;
+    }
 
 
     static JSCFunctionListEntry* ServiceModuleExportList(size_t* count) {
         static JSCFunctionListEntry list[] = {
-            JS_CFUNC_DEF("send", 2, ServiceModuleSend),
-            JS_CFUNC_DEF("call", 2, ServiceModuleCall),
-            // JS_CFUNC_DEF("reply", 2, ServiceModuleReply),
+            JS_CFUNC_DEF("send", 3, ServiceModuleSend),
+            JS_CFUNC_DEF("call", 3, ServiceModuleCall),
+            JS_CFUNC_DEF("reply", 4, ServiceModuleReply),
         };
         *count = sizeof(list) / sizeof(JSCFunctionListEntry);
         return list;
