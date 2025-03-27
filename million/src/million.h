@@ -8,6 +8,7 @@
 
 namespace million {
 
+class SeataSnowflake;
 class ServiceMgr;
 class SessionMgr;
 class SessionMonitor;
@@ -45,6 +46,7 @@ public:
     void EnableSeparateWorker(const ServiceShared& service);
 
     auto& imillion() { assert(imillion_); return *imillion_; }
+    auto& seata_snowflake() { assert(seata_snowflake_); return *seata_snowflake_; }
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& session_mgr() { assert(session_mgr_); return *session_mgr_; }
     auto& session_monitor() { assert(session_monitor_); return *session_monitor_; }
@@ -76,6 +78,7 @@ private:
     std::unique_ptr<WorkerMgr> worker_mgr_;
     std::unique_ptr<IoContextMgr> io_context_mgr_;
     std::unique_ptr<Timer> timer_;
+    std::unique_ptr<SeataSnowflake> seata_snowflake_;
 };
 
 } // namespace million

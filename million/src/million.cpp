@@ -5,6 +5,8 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <million/seata_snowflake.hpp>
+
 #include "service_mgr.h"
 #include "session_mgr.h"
 #include "session_monitor.h"
@@ -62,6 +64,18 @@ bool Million::Init(std::string_view settings_path) {
         }
 
         logger_->Info("init start.");
+
+        const auto& node_settings = settings["node"];
+        if (!node_settings) {
+            logger_->Err("cannot find 'node'.");
+            return false;
+        }
+        if (!node_settings["id"]) {
+            logger_->Err("cannot find 'node.id'.");
+            return false;
+        }
+        auto node_id = node_settings["id"].as<size_t>();
+        seata_snowflake_ = std::make_unique<SeataSnowflake>(node_id);
 
         service_mgr_ = std::make_unique<ServiceMgr>(this);
         session_mgr_ = std::make_unique<SessionMgr>(this);

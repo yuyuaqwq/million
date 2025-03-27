@@ -2,6 +2,8 @@
 
 #include <cassert>
 
+#include <million/seata_snowflake.hpp>
+
 #include "million.h"
 
 namespace million {
@@ -12,11 +14,7 @@ SessionMgr::SessionMgr(Million* million)
 SessionMgr::~SessionMgr() = default;
 
 SessionId SessionMgr::NewSession() {
-    auto id = ++session_id_;
-    if (id > 0x7fffffffffffffff) {
-        throw std::overflow_error("Session ID overflow: no more IDs available.");
-    }
-    return id;
+    return million_->seata_snowflake().NextId();
 }
 
 } //namespace million

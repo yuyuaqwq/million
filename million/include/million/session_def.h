@@ -2,10 +2,12 @@
 
 #include <cstdint>
 
+#include <million/seata_snowflake.hpp>
+
 namespace million {
 
 using SessionId = uint64_t;
-constexpr SessionId kSessionIdInvalid = 0;
+constexpr SessionId kSessionIdInvalid = kSnowIdInvalid;
 
 constexpr uint32_t kSessionNeverTimeout = 0xffffffff;
 
