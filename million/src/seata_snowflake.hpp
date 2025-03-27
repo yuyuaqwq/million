@@ -45,6 +45,7 @@ private:
     // middle 10 bit: workerId
     // lowest 53 bit: all 0
     WorkerId worker_id_;
+    static constexpr uint64_t kNotUsed = 1;
     static constexpr uint64_t kWorkerBits = 10;
 
     // timestamp and sequence mix in one Long
@@ -56,7 +57,11 @@ private:
     static constexpr uint64_t kTwepoch = 1588435200000ull; 
     static constexpr uint64_t kTimestampBits = 41;
     static constexpr uint64_t kSeqBits = 12;
-    static constexpr uint64_t kTimeAndSeqMask = 0x1fffffffffff;
+    // 53 bit
+    static constexpr uint64_t kTimeAndSeqMask = 0x1fffffffffffff;
+
+    static_assert(kNotUsed + kWorkerBits + kTimestampBits + kSeqBits == sizeof(uint64_t) * 8
+        , "Bits err.");
 };
 
 } // namespace million
