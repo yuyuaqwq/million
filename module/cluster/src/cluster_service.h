@@ -25,6 +25,8 @@ MILLION_MSG_DEFINE(, ClusterPersistentNodeServiceSessionMsg, (NodeSessionShared)
 using NodeServiceSessionId = uint64_t;
 
 class ClusterService : public IService {
+    MILLION_SERVICE_DEFINE(ClusterService);
+
 public:
     using Base = IService;
     ClusterService(IMillion* imillion)
@@ -67,9 +69,7 @@ public:
         return true;
     }
 
-    MILLION_MSG_DISPATCH(ClusterService);
-
-    MILLION_MSG_HANDLE(ClusterPersistentNodeServiceSessionMsg, msg) {
+    MILLION_MSG_HANDLE(const ClusterPersistentNodeServiceSessionMsg, msg) {
         auto& node_session = *msg->node_session;
         auto& src_service = msg->src_service;
         auto& target_service = msg->target_service;
@@ -90,7 +90,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MUT_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
         auto& node_session = *msg->node_session;
 
         auto& ep = node_session.remote_endpoint();
@@ -114,7 +114,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MUT_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
         auto& node_session = *msg->node_session;
 
         auto& ep = node_session.remote_endpoint();
@@ -235,7 +235,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MUT_MSG_HANDLE(ClusterSendMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterSendMsg, msg) {
         auto node_session = GetNodeSession(msg->target_node);
         if (node_session) {
             PacketForward(node_session, std::move(msg->src_service)

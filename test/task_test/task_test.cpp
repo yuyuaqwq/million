@@ -12,6 +12,8 @@ MILLION_MODULE_INIT();
 MILLION_MSG_DEFINE(, Test2Msg, (int) value1, (std::string) value2);
 
 class TestService : public million::IService {
+    MILLION_SERVICE_DEFINE(TestService);
+
     using Base = million::IService;
     using Base::Base;
 

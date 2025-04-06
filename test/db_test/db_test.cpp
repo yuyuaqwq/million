@@ -18,6 +18,8 @@ namespace db = million::db;
 MILLION_MSG_DEFINE_EMPTY(, Test1Msg)
 
 class TestService : public million::IService {
+    MILLION_SERVICE_DEFINE(TestService);
+
 public:
     using Base = million::IService;
     TestService(million::IMillion* imillion)
@@ -71,8 +73,6 @@ public:
     }
 
 
-    MILLION_MSG_DISPATCH(TestService);
-
     MILLION_MSG_HANDLE(Test1Msg, msg) {
         std::printf("?? ");
         //auto msg2 = std::make_unique<Test1Msg>();
@@ -105,7 +105,7 @@ int main() {
     }
     auto service_handle = *service_opt;
 
-    //test_app->Send<Test1Msg>(service_handle, service_handle);
+    // test_app->Send<Test1Msg>(service_handle, service_handle);
     //for (int i = 0; i < 10000; i++) {
     //    auto msg2 = std::make_unique<Test1Msg>();
     //    test_app->Timeout(1, service_handle, std::move(msg2));

@@ -25,6 +25,8 @@ namespace million {
 namespace db {
 
 class SqlService : public IService {
+    MILLION_SERVICE_DEFINE(SqlService);
+
 public:
     using Base = IService;
     using Base::Base;
@@ -55,8 +57,6 @@ public:
         sql_.close();
         co_return nullptr;
     }
-
-    MILLION_MSG_DISPATCH(SqlService);
 
     MILLION_MSG_HANDLE(SqlTableInitMsg, msg) {
         const auto& desc = msg->desc;
@@ -246,7 +246,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MUT_MSG_HANDLE(SqlQueryMsg, msg) {
+    MILLION_MSG_HANDLE(SqlQueryMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
         const auto& reflection = msg->db_row->GetReflection();
@@ -366,7 +366,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MUT_MSG_HANDLE(SqlInsertMsg, msg) {
+    MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
         const auto& proto_msg = msg->db_row.get();
         const auto& desc = msg->db_row.GetDescriptor();
         const auto& reflection = msg->db_row.GetReflection();
@@ -434,7 +434,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MUT_MSG_HANDLE(SqlUpdateMsg, msg) {
+    MILLION_MSG_HANDLE(SqlUpdateMsg, msg) {
         const auto& proto_msg = msg->db_row.get();
         const auto& desc = msg->db_row.GetDescriptor();
         const auto& reflection = msg->db_row.GetReflection();

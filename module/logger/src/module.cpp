@@ -27,6 +27,8 @@ static_assert(static_cast<uint32_t>(Logger::LogLevel::kCritical) == spdlog::leve
 static_assert(static_cast<uint32_t>(Logger::LogLevel::kOff) == spdlog::level::level_enum::off);
 
 class LoggerService : public IService {
+    MILLION_SERVICE_DEFINE(LoggerService);
+
 public:
     using Base = IService;
     using Base::Base;
@@ -95,7 +97,6 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_DISPATCH(LoggerService);
 
     MILLION_MSG_HANDLE(LoggerLog, msg) {
         auto level = static_cast<spdlog::level::level_enum>(msg->level);

@@ -23,6 +23,8 @@ MILLION_MSG_DEFINE(, GatewayPersistentUserSessionMsg, (UserSessionShared) user_s
     // 网关服务分为主服务及代理服务，主服务负责收包，部署在网关节点上
     // 其他需要接收网关转发的包的节点，需要部署一个代理服务，代理服务负责接收集群服务转发来的网关主服务发的包，再转发给节点内的其他服务
 class GatewayService : public IService {
+    MILLION_SERVICE_DEFINE(GatewayService);
+
 public:
     using Base = IService;
     GatewayService(IMillion* imillion)
@@ -61,8 +63,6 @@ public:
         logger().Info("Gateway start.");
         co_return nullptr;
     }
-
-    MILLION_MSG_DISPATCH(GatewayService);
 
     MILLION_MSG_HANDLE(GatewayPersistentUserSessionMsg, msg) {
         auto& user_session = *msg->user_session;
@@ -104,7 +104,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MUT_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
         auto& user_session = *msg->user_session;
 
         auto& ep = user_session.remote_endpoint();

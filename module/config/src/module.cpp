@@ -17,6 +17,8 @@ namespace config {
 // 2.访问配置即返回共享指针，热更只需要重新赋值共享指针即可
 
 class ConfigService : public IService {
+    MILLION_SERVICE_DEFINE(ConfigService);
+
 public:
     using Base = IService;
     using Base::Base;
@@ -89,9 +91,7 @@ public:
         return true;
     }
 
-    MILLION_MSG_DISPATCH(ConfigService);
-
-    MILLION_MUT_MSG_HANDLE(ConfigQueryMsg, msg) {
+    MILLION_MSG_HANDLE(ConfigQueryMsg, msg) {
         auto config_iter = config_map_.find(&msg->config_desc);
         if (config_iter == config_map_.end()) {
             co_return std::move(msg_);
@@ -101,7 +101,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MSG_HANDLE(ConfigUpdateMsg, msg) {
+    MILLION_MSG_HANDLE(const ConfigUpdateMsg, msg) {
         //const auto& name = msg->config_desc.name();
         //if (!LoadConfig(name, )) {
         //    logger().Err("LoadConfig failed: {}.", name);

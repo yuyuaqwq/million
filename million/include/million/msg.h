@@ -1,6 +1,7 @@
 #pragma once
 
 #include <variant>
+#include <typeindex>
 
 #include <million/api.h>
 #include <million/proto_msg.h>

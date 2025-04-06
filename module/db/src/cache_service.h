@@ -21,6 +21,8 @@ namespace db {
 
 // 缓存服务
 class CacheService : public IService {
+    MILLION_SERVICE_DEFINE(CacheService);
+
 public:
     using Base = IService;
     using Base::Base;
@@ -50,9 +52,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_DISPATCH(CacheService);
-
-    MILLION_MUT_MSG_HANDLE(CacheGetMsg, msg) {
+    MILLION_MSG_HANDLE(CacheGetMsg, msg) {
         auto& proto_msg = msg->db_row->get();
         const auto& desc = msg->db_row->GetDescriptor();
 
@@ -84,7 +84,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MUT_MSG_HANDLE(CacheSetMsg, msg) {
+    MILLION_MSG_HANDLE(CacheSetMsg, msg) {
         std::vector<std::string> keys; 
         std::vector<std::string> args;
         MakeKeysAndArgs(msg->db_row, msg->old_db_version, &keys, &args);
@@ -99,7 +99,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MUT_MSG_HANDLE(CacheDelMsg, msg) {
+    MILLION_MSG_HANDLE(CacheDelMsg, msg) {
         auto redis_key = GetRedisKey(msg->db_row);
         auto db_version = std::to_string(msg->db_row.db_version());
         auto res = redis_->eval<long long>(kLuaDelScript, { redis_key , db_version }, {});
@@ -134,7 +134,7 @@ public:
     //    co_return std::move(msg_);
     //}
 
-    MILLION_MUT_MSG_HANDLE(CacheGetBytesMsg, msg) {
+    MILLION_MSG_HANDLE(CacheGetBytesMsg, msg) {
         auto value =  redis_->get(msg->key_value);
         if (!value) {
             co_return std::move(msg_);
@@ -143,7 +143,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MUT_MSG_HANDLE(CacheSetBytesMsg, msg) {
+    MILLION_MSG_HANDLE(CacheSetBytesMsg, msg) {
         msg->success = redis_->set(msg->key, msg->value);
         co_return std::move(msg_);
     }

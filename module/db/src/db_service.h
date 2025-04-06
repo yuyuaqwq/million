@@ -43,6 +43,8 @@ using DbTable = std::unordered_map<std::string, DbRowCache>;
 MILLION_MSG_DEFINE(, DbRowTickSyncMsg, (int32_t) sync_tick, (DbRowCache*) cache);
 
 class DbService : public IService {
+    MILLION_SERVICE_DEFINE(DbService);
+
 public:
     using Base = IService;
     DbService(IMillion* imillion)
@@ -70,9 +72,7 @@ public:
         return true;
     }
 
-    MILLION_MSG_DISPATCH(DbService);
-
-    MILLION_MUT_MSG_HANDLE(DbRowTickSyncMsg, msg) {
+    MILLION_MSG_HANDLE(DbRowTickSyncMsg, msg) {
         if (msg->cache->db_row.db_version() > msg->cache->sql_db_version) {
             // co_await期间可能会有新的DbRowUpdateMsg消息被处理，这里复制过来再回写
             // 可以考虑优化成移动
@@ -98,14 +98,14 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MUT_MSG_HANDLE(DbRowCreateMsg, msg) {
+    MILLION_MSG_HANDLE(DbRowCreateMsg, msg) {
         auto db_row = DbRow(std::move(msg->row_msg));
         auto res = co_await Call<SqlInsertMsg>(sql_service_, db_row, false);
         TaskAssert(res->success, "SqlInsert failed.");
         co_return std::move(msg_);
     }
 
-    MILLION_MUT_MSG_HANDLE(DbRowQueryMsg, msg) {
+    MILLION_MSG_HANDLE(DbRowQueryMsg, msg) {
         auto& desc = msg->table_desc;
 
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
@@ -134,7 +134,7 @@ public:
         co_return std::move(msg_);
     }
 
-    MILLION_MUT_MSG_HANDLE(DbRowUpdateMsg, msg) {
+    MILLION_MSG_HANDLE(DbRowUpdateMsg, msg) {
         auto db_row = msg->db_row;
         const auto& desc = db_row.GetDescriptor();
         const auto& reflection = db_row.GetReflection();

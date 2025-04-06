@@ -16,6 +16,8 @@ namespace example = config::example;
 MILLION_MSG_DEFINE_EMPTY(, Test1Msg)
 
 class TestService : public million::IService {
+    MILLION_SERVICE_DEFINE(TestService);
+
 public:
     using Base = million::IService;
     TestService(million::IMillion* imillion)
@@ -40,8 +42,6 @@ public:
         co_return nullptr;
     }
 
-
-    MILLION_MSG_DISPATCH(TestService);
 
     MILLION_MSG_HANDLE(Test1Msg, msg) {
         auto config = co_await config::MakeConfigLock(this, config_service_, &example_kv_config_);

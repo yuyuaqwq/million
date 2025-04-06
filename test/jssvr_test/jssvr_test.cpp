@@ -15,6 +15,8 @@ class TestApp : public million::IMillion {
 namespace ss = million::ss;
 
 class TestService : public million::IService {
+    MILLION_SERVICE_DEFINE(TestService);
+
 public:
     using Base = million::IService;
     TestService(million::IMillion* imillion)
@@ -28,18 +30,14 @@ public:
         return true;
     }
 
-    MILLION_MSG_DISPATCH(TestService);
-
-    using LoginReq = ss::test::LoginReq;
-    MILLION_MSG_HANDLE(LoginReq, req) {
+    MILLION_MSG_HANDLE(ss::test::LoginReq, req) {
         logger().Info("ss::test::LoginReq, value:{}", req->value());
 
         // 回一个LoginRes
         co_return million::make_proto_msg<ss::test::LoginRes>("LoginRes res");
     }
 
-    using LoginRes = ss::test::LoginRes;
-    MILLION_MSG_HANDLE(LoginRes, res) {
+    MILLION_MSG_HANDLE(ss::test::LoginRes, res) {
         logger().Info("ss::test::LoginRes, value:{}", res->value());
         co_return nullptr;
     }

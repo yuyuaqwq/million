@@ -13,6 +13,8 @@ namespace million {
 namespace agent {
 
 class AgentMgrService : public IService {
+    MILLION_SERVICE_DEFINE(AgentMgrService);
+
 public:
     using Base = IService;
     using Base::Base;
@@ -35,9 +37,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_DISPATCH(AgentMgrService);
-
-    MILLION_MUT_MSG_HANDLE(AgentMgrLoginMsg, msg) {
+    MILLION_MSG_HANDLE(AgentMgrLoginMsg, msg) {
         auto agent_msg = co_await Call<NewAgentMsg>(node_mgr_, msg->agent_id, std::nullopt);
         if (!agent_msg->agent_handle) {
             TaskAbort("New agent failed.");

@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include <memory>
+#include <typeindex>
 
 #include <million/api.h>
 #include <million/noncopyable.h>
@@ -14,6 +15,8 @@
 #include <million/logger.h>
 
 namespace million {
+
+using ServiceTypeKey = std::type_index;
 
 class IMillion;
 class MILLION_API IService : noncopyable {
@@ -122,9 +125,47 @@ public:
 protected:
     virtual bool OnInit() { return true; }
     virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) { co_return nullptr; }
-    virtual Task<MsgPtr> OnMsg(ServiceHandle sender, SessionId session_id, MsgPtr msg) { co_return nullptr; }
+    virtual Task<MsgPtr> OnMsg(ServiceHandle sender, SessionId session_id, MsgPtr msg) { co_return co_await MsgDispatch(std::move(sender), session_id, std::move(msg)); }
     virtual Task<MsgPtr> OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) { co_return nullptr; }
     virtual void OnExit() { }
+
+
+    virtual ServiceTypeKey GetTypeKey() = 0;
+
+    Task<MsgPtr> MsgDispatch(ServiceHandle sender, SessionId session_id, MsgPtr msg) {
+        auto service_type_key = GetTypeKey();
+        auto msg_type_key = msg.GetTypeKey();
+        auto it = msg_handlers_.find({ service_type_key, msg_type_key });
+        if (it != msg_handlers_.end()) {
+            co_return co_await it->second(this, std::move(sender), session_id, std::move(msg));
+        }
+        co_return nullptr;
+    }
+
+    template <typename MsgT, typename ServiceT>
+    static void RegisterMsgHandler(Task<MsgPtr>(ServiceT::* handler)(const ServiceHandle& sender, SessionId session_id, MsgPtr msg_ptr, MsgT* msg)) {
+        msg_handlers_[{ typeid(ServiceT), GetMsgTypeKey<MsgT>() }] = [handler](IService* iservice, ServiceHandle sender, SessionId session_id, MsgPtr msg_ptr) -> Task<MsgPtr> {
+            ServiceT* service = static_cast<ServiceT*>(iservice);
+            if constexpr (std::is_const_v<std::remove_pointer_t<MsgT>>) {
+                auto* msg = msg_ptr.GetMsg<MsgT>();
+                co_return co_await (service->*handler)(std::move(sender), session_id, std::move(msg_ptr), msg);
+            }
+            else {
+                auto* msg = msg_ptr.GetMutMsg<MsgT>();
+                co_return co_await (service->*handler)(std::move(sender), session_id, std::move(msg_ptr), msg);
+            }
+        };
+    }
+
+    template <typename MsgT, typename ServiceT>
+    static bool StaticRegisterMsgHandler() {
+        Task<MsgPtr>(ServiceT::*handler)(const ServiceHandle&, SessionId, MsgPtr, MsgT*) = &ServiceT::OnHandle;
+        static bool registered = [&] {
+            RegisterMsgHandler<MsgT>(handler);
+            return true;
+        }();
+        return registered;
+    }
 
 private:
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
@@ -135,59 +176,59 @@ private:
 
     IMillion* imillion_;
     ServiceHandle service_handle_;
+
+    struct TypeIndexPair {
+        ServiceTypeKey service_type_key;
+        MsgTypeKey msg_type_key;
+
+        bool operator==(const TypeIndexPair& other) const {
+            return service_type_key == other.service_type_key && msg_type_key == other.msg_type_key;
+        }
+    };
+
+    struct TypeIndexPairHash {
+        size_t operator()(const TypeIndexPair& p) const {
+            return p.service_type_key.hash_code() ^ p.msg_type_key;
+        }
+    };
+
+    static inline std::unordered_map<TypeIndexPair
+        , std::function<Task<MsgPtr>(IService*, ServiceHandle, SessionId, MsgPtr)>
+        , TypeIndexPairHash> msg_handlers_;
 };
 
-#define MILLION_MSG_DISPATCH(MILLION_SERVICE_TYPE_) \
-    using _MILLION_SERVICE_TYPE_ = MILLION_SERVICE_TYPE_; \
-    virtual ::million::Task<::million::MsgPtr> OnMsg(::million::ServiceHandle sender, ::million::SessionId session_id, ::million::MsgPtr msg) override { \
-        auto iter = _MILLION_MSG_HANDLE_MAP_.find(msg.GetTypeKey()); \
-        if (iter != _MILLION_MSG_HANDLE_MAP_.end()) { \
-             co_return co_await (this->*iter->second)(sender, session_id, std::move(msg)); \
-        } \
-        co_return nullptr; \
-    } \
-    ::std::unordered_map<::million::MsgTypeKey, ::million::Task<::million::MsgPtr>(_MILLION_SERVICE_TYPE_::*)(const ::million::ServiceHandle&, ::million::SessionId, ::million::MsgPtr)> _MILLION_MSG_HANDLE_MAP_ \
-
-#define MILLION_MSG_HANDLE_TEMPLATE(MSG_TYPE_, MSG_PTR_NAME_, GET_MSG_METHOD_, CONST_) \
-    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_I(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_) { \
-        auto msg = msg_.GET_MSG_METHOD_<MSG_TYPE_>(); \
-        return _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(sender, session_id, std::move(msg_), msg); \
-    } \
-    const bool _MILLION_MSG_HANDLE_REGISTER_##MSG_TYPE_ =  \
-        [this] { \
-            auto res = _MILLION_MSG_HANDLE_MAP_.emplace(::million::GetMsgTypeKey<MSG_TYPE_>(), \
-                &_MILLION_SERVICE_TYPE_::_MILLION_MSG_HANDLE_##MSG_TYPE_##_I \
-            ); \
-            assert(res.second); \
-            return true; \
-        }(); \
-    ::million::Task<::million::MsgPtr> _MILLION_MSG_HANDLE_##MSG_TYPE_##_II(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr MSG_PTR_NAME_##_, CONST_ MSG_TYPE_* MSG_PTR_NAME_)
-
-#define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    MILLION_MSG_HANDLE_TEMPLATE(MSG_TYPE_, MSG_PTR_NAME_, GetMsg, const)
-
-#define MILLION_MUT_MSG_HANDLE(MSG_TYPE_, MSG_PTR_NAME_) \
-    MILLION_MSG_HANDLE_TEMPLATE(MSG_TYPE_, MSG_PTR_NAME_, GetMutMsg)
+//// 持久会话循环参考
+//// 使用持久会话有些需要注意的地方：
+//// 一个服务可以创建多个持久会话，创建后相当于对外提供一个持续性的，针对某个SessionId的服务端(服务协程)
+//// 同一个对端服务，同一时间只能存在一个连接到此持久会话的客户端(服务协程)
+//
+//// 需要创建新的协程，不能直接co_await OnMsg(会导致当前持久会话协程被阻塞，无法处理新的持久会话消息)
+//// SendTo如果考虑性能可以直接替换成当前服务的Service::ProcessMsg，但是是私有类
+//#define MILLION_PERSISTENT_SESSION_MSG_LOOP(START_MSG_TYPE_, STOP_MSG_TYPE_) \
+//    MILLION_MSG_HANDLE(START_MSG_TYPE_, msg) { \
+//        do { \
+//            auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false); \
+//            auto msg_type_key = recv_msg.GetTypeKey(); \
+//            imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg)); \
+//            if (::million::GetMsgTypeKey<STOP_MSG_TYPE_>()) { \
+//                break; \
+//            } \
+//        } while (true);\
+//        co_return; \
+//    }
 
 
-// 持久会话循环参考
-// 使用持久会话有些需要注意的地方：
-// 一个服务可以创建多个持久会话，创建后相当于对外提供一个持续性的，针对某个SessionId的服务端(服务协程)
-// 同一个对端服务，同一时间只能存在一个连接到此持久会话的客户端(服务协程)
+#define MILLION_SERVICE_DEFINE(SERVICE_CLASS) \
+    private:\
+        using SELF_CLASS_ = SERVICE_CLASS; \
+    virtual ::million::ServiceTypeKey GetTypeKey() override { return typeid(SELF_CLASS_); }
+    
 
-// 需要创建新的协程，不能直接co_await OnMsg(会导致当前持久会话协程被阻塞，无法处理新的持久会话消息)
-// SendTo如果考虑性能可以直接替换成当前服务的Service::ProcessMsg，但是是私有类
-#define MILLION_PERSISTENT_SESSION_MSG_LOOP(START_MSG_TYPE_, STOP_MSG_TYPE_) \
-    MILLION_MSG_HANDLE(START_MSG_TYPE_, msg) { \
-        do { \
-            auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false); \
-            auto msg_type_key = recv_msg.GetTypeKey(); \
-            imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg)); \
-            if (::million::GetMsgTypeKey<STOP_MSG_TYPE_>()) { \
-                break; \
-            } \
-        } while (true);\
-        co_return; \
-    }
+#define CONCAT(a, b) a##b          // 直接拼接
+#define CONCAT_LINE(name, line) CONCAT(name, line)  // 先展开 line，再拼接
+
+#define MILLION_MSG_HANDLE(MSG_TYPE, MSG_NAME) \
+    static inline auto CONCAT_LINE(on_handle_, __LINE__)##_  = StaticRegisterMsgHandler<MSG_TYPE, SELF_CLASS_>(); \
+    ::million::Task<::million::MsgPtr> OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE* MSG_NAME)
 
 } // namespace million

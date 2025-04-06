@@ -21,6 +21,8 @@ struct ServiceFuncContext {
 };
 
 class JsModuleService : public million::IService {
+    MILLION_SERVICE_DEFINE(JsModuleService);
+
 public:
     using Base = IService;
     using Base::Base;
@@ -49,6 +51,8 @@ public:
 };
 
 class JsService : public million::IService {
+    MILLION_SERVICE_DEFINE(JsService);
+
 public:
     using Base = IService;
     JsService(million::IMillion* imillion, JsModuleService* js_module_service, const std::string& package)

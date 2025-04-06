@@ -23,3 +23,5 @@ logger:
     level: debug
     console_level: debug
 
+node:
+    id: 0
