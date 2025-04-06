@@ -225,10 +225,10 @@ private:
     
 
 #define MILLION_CONCAT(a, b) a##b          // 直接拼接
-#define MILLION_CONCAT_LINE(name, line) CONCAT(name, line)  // 先展开 line，再拼接
+#define MILLION_CONCAT_LINE(name, line) MILLION_CONCAT(name, line)  // 先展开 line，再拼接
 
 #define MILLION_MSG_HANDLE(MSG_TYPE, MSG_NAME) \
-    static inline auto CONCAT_LINE(on_handle_, __LINE__)##_  = StaticRegisterMsgHandler<MSG_TYPE, SELF_CLASS_>(); \
+    static inline auto MILLION_CONCAT_LINE(on_handle_, __LINE__)##_  = StaticRegisterMsgHandler<MSG_TYPE, SELF_CLASS_>(); \
     ::million::Task<::million::MsgPtr> OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE* MSG_NAME)
 
 } // namespace million
