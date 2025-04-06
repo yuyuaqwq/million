@@ -224,8 +224,8 @@ private:
     virtual ::million::ServiceTypeKey GetTypeKey() override { return typeid(SELF_CLASS_); }
     
 
-#define CONCAT(a, b) a##b          // 直接拼接
-#define CONCAT_LINE(name, line) CONCAT(name, line)  // 先展开 line，再拼接
+#define MILLION_CONCAT(a, b) a##b          // 直接拼接
+#define MILLION_CONCAT_LINE(name, line) CONCAT(name, line)  // 先展开 line，再拼接
 
 #define MILLION_MSG_HANDLE(MSG_TYPE, MSG_NAME) \
     static inline auto CONCAT_LINE(on_handle_, __LINE__)##_  = StaticRegisterMsgHandler<MSG_TYPE, SELF_CLASS_>(); \
