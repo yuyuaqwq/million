@@ -760,7 +760,17 @@ private:
             }
 
             if (field_desc->is_repeated()) {
-                for (size_t j = 0; j < reflection->FieldSize(*msg, field_desc); ++j) {
+                if (!JS_IsArray(js_ctx_, field_value)) {
+                    TaskAbort("JsObjToProtoMsg: Not an array.");
+                    continue;
+                }
+
+                JSValue len_val = JS_GetPropertyStr(js_ctx_, field_value, "length");
+                uint32_t len;
+                JS_ToUint32(js_ctx_, &len, len_val);
+                JS_FreeValue(js_ctx_, len_val);
+
+                for (size_t j = 0; j < len; ++j) {
                     JSValue repeated_value = JS_GetPropertyUint32(js_ctx_, field_value, j);
                     SetProtoMsgRepeatedFieldFromJsValue(msg, *desc, *reflection, *field_desc, repeated_value, j);
                 }
