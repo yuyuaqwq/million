@@ -143,7 +143,7 @@ protected:
     }
 
     template <typename MsgT, typename ServiceT>
-    static void RegisterMsgHandler(Task<MsgPtr>(ServiceT::* handler)(const ServiceHandle& sender, SessionId session_id, MsgPtr msg_ptr, MsgT* msg)) {
+    static void BindMsgHandler(Task<MsgPtr>(ServiceT::* handler)(const ServiceHandle& sender, SessionId session_id, MsgPtr msg_ptr, MsgT* msg)) {
         msg_handlers_[{ typeid(ServiceT), GetMsgTypeKey<MsgT>() }] = [handler](IService* iservice, ServiceHandle sender, SessionId session_id, MsgPtr msg_ptr) -> Task<MsgPtr> {
             ServiceT* service = static_cast<ServiceT*>(iservice);
             if constexpr (std::is_const_v<std::remove_pointer_t<MsgT>>) {
@@ -158,10 +158,10 @@ protected:
     }
 
     template <typename MsgT, typename ServiceT>
-    static bool StaticRegisterMsgHandler() {
+    static bool AutoRegisterMsgHandler() {
         Task<MsgPtr>(ServiceT::*handler)(const ServiceHandle&, SessionId, MsgPtr, MsgT*) = &ServiceT::OnHandle;
-        static bool registered = [&] {
-            RegisterMsgHandler<MsgT>(handler);
+        static bool registered = [handler] {
+            BindMsgHandler<MsgT>(handler);
             return true;
         }();
         return registered;
@@ -228,7 +228,7 @@ private:
 #define MILLION_CONCAT_LINE(name, line) MILLION_CONCAT(name, line)  // 先展开 line，再拼接
 
 #define MILLION_MSG_HANDLE(MSG_TYPE, MSG_NAME) \
-    static inline auto MILLION_CONCAT_LINE(on_handle_, __LINE__)##_  = StaticRegisterMsgHandler<MSG_TYPE, SELF_CLASS_>(); \
+    static inline auto MILLION_CONCAT_LINE(on_handle_, __LINE__)##_  = AutoRegisterMsgHandler<MSG_TYPE, SELF_CLASS_>(); \
     ::million::Task<::million::MsgPtr> OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE* MSG_NAME)
 
 } // namespace million
