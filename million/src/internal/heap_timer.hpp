@@ -71,7 +71,7 @@ public:
             min_expire_time_ = std::chrono::high_resolution_clock::time_point::max();
             // 任务队列为空时才等待，避免唤醒丢失
             // while可以避免虚假唤醒
-            while (!adds_.empty()) {
+            while (adds_.empty()) {
                 cv_.wait(lock);
             }
         }
