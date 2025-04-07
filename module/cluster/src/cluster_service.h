@@ -75,7 +75,7 @@ public:
         auto& target_service = msg->target_service;
         do {
             // 这里未来可以修改超时时间，来自动回收协程
-            auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
+            auto recv_msg = co_await Recv(session_id, ::million::kSessionNeverTimeout, false);
             if (recv_msg.IsProtoMsg()) {
                 logger().Trace("Cluster Recv ProtoMessage: {}.", session_id);
 

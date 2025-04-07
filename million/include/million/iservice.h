@@ -44,6 +44,10 @@ public:
         return Reply(target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
+    SessionAwaiterBase Recv(SessionId session_id, uint32_t timeout_s, bool or_null) {
+        return SessionAwaiterBase(session_id, timeout_s, or_null);
+    }
+
     template <typename MsgT>
     SessionAwaiter<MsgT> Recv(SessionId session_id) {
         // 0表示默认超时时间

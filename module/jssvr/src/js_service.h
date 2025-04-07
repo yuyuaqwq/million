@@ -19,6 +19,7 @@ namespace jssvr {
 
 struct ServiceFuncContext {
     JSValue promise_cap = JS_UNDEFINED;
+    ServiceHandle sender;
     std::optional<million::SessionId> waiting_session_id;
 };
 
@@ -185,10 +186,16 @@ public:
                 }
 
                 if (func_ctx.waiting_session_id) {
-                    auto res_msg = co_await Recv<million::ProtoMsg>(*func_ctx.waiting_session_id);
+                    auto res_msg = co_await Recv(*func_ctx.waiting_session_id, 0, false);
+
+                    if (res_msg.IsCppMsg()) {
+                        res_msg = co_await MsgDispatch(func_ctx.sender, *func_ctx.waiting_session_id, std::move(res_msg));
+                    }
+                    
+                    auto proto_res_msg = res_msg.GetProtoMsg();
 
                     // res_msg转js对象，唤醒
-                    JSValue msg_obj = ProtoMsgToJsObj(*res_msg);
+                    JSValue msg_obj = ProtoMsgToJsObj(*proto_res_msg);
                     result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
                     JS_FreeValue(js_ctx_, msg_obj);
                     if (!JsCheckException(result)) break;
@@ -1320,6 +1327,8 @@ private:
             std::string primary_key_str = primary_key;
             JS_FreeCString(ctx, msg_name);
 
+            func_ctx->sender = *handle;
+
             // 这里只能让OnMsg等待，发现是C++消息再做分发
             func_ctx->waiting_session_id = service->Send<db::DbRowQueryMsg>(*handle, *desc, std::move(primary_key_str), std::nullopt, false);
 
@@ -1392,6 +1401,9 @@ private:
         return module;
     }
 
+    MILLION_MSG_HANDLE(db::DbRowQueryMsg, msg) {
+        co_return nullptr;
+    }
 
     bool AddModule(const std::string& module_name, JSModuleDef* module) {
         if (modules_.find(module_name) != modules_.end()) {

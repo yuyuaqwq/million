@@ -32,7 +32,7 @@ template <typename T = void>
 struct TaskPromise;
 
 struct SessionAwaiterBase {
-    explicit SessionAwaiterBase(SessionId waiting_session_id, uint32_t timeout_s, bool or_null)
+    SessionAwaiterBase(SessionId waiting_session_id, uint32_t timeout_s, bool or_null)
         : waiting_session_id_(waiting_session_id)
         , timeout_s_(timeout_s)
         , or_null_(or_null) {}
