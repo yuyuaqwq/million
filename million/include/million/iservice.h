@@ -218,17 +218,17 @@ private:
 //    }
 
 
-#define MILLION_SERVICE_DEFINE(SERVICE_CLASS) \
+#define MILLION_SERVICE_DEFINE(SERVICE_CLASS_) \
     private:\
-        using SELF_CLASS_ = SERVICE_CLASS; \
+        using SELF_CLASS_ = SERVICE_CLASS_; \
     virtual ::million::ServiceTypeKey GetTypeKey() override { return typeid(SELF_CLASS_); }
     
 
-#define MILLION_PRIMITIVE_CAT(a, b) a##b
-#define MILLION_CAT(name, line) MILLION_PRIMITIVE_CAT(name, line)
+#define MILLION_PRIMITIVE_CAT(A_, B_) A_##B_
+#define MILLION_CAT(NAME_, LINE_) MILLION_PRIMITIVE_CAT(NAME_, LINE_)
 
-#define MILLION_MSG_HANDLE(MSG_TYPE, MSG_NAME) \
-    static inline auto MILLION_CAT(MILLION_CAT(on_handle_, __LINE__), _) = AutoRegisterMsgHandler<MSG_TYPE, SELF_CLASS_>(); \
-    ::million::Task<::million::MsgPtr> OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE* MSG_NAME)
+#define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_NAME_) \
+    static inline auto MILLION_CAT(MILLION_CAT(on_handle_, __LINE__), _) = AutoRegisterMsgHandler<MSG_TYPE_, SELF_CLASS_>(); \
+    ::million::Task<::million::MsgPtr> OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE_* MSG_NAME_)
 
 } // namespace million
