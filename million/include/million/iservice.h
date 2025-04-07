@@ -18,8 +18,26 @@ namespace million {
 
 using ServiceTypeKey = std::type_index;
 
+template <typename MsgT, typename ServiceT>
+class AutoRegisterMsgHandler {
+public:
+    using OnHandlePtr = Task<MsgPtr>(ServiceT::*)(const ServiceHandle&, SessionId, MsgPtr, MsgT*);
+
+    AutoRegisterMsgHandler() {
+        handler_ = &ServiceT::OnHandle;
+        IService::BindMsgHandler<MsgT>(handler_);
+    }
+
+    ~AutoRegisterMsgHandler() {
+        IService::RemoveMsgHandler(handler_);
+    }
+
+private:
+    OnHandlePtr handler_;
+};
+
 class IMillion;
-class MILLION_API IService : noncopyable {
+class MILLION_API IService : public noncopyable {
 public:
     IService(IMillion* imillion)
         : imillion_(imillion) {}
@@ -139,7 +157,7 @@ protected:
     Task<MsgPtr> MsgDispatch(ServiceHandle sender, SessionId session_id, MsgPtr msg) {
         auto service_type_key = GetTypeKey();
         auto msg_type_key = msg.GetTypeKey();
-        auto it = msg_handlers_.find({ service_type_key, msg_type_key });
+        auto it = msg_handlers_.find({service_type_key, msg_type_key});
         if (it != msg_handlers_.end()) {
             co_return co_await it->second(this, std::move(sender), session_id, std::move(msg));
         }
@@ -147,7 +165,7 @@ protected:
     }
 
     template <typename MsgT, typename ServiceT>
-    static void BindMsgHandler(Task<MsgPtr>(ServiceT::* handler)(const ServiceHandle& sender, SessionId session_id, MsgPtr msg_ptr, MsgT* msg)) {
+    static void BindMsgHandler(Task<MsgPtr>(ServiceT::* handler)(const ServiceHandle&, SessionId, MsgPtr, MsgT*)) {
         msg_handlers_[{ typeid(ServiceT), GetMsgTypeKey<MsgT>() }] = [handler](IService* iservice, ServiceHandle sender, SessionId session_id, MsgPtr msg_ptr) -> Task<MsgPtr> {
             ServiceT* service = static_cast<ServiceT*>(iservice);
             if constexpr (std::is_const_v<std::remove_pointer_t<MsgT>>) {
@@ -162,24 +180,31 @@ protected:
     }
 
     template <typename MsgT, typename ServiceT>
-    static bool AutoRegisterMsgHandler() {
-        Task<MsgPtr>(ServiceT::*handler)(const ServiceHandle&, SessionId, MsgPtr, MsgT*) = &ServiceT::OnHandle;
-        static bool registered = [handler] {
-            BindMsgHandler<MsgT>(handler);
-            return true;
-        }();
-        return registered;
+    static void RemoveMsgHandler(Task<MsgPtr>(ServiceT::* handler)(const ServiceHandle&, SessionId, MsgPtr, MsgT*)) {
+        msg_handlers_.erase({typeid(ServiceT), GetMsgTypeKey<MsgT>()});
     }
+
+    //template <typename MsgT, typename ServiceT>
+    //static bool AutoRegisterMsgHandler() {
+    //    static bool registered = [handler] {
+    //        return true;
+    //    }();
+    //    return registered;
+    //}
 
 private:
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
 
 private:
+    template <typename MsgT, typename ServiceT>
+    friend class AutoRegisterMsgHandler;
+
     friend class ServiceCore;
     friend class ServiceMgr;
 
     IMillion* imillion_;
     ServiceHandle service_handle_;
+
 
     struct TypeIndexPair {
         ServiceTypeKey service_type_key;
@@ -196,9 +221,11 @@ private:
         }
     };
 
-    static inline std::unordered_map<TypeIndexPair
+    using MsgHandlerMap = std::unordered_map<TypeIndexPair
         , std::function<Task<MsgPtr>(IService*, ServiceHandle, SessionId, MsgPtr)>
-        , TypeIndexPairHash> msg_handlers_;
+        , TypeIndexPairHash>;
+
+    static inline MsgHandlerMap msg_handlers_;
 };
 
 //// 持久会话循环参考
@@ -232,7 +259,7 @@ private:
 #define MILLION_CAT(NAME_, LINE_) MILLION_PRIMITIVE_CAT(NAME_, LINE_)
 
 #define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_NAME_) \
-    static inline auto MILLION_CAT(MILLION_CAT(on_handle_, __LINE__), _) = AutoRegisterMsgHandler<MSG_TYPE_, SELF_CLASS_>(); \
+    static inline auto MILLION_CAT(MILLION_CAT(on_handle_, __LINE__), _) = ::million::AutoRegisterMsgHandler<MSG_TYPE_, SELF_CLASS_>(); \
     ::million::Task<::million::MsgPtr> OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE_* MSG_NAME_)
 
 } // namespace million
