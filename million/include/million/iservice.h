@@ -224,11 +224,11 @@ private:
     virtual ::million::ServiceTypeKey GetTypeKey() override { return typeid(SELF_CLASS_); }
     
 
-#define MILLION_CONCAT(a, b) a##b          // 直接拼接
-#define MILLION_CONCAT_LINE(name, line) MILLION_CONCAT(name, line)  // 先展开 line，再拼接
+#define MILLION_PRIMITIVE_CAT(a, b) a##b
+#define MILLION_CAT(name, line) MILLION_PRIMITIVE_CAT(name, line)
 
 #define MILLION_MSG_HANDLE(MSG_TYPE, MSG_NAME) \
-    static inline auto MILLION_CONCAT_LINE(on_handle_, __LINE__)##_  = AutoRegisterMsgHandler<MSG_TYPE, SELF_CLASS_>(); \
+    static inline auto MILLION_CAT(MILLION_CAT(on_handle_, __LINE__), _) = AutoRegisterMsgHandler<MSG_TYPE, SELF_CLASS_>(); \
     ::million::Task<::million::MsgPtr> OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE* MSG_NAME)
 
 } // namespace million
