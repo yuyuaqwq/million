@@ -59,7 +59,13 @@ public:
 
         auto lock = std::unique_lock(mutex_);
         if (!tasks_.empty()) {
-            cv_.wait_until(lock, tasks_.top().expire_time);
+            if (min_expire_time_ < tasks_.top().expire_time) {
+                // AddTask在这期间是可能插入一个更短的定时任务的
+                cv_.wait_until(lock, min_expire_time_);
+            }
+            else {
+                cv_.wait_until(lock, tasks_.top().expire_time);
+            }
         }
         else {
             min_expire_time_ = std::chrono::high_resolution_clock::time_point::max();
