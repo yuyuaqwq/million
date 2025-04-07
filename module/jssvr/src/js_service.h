@@ -343,8 +343,16 @@ private:
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
-            const auto enum_value = reflection.GetEnumValue(msg, &field_desc);
-            js_value = JS_NewInt32(js_ctx_, enum_value);
+            const auto enum_value = reflection.GetEnum(msg, &field_desc);
+            if (!enum_value) {
+                // 如果没有设置枚举值，返回空字符串或默认值
+                js_value = JS_NewString(js_ctx_, "");
+            }
+            else {
+                // 获取枚举值的名称
+                const std::string& enum_name = enum_value->name();
+                js_value = JS_NewStringLen(js_ctx_, enum_name.data(), enum_name.size());
+            }
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
@@ -406,8 +414,16 @@ private:
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
-            const auto enum_value = reflection.GetRepeatedEnumValue(msg, &field_desc, j);
-            js_value = JS_NewInt32(js_ctx_, enum_value);
+            const auto enum_value = reflection.GetRepeatedEnum(msg, &field_desc, j);
+            if (!enum_value) {
+                // 如果没有设置枚举值，返回空字符串或默认值
+                js_value = JS_NewString(js_ctx_, "");
+            }
+            else {
+                // 获取枚举值的名称
+                const std::string& enum_name = enum_value->name();
+                js_value = JS_NewStringLen(js_ctx_, enum_name.data(), enum_name.size());
+            }
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
