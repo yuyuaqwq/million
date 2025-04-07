@@ -26,5 +26,7 @@ target_include_directories(${JSSVR_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(${JSSVR_LIB} PUBLIC ${MILLION_LIB})
 target_link_libraries(${JSSVR_LIB} PUBLIC ${PROTOGEN_LIB})
+target_link_libraries(${JSSVR_LIB} PUBLIC ${DB_LIB})
+target_link_libraries(${JSSVR_LIB} PUBLIC ${CONFIG_LIB})
 
 target_link_libraries(${JSSVR_LIB} PRIVATE ${QUICK_JS_LIB})

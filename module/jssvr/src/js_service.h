@@ -8,6 +8,8 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <db/db.h>
+
 #include <million/imillion.h>
 
 #include <jssvr/api.h>
@@ -1281,6 +1283,116 @@ private:
         return module;
     }
 
+
+    static JSValue DBModuleQuery(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc < 2) {
+            return JS_ThrowTypeError(ctx, "DBModuleQuery argc: %d.", argc);
+        }
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+        auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
+
+        auto handle = service->imillion().GetServiceByName(db::kDbServiceName);
+        if (!handle) {
+            return JS_ThrowTypeError(ctx, "DBModuleQuery Unable to access db service.");
+        }
+
+        JSValue result = func_ctx->promise_cap;
+        do {
+            auto msg_name = JS_ToCString(ctx, argv[0]);
+            if (!msg_name) {
+                result = JS_ThrowInternalError(ctx, "DBModuleQuery failed to convert 0 argument to string.");
+                break;
+            }
+
+            auto desc = service->imillion().proto_mgr().FindMessageTypeByName(msg_name);
+            JS_FreeCString(ctx, msg_name);
+            if (!desc) {
+                result = JS_ThrowTypeError(ctx, "DBModuleQuery 0 argument Invalid message type.");
+                break;
+            }
+
+            auto primary_key = JS_ToCString(ctx, argv[1]);
+            if (!primary_key) {
+                result = JS_ThrowInternalError(ctx, "DBModuleQuery failed to convert 1 argument to string.");
+                break;
+            }
+            std::string primary_key_str = primary_key;
+            JS_FreeCString(ctx, msg_name);
+
+            // 这里只能让OnMsg等待，发现是C++消息再做分发
+            func_ctx->waiting_session_id = service->Send<db::DbRowQueryMsg>(*handle, *desc, std::move(primary_key_str), std::nullopt, false);
+
+            /*auto msg = service->imillion().proto_mgr().NewMessage(*desc);
+            if (!msg) {
+                result = JS_ThrowTypeError(ctx, "new message failed.");
+                break;
+            }
+
+            service->ProtoMsgToJsObj();*/
+
+        } while (false);
+
+        if (!JS_IsString(argv[0])) {
+            return JS_ThrowTypeError(ctx, "MillionModuleMakeMsg 1 argument must be a string.");
+        }
+        //auto message_name = JS_ToCString(ctx, argv[0]);
+        //if (!message_name) {
+        //    return JS_ThrowInternalError(ctx, "MillionModuleMakeMsg failed to convert first argument to string.");
+        //}
+        // JS_FreeCString(ctx, message_name);
+
+        if (!JS_IsObject(argv[1])) {
+            return JS_ThrowTypeError(ctx, "MillionModuleMakeMsg 2 argument must be a object.");
+        }
+
+        JSValue dup_arg0 = JS_DupValue(ctx, argv[0]);
+        JSValue dup_arg1 = JS_DupValue(ctx, argv[1]);
+
+        JSValue array = JS_NewArray(ctx);
+
+        JS_SetPropertyUint32(ctx, array, 0, argv[0]);
+        JS_SetPropertyUint32(ctx, array, 1, argv[1]);
+
+        //JS_FreeValue(ctx, dup_arg0);
+        //JS_FreeValue(ctx, dup_arg1);
+
+        return array;
+    }
+
+    static JSCFunctionListEntry* DBModuleExportList(size_t* count) {
+        static JSCFunctionListEntry list[] = {
+            JS_CFUNC_DEF("query", 1, DBModuleQuery),
+
+        };
+        *count = sizeof(list) / sizeof(JSCFunctionListEntry);
+        return list;
+    }
+
+    static int DBModuleInit(JSContext* ctx, JSModuleDef* m) {
+        // 导出函数到模块
+        size_t count = 0;
+        auto list = DBModuleExportList(&count);
+        return JS_SetModuleExportList(ctx, m, list, count);
+    }
+
+    JSModuleDef* CreateDBModule() {
+        JSModuleDef* module = JS_NewCModule(js_ctx_, "db", DBModuleInit);
+        if (!module) {
+            logger().Err("JS_NewCModule failed: {}.", "db");
+            return nullptr;
+        }
+        size_t count = 0;
+        auto list = DBModuleExportList(&count);
+        JS_AddModuleExportList(js_ctx_, module, list, count);
+        if (!AddModule("db", module)) {
+            logger().Err("JsAddModule failed: {}.", "db");
+            return nullptr;
+        }
+        return module;
+    }
+
+
     bool AddModule(const std::string& module_name, JSModuleDef* module) {
         if (modules_.find(module_name) != modules_.end()) {
             logger().Err("Module already exists: {}.", module_name);
@@ -1303,6 +1415,9 @@ private:
     JSContext* js_ctx_ = nullptr;
     JSValue js_service_module_ = JS_UNDEFINED;
     std::filesystem::path cur_path_;
+
+    // 加一个db行管理器
+    // 加一个config行管理器
 };
 
 } // namespace jssvr
