@@ -1401,9 +1401,6 @@ private:
         return module;
     }
 
-    MILLION_MSG_HANDLE(db::DbRowQueryMsg, msg) {
-        co_return nullptr;
-    }
 
     bool AddModule(const std::string& module_name, JSModuleDef* module) {
         if (modules_.find(module_name) != modules_.end()) {
@@ -1416,6 +1413,12 @@ private:
 
         // static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(func_val))
         return true;
+    }
+
+
+public:
+    MILLION_MSG_HANDLE(db::DbRowQueryMsg, msg) {
+        co_return nullptr;
     }
 
 private:
