@@ -37,12 +37,12 @@ public:
     ~HeapTimer() = default;
 
     void Init() {
-        
+        min_expire_time_ = std::chrono::high_resolution_clock::time_point::max();
     }
 
     void Tick(const std::function<void(DelayTask&&)>& callback) {
         {
-            auto lock = std::lock_guard(adds_mutex_);
+            auto lock = std::lock_guard(mutex_);
             std::swap(backup_adds_, adds_);
         }
         for (auto& task : backup_adds_) {
@@ -57,27 +57,22 @@ public:
             tasks_.pop();
         }
 
-        std::unique_lock<std::mutex> lock(min_expire_mutex_);
+        auto lock = std::unique_lock(mutex_);
         if (!tasks_.empty()) {
-            min_expire_time_ = tasks_.top().expire_time;
-            auto wait_duration = min_expire_time_ - now_time;
-            cv_.wait_for(lock, wait_duration);
+            cv_.wait_until(lock, tasks_.top().expire_time);
         }
         else {
             min_expire_time_ = std::chrono::high_resolution_clock::time_point::max();
-            cv_.wait(lock);
+            cv_.wait(lock, [this] { return !adds_.empty(); });
         }
     }
 
     void AddTask(uint32_t tick, T&& data) {
         auto expire_time = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(tick * ms_per_tick_);
-        {
-            auto lock = std::lock_guard(adds_mutex_);
-            adds_.emplace_back(expire_time, std::move(data));
-        }
         bool need_notify = false;
         {
-            auto lock = std::unique_lock<std::mutex>(min_expire_mutex_);
+            auto lock = std::unique_lock(mutex_);
+            adds_.emplace_back(expire_time, std::move(data));
             if (expire_time < min_expire_time_) {
                 min_expire_time_ = expire_time;
                 need_notify = true;
@@ -93,11 +88,10 @@ private:
 
     TaskQueue tasks_;
 
-    std::mutex adds_mutex_;
+    std::mutex mutex_;
     TempTaskVector adds_;
     TempTaskVector backup_adds_;
     
-    std::mutex min_expire_mutex_;
     std::chrono::high_resolution_clock::time_point min_expire_time_;
     std::condition_variable cv_;
 };
