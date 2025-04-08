@@ -25,11 +25,11 @@ public:
 
     AutoRegisterMsgHandler() {
         handler_ = &ServiceT::OnHandle;
-        IService::BindMsgHandler<MsgT>(handler_);
+        ServiceT::template BindMsgHandler(handler_);
     }
 
     ~AutoRegisterMsgHandler() {
-        IService::RemoveMsgHandler(handler_);
+        ServiceT::template RemoveMsgHandler(handler_);
     }
 
 private:
@@ -181,7 +181,7 @@ protected:
 
     template <typename MsgT, typename ServiceT>
     static void RemoveMsgHandler(Task<MsgPtr>(ServiceT::* handler)(const ServiceHandle&, SessionId, MsgPtr, MsgT*)) {
-        msg_handlers_.erase({typeid(ServiceT), GetMsgTypeKey<MsgT>()});
+        msg_handlers_.erase({ typeid(ServiceT), GetMsgTypeKey<MsgT>() });
     }
 
     //template <typename MsgT, typename ServiceT>
