@@ -149,7 +149,7 @@ public:
     }
 
 private:
-    std::string GetRedisKey(const DbRow& db_row) {
+    std::string GetRedisKey(const DBRow& db_row) {
         auto& proto_msg = db_row.get();
         const auto& desc = db_row.GetDescriptor();
 
@@ -181,7 +181,7 @@ private:
         return redis_key;
     }
 
-    void MakeKeysAndArgs(const DbRow& db_row, uint64_t old_db_version, std::vector<std::string>* keys, std::vector<std::string>* args) {
+    void MakeKeysAndArgs(const DBRow& db_row, uint64_t old_db_version, std::vector<std::string>* keys, std::vector<std::string>* args) {
         auto& proto_msg = db_row.get();
         const auto& desc = db_row.GetDescriptor();
 

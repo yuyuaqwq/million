@@ -58,7 +58,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(SqlTableInitMsg, msg) {
+    MILLION_MSG_HANDLE(SqlTableInitMsgReq, msg) {
         const auto& desc = msg->desc;
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         
@@ -72,7 +72,7 @@ public:
             "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name",
             soci::use(table_name), soci::into(count);
         if (count > 0) {
-            co_return std::move(msg_);
+            co_return make_msg<SqlTableInitMsgResp>(false);
         }
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
@@ -102,13 +102,21 @@ public:
                     break;
                 case google::protobuf::FieldDescriptor::TYPE_INT32:
                 case google::protobuf::FieldDescriptor::TYPE_SINT32:
-                case google::protobuf::FieldDescriptor::TYPE_FIXED32:
+                case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
                     field_type = "INTEGER";
+                    break;
+                case google::protobuf::FieldDescriptor::TYPE_FIXED32:
+                case google::protobuf::FieldDescriptor::TYPE_UINT32:
+                    field_type = "INT UNSIGNED";
                     break;
                 case google::protobuf::FieldDescriptor::TYPE_INT64:
                 case google::protobuf::FieldDescriptor::TYPE_SINT64:
-                case google::protobuf::FieldDescriptor::TYPE_FIXED64:
+                case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
                     field_type = "BIGINT";
+                    break;
+                case google::protobuf::FieldDescriptor::TYPE_FIXED64:
+                case google::protobuf::FieldDescriptor::TYPE_UINT64:
+                    field_type = "BIGINT UNSIGNED";
                     break;
                 case google::protobuf::FieldDescriptor::TYPE_BOOL:
                     field_type = "BOOLEAN";
@@ -125,6 +133,8 @@ public:
                 case google::protobuf::FieldDescriptor::TYPE_ENUM:
                     field_type = "INTEGER"; // Enum can be stored as INTEGER
                     break;
+                default:
+                    TaskAbort("Cannot be converted to SQL type: {}.{}.", table_name, field->name());
                 }
             }
 
@@ -243,13 +253,13 @@ public:
 
         sql_ << sql;
 
-        co_return std::move(msg_);
+        co_return make_msg<SqlTableInitMsgResp>(true);
     }
 
-    MILLION_MSG_HANDLE(SqlQueryMsg, msg) {
-        auto& proto_msg = msg->db_row->get();
-        const auto& desc = msg->db_row->GetDescriptor();
-        const auto& reflection = msg->db_row->GetReflection();
+    MILLION_MSG_HANDLE(SqlQueryMsgReq, msg) {
+        auto& proto_msg = msg->db_row.get();
+        const auto& desc = msg->db_row.GetDescriptor();
+        const auto& reflection = msg->db_row.GetReflection();
 
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         if (options.has_sql()) {
@@ -286,12 +296,11 @@ public:
 
         auto it = rs.begin();
         if (it == rs.end()) {
-            msg->success = false;
-            co_return std::move(msg_);
+            co_return make_msg<SqlQueryMsgResp>(false);
         }
 
         auto db_version = it->get<uint64_t>(0);
-        msg->db_row->set_db_version(db_version);
+        msg->db_row.set_db_version(db_version);
 
         const auto& row = *it;
         for (int i = 1; i < desc.field_count() + 1; ++i) {
@@ -362,11 +371,10 @@ public:
             }
         }
 
-        msg->success = true;
-        co_return std::move(msg_);
+        co_return make_msg<SqlQueryMsgResp>(true);
     }
 
-    MILLION_MSG_HANDLE(SqlInsertMsg, msg) {
+    MILLION_MSG_HANDLE(SqlInsertMsgReq, msg) {
         const auto& proto_msg = msg->db_row.get();
         const auto& desc = msg->db_row.GetDescriptor();
         const auto& reflection = msg->db_row.GetReflection();
@@ -431,10 +439,10 @@ public:
         auto rows = stmt.get_affected_rows();
         msg->success = rows > 0;
 
-        co_return std::move(msg_);
+        co_return make_msg<SqlInsertMsgResp>(true);
     }
 
-    MILLION_MSG_HANDLE(SqlUpdateMsg, msg) {
+    MILLION_MSG_HANDLE(SqlUpdateMsgReq, msg) {
         const auto& proto_msg = msg->db_row.get();
         const auto& desc = msg->db_row.GetDescriptor();
         const auto& reflection = msg->db_row.GetReflection();
@@ -485,9 +493,8 @@ public:
 
         stmt.execute(true);
         auto rows = stmt.get_affected_rows();
-        msg->success = rows > 0;
 
-        co_return std::move(msg_);
+        co_return make_msg<SqlInsertMsgResp>(rows > 0);
     }
 
 private:

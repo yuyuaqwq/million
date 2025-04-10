@@ -129,6 +129,11 @@ public:
     ProtoMgr& proto_mgr();
     Million& impl() { return *impl_; }
 
+protected:
+    friend class Million;
+    virtual bool OnInit() { return true; }
+    virtual void OnExit() { }
+
 private:
     std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice);
 

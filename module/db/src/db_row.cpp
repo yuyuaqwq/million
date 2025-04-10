@@ -5,7 +5,7 @@
 namespace million {
 namespace db {
 
-DbRow::DbRow(ProtoMsgUnique proto_msg)
+DBRow::DBRow(ProtoMsgUnique proto_msg)
     : proto_msg_(std::move(proto_msg))
 {
     auto desc = proto_msg_->GetDescriptor();
@@ -19,15 +19,15 @@ DbRow::DbRow(ProtoMsgUnique proto_msg)
     dirty_fields_.resize(desc->field_count(), false);
 }
 
-DbRow::DbRow(const DbRow& rv) {
+DBRow::DBRow(const DBRow& rv) {
     operator=(rv);
 }
 
-DbRow::DbRow(DbRow&& rv) noexcept {
+DBRow::DBRow(DBRow&& rv) noexcept {
     operator=(std::move(rv));
 }
 
-void DbRow::operator=(const DbRow& rv) {
+void DBRow::operator=(const DBRow& rv) {
     auto* proto_msg = rv.proto_msg_->New();
     if (proto_msg == nullptr) {
         throw std::bad_alloc();
@@ -38,35 +38,35 @@ void DbRow::operator=(const DbRow& rv) {
     dirty_fields_ = rv.dirty_fields_;
 }
 
-void DbRow::operator=(DbRow&& rv) noexcept {
+void DBRow::operator=(DBRow&& rv) noexcept {
     db_version_ = rv.db_version_;
     proto_msg_ = std::move(rv.proto_msg_);
     dirty_fields_ = std::move(rv.dirty_fields_);
 }
 
-const google::protobuf::Message& DbRow::get() const { return *proto_msg_.get(); }
+const google::protobuf::Message& DBRow::get() const { return *proto_msg_.get(); }
 
-google::protobuf::Message& DbRow::get() { return *proto_msg_.get(); }
-
-
-const protobuf::Descriptor& DbRow::GetDescriptor() const { return *proto_msg_->GetDescriptor(); }
-
-const protobuf::Reflection& DbRow::GetReflection() const { return *proto_msg_->GetReflection(); }
+google::protobuf::Message& DBRow::get() { return *proto_msg_.get(); }
 
 
-DbRow DbRow::CopyDirtyTo() {
+const protobuf::Descriptor& DBRow::GetDescriptor() const { return *proto_msg_->GetDescriptor(); }
+
+const protobuf::Reflection& DBRow::GetReflection() const { return *proto_msg_->GetReflection(); }
+
+
+DBRow DBRow::CopyDirtyTo() {
     auto* proto_msg = proto_msg_->New();
     if (proto_msg == nullptr) {
         throw std::bad_alloc();
     }
-    auto row = DbRow(ProtoMsgUnique(proto_msg));
+    auto row = DBRow(ProtoMsgUnique(proto_msg));
     row.dirty_fields_ = dirty_fields_;
 
     row.CopyFromDirty(*this);
     return row;
 }
 
-void DbRow::CopyFromDirty(const DbRow& target) {
+void DBRow::CopyFromDirty(const DBRow& target) {
     const auto* reflection = proto_msg_->GetReflection();
     for (size_t i = 0; i < dirty_fields_.size(); ++i) {
         if (target.dirty_fields_[i]) {
@@ -77,7 +77,7 @@ void DbRow::CopyFromDirty(const DbRow& target) {
     db_version_ = target.db_version_;
 }
 
-bool DbRow::IsDirty() const {
+bool DBRow::IsDirty() const {
     for (size_t i = 0; i < dirty_fields_.size(); ++i) {
         if (dirty_fields_[i]) {
             return true;
@@ -87,60 +87,60 @@ bool DbRow::IsDirty() const {
 }
 
 
-bool DbRow::IsDirtyFromFIeldNum(int32_t field_number) const {
+bool DBRow::IsDirtyFromFIeldNum(int32_t field_number) const {
     return dirty_fields_.at(GetFieldByNumber(field_number).index());
 }
 
-bool DbRow::IsDirtyFromFIeldIndex(int32_t field_index) const {
+bool DBRow::IsDirtyFromFIeldIndex(int32_t field_index) const {
     return dirty_fields_.at(field_index);
 }
 
-void DbRow::MarkDirty() {
+void DBRow::MarkDirty() {
     for (size_t i = 0; i < dirty_fields_.size(); ++i) {
         dirty_fields_[i] = true;
     }
 }
 
-void DbRow::MarkDirtyByFieldNum(int32_t field_number) {
+void DBRow::MarkDirtyByFieldNum(int32_t field_number) {
     dirty_fields_.at(GetFieldByNumber(field_number).index()) = true;
 }
 
-void DbRow::MarkDirtyByFieldIndex(int32_t field_index) {
+void DBRow::MarkDirtyByFieldIndex(int32_t field_index) {
     dirty_fields_.at(field_index) = true;
 }
 
-void DbRow::ClearDirty() {
+void DBRow::ClearDirty() {
     for (size_t i = 0; i < dirty_fields_.size(); ++i) {
         dirty_fields_[i] = false;
     }
 }
 
-void DbRow::ClearDirtyByFieldNum(int32_t field_number) {
+void DBRow::ClearDirtyByFieldNum(int32_t field_number) {
     dirty_fields_.at(GetFieldByNumber(field_number).index()) = false;
 }
 
-void DbRow::ClearDirtyByFieldIndex(int32_t field_index) {
+void DBRow::ClearDirtyByFieldIndex(int32_t field_index) {
     dirty_fields_.at(field_index) = false;
 }
 
-Task<> DbRow::Commit(IService* self, const ServiceHandle& db, bool update_to_cache) {
+Task<> DBRow::Commit(IService* self, const ServiceHandle& db, bool update_to_cache) {
     auto old_db_version = db_version_++;
     co_await self->Call<DbRowUpdateMsg>(db, *this, old_db_version, update_to_cache);
 }
 
-const google::protobuf::FieldDescriptor& DbRow::GetFieldByNumber(int32_t field_number) const {
+const google::protobuf::FieldDescriptor& DBRow::GetFieldByNumber(int32_t field_number) const {
     auto field_desc = GetDescriptor().FindFieldByNumber(field_number);
     TaskAssert(field_desc, "msg:{}, desc_.FindFieldByNumber:{}", GetDescriptor().name(), field_number);
     return *field_desc;
 }
 
-const google::protobuf::FieldDescriptor& DbRow::GetFieldByIndex(int32_t field_index) const {
+const google::protobuf::FieldDescriptor& DBRow::GetFieldByIndex(int32_t field_index) const {
     auto field_desc = GetDescriptor().field(field_index);
     TaskAssert(field_desc, "msg:{}, desc_.field:{}", GetDescriptor().name(), field_index);
     return *field_desc;
 }
 
-void DbRow::CopyField(const google::protobuf::Message& proto_msg1, const google::protobuf::FieldDescriptor& field_desc1
+void DBRow::CopyField(const google::protobuf::Message& proto_msg1, const google::protobuf::FieldDescriptor& field_desc1
     , google::protobuf::Message* proto_msg2, const google::protobuf::FieldDescriptor& field_desc2) {
 
     const auto* reflection1 = proto_msg1.GetReflection();

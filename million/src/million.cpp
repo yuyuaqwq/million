@@ -196,9 +196,13 @@ bool Million::Init(std::string_view settings_path) {
             break;
         }
 
-        logger_->Info("init success.");
-
         stage_ = kReady;
+
+        if (!imillion_->OnInit()) {
+            logger_->Err("imillion OnInit failed.");
+        }
+
+        logger_->Info("init success.");
         return true;
 
     } while (false);

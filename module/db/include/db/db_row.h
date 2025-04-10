@@ -10,14 +10,14 @@
 namespace million {
 namespace db {
 
-class MILLION_DB_API DbRow {
+class MILLION_DB_API DBRow {
 public:
-    DbRow(ProtoMsgUnique proto_msg);
-    DbRow(const DbRow& rv);
-    DbRow(DbRow&& rv) noexcept;
+    DBRow(ProtoMsgUnique proto_msg);
+    DBRow(const DBRow& rv);
+    DBRow(DBRow&& rv) noexcept;
 
-    void operator=(const DbRow& rv);
-    void operator=(DbRow&& rv) noexcept;
+    void operator=(const DBRow& rv);
+    void operator=(DBRow&& rv) noexcept;
 
     template <typename T>
     const T& get() const { return static_cast<T&>(get()); }
@@ -31,8 +31,8 @@ public:
     const protobuf::Descriptor& GetDescriptor() const;
     const protobuf::Reflection& GetReflection() const;
 
-    DbRow CopyDirtyTo();
-    void CopyFromDirty(const DbRow& db_row);
+    DBRow CopyDirtyTo();
+    void CopyFromDirty(const DBRow& db_row);
     
     bool IsDirty() const;
     bool IsDirtyFromFIeldNum(int32_t field_number) const;

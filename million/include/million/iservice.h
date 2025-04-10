@@ -89,9 +89,9 @@ public:
     }
 
 
-    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
-    SessionAwaiter<RecvMsgT> Call(const ServiceHandle& target, Args&&... args) {
-        auto session_id = Send<SendMsgT>(target, std::forward<Args>(args)...);
+    template <typename SendMsgT, typename RecvMsgT, typename ...SendArgsT>
+    SessionAwaiter<RecvMsgT> Call(const ServiceHandle& target, SendArgsT&&... args) {
+        auto session_id = Send<SendMsgT>(target, std::forward<SendArgsT>(args)...);
         return Recv<RecvMsgT>(session_id.value());
     }
     template <typename MsgT, typename ...Args>
@@ -100,9 +100,9 @@ public:
         return Recv<MsgT>(session_id.value());
     }
 
-    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
-    SessionAwaiter<RecvMsgT> CallWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
-        auto session_id = Send<SendMsgT>(target, std::forward<Args>(args)...);
+    template <typename SendMsgT, typename RecvMsgT, typename ...SendArgsT>
+    SessionAwaiter<RecvMsgT> CallWithTimeout(const ServiceHandle& target, uint32_t timeout_s, SendArgsT&&... args) {
+        auto session_id = Send<SendMsgT>(target, std::forward<SendArgsT>(args)...);
         return RecvWithTimeout<RecvMsgT>(session_id.value(), timeout_s);
     }
     template <typename MsgT, typename ...Args>
@@ -111,9 +111,9 @@ public:
         return RecvWithTimeout<MsgT>(session_id.value(), timeout_s);
     }
 
-    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
-    SessionAwaiter<RecvMsgT> CallOrNull(const ServiceHandle& target, Args&&... args) {
-        auto session_id = Send<SendMsgT>(target, std::forward<Args>(args)...);
+    template <typename SendMsgT, typename RecvMsgT, typename ...SendArgsT>
+    SessionAwaiter<RecvMsgT> CallOrNull(const ServiceHandle& target, SendArgsT&&... args) {
+        auto session_id = Send<SendMsgT>(target, std::forward<SendArgsT>(args)...);
         return RecvOrNull<RecvMsgT>(session_id.value());
     }
     template <typename MsgT, typename ...Args>
@@ -122,9 +122,9 @@ public:
         return RecvOrNull<MsgT>(session_id.value());
     }
 
-    template <typename RecvMsgT, typename SendMsgT, typename ...Args>
-    SessionAwaiter<RecvMsgT> CallOrNullWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
-        auto session_id = Send<SendMsgT>(target, std::forward<Args>(args)...);
+    template <typename SendMsgT, typename RecvMsgT, typename ...SendArgsT>
+    SessionAwaiter<RecvMsgT> CallOrNullWithTimeout(const ServiceHandle& target, uint32_t timeout_s, SendArgsT&&... args) {
+        auto session_id = Send<SendMsgT>(target, std::forward<SendArgsT>(args)...);
         return RecvOrNullWithTimeout<RecvMsgT>(session_id.value(), timeout_s);
     }
     template <typename MsgT, typename ...Args>

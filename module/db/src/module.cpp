@@ -28,7 +28,7 @@ extern "C" MILLION_DB_API bool MillionModuleInit(IMillion* imillion) {
         return false;
     }
 
-    auto db_service_opt = imillion->NewService<DbService>();
+    auto db_service_opt = imillion->NewService<DBService>();
     if (!db_service_opt) {
         return false;
     }

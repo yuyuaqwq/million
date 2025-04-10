@@ -24,9 +24,9 @@ MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_DB_API, DbRowCreateMsg, (ProtoMsgUnique) 
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DbRowQueryMsg
     , (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key
-    , (std::optional<DbRow>) db_row, (bool) tick_write_back);
+    , (std::optional<DBRow>) db_row, (bool) tick_write_back);
 
-MILLION_MSG_DEFINE(MILLION_DB_API, DbRowUpdateMsg, (DbRow) db_row, (uint64_t) old_db_version, (bool) update_to_cache);
+MILLION_MSG_DEFINE(MILLION_DB_API, DbRowUpdateMsg, (DBRow) db_row, (uint64_t) old_db_version, (bool) update_to_cache);
 
 // MILLION_MSG_DEFINE(MILLION_DB_API, DbRowBatchUpdateMsg, (std::vector<nonnull_ptr<DbRow>>) db_rows);
 

@@ -25,7 +25,7 @@ bool ServiceCore::PushMsg(const ServiceShared& sender, SessionId session_id, Msg
         if (!IsReady() && !IsStarting() && !IsRunning() && !msg.IsType<ServiceExitMsg>()) {
             return false;
         }
-        ServiceCore::MsgElement ele{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
+        auto ele = ServiceCore::MsgElement{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
         msgs_.emplace(std::move(ele));
     }
     if (HasSeparateWorker()) {
