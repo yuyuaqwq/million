@@ -17,7 +17,7 @@ constexpr const char* kClusterServiceName = "ClusterService";
 
 using NodeName = std::string;
 
-MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterSendMsg, (ServiceName) src_service, (NodeName) target_node, (ServiceName) target_service, (ProtoMsgUnique) msg)
+MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterSend, (ServiceName) src_service, (NodeName) target_node, (ServiceName) target_service, (ProtoMsgUnique) msg)
 
 // Cluster.Call返回一个Task<ProtoMsgUnique>，通过co_return 将proto_msg返回回来
 // Cluster.Call内部：

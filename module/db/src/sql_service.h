@@ -58,7 +58,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(SqlTableInitMsgReq, msg) {
+    MILLION_MSG_HANDLE(SqlTableInitReq, msg) {
         const auto& desc = msg->desc;
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         
@@ -72,7 +72,7 @@ public:
             "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name",
             soci::use(table_name), soci::into(count);
         if (count > 0) {
-            co_return make_msg<SqlTableInitMsgResp>(false);
+            co_return make_msg<SqlTableInitResp>(false);
         }
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
@@ -253,10 +253,10 @@ public:
 
         sql_ << sql;
 
-        co_return make_msg<SqlTableInitMsgResp>(true);
+        co_return make_msg<SqlTableInitResp>(true);
     }
 
-    MILLION_MSG_HANDLE(SqlQueryMsgReq, msg) {
+    MILLION_MSG_HANDLE(SqlQueryReq, msg) {
         auto& proto_msg = msg->db_row.get();
         const auto& desc = msg->db_row.GetDescriptor();
         const auto& reflection = msg->db_row.GetReflection();
@@ -296,7 +296,7 @@ public:
 
         auto it = rs.begin();
         if (it == rs.end()) {
-            co_return make_msg<SqlQueryMsgResp>(false);
+            co_return make_msg<SqlQueryResp>(std::nullopt);
         }
 
         auto db_version = it->get<uint64_t>(0);
@@ -371,10 +371,10 @@ public:
             }
         }
 
-        co_return make_msg<SqlQueryMsgResp>(true);
+        co_return make_msg<SqlQueryResp>(std::move(msg->db_row));
     }
 
-    MILLION_MSG_HANDLE(SqlInsertMsgReq, msg) {
+    MILLION_MSG_HANDLE(SqlInsertReq, msg) {
         const auto& proto_msg = msg->db_row.get();
         const auto& desc = msg->db_row.GetDescriptor();
         const auto& reflection = msg->db_row.GetReflection();
@@ -439,10 +439,10 @@ public:
         auto rows = stmt.get_affected_rows();
         msg->success = rows > 0;
 
-        co_return make_msg<SqlInsertMsgResp>(true);
+        co_return make_msg<SqlInsertResp>(true);
     }
 
-    MILLION_MSG_HANDLE(SqlUpdateMsgReq, msg) {
+    MILLION_MSG_HANDLE(SqlUpdateReq, msg) {
         const auto& proto_msg = msg->db_row.get();
         const auto& desc = msg->db_row.GetDescriptor();
         const auto& reflection = msg->db_row.GetReflection();
@@ -494,7 +494,7 @@ public:
         stmt.execute(true);
         auto rows = stmt.get_affected_rows();
 
-        co_return make_msg<SqlInsertMsgResp>(rows > 0);
+        co_return make_msg<SqlInsertResp>(rows > 0);
     }
 
 private:

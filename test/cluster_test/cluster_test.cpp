@@ -52,7 +52,7 @@ public:
     }
 
     MILLION_MSG_HANDLE(TestMsg, msg) {
-        Send<million::cluster::ClusterSendMsg>(cluster_
+        Send<million::cluster::ClusterSend>(cluster_
             , "TestService", msg->target_node, "TestService"
             , std::move(msg->req));
         co_return nullptr;

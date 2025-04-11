@@ -14,10 +14,10 @@ namespace gateway {
 
 namespace protobuf = google::protobuf; 
 
-MILLION_MSG_DEFINE(, GatewayTcpConnectionMsg, (UserSessionShared) user_session)
-MILLION_MSG_DEFINE(, GatewayTcpRecvPacketMsg, (UserSessionShared) user_session, (net::Packet) packet)
+MILLION_MSG_DEFINE(, GatewayTcpConnection, (UserSessionShared) user_session)
+MILLION_MSG_DEFINE(, GatewayTcpRecvPacket, (UserSessionShared) user_session, (net::Packet) packet)
 
-MILLION_MSG_DEFINE(, GatewayPersistentUserSessionMsg, (UserSessionShared) user_session);
+MILLION_MSG_DEFINE(, GatewayPersistentUserSession, (UserSessionShared) user_session);
 
 // 跨节点：
     // 网关服务分为主服务及代理服务，主服务负责收包，部署在网关节点上
@@ -52,11 +52,11 @@ public:
 
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
-            Send<GatewayTcpConnectionMsg>(service_handle(), std::move(std::static_pointer_cast<UserSession>(connection)));
+            Send<GatewayTcpConnection>(service_handle(), std::move(std::static_pointer_cast<UserSession>(connection)));
             co_return;
             });
         server_.set_on_msg([this](auto&& connection, auto&& packet) -> asio::awaitable<void> {
-            Send<GatewayTcpRecvPacketMsg>(service_handle(), std::move(std::static_pointer_cast<UserSession>(connection)), std::move(packet));
+            Send<GatewayTcpRecvPacket>(service_handle(), std::move(std::static_pointer_cast<UserSession>(connection)), std::move(packet));
             co_return;
             });
         server_.Start(port);
@@ -64,7 +64,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(GatewayPersistentUserSessionMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayPersistentUserSession, msg) {
         auto& user_session = *msg->user_session;
         do {
             auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
@@ -84,27 +84,27 @@ public:
                 span = net::PacketSpan(*packet);
                 user_session.Send(std::move(*packet), span, 0);
             }
-            else if (recv_msg.IsType<GatewaySendPacketMsg>()) {
-                logger().Trace("GatewaySendPacketMsg: {}.", session_id);
+            else if (recv_msg.IsType<GatewaySendPacket>()) {
+                logger().Trace("GatewaySendPacket: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
-                auto msg = recv_msg.GetMutMsg<GatewaySendPacketMsg>();
+                auto msg = recv_msg.GetMutMsg<GatewaySendPacket>();
                 auto span = net::PacketSpan(header_packet);
                 user_session.Send(std::move(header_packet), span, header_packet.size() + msg->packet.size());
                 span = net::PacketSpan(msg->packet);
                 user_session.Send(std::move(msg->packet), span, 0);
             }
-            else if (recv_msg.IsType<GatewaySureAgentMsg>()) {
-                auto msg = recv_msg.GetMutMsg<GatewaySureAgentMsg>();
+            else if (recv_msg.IsType<GatewaySureAgent>()) {
+                auto msg = recv_msg.GetMutMsg<GatewaySureAgent>();
                 user_session.set_agent_handle(std::move(msg->agent_service));
             }
-            else if (recv_msg.IsType<GatewayPersistentUserSessionMsg>()) {
+            else if (recv_msg.IsType<GatewayPersistentUserSession>()) {
                 break;
             }
         } while (true);
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(GatewayTcpConnectionMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayTcpConnection, msg) {
         auto& user_session = *msg->user_session;
 
         auto& ep = user_session.remote_endpoint();
@@ -113,21 +113,21 @@ public:
 
         if (user_session.Connected()) {
             // 开启持久会话，这里设计上，Send 创建的 session_id，则视作 agent_id
-            auto agent_id = Send<GatewayPersistentUserSessionMsg>(service_handle(), std::move(msg->user_session));
+            auto agent_id = Send<GatewayPersistentUserSession>(service_handle(), std::move(msg->user_session));
             user_session.set_agent_id(agent_id.value());
 
             logger().Debug("Gateway connection establishment, agent_id:{}, ip: {}, port: {}", user_session.agent_id(), ip, port);
         }
         else {
             // 停止持久会话
-            Reply<GatewayPersistentUserSessionMsg>(service_handle(), user_session.agent_id(), std::move(msg->user_session));
+            Reply<GatewayPersistentUserSession>(service_handle(), user_session.agent_id(), std::move(msg->user_session));
 
             logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(GatewayTcpRecvPacketMsg, msg) {
+    MILLION_MSG_HANDLE(GatewayTcpRecvPacket, msg) {
         auto& user_session = *msg->user_session;
         auto agent_id = user_session.agent_id();
 
@@ -169,10 +169,10 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(GatewayRegisterUserServiceMsg, msg) {
-        logger().Trace("GatewayRegisterUserServiceMsg.");
+    MILLION_MSG_HANDLE(GatewayRegisterUserServiceReq, msg) {
+        logger().Trace("GatewayRegisterUserServiceReq.");
         user_service_ = msg->user_service;
-        co_return std::move(msg_);
+        co_return make_msg<GatewayRegisterUserServiceResp>();
     }
 
 

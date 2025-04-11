@@ -14,17 +14,17 @@ namespace db {
 constexpr const char* kSqlServiceName = "SqlService";
 #define MILLION_SQL_SERVICE_NAME "SqlService"
 
-MILLION_MSG_DEFINE(MILLION_DB_API, SqlTableInitMsgReq, (const google::protobuf::Descriptor&) desc)
-MILLION_MSG_DEFINE(MILLION_DB_API, SqlTableInitMsgResp, (bool) success)
+MILLION_MSG_DEFINE(MILLION_DB_API, SqlTableInitReq, (const google::protobuf::Descriptor&) desc)
+MILLION_MSG_DEFINE(MILLION_DB_API, SqlTableInitResp, (bool) success)
 
-MILLION_MSG_DEFINE(MILLION_DB_API, SqlQueryMsgReq, (DBRow) db_row, (std::string) primary_key)
-MILLION_MSG_DEFINE(MILLION_DB_API, SqlQueryMsgResp, (std::optional<DBRow>) db_row)
+MILLION_MSG_DEFINE(MILLION_DB_API, SqlQueryReq, (DBRow) db_row, (std::string) primary_key)
+MILLION_MSG_DEFINE(MILLION_DB_API, SqlQueryResp, (std::optional<DBRow>) db_row)
 
-MILLION_MSG_DEFINE(MILLION_DB_API, SqlUpdateMsgReq, (DBRow) db_row, (uint64_t) old_db_version)
-MILLION_MSG_DEFINE(MILLION_DB_API, SqlUpdateMsgResp, (bool) success)
+MILLION_MSG_DEFINE(MILLION_DB_API, SqlUpdateReq, (DBRow) db_row, (uint64_t) old_db_version)
+MILLION_MSG_DEFINE(MILLION_DB_API, SqlUpdateResp, (bool) success)
 
-MILLION_MSG_DEFINE(MILLION_DB_API, SqlInsertMsgReq, (DBRow) db_row, (bool) success)
-MILLION_MSG_DEFINE(MILLION_DB_API, SqlInsertMsgResp, (bool) success)
+MILLION_MSG_DEFINE(MILLION_DB_API, SqlInsertReq, (DBRow) db_row, (bool) success)
+MILLION_MSG_DEFINE(MILLION_DB_API, SqlInsertResp, (bool) success)
 
 } // namespace db
 } // namespace million

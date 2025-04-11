@@ -54,10 +54,10 @@ public:
         user->set_created_at(10000);
         user->set_updated_at(13123);
         user->set_email("sb@qq.com");
-        // auto res = co_await Call<db::DbRowCreateMsg>(db_service_, std::move(user));
+        // auto res = co_await Call<db::DBRowCreateReq>(db_service_, std::move(user));
 
-        auto res2 = co_await Call<db::DbRowQueryMsg>(db_service_, *million::db::example::User::GetDescriptor(), "103"
-            , std::nullopt, true);
+        auto res2 = co_await Call<db::DBRowQueryReq, db::DBRowQueryResp>(db_service_
+            , *million::db::example::User::GetDescriptor(), "103",  true);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");
         }

@@ -184,7 +184,7 @@ public:
 
             // 完成连接，发送所有队列包
             for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
-                auto msg = iter->GetMutMsg<ClusterSendMsg>();
+                auto msg = iter->GetMutMsg<ClusterSend>();
                 if (msg->target_node == res.target_node()) {
                     PacketForward(&node_session, std::move(msg->src_service)
                         , std::move(msg->target_service), *msg->msg);
@@ -235,7 +235,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(ClusterSendMsg, msg) {
+    MILLION_MSG_HANDLE(ClusterSend, msg) {
         auto node_session = GetNodeSession(msg->target_node);
         if (node_session) {
             PacketForward(node_session, std::move(msg->src_service)

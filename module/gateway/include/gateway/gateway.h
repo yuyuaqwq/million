@@ -21,12 +21,14 @@ constexpr const char* kGatewayServiceName = "GatewayService";
 // user-n服务再通知agentmgr(全局唯一)服务，agentmgr让nodemgr(本机唯一)创建agent-n，然后再关联到gateway，gateway下次就可以直接发给这个agent
 
 // recv
-MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayRegisterUserServiceMsg, (ServiceHandle) user_service);
-MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySureAgentMsg, (ServiceHandle) agent_service);
-MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySendPacketMsg, (net::Packet) packet);
+MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayRegisterUserServiceReq, (ServiceHandle) user_service);
+MILLION_MSG_DEFINE_EMPTY(MILLION_GATEWAY_API, GatewayRegisterUserServiceResp);
+
+MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySureAgent, (ServiceHandle) agent_service);
+MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySendPacket, (net::Packet) packet);
 
 // send
-// MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayRecvPacketMsg, (net::Packet) packet_raw, (net::PacketSpan) packet);
+// MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayRecvPacketReq, (net::Packet) packet_raw, (net::PacketSpan) packet);
 
 } // namespace gateway
 } // namespace million

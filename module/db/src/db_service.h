@@ -40,7 +40,7 @@ struct DBRowCache {
 };
 using DBTable = std::unordered_map<std::string, DBRowCache>;
 
-MILLION_MSG_DEFINE(, DBRowTickSyncMsg, (int32_t) sync_tick, (DBRowCache*) cache);
+MILLION_MSG_DEFINE(, DBRowTickSync, (int32_t) sync_tick, (DBRowCache*) cache);
 
 class DBService : public IService {
     MILLION_SERVICE_DEFINE(DBService);
@@ -51,7 +51,7 @@ public:
         : Base(imillion) {}
 
     virtual bool OnInit() override {
-        logger().Info("DbService Init");
+        logger().Info("DBService Init");
 
         imillion().SetServiceName(service_handle(), kDbServiceName);
 
@@ -72,12 +72,12 @@ public:
         return true;
     }
 
-    MILLION_MSG_HANDLE(DBRowTickSyncMsg, msg) {
+    MILLION_MSG_HANDLE(DBRowTickSync, msg) {
         if (msg->cache->db_row.db_version() > msg->cache->sql_db_version) {
             // co_await期间可能会有新的DbRowUpdateMsg消息被处理，这里复制过来再回写
             // 可以考虑优化成移动
             auto db_row = msg->cache->db_row.CopyDirtyTo();
-            auto res = co_await CallOrNull<SqlUpdateMsgReq, SqlUpdateMsgResp>(sql_service_, std::move(db_row), msg->cache->sql_db_version);
+            auto res = co_await CallOrNull<SqlUpdateReq, SqlUpdateResp>(sql_service_, std::move(db_row), msg->cache->sql_db_version);
             if (!res) {
                 // 超时，可能只是sql暂时不能提供服务，可以重试
                 logger().Err("SqlUpdate Timeout.");
@@ -98,13 +98,12 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(DbRowCreateMsg, msg) {
-        auto res = co_await Call<SqlInsertMsgReq, SqlInsertMsgResp>(sql_service_, DBRow(std::move(msg->row_msg)), false);
-        TaskAssert(res->success, "SqlInsert failed.");
-        co_return std::move(msg_);
+    MILLION_MSG_HANDLE(DBRowCreateReq, msg) {
+        auto res = co_await Call<SqlInsertReq, SqlInsertResp>(sql_service_, DBRow(std::move(msg->row_msg)), false);
+        co_return make_msg<DBRowCreateResp>(res->success);
     }
 
-    MILLION_MSG_HANDLE(DbRowQueryMsg, msg) {
+    MILLION_MSG_HANDLE(DBRowQueryReq, msg) {
         auto& desc = msg->table_desc;
 
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
@@ -113,8 +112,7 @@ public:
         auto db_row_cache = LocalQueryDBRow(desc, msg->primary_key);
         if (db_row_cache) {
             // 如果找到了，就直接返回
-            msg->db_row.emplace(db_row_cache->db_row);
-            co_return std::move(msg_);
+            co_return make_msg<DBRowQueryResp>(db_row_cache->db_row);
         }
 
         auto proto_msg = imillion().proto_mgr().NewMessage(desc);
@@ -122,19 +120,21 @@ public:
         auto db_row = DBRow(std::move(proto_msg));
 
         auto res = co_await RemoteQueryDBRow(msg->primary_key, std::move(db_row));
+        if (!res) {
+            co_return make_msg<DBRowQueryResp>(std::nullopt);
+        }
+        db_row = std::move(*res->db_row);
 
         if (msg->tick_write_back) {
             auto sql_db_version = res->db_row->db_version();
-            msg->db_row.emplace(db_row);
-            LocalCacheDBRow(desc, std::move(msg->primary_key), std::move(db_row), sql_db_version);
+            
+            LocalCacheDBRow(desc, std::move(msg->primary_key), db_row, sql_db_version);
         }
-        else {
-            msg->db_row.emplace(std::move(db_row));
-        }
-        co_return std::move(msg_);
+
+        co_return make_msg<DBRowQueryResp>(std::move(db_row));
     }
 
-    MILLION_MSG_HANDLE(DbRowUpdateMsg, msg) {
+    MILLION_MSG_HANDLE(DBRowUpdateReq, msg) {
         auto db_row = msg->db_row;
         const auto& desc = db_row.GetDescriptor();
         const auto& reflection = db_row.GetReflection();
@@ -175,14 +175,14 @@ public:
 
         row_iter->second.db_row = std::move(msg->db_row);
 
-        co_return std::move(msg_);
+        co_return make_msg<DBRowUpdateResp>();
     }
 
 private:
     DBTable& LocalGetTable(const google::protobuf::Descriptor& desc) {
         auto table_iter = tables_.find(&desc);
         if (table_iter == tables_.end()) {
-            auto res = tables_.emplace(&desc, DbTable());
+            auto res = tables_.emplace(&desc, DBTable());
             assert(res.second);
             table_iter = res.first;
         }
@@ -198,7 +198,7 @@ private:
         return &iter->second;
     }
 
-    bool LocalCacheDBRow(const google::protobuf::Descriptor& desc, std::string&& primary_key, DBRow&& row, uint64_t sql_db_version) {
+    bool LocalCacheDBRow(const google::protobuf::Descriptor& desc, std::string&& primary_key, DBRow row, uint64_t sql_db_version) {
         const MessageOptionsTable& options = desc.options().GetExtension(::million::db::table);
         auto sync_tick = options.sync_tick();
 
@@ -207,15 +207,14 @@ private:
         auto res = table.emplace(std::move(primary_key), DBRowCache{ .db_row = std::move(row), .sql_db_version = sql_db_version });
         TaskAssert(res.second, "Duplicate cached db row.");
 
-        Timeout<DBRowTickSyncMsg>(sync_tick, sync_tick, &res.first->second);
+        Timeout<DBRowTickSync>(sync_tick, sync_tick, &res.first->second);
 
         return true;
     }
 
-    Task<std::unique_ptr<SqlQueryMsgResp>> RemoteQueryDBRow(const std::string& primary_key, DBRow&& db_row) {
-        auto sql_res = co_await Call<SqlQueryMsgReq, SqlQueryMsgResp>(sql_service_, std::move(db_row), primary_key);
-        TaskAssert(sql_res->success, "SqlQueryMsg failed.");
-
+    Task<std::unique_ptr<SqlQueryResp>> RemoteQueryDBRow(const std::string& primary_key, DBRow&& db_row) {
+        auto sql_res = co_await Call<SqlQueryReq, SqlQueryResp>(sql_service_, std::move(db_row), primary_key);
+        TaskAssert(sql_res->db_row, "SqlQueryMsg failed.");
 
         //// 直接读cache的row->db_version，可能不是sql的version
         //// 因为cache里的数据可能没有回写到sql中，所以还是需要先向sql查询获取sql的db_version

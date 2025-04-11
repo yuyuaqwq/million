@@ -25,11 +25,11 @@ public:
 
     AutoRegisterMsgHandler() {
         handler_ = &ServiceT::OnHandle;
-        ServiceT::template BindMsgHandler(handler_);
+        ServiceT:: BindMsgHandler(handler_);
     }
 
     ~AutoRegisterMsgHandler() {
-        ServiceT::template RemoveMsgHandler(handler_);
+        ServiceT:: RemoveMsgHandler(handler_);
     }
 
 private:

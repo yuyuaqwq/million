@@ -14,13 +14,23 @@ namespace db {
     constexpr const char* kCacheServiceName = "CacheService";
 #define MILLION_CACHE_SERVICE_NAME "CacheService"
 
-MILLION_MSG_DEFINE(MILLION_DB_API, CacheGetMsg, (std::string_view) primary_key, (DBRow*) db_row, (bool) success)
-MILLION_MSG_DEFINE(MILLION_DB_API, CacheSetMsg, (const DBRow&) db_row, (uint64_t) old_db_version, (bool) success)
-MILLION_MSG_DEFINE(MILLION_DB_API, CacheDelMsg, (const DBRow&) db_row, (bool) success)
-MILLION_MSG_DEFINE(MILLION_DB_API, CacheBatchSetMsg, (std::vector<std::reference_wrapper<const DBRow>>) db_rows, (std::vector<uint64_t>) old_db_version_list, (bool) success)
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheGetReq,  (DBRow) db_row, (std::string_view) primary_key)
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheGetResp, (std::optional<DBRow>) db_row)
 
-MILLION_MSG_DEFINE(MILLION_DB_API, CacheGetBytesMsg, (std::string) key_value)
-MILLION_MSG_DEFINE(MILLION_DB_API, CacheSetBytesMsg, (std::string) key, (std::string) value, (bool) success)
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheSetReq, (DBRow) db_row, (uint64_t) old_db_version)
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheSetResp, (bool) success)
+
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheDelReq, (DBRow) db_row)
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheDelResp, (bool) success)
+
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheBatchSetReq, (std::vector<DBRow>) db_rows, (std::vector<uint64_t>) old_db_version_list)
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheBatchSetResp, (bool) success)
+
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheGetBytesReq, (std::string) key)
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheGetBytesResp, (std::optional<std::string>) value)
+
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheSetBytesReq, (std::string) key)
+MILLION_MSG_DEFINE(MILLION_DB_API, CacheSetBytesResp, (std::optional<std::string>) value)
 
 } // namespace db
 } // namespace million

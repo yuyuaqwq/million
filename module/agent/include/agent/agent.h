@@ -12,7 +12,8 @@ namespace agent {
 constexpr const char* kAgentServiceName = "AgentService";
 constexpr const char* kAgentMgrServiceName = "AgentMgrService";
 
-MILLION_MSG_DEFINE(MILLION_AGENT_API, NewAgentMsg, (SessionId) user_session_id, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MSG_DEFINE(MILLION_AGENT_API, NewAgentReq, (SessionId) user_session_id);
+MILLION_MSG_DEFINE(MILLION_AGENT_API, NewAgentResp, (std::optional<ServiceHandle>) agent_handle);
 
 class AgentService;
 using AgentLogicHandleFunc = Task<MsgPtr>(*)(AgentService* agent, MsgPtr msg_ptr);
@@ -70,7 +71,9 @@ private:
     std::vector<std::function<void()>> logic_init_queue_;
 };
 
-MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginMsg, (SessionId) agent_id, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginReq, (SessionId) agent_id);
+MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginResp, (std::optional<ServiceHandle>) agent_handle);
+
 
 class MILLION_AGENT_API AgentService : public IService {
 public:

@@ -7,8 +7,11 @@ namespace config {
 
 constexpr const char* kConfigServiceName = "ConfigService";
 
-MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryMsg, (const google::protobuf::Descriptor&) config_desc, (std::optional<ProtoMsgWeak>) config)
-MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigUpdateMsg, (const google::protobuf::Descriptor&) config_desc)
+MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryReq, (const google::protobuf::Descriptor&) config_desc)
+MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryResp, (std::optional<ProtoMsgWeak>) config)
+
+MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigUpdateReq, (const google::protobuf::Descriptor&) config_desc)
+MILLION_MSG_DEFINE_EMPTY(MILLION_CONFIG_API, ConfigUpdateResp)
 
 
 template <typename ConfigTableMsgT, typename ConfigMsgT>
@@ -46,7 +49,7 @@ static Task<ConfigWeak<ConfigTableMsgT, ConfigMsgT>> QueryConfig(IService* this_
         TaskAbort("Unable to obtain descriptor: {}.", typeid(ConfigMsgT).name());
     }
 
-    auto msg = co_await this_service->Call<ConfigQueryMsg>(config_service, *desc, std::nullopt);
+    auto msg = co_await this_service->Call<ConfigQueryReq, ConfigQueryResp>(config_service, *desc);
     if (!msg->config) {
         TaskAbort("Query config failed: {}.", desc->full_name());
     }

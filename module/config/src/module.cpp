@@ -91,22 +91,21 @@ public:
         return true;
     }
 
-    MILLION_MSG_HANDLE(ConfigQueryMsg, msg) {
+    MILLION_MSG_HANDLE(ConfigQueryReq, msg) {
         auto config_iter = config_map_.find(&msg->config_desc);
         if (config_iter == config_map_.end()) {
             co_return std::move(msg_);
         }
 
-        msg->config.emplace(config_iter->second);
-        co_return std::move(msg_);
+        co_return make_msg<ConfigQueryResp>(config_iter->second);
     }
 
-    MILLION_MSG_HANDLE(const ConfigUpdateMsg, msg) {
+    MILLION_MSG_HANDLE(const ConfigUpdateReq, msg) {
         //const auto& name = msg->config_desc.name();
         //if (!LoadConfig(name, )) {
         //    logger().Err("LoadConfig failed: {}.", name);
         //}
-        co_return std::move(msg_);
+        co_return make_msg<ConfigUpdateResp>();
     }
 
 private:

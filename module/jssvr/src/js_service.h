@@ -1335,7 +1335,8 @@ private:
             func_ctx->sender = *handle;
 
             // 这里只能让OnMsg等待，发现是C++消息再做分发
-            func_ctx->waiting_session_id = service->Send<db::DbRowQueryMsg>(*handle, *desc, std::move(primary_key_str), std::nullopt, false);
+            func_ctx->waiting_session_id = service->Send<db::DBRowQueryReq>(*handle, *desc
+                , std::move(primary_key_str), false);
 
             /*auto msg = service->imillion().proto_mgr().NewMessage(*desc);
             if (!msg) {
@@ -1398,8 +1399,8 @@ private:
 
 
 public:
-    MILLION_MSG_HANDLE(db::DbRowQueryMsg, msg) {
-        logger().Err("DbRowQueryMsg");
+    MILLION_MSG_HANDLE(db::DBRowQueryResp, msg) {
+        logger().Err("DBRowQueryResp");
 
         co_return nullptr;
     }

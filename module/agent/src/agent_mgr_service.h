@@ -37,14 +37,13 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(AgentMgrLoginMsg, msg) {
-        auto agent_msg = co_await Call<NewAgentMsg>(node_mgr_, msg->agent_id, std::nullopt);
-        if (!agent_msg->agent_handle) {
+    MILLION_MSG_HANDLE(AgentMgrLoginReq, msg) {
+        auto new_resp = co_await Call<NewAgentReq, NewAgentResp>(node_mgr_, msg->agent_id);
+        if (!new_resp->agent_handle) {
             TaskAbort("New agent failed.");
         }
-        msg->agent_handle = std::move(agent_msg->agent_handle);
-        Reply<gateway::GatewaySureAgentMsg>(gateway_, msg->agent_id, *msg->agent_handle);
-        co_return std::move(msg_);
+        Reply<gateway::GatewaySureAgent>(gateway_, msg->agent_id, *new_resp->agent_handle);
+        co_return make_msg<AgentMgrLoginResp>(std::move(new_resp->agent_handle));
     }
 
 private:

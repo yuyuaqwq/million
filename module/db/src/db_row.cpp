@@ -125,7 +125,7 @@ void DBRow::ClearDirtyByFieldIndex(int32_t field_index) {
 
 Task<> DBRow::Commit(IService* self, const ServiceHandle& db, bool update_to_cache) {
     auto old_db_version = db_version_++;
-    co_await self->Call<DbRowUpdateMsg>(db, *this, old_db_version, update_to_cache);
+    co_await self->Call<DBRowUpdateReq>(db, *this, old_db_version, update_to_cache);
 }
 
 const google::protobuf::FieldDescriptor& DBRow::GetFieldByNumber(int32_t field_number) const {
