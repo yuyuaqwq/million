@@ -355,8 +355,10 @@ public:
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-                    google::protobuf::Message* sub_message = reflection.MutableMessage(&proto_msg, field);
-                    sub_message->ParseFromString(row.get<std::string>(i));
+                    if (row.get_indicator(i) != soci::i_null) {
+                        google::protobuf::Message* sub_message = reflection.MutableMessage(&proto_msg, field);
+                        sub_message->ParseFromString(row.get<std::string>(i));
+                    }
                     break;
                 }
                 case google::protobuf::FieldDescriptor::TYPE_ENUM: {

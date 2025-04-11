@@ -196,14 +196,21 @@ public:
                         res_msg = co_await MsgDispatch(func_ctx.sender, *func_ctx.waiting_session_id, std::move(res_msg));
                     }
                     
-                    auto proto_res_msg = res_msg.GetProtoMsg();
+                    if (res_msg.IsProtoMsg()) {
+                        auto proto_res_msg = res_msg.GetProtoMsg();
 
-                    // res_msg转js对象，唤醒
-                    JSValue msg_obj = ProtoMsgToJsObj(*proto_res_msg);
-                    result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
-                    JS_FreeValue(js_ctx_, msg_obj);
-                    if (!JsCheckException(result)) break;
-
+                        // res_msg转js对象，唤醒
+                        JSValue msg_obj = ProtoMsgToJsObj(*proto_res_msg);
+                        result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
+                        JS_FreeValue(js_ctx_, msg_obj);
+                        if (!JsCheckException(result)) break;
+                    }
+                    else {
+                        JSValue undefined = JS_UNDEFINED;
+                        result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &undefined);
+                        if (!JsCheckException(result)) break;
+                    }
+                    
                     func_ctx.waiting_session_id.reset();
                 }
 

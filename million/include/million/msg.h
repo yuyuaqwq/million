@@ -25,13 +25,12 @@ inline MsgTypeKey GetMsgTypeKey() {
     }
 }
 
-MILLION_MSG_DEFINE_EMPTY(, SB)
-
 class MILLION_API MsgPtr {
 public:
     MsgPtr() = default;
 
-    MsgPtr(std::nullptr_t) {}
+    MsgPtr(std::nullptr_t) 
+        : msg_ptr_(nullptr) {}
 
     MsgPtr(MsgPtr&& other) noexcept 
         : msg_ptr_(std::move(other.msg_ptr_)){}
@@ -214,6 +213,9 @@ public:
         else if (IsCppMsg()) {
             return GetCppMsg();
         }
+        else {
+            return false;
+        }
         throw std::bad_variant_access();
     }
 
@@ -267,7 +269,9 @@ private:
     }
 
 private:
-    std::variant<ProtoMsgUnique
+    std::variant<
+        std::nullptr_t
+        , ProtoMsgUnique
         , ProtoMsgShared
         , CppMsgUnique
         , CppMsgShared> msg_ptr_;
