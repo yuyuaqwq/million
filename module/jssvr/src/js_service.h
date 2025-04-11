@@ -190,7 +190,7 @@ public:
                 }
 
                 if (func_ctx.waiting_session_id) {
-                    auto res_msg = co_await Recv(*func_ctx.waiting_session_id, 0, false);
+                    auto res_msg = co_await Recv(*func_ctx.waiting_session_id);
 
                     if (res_msg.IsCppMsg()) {
                         res_msg = co_await MsgDispatch(func_ctx.sender, *func_ctx.waiting_session_id, std::move(res_msg));

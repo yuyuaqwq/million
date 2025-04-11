@@ -62,27 +62,35 @@ public:
         return Reply(target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
-    SessionAwaiterBase Recv(SessionId session_id, uint32_t timeout_s, bool or_null) {
-        return SessionAwaiterBase(session_id, timeout_s, or_null);
+    SessionAwaiterBase Recv(SessionId session_id) {
+        return SessionAwaiterBase(session_id, 0, false);
     }
-
     template <typename MsgT>
     SessionAwaiter<MsgT> Recv(SessionId session_id) {
         // 0表示默认超时时间
         return SessionAwaiter<MsgT>(session_id, 0, false);
     }
 
+    SessionAwaiterBase RecvWithTimeout(SessionId session_id, uint32_t timeout_s) {
+        return SessionAwaiterBase(session_id, timeout_s, false);
+    }
     template <typename MsgT>
     SessionAwaiter<MsgT> RecvWithTimeout(SessionId session_id, uint32_t timeout_s) {
         return SessionAwaiter<MsgT>(session_id, timeout_s, false);
     }
 
+    SessionAwaiterBase RecvOrNull(SessionId session_id) {
+        return SessionAwaiterBase(session_id, 0, true);
+    }
     template <typename MsgT>
     SessionAwaiter<MsgT> RecvOrNull(SessionId session_id) {
         // 0表示默认超时时间
         return SessionAwaiter<MsgT>(session_id, 0, true);
     }
 
+    SessionAwaiterBase RecvOrNullWithTimeout(SessionId session_id, uint32_t timeout_s) {
+        return SessionAwaiterBase(session_id, timeout_s, true);
+    }
     template <typename MsgT>
     SessionAwaiter<MsgT> RecvOrNullWithTimeout(SessionId session_id, uint32_t timeout_s) {
         return SessionAwaiter<MsgT>(session_id, timeout_s, true);
@@ -95,9 +103,9 @@ public:
         return Recv<RecvMsgT>(session_id.value());
     }
     template <typename MsgT, typename ...Args>
-    SessionAwaiter<MsgT> Call(const ServiceHandle& target, Args&&... args) {
+    SessionAwaiterBase Call(const ServiceHandle& target, Args&&... args) {
         auto session_id = Send<MsgT>(target, std::forward<Args>(args)...);
-        return Recv<MsgT>(session_id.value());
+        return Recv(session_id.value());
     }
 
     template <typename SendMsgT, typename RecvMsgT, typename ...SendArgsT>
@@ -106,9 +114,9 @@ public:
         return RecvWithTimeout<RecvMsgT>(session_id.value(), timeout_s);
     }
     template <typename MsgT, typename ...Args>
-    SessionAwaiter<MsgT> CallWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
+    SessionAwaiterBase CallWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
         auto session_id = Send<MsgT>(target, std::forward<Args>(args)...);
-        return RecvWithTimeout<MsgT>(session_id.value(), timeout_s);
+        return RecvWithTimeout(session_id.value(), timeout_s);
     }
 
     template <typename SendMsgT, typename RecvMsgT, typename ...SendArgsT>
@@ -117,9 +125,9 @@ public:
         return RecvOrNull<RecvMsgT>(session_id.value());
     }
     template <typename MsgT, typename ...Args>
-    SessionAwaiter<MsgT> CallOrNull(const ServiceHandle& target, Args&&... args) {
+    SessionAwaiterBase CallOrNull(const ServiceHandle& target, Args&&... args) {
         auto session_id = Send<MsgT>(target, std::forward<Args>(args)...);
-        return RecvOrNull<MsgT>(session_id.value());
+        return RecvOrNull(session_id.value());
     }
 
     template <typename SendMsgT, typename RecvMsgT, typename ...SendArgsT>
@@ -128,9 +136,9 @@ public:
         return RecvOrNullWithTimeout<RecvMsgT>(session_id.value(), timeout_s);
     }
     template <typename MsgT, typename ...Args>
-    SessionAwaiter<MsgT> CallOrNullWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
+    SessionAwaiterBase CallOrNullWithTimeout(const ServiceHandle& target, uint32_t timeout_s, Args&&... args) {
         auto session_id = Send<MsgT>(target, std::forward<Args>(args)...);
-        return RecvOrNullWithTimeout<MsgT>(session_id.value(), timeout_s);
+        return RecvOrNullWithTimeout(session_id.value(), timeout_s);
     }
 
     void Timeout(uint32_t tick, MsgPtr msg);
