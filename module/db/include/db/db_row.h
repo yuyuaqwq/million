@@ -46,7 +46,7 @@ public:
     void ClearDirtyByFieldNum(int32_t field_number);
     void ClearDirtyByFieldIndex(int32_t field_index);
 
-    Task<> Commit(IService* self, const ServiceHandle& db, bool update_to_cache);
+    Task<> Commit(IService* self, const ServiceHandle& db);
 
     uint64_t db_version() const { return db_version_; }
 

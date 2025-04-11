@@ -77,6 +77,7 @@ public:
             // co_await期间可能会有新的DbRowUpdateMsg消息被处理，这里复制过来再回写
             // 可以考虑优化成移动
             auto db_row = msg->cache->db_row.CopyDirtyTo();
+            auto db_version = db_row.db_version();
             auto res = co_await CallOrNull<SqlUpdateReq, SqlUpdateResp>(sql_service_, std::move(db_row), msg->cache->sql_db_version);
             if (!res) {
                 // 超时，可能只是sql暂时不能提供服务，可以重试
@@ -87,10 +88,10 @@ public:
 
                 // 这里不匹配的原因，可能是其他节点回写了这行的数据到SQL，一般是应用设计问题
                 // 比如某玩家的基本数据，被两个节点的服务同时query并设置了回写，不是一个常见的场景
-                TaskAbort("Sql tick sync failed, check the db version: {} -> {}.", msg->cache->sql_db_version, db_row.db_version());
+                TaskAbort("Sql tick sync failed, check the db version: {} -> {}.", msg->cache->sql_db_version, db_version);
             }
             else {
-                msg->cache->sql_db_version = db_row.db_version();
+                msg->cache->sql_db_version = db_version;
             }
         }
         auto sync_tick = msg->sync_tick;
@@ -126,8 +127,8 @@ public:
         db_row = std::move(*res->db_row);
 
         if (msg->tick_write_back) {
+            // 需要tick回写，缓存一下
             auto sql_db_version = res->db_row->db_version();
-            
             LocalCacheDBRow(desc, std::move(msg->primary_key), db_row, sql_db_version);
         }
 
@@ -151,6 +152,9 @@ public:
 
         auto table_iter = tables_.find(&desc);
         TaskAssert(table_iter != tables_.end(), "Table does not exist.");
+
+        // 这里由于未来引入lru淘汰，是可能找不到的
+        // 找不到就重新缓存即可
         auto row_iter = table_iter->second.find(primary_key);
         TaskAssert(row_iter != table_iter->second.end(), "Row does not exist.");
 
@@ -237,6 +241,7 @@ private:
     }
 
 private:
+    // 后续实现lru，位于db_service的缓存会进行淘汰
     std::unordered_map<const protobuf::Descriptor*, DBTable> tables_;
 
     ServiceHandle cache_service_;

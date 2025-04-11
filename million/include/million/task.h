@@ -53,7 +53,7 @@ struct SessionAwaiterBase {
         result_ = std::move(result);
     }
 
-    SessionId waiting_session() const {
+    SessionId waiting_session_id() const {
         return waiting_session_id_;
     }
 

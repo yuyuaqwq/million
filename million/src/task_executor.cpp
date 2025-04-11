@@ -34,7 +34,7 @@ std::variant<MsgPtr, TaskElement, TaskElement*> TaskExecutor::TrySchedule(Sessio
     }
     if (!iter->second.task.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        auto task = RePush(session_id, iter->second.task.coroutine.promise().session_awaiter()->waiting_session());
+        auto task = RePush(session_id, iter->second.task.coroutine.promise().session_awaiter()->waiting_session_id());
         return task;
     }
     else {
@@ -60,7 +60,7 @@ std::optional<TaskElement> TaskExecutor::AddTask(TaskElement&& ele) {
     }
     if (!ele.task.coroutine.done()) {
         assert(ele.task.coroutine.promise().session_awaiter());
-        Push(ele.task.coroutine.promise().session_awaiter()->waiting_session(), std::move(ele));
+        Push(ele.task.coroutine.promise().session_awaiter()->waiting_session_id(), std::move(ele));
         return std::nullopt;
     }
     return ele;
@@ -82,7 +82,7 @@ std::pair<TaskElement*, bool> TaskExecutor::TaskTimeout(SessionId session_id) {
 
     if (!iter->second.task.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
-        return std::make_pair(RePush(session_id, iter->second.task.coroutine.promise().session_awaiter()->waiting_session()), false);
+        return std::make_pair(RePush(session_id, iter->second.task.coroutine.promise().session_awaiter()->waiting_session_id()), false);
     }
     else {
         auto has_exception = iter->second.task.has_exception();
@@ -94,7 +94,7 @@ std::pair<TaskElement*, bool> TaskExecutor::TaskTimeout(SessionId session_id) {
 std::optional<MsgPtr> TaskExecutor::TrySchedule(TaskElement& ele, SessionId session_id, MsgPtr msg) {
     auto awaiter = ele.task.coroutine.promise().session_awaiter();
     if (msg) {
-        if (awaiter->waiting_session() != session_id) {
+        if (awaiter->waiting_session_id() != session_id) {
             return msg;
         }
     }

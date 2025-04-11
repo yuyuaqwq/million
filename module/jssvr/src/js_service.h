@@ -51,6 +51,8 @@ private:
 public:
     std::vector<std::string> jssvr_dirs_;
     // std::unordered_map<std::filesystem::path, std::vector<uint8_t>> module_bytecodes_map_;
+
+    ServiceHandle db_handle_;
 };
 
 class JsService : public million::IService {
@@ -637,25 +639,25 @@ private:
         , const google::protobuf::Descriptor& desc
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
-        , JSValue repeated_value)
+        , JSValue js_value)
     {
         switch (field_desc.type()) {
         case google::protobuf::FieldDescriptor::TYPE_DOUBLE: {
-            if (!JS_IsNumber(repeated_value)) {
+            if (!JS_IsNumber(js_value)) {
                 TaskAbort("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
             double value;
-            if (JS_ToFloat64(js_ctx_, &value, repeated_value) == 0) {
+            if (JS_ToFloat64(js_ctx_, &value, js_value) == 0) {
                 reflection.SetDouble(msg, &field_desc, value);
             }
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_FLOAT: {
-            if (!JS_IsNumber(repeated_value)) {
+            if (!JS_IsNumber(js_value)) {
                 TaskAbort("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
             double value;
-            if (JS_ToFloat64(js_ctx_, &value, repeated_value) == 0) {
+            if (JS_ToFloat64(js_ctx_, &value, js_value) == 0) {
                 reflection.SetFloat(msg, &field_desc, value);
             }
             break;
@@ -663,22 +665,22 @@ private:
         case google::protobuf::FieldDescriptor::TYPE_INT64:
         case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
         case google::protobuf::FieldDescriptor::TYPE_SINT64: {
-            if (!JS_IsBigInt(js_ctx_, repeated_value)) {
+            if (!JS_IsBigInt(js_ctx_, js_value)) {
                 TaskAbort("Field {}.{} is not a bigint.", desc.name(), desc.name(), field_desc.name());
             }
             int64_t value;
-            if (JS_ToBigInt64(js_ctx_, &value, repeated_value) == 0) {
+            if (JS_ToBigInt64(js_ctx_, &value, js_value) == 0) {
                 reflection.SetInt64(msg, &field_desc, value);
             }
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_UINT64:
         case google::protobuf::FieldDescriptor::TYPE_FIXED64: {
-            if (!JS_IsBigInt(js_ctx_, repeated_value)) {
+            if (!JS_IsBigInt(js_ctx_, js_value)) {
                 TaskAbort("Field {}.{} is not a bigint.", desc.name(), field_desc.name());
             }
             uint64_t value;
-            if (JS_ToBigUint64(js_ctx_, &value, repeated_value) == 0) {
+            if (JS_ToBigUint64(js_ctx_, &value, js_value) == 0) {
                 reflection.SetUInt64(msg, &field_desc, value);
             }
             break;
@@ -686,38 +688,38 @@ private:
         case google::protobuf::FieldDescriptor::TYPE_INT32:
         case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
         case google::protobuf::FieldDescriptor::TYPE_SINT32: {
-            if (!JS_IsNumber(repeated_value)) {
+            if (!JS_IsNumber(js_value)) {
                 TaskAbort("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
             int32_t value;
-            if (JS_ToInt32(js_ctx_, &value, repeated_value) == 0) {
+            if (JS_ToInt32(js_ctx_, &value, js_value) == 0) {
                 reflection.SetInt32(msg, &field_desc, value);
             }
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_UINT32:
         case google::protobuf::FieldDescriptor::TYPE_FIXED32: {
-            if (!JS_IsNumber(repeated_value)) {
+            if (!JS_IsNumber(js_value)) {
                 TaskAbort("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
             uint32_t value;
-            if (JS_ToUint32(js_ctx_, &value, repeated_value) == 0) {
+            if (JS_ToUint32(js_ctx_, &value, js_value) == 0) {
                 reflection.SetUInt32(msg, &field_desc, value);
             }
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_BOOL: {
-            if (!JS_IsBool(repeated_value)) {
+            if (!JS_IsBool(js_value)) {
                 TaskAbort("Field {}.{} is not a bool.", desc.name(), field_desc.name());
             }
-            reflection.SetBool(msg, &field_desc, JS_ToBool(js_ctx_, repeated_value));
+            reflection.SetBool(msg, &field_desc, JS_ToBool(js_ctx_, js_value));
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_STRING: {
-            if (!JS_IsString(repeated_value)) {
+            if (!JS_IsString(js_value)) {
                 TaskAbort("Field {}.{} is not a string.", desc.name(), field_desc.name());
             }
-            const char* str = JS_ToCString(js_ctx_, repeated_value);
+            const char* str = JS_ToCString(js_ctx_, js_value);
             if (!str) {
                 TaskAbort("Field {}.{} to cstring failed.", desc.name(), field_desc.name());
             }
@@ -726,20 +728,20 @@ private:
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_BYTES: {
-            if (!JS_IsArrayBuffer(repeated_value)) {
+            if (!JS_IsArrayBuffer(js_value)) {
                 TaskAbort("Field {}.{} is not a array buffer.", desc.name(), field_desc.name());
             }
 
             size_t size;
-            const uint8_t* data = JS_GetArrayBuffer(js_ctx_, &size, repeated_value);
+            const uint8_t* data = JS_GetArrayBuffer(js_ctx_, &size, js_value);
             reflection.SetString(msg, &field_desc, std::string(reinterpret_cast<const char*>(data), size));
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
-            if (!JS_IsString(repeated_value)) {
+            if (!JS_IsString(js_value)) {
                 TaskAbort("Field {}.{} is not a string(enum).", desc.name(), field_desc.name());
             }
-            const char* str = JS_ToCString(js_ctx_, repeated_value);
+            const char* str = JS_ToCString(js_ctx_, js_value);
             if (!str) {
                 TaskAbort("Field {}.{} to cstring failed.", desc.name(), field_desc.name());
             }
@@ -766,10 +768,10 @@ private:
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
-            if (!JS_IsObject(repeated_value)) {
+            if (!JS_IsObject(js_value)) {
                 TaskAbort("Field {}.{} is not a object.", desc.name(), field_desc.name());
             }
-            JSValue sub_obj = repeated_value;
+            JSValue sub_obj = js_value;
             auto sub_msg = reflection.MutableMessage(msg, &field_desc);
             JsObjToProtoMsg(sub_msg, sub_obj);
             break;
@@ -1210,7 +1212,6 @@ private:
     }
 
 
-
     static JSValue MillionModuleNewService(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         if (argc < 1) {
             return JS_ThrowTypeError(ctx, "MillionModuleNewService argc: %d.", argc);
@@ -1302,6 +1303,138 @@ private:
         return module;
     }
 
+
+    using DBRow = db::DBRow;
+
+    // 定义 JS 对象类 ID
+    static JSClassID js_dbrow_class_id;
+
+    // DBRow 的 Finalizer
+    static void js_dbrow_finalizer(JSRuntime* rt, JSValue val) {
+        DBRow* dbrow = (DBRow*)JS_GetOpaque(val, js_dbrow_class_id);
+        if (dbrow) {
+            delete dbrow;
+        }
+    }
+
+    // 属性获取回调
+    static JSValue js_dbrow_get_property(JSContext* ctx, JSValueConst this_val, JSAtom atom) {
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+
+        DBRow* dbrow = (DBRow*)JS_GetOpaque(this_val, js_dbrow_class_id);
+        if (!dbrow) {
+            return JS_EXCEPTION;
+        }
+
+        const char* prop = JS_AtomToCString(ctx, atom);
+        if (!prop) {
+            return JS_EXCEPTION;
+        }
+
+        // 通过反射访问属性
+        auto& msg = dbrow->get();
+
+        const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
+        const google::protobuf::FieldDescriptor* field =
+            descriptor->FindFieldByName(prop);
+
+        if (!field) {
+            return JS_UNDEFINED;
+        }
+
+        auto value = service->GetJsValueByProtoMsgField(msg, *msg.GetReflection(), *field);
+
+        return value;
+    }
+
+    // 属性设置回调
+    static JSValue js_dbrow_set_property(JSContext* ctx, JSValueConst this_val, JSAtom atom, JSValueConst value, JSValueConst receiver) {
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+        
+        DBRow* dbrow = (DBRow*)JS_GetOpaque(this_val, js_dbrow_class_id);
+        if (!dbrow) {
+            return JS_EXCEPTION;
+        }
+
+        const char* prop = JS_AtomToCString(ctx, atom);
+        if (!prop) {
+            return JS_EXCEPTION;
+        }
+
+        auto& msg = dbrow->get();
+
+        const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
+        const google::protobuf::FieldDescriptor* field =
+            descriptor->FindFieldByName(prop);
+
+        if (!field) {
+            return JS_ThrowTypeError(ctx, "Failed to set property %s", prop);
+        }
+
+        service->SetProtoMsgFieldFromJsValue(&msg, *descriptor, *msg.GetReflection(), *field, value);
+        dbrow->MarkDirtyByFieldIndex(field->index());
+
+        return JS_UNDEFINED;
+    }
+
+    // commit 方法实现
+    static JSValue js_dbrow_commit(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+        
+        DBRow* dbrow = (DBRow*)JS_GetOpaque(this_val, js_dbrow_class_id);
+        if (!dbrow) {
+            return JS_EXCEPTION;
+        }
+
+        auto task = dbrow->Commit(service, service->js_module_service_->db_handle_);
+
+        // 等待这个消息
+        task.coroutine.promise().session_awaiter()->waiting_session_id();
+    }
+
+    // 定义 JS 类的方法
+    static const JSCFunctionListEntry js_dbrow_proto_funcs[] = {
+        JS_CFUNC_DEF("commit", 0, js_dbrow_commit),
+    };
+
+    // 初始化 DBRow 类
+    static JSValue js_dbrow_init(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        JSValue obj = JS_NewObjectClass(ctx, js_dbrow_class_id);
+        if (JS_IsException(obj)) {
+            return obj;
+        }
+
+        DBRow* dbrow = new DBRow();
+        JS_SetOpaque(obj, dbrow);
+
+        return obj;
+    }
+
+    // 注册 DBRow 类到 QuickJS
+    void js_init_dbrow(JSContext* ctx) {
+        JS_NewClassID(ctx->, &js_dbrow_class_id);
+
+        JSClassDef dbrow_class = {
+            "DBRow",
+            .finalizer = js_dbrow_finalizer,
+        };
+
+        JS_NewClass(JS_GetRuntime(ctx), js_dbrow_class_id, &dbrow_class);
+
+        JSValue proto = JS_NewObject(ctx);
+        JS_SetPropertyFunctionList(ctx, proto, js_dbrow_proto_funcs, countof(js_dbrow_proto_funcs));
+
+        JS_SetClassProto(ctx, js_dbrow_class_id, proto);
+
+        // 将构造函数添加到全局对象
+        JSValue constructor = JS_NewCFunction2(ctx, js_dbrow_init, "DBRow", 0, JS_CFUNC_constructor, 0);
+        JS_SetPropertyStr(ctx, JS_GetGlobalObject(ctx), "DBRow", constructor);
+    }
+
+
+    // static Value DBRow
 
     static JSValue DBModuleQuery(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         if (argc < 2) {
@@ -1407,9 +1540,17 @@ private:
 
 public:
     MILLION_MSG_HANDLE(db::DBRowQueryResp, msg) {
-        logger().Err("DBRowQueryResp");
+        if (!msg->db_row) {
+            logger().Err("dbrow query failed.");
+            co_return nullptr;
+        }
 
-        co_return nullptr;
+        // 返回一个js的db row对象给他们
+        // 一个js的db row包装了cpp的db row
+        // js调用commit之类的，会再走DBRowUpdateReq
+        // 生命周期也交给js
+
+        co_return msg->db_row->get();
     }
 
 private:
@@ -1422,8 +1563,6 @@ private:
     JSValue js_service_module_ = JS_UNDEFINED;
     std::filesystem::path cur_path_;
 
-    // 加一个db行管理器
-    // 加一个config行管理器
 };
 
 } // namespace jssvr

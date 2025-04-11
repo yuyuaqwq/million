@@ -28,7 +28,8 @@ MILLION_MSG_DEFINE(MILLION_DB_API, DBRowQueryReq
     , (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (bool) tick_write_back);
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowQueryResp, (std::optional<DBRow>) db_row);
 
-MILLION_MSG_DEFINE(MILLION_DB_API, DBRowUpdateReq, (DBRow) db_row, (uint64_t) old_db_version, (bool) update_to_cache);
+/*(bool) update_to_cache*/
+MILLION_MSG_DEFINE(MILLION_DB_API, DBRowUpdateReq, (DBRow) db_row, (uint64_t) old_db_version);
 MILLION_MSG_DEFINE_EMPTY(MILLION_DB_API, DBRowUpdateResp);
 
 // MILLION_MSG_DEFINE(MILLION_DB_API, DbRowBatchUpdateReq, (std::vector<nonnull_ptr<DbRow>>) db_rows);
