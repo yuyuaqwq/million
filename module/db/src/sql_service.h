@@ -377,9 +377,13 @@ public:
     }
 
     MILLION_MSG_HANDLE(SqlInsertReq, msg) {
-        const auto& proto_msg = msg->db_row.get();
-        const auto& desc = msg->db_row.GetDescriptor();
-        const auto& reflection = msg->db_row.GetReflection();
+        auto& db_row = msg->db_row;
+        db_row.MarkDirty();
+
+
+        const auto& proto_msg = db_row.get();
+        const auto& desc = db_row.GetDescriptor();
+        const auto& reflection = db_row.GetReflection();
 
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
@@ -434,7 +438,7 @@ public:
         stmt.alloc();
         stmt.prepare(sql);
         std::vector<std::any> values;
-        BindValuesToStatement(proto_msg, &values, stmt);
+        BindValuesToStatement(db_row, &values, stmt);
         stmt.define_and_bind();
 
         stmt.execute(true);
@@ -445,9 +449,11 @@ public:
     }
 
     MILLION_MSG_HANDLE(SqlUpdateReq, msg) {
-        const auto& proto_msg = msg->db_row.get();
-        const auto& desc = msg->db_row.GetDescriptor();
-        const auto& reflection = msg->db_row.GetReflection();
+        auto& db_row = msg->db_row;
+
+        const auto& proto_msg = db_row.get();
+        const auto& desc = db_row.GetDescriptor();
+        const auto& reflection = db_row.GetReflection();
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         if (options.has_sql()) {
@@ -462,9 +468,12 @@ public:
 
         soci::statement stmt(sql_);
 
-        sql += std::format("__db_version__ = '{}',", msg->db_row.db_version());
+        sql += std::format("__db_version__ = {},", msg->db_row.db_version());
         for (int i = 0; i < desc.field_count(); ++i) {
             const auto* field = desc.field(i);
+            if (!db_row.IsDirtyFromFIeldIndex(field->index())) {
+                continue;
+            }
             sql += field->name() + " = :" + field->name() + ",";
         }
 
@@ -473,13 +482,13 @@ public:
         }
 
         sql += " WHERE ";
-        sql += std::format("__db_version__ = '{}' AND __db_version__ < {} ", msg->old_db_version, msg->db_row.db_version());
+        sql += std::format("__db_version__ = {} AND __db_version__ < {} AND ", msg->old_db_version, msg->db_row.db_version());
 
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
         TaskAssert(primary_key_field_desc,
             "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
 
-        sql += std::format("AND {} = :{}", primary_key_field_desc->name(), primary_key_field_desc->name());
+        sql += std::format("{} = :{}", primary_key_field_desc->name(), primary_key_field_desc->name());
 
         // 这里自动根据主键来设置条件进行Update
         //if (!condition.empty()) {
@@ -490,17 +499,19 @@ public:
         stmt.alloc();
         stmt.prepare(sql);
         std::vector<std::any> values;
-        BindValuesToStatement(proto_msg, &values, stmt);
+        BindValuesToStatement(db_row, &values, stmt);
         stmt.define_and_bind();
 
         stmt.execute(true);
         auto rows = stmt.get_affected_rows();
 
-        co_return make_msg<SqlInsertResp>(rows > 0);
+        co_return make_msg<SqlUpdateResp>(rows > 0);
     }
 
 private:
-    void BindValuesToStatement(const google::protobuf::Message& msg, std::vector<std::any>* values, soci::statement& stmt) {
+    void BindValuesToStatement(const DBRow& db_row, std::vector<std::any>* values, soci::statement& stmt) {
+        auto& msg = db_row.get();
+
         const google::protobuf::Descriptor* desc = msg.GetDescriptor();
         const google::protobuf::Reflection* reflection = msg.GetReflection();
         const MessageOptionsTable& options = desc->options().GetExtension(table);
@@ -513,6 +524,9 @@ private:
 
         for (int i = 0; i < desc->field_count(); ++i) {
             const auto* field = desc->field(i);
+            if (field->number() != options.primary_key() && !db_row.IsDirtyFromFIeldIndex(field->index())) {
+                continue;
+            }
 
             if (field->is_repeated()) {
                 logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());

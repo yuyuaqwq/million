@@ -54,7 +54,7 @@ const protobuf::Descriptor& DBRow::GetDescriptor() const { return *proto_msg_->G
 const protobuf::Reflection& DBRow::GetReflection() const { return *proto_msg_->GetReflection(); }
 
 
-DBRow DBRow::CopyDirtyTo() {
+DBRow DBRow::CopyDirtyTo(bool copy_primary_key) {
     auto* proto_msg = proto_msg_->New();
     if (proto_msg == nullptr) {
         throw std::bad_alloc();
@@ -62,14 +62,26 @@ DBRow DBRow::CopyDirtyTo() {
     auto row = DBRow(ProtoMsgUnique(proto_msg));
     row.dirty_fields_ = dirty_fields_;
 
-    row.CopyFromDirty(*this);
+    row.CopyFromDirty(*this, copy_primary_key);
     return row;
 }
 
-void DBRow::CopyFromDirty(const DBRow& target) {
+void DBRow::CopyFromDirty(const DBRow& target, bool copy_primary_key) {
+    auto desc = target.proto_msg_->GetDescriptor();
+    auto primary_key = 0;
+    if (copy_primary_key) {
+        TaskAssert(desc->options().HasExtension(table), "{} hasExtension table failed.", desc->name());
+        const MessageOptionsTable& options = desc->options().GetExtension(table);
+        primary_key = options.primary_key();
+    }
+
     const auto* reflection = proto_msg_->GetReflection();
     for (size_t i = 0; i < dirty_fields_.size(); ++i) {
-        if (target.dirty_fields_[i]) {
+        const auto* field = desc->field(i);
+        TaskAssert(field, "{} field({}) is nullptr.", desc->name(), i);
+        
+        if (copy_primary_key && primary_key == field->number()
+            || target.dirty_fields_[i]) {
             CopyField(*target.proto_msg_, target.GetFieldByIndex(i), proto_msg_.get(), GetFieldByIndex(i));
             dirty_fields_.at(i) = true;
         }

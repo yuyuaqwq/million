@@ -56,7 +56,7 @@ public:
         user->set_email("sb@qq.com");
         // auto res = co_await Call<db::DBRowCreateReq>(db_service_, std::move(user));
 
-        auto res2 = co_await Call<db::DBRowQueryReq, db::DBRowQueryResp>(db_service_
+        auto res2 = co_await Call<db::DBRowLoadReq, db::DBRowLoadResp>(db_service_
             , *million::db::example::User::GetDescriptor(), "103",  true);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");

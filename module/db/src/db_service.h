@@ -76,7 +76,7 @@ public:
         if (msg->cache->db_row.db_version() > msg->cache->sql_db_version) {
             // co_await期间可能会有新的DbRowUpdateMsg消息被处理，这里复制过来再回写
             // 可以考虑优化成移动
-            auto db_row = msg->cache->db_row.CopyDirtyTo();
+            auto db_row = msg->cache->db_row.CopyDirtyTo(true);
             auto db_version = db_row.db_version();
             auto res = co_await CallOrNull<SqlUpdateReq, SqlUpdateResp>(sql_service_, std::move(db_row), msg->cache->sql_db_version);
             if (!res) {
@@ -104,7 +104,7 @@ public:
         co_return make_msg<DBRowCreateResp>(res->success);
     }
 
-    MILLION_MSG_HANDLE(DBRowQueryReq, msg) {
+    MILLION_MSG_HANDLE(DBRowLoadReq, msg) {
         auto& desc = msg->table_desc;
 
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
@@ -113,7 +113,7 @@ public:
         auto db_row_cache = LocalQueryDBRow(desc, msg->primary_key);
         if (db_row_cache) {
             // 如果找到了，就直接返回
-            co_return make_msg<DBRowQueryResp>(db_row_cache->db_row);
+            co_return make_msg<DBRowLoadResp>(db_row_cache->db_row);
         }
 
         auto proto_msg = imillion().proto_mgr().NewMessage(desc);
@@ -122,7 +122,7 @@ public:
 
         auto res = co_await RemoteQueryDBRow(msg->primary_key, std::move(db_row));
         if (!res) {
-            co_return make_msg<DBRowQueryResp>(std::nullopt);
+            co_return make_msg<DBRowLoadResp>(std::nullopt);
         }
         db_row = std::move(*res->db_row);
 
@@ -132,7 +132,7 @@ public:
             LocalCacheDBRow(desc, std::move(msg->primary_key), db_row, sql_db_version);
         }
 
-        co_return make_msg<DBRowQueryResp>(std::move(db_row));
+        co_return make_msg<DBRowLoadResp>(std::move(db_row));
     }
 
     MILLION_MSG_HANDLE(DBRowUpdateReq, msg) {

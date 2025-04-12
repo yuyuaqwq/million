@@ -24,9 +24,9 @@ MILLION_MSG_DEFINE(MILLION_DB_API, DBRowExistResp, (bool) exist);
 MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_DB_API, DBRowCreateReq, (ProtoMsgUnique) row_msg);
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowCreateResp, (bool) success);
 
-MILLION_MSG_DEFINE(MILLION_DB_API, DBRowQueryReq
+MILLION_MSG_DEFINE(MILLION_DB_API, DBRowLoadReq
     , (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (bool) tick_write_back);
-MILLION_MSG_DEFINE(MILLION_DB_API, DBRowQueryResp, (std::optional<DBRow>) db_row);
+MILLION_MSG_DEFINE(MILLION_DB_API, DBRowLoadResp, (std::optional<DBRow>) db_row);
 
 /*(bool) update_to_cache*/
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowUpdateReq, (DBRow) db_row, (uint64_t) old_db_version);

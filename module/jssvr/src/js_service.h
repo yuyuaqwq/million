@@ -44,8 +44,12 @@ private:
             return false;
         }
         jssvr_dirs_ = jssvr_settings["dirs"].as<std::vector<std::string>>();
-
         return true;
+    }
+
+    Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+        db_handle_ = *imillion().GetServiceByName(db::kDbServiceName);
+        co_return nullptr;
     }
 
 public:
@@ -54,6 +58,8 @@ public:
 
     ServiceHandle db_handle_;
 };
+
+MILLION_MSG_DEFINE(, JSValueMsg, (JSValue) value)
 
 class JsService : public million::IService {
     MILLION_SERVICE_DEFINE(JsService);
@@ -208,8 +214,13 @@ public:
                         if (!JsCheckException(result)) break;
                     }
                     else {
-                        JSValue undefined = JS_UNDEFINED;
-                        result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &undefined);
+                        JSValue msg_obj = JS_UNDEFINED;
+
+                        if (res_msg.IsType<JSValueMsg>()) {
+                            msg_obj = res_msg.GetMsg<JSValueMsg>()->value;
+                        }
+                        
+                        result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
                         if (!JsCheckException(result)) break;
                     }
                     
@@ -1307,7 +1318,7 @@ private:
     using DBRow = db::DBRow;
 
     // 定义 JS 对象类 ID
-    static JSClassID js_dbrow_class_id;
+    inline static JSClassID js_dbrow_class_id;
 
     // DBRow 的 Finalizer
     static void js_dbrow_finalizer(JSRuntime* rt, JSValue val) {
@@ -1318,7 +1329,7 @@ private:
     }
 
     // 属性获取回调
-    static JSValue js_dbrow_get_property(JSContext* ctx, JSValueConst this_val, JSAtom atom) {
+    static JSValue js_dbrow_get_property(JSContext* ctx, JSValueConst this_val, JSAtom atom, JSValue receiver) {
 
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
 
@@ -1333,12 +1344,19 @@ private:
             return JS_EXCEPTION;
         }
 
+        if (strcmp(prop, "commit") == 0) {
+            JS_FreeCString(ctx, prop);  // Don't forget to free the C string
+            return JS_NewCFunction(ctx, js_dbrow_commit, "commit", 0);
+        }
+
         // 通过反射访问属性
         auto& msg = dbrow->get();
 
         const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
         const google::protobuf::FieldDescriptor* field =
             descriptor->FindFieldByName(prop);
+
+        JS_FreeCString(ctx, prop);
 
         if (!field) {
             return JS_UNDEFINED;
@@ -1350,17 +1368,17 @@ private:
     }
 
     // 属性设置回调
-    static JSValue js_dbrow_set_property(JSContext* ctx, JSValueConst this_val, JSAtom atom, JSValueConst value, JSValueConst receiver) {
+    static int js_dbrow_set_property(JSContext* ctx, JSValueConst this_val, JSAtom atom, JSValueConst value, JSValueConst receiver, int flags) {
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
         
         DBRow* dbrow = (DBRow*)JS_GetOpaque(this_val, js_dbrow_class_id);
         if (!dbrow) {
-            return JS_EXCEPTION;
+            return -1;
         }
 
         const char* prop = JS_AtomToCString(ctx, atom);
         if (!prop) {
-            return JS_EXCEPTION;
+            return -1;
         }
 
         auto& msg = dbrow->get();
@@ -1369,14 +1387,16 @@ private:
         const google::protobuf::FieldDescriptor* field =
             descriptor->FindFieldByName(prop);
 
+        JS_FreeCString(ctx, prop);
+
         if (!field) {
-            return JS_ThrowTypeError(ctx, "Failed to set property %s", prop);
+            return -1;
         }
 
         service->SetProtoMsgFieldFromJsValue(&msg, *descriptor, *msg.GetReflection(), *field, value);
         dbrow->MarkDirtyByFieldIndex(field->index());
 
-        return JS_UNDEFINED;
+        return 0;
     }
 
     // commit 方法实现
@@ -1391,54 +1411,69 @@ private:
         auto task = dbrow->Commit(service, service->js_module_service_->db_handle_);
 
         // 等待这个消息
-        task.coroutine.promise().session_awaiter()->waiting_session_id();
+        // task.coroutine.promise().session_awaiter()->waiting_session_id();
+
+        return JS_UNDEFINED;
     }
 
     // 定义 JS 类的方法
-    static const JSCFunctionListEntry js_dbrow_proto_funcs[] = {
-        JS_CFUNC_DEF("commit", 0, js_dbrow_commit),
-    };
+    static JSCFunctionListEntry* DBRowExportList(size_t* count) {
+        static JSCFunctionListEntry list[] = {
+            JS_CFUNC_DEF("commit", 0, js_dbrow_commit),
+        };
+        *count = sizeof(list) / sizeof(JSCFunctionListEntry);
+        return list;
+    }
 
     // 初始化 DBRow 类
-    static JSValue js_dbrow_init(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        JSValue obj = JS_NewObjectClass(ctx, js_dbrow_class_id);
+    JSValue JSDBRowMake(DBRow&& dbrow) {
+        JSValue obj = JS_NewObjectClass(js_ctx_, js_dbrow_class_id);
         if (JS_IsException(obj)) {
             return obj;
         }
 
-        DBRow* dbrow = new DBRow();
-        JS_SetOpaque(obj, dbrow);
+        DBRow* new_dbrow = new DBRow(std::move(dbrow));
+        JS_SetOpaque(obj, new_dbrow);
 
         return obj;
     }
 
     // 注册 DBRow 类到 QuickJS
     void js_init_dbrow(JSContext* ctx) {
-        JS_NewClassID(ctx->, &js_dbrow_class_id);
+        JS_NewClassID(JS_GetRuntime(ctx), &js_dbrow_class_id);
+
+        static JSClassExoticMethods js_dbrow_exotic_methods = {
+                .get_property = js_dbrow_get_property,
+                .set_property = js_dbrow_set_property,
+        };
 
         JSClassDef dbrow_class = {
-            "DBRow",
+            .class_name = "DBRow",
             .finalizer = js_dbrow_finalizer,
+            .exotic = &js_dbrow_exotic_methods,
         };
 
         JS_NewClass(JS_GetRuntime(ctx), js_dbrow_class_id, &dbrow_class);
 
         JSValue proto = JS_NewObject(ctx);
-        JS_SetPropertyFunctionList(ctx, proto, js_dbrow_proto_funcs, countof(js_dbrow_proto_funcs));
+
+        size_t count = 0;
+        auto js_dbrow_proto_funcs = DBRowExportList(&count);
+        JS_SetPropertyFunctionList(ctx, proto, js_dbrow_proto_funcs, count);
 
         JS_SetClassProto(ctx, js_dbrow_class_id, proto);
 
         // 将构造函数添加到全局对象
-        JSValue constructor = JS_NewCFunction2(ctx, js_dbrow_init, "DBRow", 0, JS_CFUNC_constructor, 0);
-        JS_SetPropertyStr(ctx, JS_GetGlobalObject(ctx), "DBRow", constructor);
+        //JSValue constructor = JS_NewCFunction2(ctx, js_dbrow_init, "DBRow", 0, JS_CFUNC_constructor, 0);
+        //JS_SetPropertyStr(ctx, JS_GetGlobalObject(ctx), "DBRow", constructor);
     }
 
 
     // static Value DBRow
 
-    static JSValue DBModuleQuery(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    static JSValue DBModuleLoad(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         if (argc < 2) {
-            return JS_ThrowTypeError(ctx, "DBModuleQuery argc: %d.", argc);
+            return JS_ThrowTypeError(ctx, "DBModuleLoad argc: %d.", argc);
         }
 
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
@@ -1446,27 +1481,27 @@ private:
 
         auto handle = service->imillion().GetServiceByName(db::kDbServiceName);
         if (!handle) {
-            return JS_ThrowTypeError(ctx, "DBModuleQuery Unable to access db service.");
+            return JS_ThrowTypeError(ctx, "DBModuleLoad Unable to access db service.");
         }
 
         JSValue result = func_ctx->promise_cap;
         do {
             auto msg_name = JS_ToCString(ctx, argv[0]);
             if (!msg_name) {
-                result = JS_ThrowInternalError(ctx, "DBModuleQuery failed to convert 0 argument to string.");
+                result = JS_ThrowInternalError(ctx, "DBModuleLoad failed to convert 0 argument to string.");
                 break;
             }
 
             auto desc = service->imillion().proto_mgr().FindMessageTypeByName(msg_name);
             JS_FreeCString(ctx, msg_name);
             if (!desc) {
-                result = JS_ThrowTypeError(ctx, "DBModuleQuery 0 argument Invalid message type.");
+                result = JS_ThrowTypeError(ctx, "DBModuleLoad 0 argument Invalid message type.");
                 break;
             }
 
             auto primary_key = JS_ToCString(ctx, argv[1]);
             if (!primary_key) {
-                result = JS_ThrowInternalError(ctx, "DBModuleQuery failed to convert 1 argument to string.");
+                result = JS_ThrowInternalError(ctx, "DBModuleLoad failed to convert 1 argument to string.");
                 break;
             }
             std::string primary_key_str = primary_key;
@@ -1475,8 +1510,8 @@ private:
             func_ctx->sender = *handle;
 
             // 这里只能让OnMsg等待，发现是C++消息再做分发
-            func_ctx->waiting_session_id = service->Send<db::DBRowQueryReq>(*handle, *desc
-                , std::move(primary_key_str), false);
+            func_ctx->waiting_session_id = service->Send<db::DBRowLoadReq>(*handle, *desc
+                , std::move(primary_key_str), true);
 
             /*auto msg = service->imillion().proto_mgr().NewMessage(*desc);
             if (!msg) {
@@ -1493,7 +1528,7 @@ private:
 
     static JSCFunctionListEntry* DBModuleExportList(size_t* count) {
         static JSCFunctionListEntry list[] = {
-            JS_CFUNC_DEF("query", 1, DBModuleQuery),
+            JS_CFUNC_DEF("load", 1, DBModuleLoad),
 
         };
         *count = sizeof(list) / sizeof(JSCFunctionListEntry);
@@ -1520,6 +1555,10 @@ private:
             logger().Err("JsAddModule failed: {}.", "db");
             return nullptr;
         }
+
+
+        js_init_dbrow(js_ctx_);
+
         return module;
     }
 
@@ -1539,7 +1578,7 @@ private:
 
 
 public:
-    MILLION_MSG_HANDLE(db::DBRowQueryResp, msg) {
+    MILLION_MSG_HANDLE(db::DBRowLoadResp, msg) {
         if (!msg->db_row) {
             logger().Err("dbrow query failed.");
             co_return nullptr;
@@ -1550,7 +1589,7 @@ public:
         // js调用commit之类的，会再走DBRowUpdateReq
         // 生命周期也交给js
 
-        co_return msg->db_row->get();
+        co_return make_msg<JSValueMsg>(JSDBRowMake(std::move(*msg->db_row)));
     }
 
 private:

@@ -179,7 +179,7 @@ public:
         else if (IsCppMsgUnique()) {
             return GetCppMsgUnique().release();
         }
-        throw std::bad_variant_access();
+        return nullptr;
     }
 
     MsgPtr Copy() const {

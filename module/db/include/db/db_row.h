@@ -31,8 +31,8 @@ public:
     const protobuf::Descriptor& GetDescriptor() const;
     const protobuf::Reflection& GetReflection() const;
 
-    DBRow CopyDirtyTo();
-    void CopyFromDirty(const DBRow& db_row);
+    DBRow CopyDirtyTo(bool copy_primary_key);
+    void CopyFromDirty(const DBRow& db_row, bool copy_primary_key);
     
     bool IsDirty() const;
     bool IsDirtyFromFIeldNum(int32_t field_number) const;
