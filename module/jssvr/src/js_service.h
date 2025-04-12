@@ -939,7 +939,6 @@ private:
 
         func_ctx->promise_cap = JS_NewPromiseCapability(ctx, func_ctx->resolving_funcs);
 
-        // 这里应该不能返回这个promise了，应该每一个await都要有自己的promise
         JSValue result = func_ctx->promise_cap;
         do {
             if (!JS_IsString(argv[0])) {
