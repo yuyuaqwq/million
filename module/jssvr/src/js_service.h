@@ -19,6 +19,7 @@ namespace jssvr {
 
 struct ServiceFuncContext {
     JSValue promise_cap = JS_UNDEFINED;
+    JSValue resolving_funcs[2] = { JS_UNDEFINED };
     ServiceHandle sender;
     std::optional<million::SessionId> waiting_session_id;
 };
@@ -179,8 +180,7 @@ public:
             JS_SetContextOpaque(js_ctx_, &func_ctx);
 
             JSValue resolving_funcs[2];
-            func_ctx.promise_cap = JS_NewPromiseCapability(js_ctx_, resolving_funcs);
-            JSValue resolve_func = resolving_funcs[0];
+            JS_NewPromiseCapability(js_ctx_, resolving_funcs);
 
             if (proto_msg) {
                 par[0] = JS_NewString(js_ctx_, proto_msg->GetDescriptor()->full_name().c_str());
@@ -209,7 +209,7 @@ public:
 
                         // res_msg转js对象，唤醒
                         JSValue msg_obj = ProtoMsgToJsObj(*proto_res_msg);
-                        result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
+                        result = JS_Call(js_ctx_, func_ctx.resolving_funcs[0], JS_UNDEFINED, 1, &msg_obj);
                         JS_FreeValue(js_ctx_, msg_obj);
                         if (!JsCheckException(result)) break;
                     }
@@ -220,10 +220,15 @@ public:
                             msg_obj = res_msg.GetMsg<JSValueMsg>()->value;
                         }
                         
-                        result = JS_Call(js_ctx_, resolve_func, JS_UNDEFINED, 1, &msg_obj);
+                        result = JS_Call(js_ctx_, func_ctx.resolving_funcs[0], JS_UNDEFINED, 1, &msg_obj);
                         if (!JsCheckException(result)) break;
                     }
                     
+                    JS_FreeValue(js_ctx_, func_ctx.promise_cap);
+                    func_ctx.promise_cap = JS_UNDEFINED;
+                    func_ctx.resolving_funcs[0] = JS_UNDEFINED;
+                    func_ctx.resolving_funcs[1] = JS_UNDEFINED;
+
                     func_ctx.waiting_session_id.reset();
                 }
 
@@ -932,6 +937,9 @@ private:
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
         auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
 
+        func_ctx->promise_cap = JS_NewPromiseCapability(ctx, func_ctx->resolving_funcs);
+
+        // 这里应该不能返回这个promise了，应该每一个await都要有自己的promise
         JSValue result = func_ctx->promise_cap;
         do {
             if (!JS_IsString(argv[0])) {
@@ -1483,6 +1491,7 @@ private:
         if (!handle) {
             return JS_ThrowTypeError(ctx, "DBModuleLoad Unable to access db service.");
         }
+        func_ctx->promise_cap = JS_NewPromiseCapability(ctx, func_ctx->resolving_funcs);
 
         JSValue result = func_ctx->promise_cap;
         do {
