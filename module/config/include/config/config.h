@@ -23,14 +23,14 @@ public:
     explicit ConfigTableWeak(ProtoMsgWeak&& msg_weak)
         : weak_(std::move(msg_weak)) {}
 
-    ConfigTableWeak(ConfigTableWeak&& other)
+    ConfigTableWeak(ConfigTableWeak&& other) noexcept
         : weak_(std::move(other.weak_)) {}
 
-    void operator=(ConfigTableWeak&& other) {
+    void operator=(ConfigTableWeak&& other) noexcept {
         weak_ = std::move(other.weak_);
     }
 
-    Task<ConfigTable<ConfigMsgT>> lock(IService* this_service, ServiceHandle config_service) const {
+    Task<ConfigTable<ConfigMsgT>> Lock(IService* this_service, ServiceHandle config_service) const {
         auto config_lock = weak_.lock();
         while (!config_lock) {
             // 提升失败，说明配置有更新，重新拉取

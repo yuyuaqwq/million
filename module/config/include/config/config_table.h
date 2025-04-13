@@ -33,11 +33,11 @@ public:
     }
     ~ConfigTableBase() = default;
 
-    ConfigTableBase(ConfigTableBase&& other)
+    ConfigTableBase(ConfigTableBase&& other) noexcept
         : table_(std::move(other.table_))
         , table_field_(std::move(other.table_field_)) {}
 
-    void operator=(ConfigTableBase&& other) {
+    void operator=(ConfigTableBase&& other) noexcept {
         table_ = std::move(other.table_);
         table_field_ = std::move(other.table_field_);
     }
@@ -87,10 +87,10 @@ public:
     
     ~ConfigTable() = default;
 
-    ConfigTable(ConfigTable&& other)
+    ConfigTable(ConfigTable&& other) noexcept
         : base_(std::move(other.base_)) {}
 
-    void operator=(ConfigTable&& other) {
+    void operator=(ConfigTable&& other) noexcept {
         base_ = std::move(other.base_);
     }
 

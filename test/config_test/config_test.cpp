@@ -44,7 +44,7 @@ public:
 
 
     MILLION_MSG_HANDLE(Test1Msg, msg) {
-        auto config_lock = co_await example_kv_config_.lock(this, config_service_);
+        auto config_lock = co_await example_kv_config_.Lock(this, config_service_);
 
         auto row = config_lock.FindRowByField([](const config::example::ExampleKV& row) -> bool {
             return row.serverip() == "8.8.8.8";
@@ -53,7 +53,7 @@ public:
         logger().Info("ExampleKV:\n{}", config_lock.DebugString());
 
         auto example_data_config = co_await config::QueryConfig<config::example::ExampleData>(this, config_service_);
-        auto config_lock2 = co_await example_data_config.lock(this, config_service_);
+        auto config_lock2 = co_await example_data_config.Lock(this, config_service_);
         logger().Info("ExampleData:\n{}", config_lock2.DebugString());
 
         co_return nullptr;
