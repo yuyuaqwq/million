@@ -1641,7 +1641,6 @@ private:
             return JS_EXCEPTION;
         }
 
-
         // service, service->js_module_service_->config_handle_, 
 
         auto config_table_base = config_table_weak->TryLock(config_table_weak->descriptor());
@@ -1649,6 +1648,7 @@ private:
             return service->JSConfigTableMake(std::move(*config_table_base));
         }
 
+        service->logger().Err("Does not support automatic updates: {}.", config_table_weak->descriptor()->full_name());
         // 需要更新，qjs暂时不写
         
         return JS_EXCEPTION;
@@ -1659,14 +1659,90 @@ private:
     static JSValue js_config_table_get_row_count(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
 
-        JSConfigTable* config_table = (JSConfigTable*)JS_GetOpaque(this_val, js_config_table_weak_class_id);
+        JSConfigTable* config_table = (JSConfigTable*)JS_GetOpaque(this_val, js_config_table_class_id);
         if (!config_table) {
             return JS_EXCEPTION;
         }
 
         auto size = config_table->GetRowCount();
 
-        return JS_NewInt32(ctx, size);
+        return JS_NewUint32(ctx, size);
+    }
+
+    static JSValue js_config_table_get_row_by_index(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc < 1) {
+            return JS_ThrowTypeError(ctx, "js_config_table_get_row_by_index argc: %d.", argc);
+        }
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+        if (!JS_IsNumber(argv[0])) {
+            return JS_ThrowTypeError(ctx, "index is not a number.");
+        }
+        uint32_t index;
+        if (JS_ToUint32(ctx, &index, argv[0]) != 0) {
+            return JS_ThrowTypeError(ctx, "JS_ToUint32 failed.");
+        }
+
+        JSConfigTable* config_table = (JSConfigTable*)JS_GetOpaque(this_val, js_config_table_class_id);
+        if (!config_table) {
+            return JS_EXCEPTION;
+        }
+
+        auto msg = config_table->GetRowByIndex(index);
+        if (!msg) {
+            service->logger().Err("GetRowByIndex failed:{}.", index);
+            return JS_EXCEPTION;
+        }
+        return service->ProtoMsgToJsObj(*msg);
+    }
+
+    static JSValue js_config_table_find_row(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc < 1) {
+            return JS_ThrowTypeError(ctx, "js_config_table_find_row argc: %d.", argc);
+        }
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+        if (!JS_IsFunction(ctx, argv[0])) {
+            return JS_ThrowTypeError(ctx, "argument is not a function.");
+        }
+
+        JSConfigTable* config_table = (JSConfigTable*)JS_GetOpaque(this_val, js_config_table_class_id);
+        if (!config_table) {
+            return JS_EXCEPTION;
+        }
+
+        // Create a std::function that will call the JS callback
+        auto predicate = [ctx, service, callback = argv[0]](const ProtoMsg& row) -> bool {
+            // Convert ProtoMsg to JS object
+            JSValue js_row = service->ProtoMsgToJsObj(row);
+
+            // Call the JS callback function
+            JSValueConst args[] = { js_row };
+            JSValue result = JS_Call(ctx, callback, JS_UNDEFINED, 1, args);
+
+            // Clean up the JS row object
+            JS_FreeValue(ctx, js_row);
+
+            if (JS_IsException(result)) {
+                // Exception occurred in callback
+                return false;
+            }
+
+            // Convert the result to boolean
+            bool ret = JS_ToBool(ctx, result);
+            JS_FreeValue(ctx, result);
+            return ret;
+        };
+
+        // Call FindRow with the predicate
+        auto msg = config_table->FindRow(predicate);
+        if (!msg) {
+            return JS_NULL;  // Return null if no row found, or JS_EXCEPTION if you prefer
+        }
+
+        return service->ProtoMsgToJsObj(*msg);
     }
 
 
@@ -1681,7 +1757,9 @@ private:
 
     static JSCFunctionListEntry* ConfigTableExportList(size_t* count) {
         static JSCFunctionListEntry list[] = {
-            JS_CFUNC_DEF("getRowCount", 0, js_config_table_weak_lock),
+            JS_CFUNC_DEF("getRowCount", 0, js_config_table_get_row_count),
+            JS_CFUNC_DEF("getRowByIndex", 0, js_config_table_get_row_by_index),
+            JS_CFUNC_DEF("findRow", 0, js_config_table_find_row),
         };
         *count = sizeof(list) / sizeof(JSCFunctionListEntry);
         return list;

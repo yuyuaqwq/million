@@ -43,7 +43,7 @@ public:
     }
 
 public:
-    const ProtoMsg* FindRowByField(const std::function<bool(const ProtoMsg& row)>& predicate) {
+    const ProtoMsg* FindRow(const std::function<bool(const ProtoMsg& row)>& predicate) {
         auto reflection = table_->GetReflection();
         size_t row_count = GetRowCount();
 
@@ -99,8 +99,8 @@ public:
     }
 
 public:
-    const ConfigMsgT* FindRowByField(const std::function<bool(const ConfigMsgT&)>& predicate) {
-        return static_cast<const ConfigMsgT*>(base_.FindRowByField([predicate](const ProtoMsg& row) -> bool {
+    const ConfigMsgT* FindRow(const std::function<bool(const ConfigMsgT&)>& predicate) {
+        return static_cast<const ConfigMsgT*>(base_.FindRow([predicate](const ProtoMsg& row) -> bool {
             return predicate(static_cast<const ConfigMsgT&>(row));
         }));
     }
