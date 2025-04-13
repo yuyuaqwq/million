@@ -9,6 +9,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <db/db.h>
+#include <config/config.h>
 
 #include <million/imillion.h>
 
@@ -21,10 +22,10 @@ struct ServiceFuncContext {
     JSValue promise_cap = JS_UNDEFINED;
     JSValue resolving_funcs[2] = { JS_UNDEFINED };
     ServiceHandle sender;
-    std::optional<million::SessionId> waiting_session_id;
+    std::optional<SessionId> waiting_session_id;
 };
 
-class JsModuleService : public million::IService {
+class JsModuleService : public IService {
     MILLION_SERVICE_DEFINE(JsModuleService);
 
 public:
@@ -62,12 +63,12 @@ public:
 
 MILLION_MSG_DEFINE(, JSValueMsg, (JSValue) value)
 
-class JsService : public million::IService {
+class JsService : public IService {
     MILLION_SERVICE_DEFINE(JsService);
 
 public:
     using Base = IService;
-    JsService(million::IMillion* imillion, JsModuleService* js_module_service, const std::string& package)
+    JsService(IMillion* imillion, JsModuleService* js_module_service, const std::string& package)
         : Base(imillion)
         , js_module_service_(js_module_service)
         , package_(package) {}
@@ -1476,8 +1477,6 @@ private:
     }
 
 
-    // static Value DBRow
-
     static JSValue DBModuleLoad(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         if (argc < 2) {
             return JS_ThrowTypeError(ctx, "DBModuleLoad argc: %d.", argc);
@@ -1569,6 +1568,253 @@ private:
 
         return module;
     }
+
+
+    //// 定义 JS 对象类 ID
+    //inline static JSClassID js_config_row_class_id;
+
+    //// DBRow 的 Finalizer
+    //static void js_dbrow_finalizer(JSRuntime* rt, JSValue val) {
+    //    DBRow* dbrow = (DBRow*)JS_GetOpaque(val, js_dbrow_class_id);
+    //    if (dbrow) {
+    //        delete dbrow;
+    //    }
+    //}
+
+    //// 属性获取回调
+    //static JSValue js_dbrow_get_property(JSContext* ctx, JSValueConst this_val, JSAtom atom, JSValue receiver) {
+
+    //    JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+
+    //    DBRow* dbrow = (DBRow*)JS_GetOpaque(this_val, js_dbrow_class_id);
+    //    if (!dbrow) {
+    //        return JS_EXCEPTION;
+    //    }
+
+    //    const char* prop = JS_AtomToCString(ctx, atom);
+    //    if (!prop) {
+    //        return JS_EXCEPTION;
+    //    }
+
+    //    if (strcmp(prop, "commit") == 0) {
+    //        JS_FreeCString(ctx, prop);  // Don't forget to free the C string
+    //        return JS_NewCFunction(ctx, js_dbrow_commit, "commit", 0);
+    //    }
+
+    //    // 通过反射访问属性
+    //    auto& msg = dbrow->get();
+
+    //    const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
+    //    const google::protobuf::FieldDescriptor* field =
+    //        descriptor->FindFieldByName(prop);
+
+    //    JS_FreeCString(ctx, prop);
+
+    //    if (!field) {
+    //        return JS_UNDEFINED;
+    //    }
+
+    //    auto value = service->GetJsValueByProtoMsgField(msg, *msg.GetReflection(), *field);
+
+    //    return value;
+    //}
+
+    //// 属性设置回调
+    //static int js_dbrow_set_property(JSContext* ctx, JSValueConst this_val, JSAtom atom, JSValueConst value, JSValueConst receiver, int flags) {
+    //    JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+    //    DBRow* dbrow = (DBRow*)JS_GetOpaque(this_val, js_dbrow_class_id);
+    //    if (!dbrow) {
+    //        return -1;
+    //    }
+
+    //    const char* prop = JS_AtomToCString(ctx, atom);
+    //    if (!prop) {
+    //        return -1;
+    //    }
+
+    //    auto& msg = dbrow->get();
+
+    //    const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
+    //    const google::protobuf::FieldDescriptor* field =
+    //        descriptor->FindFieldByName(prop);
+
+    //    JS_FreeCString(ctx, prop);
+
+    //    if (!field) {
+    //        return -1;
+    //    }
+
+    //    service->SetProtoMsgFieldFromJsValue(&msg, *descriptor, *msg.GetReflection(), *field, value);
+    //    dbrow->MarkDirtyByFieldIndex(field->index());
+
+    //    return 0;
+    //}
+
+    //// commit 方法实现
+    //static JSValue js_dbrow_commit(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    //    JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+    //    DBRow* dbrow = (DBRow*)JS_GetOpaque(this_val, js_dbrow_class_id);
+    //    if (!dbrow) {
+    //        return JS_EXCEPTION;
+    //    }
+
+    //    auto task = dbrow->Commit(service, service->js_module_service_->db_handle_);
+
+    //    // 等待这个消息
+    //    // task.coroutine.promise().session_awaiter()->waiting_session_id();
+
+    //    return JS_UNDEFINED;
+    //}
+
+    //// 定义 JS 类的方法
+    //static JSCFunctionListEntry* DBRowExportList(size_t* count) {
+    //    static JSCFunctionListEntry list[] = {
+    //        JS_CFUNC_DEF("commit", 0, js_dbrow_commit),
+    //    };
+    //    *count = sizeof(list) / sizeof(JSCFunctionListEntry);
+    //    return list;
+    //}
+
+    //// 初始化 DBRow 类
+    //JSValue JSDBRowMake(DBRow&& dbrow) {
+    //    JSValue obj = JS_NewObjectClass(js_ctx_, js_dbrow_class_id);
+    //    if (JS_IsException(obj)) {
+    //        return obj;
+    //    }
+
+    //    DBRow* new_dbrow = new DBRow(std::move(dbrow));
+    //    JS_SetOpaque(obj, new_dbrow);
+
+    //    return obj;
+    //}
+
+    //// 注册 DBRow 类到 QuickJS
+    //void js_init_dbrow(JSContext* ctx) {
+    //    JS_NewClassID(JS_GetRuntime(ctx), &js_dbrow_class_id);
+
+    //    static JSClassExoticMethods js_dbrow_exotic_methods = {
+    //            .get_property = js_dbrow_get_property,
+    //            .set_property = js_dbrow_set_property,
+    //    };
+
+    //    JSClassDef dbrow_class = {
+    //        .class_name = "DBRow",
+    //        .finalizer = js_dbrow_finalizer,
+    //        .exotic = &js_dbrow_exotic_methods,
+    //    };
+
+    //    JS_NewClass(JS_GetRuntime(ctx), js_dbrow_class_id, &dbrow_class);
+
+    //    JSValue proto = JS_NewObject(ctx);
+
+    //    size_t count = 0;
+    //    auto js_dbrow_proto_funcs = DBRowExportList(&count);
+    //    JS_SetPropertyFunctionList(ctx, proto, js_dbrow_proto_funcs, count);
+
+    //    JS_SetClassProto(ctx, js_dbrow_class_id, proto);
+
+    //    // 将构造函数添加到全局对象
+    //    //JSValue constructor = JS_NewCFunction2(ctx, js_dbrow_init, "DBRow", 0, JS_CFUNC_constructor, 0);
+    //    //JS_SetPropertyStr(ctx, JS_GetGlobalObject(ctx), "DBRow", constructor);
+    //}
+
+
+    //// static Value DBRow
+
+    //static JSValue DBModuleLoad(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    //    if (argc < 2) {
+    //        return JS_ThrowTypeError(ctx, "DBModuleLoad argc: %d.", argc);
+    //    }
+
+    //    JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+    //    auto func_ctx = static_cast<ServiceFuncContext*>(JS_GetContextOpaque(ctx));
+
+    //    auto handle = service->imillion().GetServiceByName(db::kDbServiceName);
+    //    if (!handle) {
+    //        return JS_ThrowTypeError(ctx, "DBModuleLoad Unable to access db service.");
+    //    }
+    //    func_ctx->promise_cap = JS_NewPromiseCapability(ctx, func_ctx->resolving_funcs);
+
+    //    JSValue result = func_ctx->promise_cap;
+    //    do {
+    //        auto msg_name = JS_ToCString(ctx, argv[0]);
+    //        if (!msg_name) {
+    //            result = JS_ThrowInternalError(ctx, "DBModuleLoad failed to convert 0 argument to string.");
+    //            break;
+    //        }
+
+    //        auto desc = service->imillion().proto_mgr().FindMessageTypeByName(msg_name);
+    //        JS_FreeCString(ctx, msg_name);
+    //        if (!desc) {
+    //            result = JS_ThrowTypeError(ctx, "DBModuleLoad 0 argument Invalid message type.");
+    //            break;
+    //        }
+
+    //        auto primary_key = JS_ToCString(ctx, argv[1]);
+    //        if (!primary_key) {
+    //            result = JS_ThrowInternalError(ctx, "DBModuleLoad failed to convert 1 argument to string.");
+    //            break;
+    //        }
+    //        std::string primary_key_str = primary_key;
+    //        JS_FreeCString(ctx, msg_name);
+
+    //        func_ctx->sender = *handle;
+
+    //        // 这里只能让OnMsg等待，发现是C++消息再做分发
+    //        func_ctx->waiting_session_id = service->Send<db::DBRowLoadReq>(*handle, *desc
+    //            , std::move(primary_key_str), true);
+
+    //        /*auto msg = service->imillion().proto_mgr().NewMessage(*desc);
+    //        if (!msg) {
+    //            result = JS_ThrowTypeError(ctx, "new message failed.");
+    //            break;
+    //        }
+
+    //        service->ProtoMsgToJsObj();*/
+
+    //    } while (false);
+
+    //    return result;
+    //}
+
+    //static JSCFunctionListEntry* DBModuleExportList(size_t* count) {
+    //    static JSCFunctionListEntry list[] = {
+    //        JS_CFUNC_DEF("load", 1, DBModuleLoad),
+
+    //    };
+    //    *count = sizeof(list) / sizeof(JSCFunctionListEntry);
+    //    return list;
+    //}
+
+    //static int DBModuleInit(JSContext* ctx, JSModuleDef* m) {
+    //    // 导出函数到模块
+    //    size_t count = 0;
+    //    auto list = DBModuleExportList(&count);
+    //    return JS_SetModuleExportList(ctx, m, list, count);
+    //}
+
+    //JSModuleDef* CreateDBModule() {
+    //    JSModuleDef* module = JS_NewCModule(js_ctx_, "db", DBModuleInit);
+    //    if (!module) {
+    //        logger().Err("JS_NewCModule failed: {}.", "db");
+    //        return nullptr;
+    //    }
+    //    size_t count = 0;
+    //    auto list = DBModuleExportList(&count);
+    //    JS_AddModuleExportList(js_ctx_, module, list, count);
+    //    if (!AddModule("db", module)) {
+    //        logger().Err("JsAddModule failed: {}.", "db");
+    //        return nullptr;
+    //    }
+
+
+    //    js_init_dbrow(js_ctx_);
+
+    //    return module;
+    //}
 
 
     bool AddModule(const std::string& module_name, JSModuleDef* module) {

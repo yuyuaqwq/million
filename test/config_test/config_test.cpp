@@ -35,8 +35,8 @@ public:
     }
 
     virtual million::Task<million::MsgPtr> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr with_msg) override {
-        example_kv_config_ = co_await config::QueryConfig<config::example::Table, config::example::ExampleKV>(this, config_service_);
-
+        example_kv_config_ = co_await config::QueryConfig<config::example::ExampleKV>(this, config_service_);
+        
         Send<Test1Msg>(service_handle());
 
         co_return nullptr;
@@ -44,16 +44,24 @@ public:
 
 
     MILLION_MSG_HANDLE(Test1Msg, msg) {
-        auto config = co_await config::MakeConfigLock(this, config_service_, &example_kv_config_);
+        auto config_lock = co_await example_kv_config_.lock(this, config_service_);
 
-        logger().Info("ExampleKV:\n{}", config->DebugString());
+        auto row = config_lock.FindRowByField([](const config::example::ExampleKV& row) -> bool {
+            return row.serverip() == "8.8.8.8";
+        });
+
+        logger().Info("ExampleKV:\n{}", config_lock.DebugString());
+
+        auto example_data_config = co_await config::QueryConfig<config::example::ExampleData>(this, config_service_);
+        auto config_lock2 = co_await example_data_config.lock(this, config_service_);
+        logger().Info("ExampleData:\n{}", config_lock2.DebugString());
 
         co_return nullptr;
     }
 
 private:
     million::ServiceHandle config_service_;
-    million::config::ConfigWeak<config::example::Table, config::example::ExampleKV> example_kv_config_;
+    million::config::ConfigTableWeak<config::example::ExampleKV> example_kv_config_;
 };
 
 class TestApp : public million::IMillion {
