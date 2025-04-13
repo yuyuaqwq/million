@@ -94,10 +94,10 @@ public:
     MILLION_MSG_HANDLE(ConfigQueryReq, msg) {
         auto config_iter = config_map_.find(&msg->config_desc);
         if (config_iter == config_map_.end()) {
-            co_return std::move(msg_);
+            co_return make_msg<ConfigQueryResp>(msg->config_desc, std::nullopt);
         }
 
-        co_return make_msg<ConfigQueryResp>(config_iter->second);
+        co_return make_msg<ConfigQueryResp>(msg->config_desc, config_iter->second);
     }
 
     MILLION_MSG_HANDLE(const ConfigUpdateReq, msg) {

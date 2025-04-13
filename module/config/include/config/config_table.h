@@ -85,6 +85,10 @@ public:
     ConfigTable(ProtoMsgShared table)
         : base_(std::move(table), ConfigMsgT::GetDescriptor()) {}
     
+    ConfigTable(ConfigTableBase&& base)
+        : base_(std::move(base)) {}
+
+
     ~ConfigTable() = default;
 
     ConfigTable(ConfigTable&& other) noexcept
