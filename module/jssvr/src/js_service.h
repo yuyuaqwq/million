@@ -1575,8 +1575,8 @@ private:
 
     class JSConfigTableWeak : public config::ConfigTableWeakBase {
     public:
-        JSConfigTableWeak(ProtoMsgWeak&& msg_weak, const google::protobuf::Descriptor* descriptor)
-            : config::ConfigTableWeakBase(std::move(msg_weak))
+        JSConfigTableWeak(million::config::ConfigTableWeakBase&& weak, const google::protobuf::Descriptor* descriptor)
+            : config::ConfigTableWeakBase(std::move(weak))
             , descriptor_(descriptor) {}
 
         auto descriptor() const { return descriptor_; }
@@ -1585,7 +1585,7 @@ private:
         const google::protobuf::Descriptor* descriptor_;
     };
 
-    using JSConfigTable = config::ConfigTableBase;
+    using JSConfigTable = config::ConfigTableShared;
 
     // 定义 JS 对象类 ID
     inline static JSClassID js_config_table_weak_class_id;
@@ -1664,7 +1664,7 @@ private:
             return JS_EXCEPTION;
         }
 
-        auto size = config_table->GetRowCount();
+        auto size = (*config_table)->GetRowCount();
 
         return JS_NewUint32(ctx, size);
     }
@@ -1689,7 +1689,7 @@ private:
             return JS_EXCEPTION;
         }
 
-        auto msg = config_table->GetRowByIndex(index);
+        auto msg = (*config_table)->GetRowByIndex(index);
         if (!msg) {
             service->logger().Err("GetRowByIndex failed:{}.", index);
             return JS_EXCEPTION;
@@ -1737,7 +1737,7 @@ private:
         };
 
         // Call FindRow with the predicate
-        auto msg = config_table->FindRow(predicate);
+        auto msg = (*config_table)->FindRow(predicate);
         if (!msg) {
             return JS_NULL;  // Return null if no row found, or JS_EXCEPTION if you prefer
         }

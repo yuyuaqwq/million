@@ -1,3 +1,4 @@
+#include <variant>
 #include <unordered_map>
 #include <initializer_list>
 
@@ -62,7 +63,7 @@ public:
     using CompositeIndex = std::unordered_map<CompositeKey, int32_t, CompositeKeyHash, CompositeKeyEqual>;
 
 public:
-    ConfigTableBase(ProtoMsgShared table, const google::protobuf::Descriptor* config_descriptor)
+    ConfigTableBase(ProtoMsgUnique table, const google::protobuf::Descriptor* config_descriptor)
         : table_(std::move(table))
         , table_field_(nullptr)
     {
@@ -255,7 +256,7 @@ private:
     }
     
 private:
-    ProtoMsgShared table_;
+    ProtoMsgUnique table_;
     const google::protobuf::FieldDescriptor* table_field_;
 
     // ×Ö¶ÎË÷Òý
@@ -287,64 +288,37 @@ private:
 };
 
 template <typename ConfigMsgT>
-class ConfigTable : public noncopyable {
+class ConfigTable : public ConfigTableBase {
 public:
-    ConfigTable(ProtoMsgShared table)
-        : base_(std::move(table), ConfigMsgT::GetDescriptor()) {}
-    
-    ConfigTable(ConfigTableBase&& base)
-        : base_(std::move(base)) {}
-
-
-    ~ConfigTable() = default;
-
-    ConfigTable(ConfigTable&& other) noexcept
-        : base_(std::move(other.base_)) {}
-
-    void operator=(ConfigTable&& other) noexcept {
-        base_ = std::move(other.base_);
-    }
+    using ConfigTableBase::ConfigTableBase;
 
 public:
     const ConfigMsgT* FindRow(const std::function<bool(const ConfigMsgT&)>& predicate) {
-        return static_cast<const ConfigMsgT*>(base_.FindRow([predicate](const ProtoMsg& row) -> bool {
+        return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRow([predicate](const ProtoMsg& row) -> bool {
             return predicate(static_cast<const ConfigMsgT&>(row));
         }));
     }
 
     const ConfigMsgT* GetRowByIndex(size_t idx) {
-        return static_cast<const ConfigMsgT*>(base_.GetRowByIndex(idx));
+        return static_cast<const ConfigMsgT*>(ConfigTableBase::GetRowByIndex(idx));
     }
 
-    size_t GetRowCount() {
-        return base_.GetRowCount();
-    }
-
-    std::string DebugString() {
-        return base_.DebugString();
-    }
-
-    void BuildIndex(int32_t field_number) {
-        base_.BuildIndex(field_number);
-    }
 
     const ConfigMsgT* FindRowByIndex(int32_t field_number, const ConfigTableBase::IndexKey& key) {
-        return static_cast<const ConfigMsgT*>(base_.FindRowByIndex(field_number, key));
+        return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRowByIndex(field_number, key));
     }
 
     void BuildCompositeIndex(std::initializer_list<int32_t> field_numbers) {
-        base_.BuildCompositeIndex(std::move(field_numbers));
+        ConfigTableBase::BuildCompositeIndex(std::move(field_numbers));
     }
 
     template <typename... Args>
-    const ProtoMsg* FindRowByCompositeIndex(std::initializer_list<int32_t> field_numbers, Args&&... args) {
-        return base_.FindRowByCompositeIndex(std::move(field_numbers), std::forward<Args>(args)...);
+    const ConfigMsgT* FindRowByCompositeIndex(std::initializer_list<int32_t> field_numbers, Args&&... args) {
+        return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRowByCompositeIndex(std::move(field_numbers), std::forward<Args>(args)...));
     }
-
-
-private:
-    ConfigTableBase base_;
 };
+
+using ConfigTableShared = std::shared_ptr<ConfigTableBase>;
 
 } // namespace config
 } // namespace million

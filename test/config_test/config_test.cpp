@@ -46,26 +46,26 @@ public:
     MILLION_MSG_HANDLE(Test1Msg, msg) {
         auto config_lock = co_await example_kv_config_.Lock(this, config_service_);
 
-        config_lock.BuildIndex(config::example::ExampleKV::kServerPortFieldNumber);
-        config_lock.BuildIndex(config::example::ExampleKV::kServerIPFieldNumber);
+        config_lock->BuildIndex(config::example::ExampleKV::kServerPortFieldNumber);
+        config_lock->BuildIndex(config::example::ExampleKV::kServerIPFieldNumber);
 
-        auto aa = config_lock.FindRowByIndex(config::example::ExampleKV::kServerPortFieldNumber, 1024u);
-        auto bb = config_lock.FindRowByIndex(config::example::ExampleKV::kServerIPFieldNumber, "8.8.8.8");
+        auto aa = config_lock->FindRowByIndex(config::example::ExampleKV::kServerPortFieldNumber, 1024u);
+        auto bb = config_lock->FindRowByIndex(config::example::ExampleKV::kServerIPFieldNumber, "8.8.8.8");
 
-        config_lock.BuildCompositeIndex({ config::example::ExampleKV::kServerPortFieldNumber, config::example::ExampleKV::kServerIPFieldNumber });
-        auto aabb = config_lock.FindRowByCompositeIndex({ config::example::ExampleKV::kServerPortFieldNumber, config::example::ExampleKV::kServerIPFieldNumber }
+        config_lock->BuildCompositeIndex({ config::example::ExampleKV::kServerPortFieldNumber, config::example::ExampleKV::kServerIPFieldNumber });
+        auto aabb = config_lock->FindRowByCompositeIndex({ config::example::ExampleKV::kServerPortFieldNumber, config::example::ExampleKV::kServerIPFieldNumber }
             , 1024u, "8.8.8.8");
 
 
-        auto row = config_lock.FindRow([](const config::example::ExampleKV& row) -> bool {
+        auto row = config_lock->FindRow([](const config::example::ExampleKV& row) -> bool {
             return row.serverip() == "8.8.8.8";
         });
 
-        logger().Info("ExampleKV:\n{}", config_lock.DebugString());
+        logger().Info("ExampleKV:\n{}", config_lock->DebugString());
 
         auto example_data_config = co_await config::QueryConfig<config::example::ExampleData>(this, config_service_);
         auto config_lock2 = co_await example_data_config.Lock(this, config_service_);
-        logger().Info("ExampleData:\n{}", config_lock2.DebugString());
+        logger().Info("ExampleData:\n{}", config_lock2->DebugString());
 
         co_return nullptr;
     }

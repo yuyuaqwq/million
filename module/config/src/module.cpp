@@ -97,7 +97,9 @@ public:
             co_return make_msg<ConfigQueryResp>(msg->config_desc, std::nullopt);
         }
 
-        co_return make_msg<ConfigQueryResp>(msg->config_desc, config_iter->second);
+        
+
+        co_return make_msg<ConfigQueryResp>(msg->config_desc, ConfigTableWeakBase(config_iter->second));
     }
 
     MILLION_MSG_HANDLE(const ConfigUpdateReq, msg) {
@@ -151,14 +153,14 @@ private:
         }
         // logger().Debug("Config '{}.{}' debug string:\n {}", config_desc.full_name(), config_desc.full_name(), config_msg->DebugString());
 
-        config_map_[&config_desc] = ProtoMsgShared(config_msg.release());
+        config_map_[&config_desc] = std::make_shared<ConfigTableBase>(std::move(config_msg), &config_desc);
 
         return true;
     }
 
 private:
     std::string pbb_dir_path_;
-    std::unordered_map<const google::protobuf::Descriptor*, ProtoMsgShared> config_map_;
+    std::unordered_map<const google::protobuf::Descriptor*, ConfigTableShared> config_map_;
 };
 
 extern "C" MILLION_CONFIG_API bool MillionModuleInit(IMillion* imillion) {
