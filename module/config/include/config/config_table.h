@@ -308,10 +308,6 @@ public:
         return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRowByIndex(field_number, key));
     }
 
-    void BuildCompositeIndex(std::initializer_list<int32_t> field_numbers) {
-        ConfigTableBase::BuildCompositeIndex(std::move(field_numbers));
-    }
-
     template <typename... Args>
     const ConfigMsgT* FindRowByCompositeIndex(std::initializer_list<int32_t> field_numbers, Args&&... args) {
         return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRowByCompositeIndex(std::move(field_numbers), std::forward<Args>(args)...));
