@@ -1021,11 +1021,11 @@ private:
                 break;
             }
             if (!JS_IsString(argv[2])) {
-                result = JS_ThrowTypeError(ctx, "ServiceModuleReply 2 argument must be a string.");
+                result = JS_ThrowTypeError(ctx, "ServiceModuleReply 3 argument must be a string.");
                 break;
             }
             if (!JS_IsObject(argv[3])) {
-                result = JS_ThrowTypeError(ctx, "ServiceModuleReply 3 argument must be a object.");
+                result = JS_ThrowTypeError(ctx, "ServiceModuleReply 4 argument must be a object.");
                 break;
             }
 
