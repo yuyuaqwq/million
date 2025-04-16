@@ -67,7 +67,7 @@ public:
     MILLION_MSG_HANDLE(GatewayPersistentUserSession, msg) {
         auto& user_session = *msg->user_session;
         do {
-            auto recv_msg = co_await ::million::SessionAwaiterBase(session_id, ::million::kSessionNeverTimeout, false);
+            auto recv_msg = co_await RecvWithTimeout(session_id, ::million::kSessionNeverTimeout);
             // imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
             if (recv_msg.IsProtoMsg()) {
                 logger().Trace("Gateway Recv ProtoMessage: {}.", session_id);
