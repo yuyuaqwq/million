@@ -27,6 +27,8 @@ MILLION_MSG_DEFINE_EMPTY(MILLION_GATEWAY_API, GatewayRegisterUserServiceResp);
 MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySureAgent, (ServiceHandle) agent_service);
 MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewaySendPacket, (net::Packet) packet);
 
+MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayResetAgentId, (SessionId) agent_id);
+
 // send
 // MILLION_MSG_DEFINE(MILLION_GATEWAY_API, GatewayRecvPacketReq, (net::Packet) packet_raw, (net::PacketSpan) packet);
 

@@ -110,7 +110,7 @@ public:
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
 
-        auto db_row_cache = LocalQueryDBRow(desc, msg->primary_key);
+        auto db_row_cache = LocalQueryDBRow(desc, msg->key);
         if (db_row_cache) {
             // 如果找到了，就直接返回
             co_return make_msg<DBRowLoadResp>(db_row_cache->db_row);
@@ -120,7 +120,7 @@ public:
         TaskAssert(proto_msg, "proto_mgr().NewMessage failed.");
         auto db_row = DBRow(std::move(proto_msg));
 
-        auto res = co_await RemoteQueryDBRow(msg->primary_key, std::move(db_row));
+        auto res = co_await RemoteQueryDBRow(msg->key, std::move(db_row));
         if (!res) {
             co_return make_msg<DBRowLoadResp>(std::nullopt);
         }

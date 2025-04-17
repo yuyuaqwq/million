@@ -3,6 +3,7 @@
 #include <initializer_list>
 
 #include <million/imillion.h>
+#include <million/proto_field_any.h>
 
 #include <config/api.h>
 
@@ -11,57 +12,7 @@ namespace config {
 
 class MILLION_CONFIG_API ConfigTableBase : public noncopyable {
 public:
-    // 使用variant来支持不同类型的键
-    using IndexKey = std::variant<
-        int32_t, uint32_t, int64_t, uint64_t,
-        bool, float, double, std::string>;
-
-    // 哈希函数为variant特化
-    struct IndexKeyHash {
-        size_t operator()(const IndexKey& key) const {
-            return std::visit([](const auto& k) {
-                return std::hash<std::decay_t<decltype(k)>>{}(k);
-                }, key);
-        }
-    };
-
-    // 比较函数为variant特化
-    struct IndexKeyEqual {
-        bool operator()(const IndexKey& lhs, const IndexKey& rhs) const {
-            return lhs == rhs;
-        }
-    };
-
-    using FieldIndex = std::unordered_map<IndexKey, int32_t, IndexKeyHash, IndexKeyEqual>;
-
-
-    // 组合索引
-    using CompositeKey = std::vector<IndexKey>;
-
-    struct CompositeKeyHash {
-        size_t operator()(const CompositeKey& keys) const {
-            size_t seed = 0;
-            for (const auto& key : keys) {
-                std::visit([&seed](const auto& k) {
-                    seed ^= std::hash<std::decay_t<decltype(k)>>{}(k)+0x9e3779b9 + (seed << 6) + (seed >> 2);
-                    }, key);
-            }
-            return seed;
-        }
-    };
-
-    struct CompositeKeyEqual {
-        bool operator()(const CompositeKey& lhs, const CompositeKey& rhs) const {
-            if (lhs.size() != rhs.size()) return false;
-            for (size_t i = 0; i < lhs.size(); ++i) {
-                if (lhs[i] != rhs[i]) return false;
-            }
-            return true;
-        }
-    };
-
-    using CompositeIndex = std::unordered_map<CompositeKey, int32_t, CompositeKeyHash, CompositeKeyEqual>;
-
+    
 public:
     ConfigTableBase(ProtoMsgUnique table, const google::protobuf::Descriptor* config_descriptor)
         : table_(std::move(table))
@@ -136,7 +87,7 @@ public:
         const auto* field_desc = row_descriptor->FindFieldByNumber(field_number);
         TaskAssert(field_desc, "Field number {} not found in row descriptor", field_number);
 
-        FieldIndex index;
+        ProtoFieldAnyIndex index;
         auto reflection = table_->GetReflection();
         size_t row_count = GetRowCount();
 
@@ -144,7 +95,7 @@ public:
             const auto& row = reflection->GetRepeatedMessage(*table_, table_field_, i);
             const auto& field_reflection = *row.GetReflection();
 
-            IndexKey key = GetFieldValue(field_reflection, row, field_desc);
+            ProtoFieldAny key = ProtoMsgGetFieldAny(field_reflection, row, field_desc);
 
             auto [it, inserted] = index.emplace(key, i);
             TaskAssert(inserted, "Duplicate key found when building index for field {}", field_desc->full_name());
@@ -154,7 +105,7 @@ public:
     }
 
 
-    const ProtoMsg* FindRowByIndex(int32_t field_number, const IndexKey& key) {
+    const ProtoMsg* FindRowByIndex(int32_t field_number, const ProtoFieldAny& key) {
         auto it = field_index_.find(field_number);
         if (it == field_index_.end()) {
             return nullptr;
@@ -171,7 +122,7 @@ public:
 
     // 组合索引
     void BuildCompositeIndex(std::initializer_list<int32_t> field_numbers) {
-        CompositeIndex index;
+        CompositeProtoFieldAnyIndex index;
         auto reflection = table_->GetReflection();
         size_t row_count = GetRowCount();
         const auto* row_descriptor = table_field_->message_type();
@@ -187,11 +138,11 @@ public:
         // 构建索引
         for (size_t i = 0; i < row_count; ++i) {
             const auto& row = reflection->GetRepeatedMessage(*table_, table_field_, i);
-            CompositeKey composite_key;
+            CompositeProtoFieldAny composite_key;
 
             for (const auto* field_desc : field_descriptors) {
                 const auto& field_reflection = *row.GetReflection();
-                composite_key.push_back(GetFieldValue(field_reflection, row, field_desc));
+                composite_key.push_back(ProtoMsgGetFieldAny(field_reflection, row, field_desc));
             }
 
             auto [it, inserted] = index.emplace(std::move(composite_key), i);
@@ -212,7 +163,7 @@ public:
             return nullptr;
         }
 
-        CompositeKey key;
+        CompositeProtoFieldAny key;
         (key.emplace_back(std::forward<Args>(args)), ...);
 
         const auto& index = it->second;
@@ -226,41 +177,13 @@ public:
 
 private:
 
-    // 获取字段值的辅助函数
-    IndexKey GetFieldValue(const google::protobuf::Reflection& reflection,
-        const ProtoMsg& row,
-        const google::protobuf::FieldDescriptor* field_desc) {
-        switch (field_desc->cpp_type()) {
-        case google::protobuf::FieldDescriptor::CPPTYPE_INT32:
-            return reflection.GetInt32(row, field_desc);
-        case google::protobuf::FieldDescriptor::CPPTYPE_INT64:
-            return reflection.GetInt64(row, field_desc);
-        case google::protobuf::FieldDescriptor::CPPTYPE_UINT32:
-            return reflection.GetUInt32(row, field_desc);
-        case google::protobuf::FieldDescriptor::CPPTYPE_UINT64:
-            return reflection.GetUInt64(row, field_desc);
-        case google::protobuf::FieldDescriptor::CPPTYPE_DOUBLE:
-            return reflection.GetDouble(row, field_desc);
-        case google::protobuf::FieldDescriptor::CPPTYPE_FLOAT:
-            return reflection.GetFloat(row, field_desc);
-        case google::protobuf::FieldDescriptor::CPPTYPE_BOOL:
-            return reflection.GetBool(row, field_desc);
-        case google::protobuf::FieldDescriptor::CPPTYPE_ENUM:
-            return reflection.GetEnumValue(row, field_desc);
-        case google::protobuf::FieldDescriptor::CPPTYPE_STRING:
-            return reflection.GetString(row, field_desc);
-        default:
-            TaskAssert(false, "Unsupported field type for indexing: {}", field_desc->cpp_type_name());
-            return {};
-        }
-    }
-    
+
 private:
     ProtoMsgUnique table_;
     const google::protobuf::FieldDescriptor* table_field_;
 
     // 字段索引
-    std::unordered_map<int32_t, FieldIndex> field_index_;
+    std::unordered_map<int32_t, ProtoFieldAnyIndex> field_index_;
 
     // 组合索引
     struct VectorIntHash {
@@ -281,7 +204,7 @@ private:
 
     std::unordered_map<
         std::vector<int32_t>,
-        CompositeIndex,
+        CompositeProtoFieldAnyIndex,
         VectorIntHash,
         VectorIntEqual
     > composite_indices_;
@@ -304,7 +227,7 @@ public:
     }
 
 
-    const ConfigMsgT* FindRowByIndex(int32_t field_number, const ConfigTableBase::IndexKey& key) {
+    const ConfigMsgT* FindRowByIndex(int32_t field_number, const ProtoFieldAny& key) {
         return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRowByIndex(field_number, key));
     }
 

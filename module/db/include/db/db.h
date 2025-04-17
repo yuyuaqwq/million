@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <vector>
+#include <any>
 
 #include <million/imillion.h>
 #include <million/msg.h>
@@ -13,7 +14,7 @@
 namespace million {
 namespace db {
 
-constexpr const char* kDbServiceName = "DbService";
+constexpr const char* kDBServiceName = "DBService";
 
 using BatchId = uint64_t;
 constexpr BatchId kBatchIdNull = 0;
@@ -25,7 +26,7 @@ MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_DB_API, DBRowCreateReq, (ProtoMsgUnique) 
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowCreateResp, (bool) success);
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowLoadReq
-    , (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key, (bool) tick_write_back);
+    , (const google::protobuf::Descriptor&) table_desc, (int32_t) key_field_number, (std::any) key, (bool) tick_write_back);
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowLoadResp, (std::optional<DBRow>) db_row);
 
 /*(bool) update_to_cache*/

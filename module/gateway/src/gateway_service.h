@@ -64,8 +64,8 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(GatewayPersistentUserSession, msg) {
-        auto& user_session = *msg->user_session;
+    MILLION_MSG_HANDLE(GatewayPersistentUserSession, session_msg) {
+        auto& user_session = *session_msg->user_session;
         do {
             auto recv_msg = co_await RecvWithTimeout(session_id, ::million::kSessionNeverTimeout);
             // imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
@@ -96,6 +96,12 @@ public:
             else if (recv_msg.IsType<GatewaySureAgent>()) {
                 auto msg = recv_msg.GetMutMsg<GatewaySureAgent>();
                 user_session.set_agent_handle(std::move(msg->agent_service));
+            }
+            else if (recv_msg.IsType<GatewayResetAgentId>()) {
+                auto msg = recv_msg.GetMsg<GatewayResetAgentId>();
+                user_session.set_agent_id(msg->agent_id);
+                SendTo(service_handle(), msg->agent_id, std::move(msg_));
+                break;
             }
             else if (recv_msg.IsType<GatewayPersistentUserSession>()) {
                 break;
