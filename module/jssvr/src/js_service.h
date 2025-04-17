@@ -50,7 +50,7 @@ private:
     }
 
     Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
-        db_handle_ = *imillion().GetServiceByName(db::kDbServiceName);
+        db_handle_ = *imillion().GetServiceByName(db::kDBServiceName);
         config_handle_ = *imillion().GetServiceByName(config::kConfigServiceName);
         co_return nullptr;
     }

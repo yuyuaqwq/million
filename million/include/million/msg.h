@@ -6,6 +6,7 @@
 #include <million/api.h>
 #include <million/proto_msg.h>
 #include <million/cpp_msg.h>
+#include <million/proto_field_any.h>
 
 namespace million {
 

@@ -34,6 +34,18 @@ public:
     ProtoFieldAny(T&& value) 
         : data_(std::forward<T>(value)) {}
     
+    ProtoFieldAny(const ProtoFieldAny&) = default;
+    ProtoFieldAny(ProtoFieldAny&&) noexcept = default;
+
+    void operator=(const ProtoFieldAny& r) noexcept {
+        data_ = r.data_;
+    }
+
+    void operator=(ProtoFieldAny&& r) noexcept {
+        data_ = std::move(r.data_);
+    }
+
+
     // 访问器方法
     template <typename T>
     bool is() const {
@@ -73,7 +85,8 @@ public:
 struct ProtoFieldAnyHash {
     size_t operator()(const ProtoFieldAny& key) const {
         return key.visit([](const auto& k) {
-            return std::hash<std::decay_t<decltype(k)>>{}(k);
+            using T = std::decay_t<decltype(k)>;
+            return std::hash<T>{}(k);
         });
     }
 };
@@ -85,7 +98,6 @@ struct ProtoFieldAnyEqual {
     }
 };
 
-using ProtoFieldAnyIndex = std::unordered_map<ProtoFieldAny, int32_t, ProtoFieldAnyHash, ProtoFieldAnyEqual>;
 
 using CompositeProtoFieldAny = std::vector<ProtoFieldAny>;
 
@@ -94,7 +106,8 @@ struct CompositeProtoFieldAnyHash {
         size_t seed = 0;
         for (const auto& key : keys) {
             key.visit([&seed](const auto& k) {
-                seed ^= std::hash<std::decay_t<decltype(k)>>{}(k) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                using T = std::decay_t<decltype(k)>;
+                seed ^= std::hash<T>{}(k) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
             });
         }
         return seed;
@@ -107,10 +120,8 @@ struct CompositeProtoFieldAnyEqual {
     }
 };
 
-using CompositeProtoFieldAnyIndex = std::unordered_map<CompositeProtoFieldAny, int32_t, CompositeProtoFieldAnyHash, CompositeProtoFieldAnyEqual>;
 
-// 获取字段值的辅助函数
-ProtoFieldAny ProtoMsgGetFieldAny(const google::protobuf::Reflection& reflection
+inline ProtoFieldAny ProtoMsgGetFieldAny(const google::protobuf::Reflection& reflection
     , const ProtoMsg& row
     , const google::protobuf::FieldDescriptor* field_desc)
 {
@@ -138,7 +149,7 @@ ProtoFieldAny ProtoMsgGetFieldAny(const google::protobuf::Reflection& reflection
     }
 }
 
-void ProtoMsgSetFieldAny(const google::protobuf::Reflection& reflection
+inline void ProtoMsgSetFieldAny(const google::protobuf::Reflection& reflection
     , ProtoMsg* row
     , const google::protobuf::FieldDescriptor* field_desc
     , const ProtoFieldAny any)

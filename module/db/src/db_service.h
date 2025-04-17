@@ -38,7 +38,7 @@ struct DBRowCache {
     DBRow db_row;
     uint64_t sql_db_version;
 };
-using DBTable = std::unordered_map<std::string, DBRowCache>;
+using DBTable = std::unordered_map<ProtoFieldAny, DBRowCache, ProtoFieldAnyHash, ProtoFieldAnyEqual>;
 
 MILLION_MSG_DEFINE(, DBRowTickSync, (int32_t) sync_tick, (DBRowCache*) cache);
 
@@ -53,7 +53,7 @@ public:
     virtual bool OnInit() override {
         logger().Info("DBService Init");
 
-        imillion().SetServiceName(service_handle(), kDbServiceName);
+        imillion().SetServiceName(service_handle(), kDBServiceName);
 
         auto handle = imillion().GetServiceByName(kSqlServiceName);
         if (!handle) {
@@ -129,7 +129,7 @@ public:
         if (msg->tick_write_back) {
             // 需要tick回写，缓存一下
             auto sql_db_version = res->db_row->db_version();
-            LocalCacheDBRow(desc, std::move(msg->primary_key), db_row, sql_db_version);
+            LocalCacheDBRow(desc, std::move(msg->key), db_row, sql_db_version);
         }
 
         co_return make_msg<DBRowLoadResp>(std::move(db_row));
@@ -193,7 +193,7 @@ private:
         return table_iter->second;
     }
 
-    DBRowCache* LocalQueryDBRow(const google::protobuf::Descriptor& desc, const std::string& primary_key) {
+    DBRowCache* LocalQueryDBRow(const google::protobuf::Descriptor& desc, const ProtoFieldAny& primary_key) {
         auto& table = LocalGetTable(desc);
         auto iter = table.find(primary_key);
         if (iter == table.end()) {
@@ -202,7 +202,7 @@ private:
         return &iter->second;
     }
 
-    bool LocalCacheDBRow(const google::protobuf::Descriptor& desc, std::string&& primary_key, DBRow row, uint64_t sql_db_version) {
+    bool LocalCacheDBRow(const google::protobuf::Descriptor& desc, ProtoFieldAny&& primary_key, DBRow row, uint64_t sql_db_version) {
         const MessageOptionsTable& options = desc.options().GetExtension(::million::db::table);
         auto sync_tick = options.sync_tick();
 
@@ -216,7 +216,7 @@ private:
         return true;
     }
 
-    Task<std::unique_ptr<SqlQueryResp>> RemoteQueryDBRow(const std::string& primary_key, DBRow&& db_row) {
+    Task<std::unique_ptr<SqlQueryResp>> RemoteQueryDBRow(const ProtoFieldAny& primary_key, DBRow&& db_row) {
         auto sql_res = co_await Call<SqlQueryReq, SqlQueryResp>(sql_service_, std::move(db_row), primary_key);
         TaskAssert(sql_res->db_row, "SqlQueryMsg failed.");
 

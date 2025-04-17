@@ -27,14 +27,14 @@ public:
 
     virtual bool OnInit() override {
         
-        auto handle = imillion().GetServiceByName(db::kDbServiceName);
+        auto handle = imillion().GetServiceByName(db::kDBServiceName);
         if (!handle) {
             logger().Err("Unable to find DbService.");
             return false;
         }
         db_service_ = *handle;
 
-        handle = imillion().GetServiceByName(db::kDbServiceName);
+        handle = imillion().GetServiceByName(db::kDBServiceName);
         if (!handle) {
             logger().Err("Unable to find SqlService.");
             return false;
@@ -57,7 +57,7 @@ public:
         // auto res = co_await Call<db::DBRowCreateReq>(db_service_, std::move(user));
 
         auto res2 = co_await Call<db::DBRowLoadReq, db::DBRowLoadResp>(db_service_
-            , *million::db::example::User::GetDescriptor(), "103",  true);
+            , *million::db::example::User::GetDescriptor(), million::db::example::User::kIdFieldNumber, 103,  true);
         if (!res2->db_row) {
             logger().Info("DbRowGetMsg failed.");
         }

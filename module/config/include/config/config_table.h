@@ -10,6 +10,12 @@
 namespace million {
 namespace config {
 
+using Index = std::unordered_map<ProtoFieldAny, int32_t
+    , ProtoFieldAnyHash, ProtoFieldAnyEqual>;
+
+using CompositeIndex = std::unordered_map<CompositeProtoFieldAny
+    , int32_t, CompositeProtoFieldAnyHash, CompositeProtoFieldAnyEqual>;
+
 class MILLION_CONFIG_API ConfigTableBase : public noncopyable {
 public:
     
@@ -87,7 +93,7 @@ public:
         const auto* field_desc = row_descriptor->FindFieldByNumber(field_number);
         TaskAssert(field_desc, "Field number {} not found in row descriptor", field_number);
 
-        ProtoFieldAnyIndex index;
+        Index index;
         auto reflection = table_->GetReflection();
         size_t row_count = GetRowCount();
 
@@ -122,7 +128,7 @@ public:
 
     // 组合索引
     void BuildCompositeIndex(std::initializer_list<int32_t> field_numbers) {
-        CompositeProtoFieldAnyIndex index;
+        CompositeIndex index;
         auto reflection = table_->GetReflection();
         size_t row_count = GetRowCount();
         const auto* row_descriptor = table_field_->message_type();
@@ -183,7 +189,7 @@ private:
     const google::protobuf::FieldDescriptor* table_field_;
 
     // 字段索引
-    std::unordered_map<int32_t, ProtoFieldAnyIndex> field_index_;
+    std::unordered_map<int32_t, Index> field_index_;
 
     // 组合索引
     struct VectorIntHash {
@@ -204,7 +210,7 @@ private:
 
     std::unordered_map<
         std::vector<int32_t>,
-        CompositeProtoFieldAnyIndex,
+        CompositeIndex,
         VectorIntHash,
         VectorIntEqual
     > composite_indices_;

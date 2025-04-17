@@ -5,7 +5,6 @@
 #include <any>
 
 #include <million/imillion.h>
-#include <million/msg.h>
 
 #include <db/db_options.pb.h>
 #include <db/api.h>
@@ -19,14 +18,14 @@ constexpr const char* kDBServiceName = "DBService";
 using BatchId = uint64_t;
 constexpr BatchId kBatchIdNull = 0;
 
-MILLION_MSG_DEFINE(MILLION_DB_API, DBRowExistReq, (const google::protobuf::Descriptor&) table_desc, (std::string) primary_key);
+MILLION_MSG_DEFINE(MILLION_DB_API, DBRowExistReq, (const google::protobuf::Descriptor&) table_desc, (int32_t) key_field_number, (ProtoFieldAny) key);
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowExistResp, (bool) exist);
 
 MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_DB_API, DBRowCreateReq, (ProtoMsgUnique) row_msg);
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowCreateResp, (bool) success);
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowLoadReq
-    , (const google::protobuf::Descriptor&) table_desc, (int32_t) key_field_number, (std::any) key, (bool) tick_write_back);
+    , (const google::protobuf::Descriptor&) table_desc, (int32_t) key_field_number, (ProtoFieldAny) key, (bool) tick_write_back);
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowLoadResp, (std::optional<DBRow>) db_row);
 
 /*(bool) update_to_cache*/
@@ -35,7 +34,7 @@ MILLION_MSG_DEFINE_EMPTY(MILLION_DB_API, DBRowUpdateResp);
 
 // MILLION_MSG_DEFINE(MILLION_DB_API, DbRowBatchUpdateReq, (std::vector<nonnull_ptr<DbRow>>) db_rows);
 
-MILLION_MSG_DEFINE(MILLION_DB_API, DBRowDeleteReq, (std::string) table_name, (std::string) primary_key);
+MILLION_MSG_DEFINE(MILLION_DB_API, DBRowDeleteReq, (std::string) table_name, (int32_t) key_field_number, (ProtoFieldAny) key);
 MILLION_MSG_DEFINE(MILLION_DB_API, DBRowDeleteResp, (bool) success);
 
 MILLION_MSG_DEFINE(MILLION_DB_API, DBBatchBeginReq, (BatchId) batch_id);

@@ -46,6 +46,8 @@ public:
     MILLION_MSG_HANDLE(Test1Msg, msg) {
         auto config_lock = co_await example_kv_config_.Lock(this, config_service_);
 
+        million::ProtoFieldAny f;
+
         config_lock->BuildIndex(config::example::ExampleKV::kServerPortFieldNumber);
         config_lock->BuildIndex(config::example::ExampleKV::kServerIPFieldNumber);
 
