@@ -1483,7 +1483,7 @@ private:
 
 
     static JSValue DBModuleLoad(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        if (argc < 2) {
+        if (argc < 3) {
             return JS_ThrowTypeError(ctx, "DBModuleLoad argc: %d.", argc);
         }
 
@@ -1500,26 +1500,39 @@ private:
                 break;
             }
 
-            auto desc = service->imillion().proto_mgr().FindMessageTypeByName(msg_name);
+            const auto* desc = service->imillion().proto_mgr().FindMessageTypeByName(msg_name);
             JS_FreeCString(ctx, msg_name);
             if (!desc) {
                 result = JS_ThrowTypeError(ctx, "DBModuleLoad 0 argument Invalid message type.");
                 break;
             }
 
-            auto primary_key = JS_ToCString(ctx, argv[1]);
-            if (!primary_key) {
+            auto key_field_name = JS_ToCString(ctx, argv[1]);
+            if (!key_field_name) {
                 result = JS_ThrowInternalError(ctx, "DBModuleLoad failed to convert 1 argument to string.");
                 break;
             }
-            std::string primary_key_str = primary_key;
-            JS_FreeCString(ctx, primary_key);
+            const auto* field = desc->FindFieldByName(key_field_name);
+            if (!field) {
+                result = JS_ThrowInternalError(ctx, "Invalid field name.");
+                break;
+            }
+            JS_FreeCString(ctx, key_field_name);
+
+            
+            auto key = JS_ToCString(ctx, argv[2]);
+            if (!key) {
+                result = JS_ThrowInternalError(ctx, "DBModuleLoad failed to convert 1 argument to string.");
+                break;
+            }
+            std::string key_str = key;
+            JS_FreeCString(ctx, key);
 
             func_ctx->sender = service->js_module_service_->db_handle_;
 
             // 这里只能让OnMsg等待，发现是C++消息再做分发
             func_ctx->waiting_session_id = service->Send<db::DBRowLoadReq>(func_ctx->sender, *desc
-                , std::move(primary_key_str), true);
+                , field->number(), std::move(key_str), true);
 
             /*auto msg = service->imillion().proto_mgr().NewMessage(*desc);
             if (!msg) {

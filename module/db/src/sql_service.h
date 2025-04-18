@@ -266,9 +266,7 @@ public:
             const TableSqlOptions& sql_options = options.sql();
         }
         auto& table_name = options.name();
-        if (table_name.empty()) {
-            TaskAbort("table_name is empty.");
-        }
+        TaskAssert(!table_name.empty(), "table_name is empty.");
 
         std::string sql = "SELECT";
         sql += " __db_version__,";
@@ -284,15 +282,16 @@ public:
         sql += " FROM ";
         sql += table_name;
 
-        const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
-        TaskAssert(primary_key_field_desc, 
-            "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
+        const auto* key_field_desc = desc.FindFieldByNumber(msg->key_field_number);
+        TaskAssert(key_field_desc,
+            "FindFieldByNumber failed, key_field_number:{}.{}", table_name, msg->key_field_number);
         
         sql += " WHERE ";
-        sql += primary_key_field_desc->name() + " = :" + primary_key_field_desc->name() + ";";
+        sql += key_field_desc->name() + " = :" + key_field_desc->name() + ";";
 
         // Prepare SQL statement and bind primary key value
-        soci::rowset<soci::row> rs = (sql_.prepare << sql, soci::use(msg->primary_key, primary_key_field_desc->name()));
+        auto key = msg->key.ToString();
+        soci::rowset<soci::row> rs = (sql_.prepare << sql, soci::use(key, key_field_desc->name()));
 
         auto it = rs.begin();
         if (it == rs.end()) {

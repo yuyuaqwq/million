@@ -6,13 +6,13 @@
 #include <unordered_map>
 #include <vector>
 #include <functional>
-#include <format>
 
+#include <million/exception.h>
 #include <million/proto_msg.h>
 
 namespace million {
 
-class ProtoFieldAny {
+class MILLION_API ProtoFieldAny {
 public:
     // 先声明成员变量
 private:
@@ -79,10 +79,31 @@ public:
     decltype(auto) visit(Visitor&& vis) const {
         return std::visit(std::forward<Visitor>(vis), data_);
     }
+
+
+    std::string ToString() {
+        return visit([](auto&& arg) -> std::string {
+            using T = std::decay_t<decltype(arg)>;
+
+            if constexpr (std::is_same_v<T, std::monostate>) {
+                TaskAbort("std::monostate Cannot be converted to string.");
+            }
+            else if constexpr (std::is_same_v<T, bool>) {
+                return arg ? "true" : "false";
+            }
+            else if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
+                return std::to_string(arg);
+            }
+            else if constexpr (std::is_same_v<T, std::string>) {
+                return arg;
+            }
+            });
+    }
+
 };
 
 // 哈希函数为variant特化
-struct ProtoFieldAnyHash {
+struct MILLION_API ProtoFieldAnyHash {
     size_t operator()(const ProtoFieldAny& key) const {
         return key.visit([](const auto& k) {
             using T = std::decay_t<decltype(k)>;
@@ -92,7 +113,7 @@ struct ProtoFieldAnyHash {
 };
 
 // 比较函数为variant特化
-struct ProtoFieldAnyEqual {
+struct MILLION_API ProtoFieldAnyEqual {
     bool operator()(const ProtoFieldAny& lhs, const ProtoFieldAny& rhs) const {
         return lhs == rhs;
     }
@@ -101,7 +122,7 @@ struct ProtoFieldAnyEqual {
 
 using CompositeProtoFieldAny = std::vector<ProtoFieldAny>;
 
-struct CompositeProtoFieldAnyHash {
+struct MILLION_API CompositeProtoFieldAnyHash {
     size_t operator()(const CompositeProtoFieldAny& keys) const {
         size_t seed = 0;
         for (const auto& key : keys) {
@@ -114,7 +135,7 @@ struct CompositeProtoFieldAnyHash {
     }
 };
 
-struct CompositeProtoFieldAnyEqual {
+struct MILLION_API CompositeProtoFieldAnyEqual {
     bool operator()(const CompositeProtoFieldAny& lhs, const CompositeProtoFieldAny& rhs) const {
         return lhs == rhs;
     }
@@ -145,14 +166,14 @@ inline ProtoFieldAny ProtoMsgGetFieldAny(const google::protobuf::Reflection& ref
     case google::protobuf::FieldDescriptor::CPPTYPE_STRING:
         return reflection.GetString(row, field_desc);
     default:
-        throw std::runtime_error(std::format("Unsupported field type: {}", field_desc->cpp_type_name()));
+        TaskAbort("Unsupported field type : {}", field_desc->cpp_type_name());
     }
 }
 
 inline void ProtoMsgSetFieldAny(const google::protobuf::Reflection& reflection
     , ProtoMsg* row
     , const google::protobuf::FieldDescriptor* field_desc
-    , const ProtoFieldAny any)
+    , const ProtoFieldAny& any)
 {
     switch (field_desc->cpp_type()) {
     case google::protobuf::FieldDescriptor::CPPTYPE_INT32:
@@ -174,7 +195,7 @@ inline void ProtoMsgSetFieldAny(const google::protobuf::Reflection& reflection
     case google::protobuf::FieldDescriptor::CPPTYPE_STRING:
         return reflection.SetString(row, field_desc, any.get<std::string>());
     default:
-        throw std::runtime_error(std::format("Unsupported field type: {}", field_desc->cpp_type_name()));
+        TaskAbort("Unsupported field type : {}", field_desc->cpp_type_name());
     }
 }
 

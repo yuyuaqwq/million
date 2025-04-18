@@ -38,7 +38,14 @@ struct DBRowCache {
     DBRow db_row;
     uint64_t sql_db_version;
 };
-using DBTable = std::unordered_map<ProtoFieldAny, DBRowCache, ProtoFieldAnyHash, ProtoFieldAnyEqual>;
+class DBTable : public std::unordered_map<ProtoFieldAny, DBRowCache, ProtoFieldAnyHash, ProtoFieldAnyEqual> {
+public:
+    DBTable(int primary_key_field_number)
+        : primary_key_field_number_(primary_key_field_number) {}
+
+private:
+    int primary_key_field_number_;
+};
 
 MILLION_MSG_DEFINE(, DBRowTickSync, (int32_t) sync_tick, (DBRowCache*) cache);
 
@@ -109,18 +116,27 @@ public:
 
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
+        auto& table_name = options.name();
+        TaskAssert(!table_name.empty(), "table_name is empty.");
 
-        auto db_row_cache = LocalQueryDBRow(desc, msg->key);
-        if (db_row_cache) {
-            // 如果找到了，就直接返回
-            co_return make_msg<DBRowLoadResp>(db_row_cache->db_row);
+        const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
+        TaskAssert(primary_key_field_desc,
+            "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
+
+        // 如果是主键查询，可以走本地缓存
+        if (msg->key_field_number == options.primary_key()) {
+            auto db_row_cache = LocalQueryDBRow(desc, msg->key_field_number, msg->key);
+            if (db_row_cache) {
+                // 如果找到了，就直接返回
+                co_return make_msg<DBRowLoadResp>(db_row_cache->db_row);
+            }
         }
 
         auto proto_msg = imillion().proto_mgr().NewMessage(desc);
         TaskAssert(proto_msg, "proto_mgr().NewMessage failed.");
         auto db_row = DBRow(std::move(proto_msg));
 
-        auto res = co_await RemoteQueryDBRow(msg->key, std::move(db_row));
+        auto res = co_await RemoteQueryDBRow(msg->key_field_number, msg->key, std::move(db_row));
         if (!res) {
             co_return make_msg<DBRowLoadResp>(std::nullopt);
         }
@@ -129,7 +145,7 @@ public:
         if (msg->tick_write_back) {
             // 需要tick回写，缓存一下
             auto sql_db_version = res->db_row->db_version();
-            LocalCacheDBRow(desc, std::move(msg->key), db_row, sql_db_version);
+            LocalCacheDBRow(desc, msg->key_field_number, std::move(msg->key), db_row, sql_db_version);
         }
 
         co_return make_msg<DBRowLoadResp>(std::move(db_row));
@@ -183,18 +199,18 @@ public:
     }
 
 private:
-    DBTable& LocalGetTable(const google::protobuf::Descriptor& desc) {
+    DBTable& LocalGetTable(const google::protobuf::Descriptor& desc, int primary_key_field_number) {
         auto table_iter = tables_.find(&desc);
         if (table_iter == tables_.end()) {
-            auto res = tables_.emplace(&desc, DBTable());
+            auto res = tables_.emplace(&desc, DBTable(primary_key_field_number));
             assert(res.second);
             table_iter = res.first;
         }
         return table_iter->second;
     }
 
-    DBRowCache* LocalQueryDBRow(const google::protobuf::Descriptor& desc, const ProtoFieldAny& primary_key) {
-        auto& table = LocalGetTable(desc);
+    DBRowCache* LocalQueryDBRow(const google::protobuf::Descriptor& desc, int primary_key_field_number, const ProtoFieldAny& primary_key) {
+        auto& table = LocalGetTable(desc, primary_key_field_number);
         auto iter = table.find(primary_key);
         if (iter == table.end()) {
             return nullptr;
@@ -202,11 +218,11 @@ private:
         return &iter->second;
     }
 
-    bool LocalCacheDBRow(const google::protobuf::Descriptor& desc, ProtoFieldAny&& primary_key, DBRow row, uint64_t sql_db_version) {
+    bool LocalCacheDBRow(const google::protobuf::Descriptor& desc, int primary_key_field_number, ProtoFieldAny&& primary_key, DBRow row, uint64_t sql_db_version) {
         const MessageOptionsTable& options = desc.options().GetExtension(::million::db::table);
         auto sync_tick = options.sync_tick();
 
-        auto& table = LocalGetTable(desc);
+        auto& table = LocalGetTable(desc, primary_key_field_number);
 
         auto res = table.emplace(std::move(primary_key), DBRowCache{ .db_row = std::move(row), .sql_db_version = sql_db_version });
         TaskAssert(res.second, "Duplicate cached db row.");
@@ -216,8 +232,8 @@ private:
         return true;
     }
 
-    Task<std::unique_ptr<SqlQueryResp>> RemoteQueryDBRow(const ProtoFieldAny& primary_key, DBRow&& db_row) {
-        auto sql_res = co_await Call<SqlQueryReq, SqlQueryResp>(sql_service_, std::move(db_row), primary_key);
+    Task<std::unique_ptr<SqlQueryResp>> RemoteQueryDBRow(int key_field_number, const ProtoFieldAny& key, DBRow&& db_row) {
+        auto sql_res = co_await Call<SqlQueryReq, SqlQueryResp>(sql_service_, std::move(db_row), key_field_number, key);
         TaskAssert(sql_res->db_row, "SqlQueryMsg failed.");
 
         //// 直接读cache的row->db_version，可能不是sql的version

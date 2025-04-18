@@ -17,7 +17,7 @@ constexpr const char* kSqlServiceName = "SqlService";
 MILLION_MSG_DEFINE(MILLION_DB_API, SqlTableInitReq, (const google::protobuf::Descriptor&) desc)
 MILLION_MSG_DEFINE(MILLION_DB_API, SqlTableInitResp, (bool) success)
 
-MILLION_MSG_DEFINE(MILLION_DB_API, SqlQueryReq, (DBRow) db_row, (std::string) primary_key)
+MILLION_MSG_DEFINE(MILLION_DB_API, SqlQueryReq, (DBRow) db_row, (int) key_field_number, (ProtoFieldAny) key)
 MILLION_MSG_DEFINE(MILLION_DB_API, SqlQueryResp, (std::optional<DBRow>) db_row)
 
 MILLION_MSG_DEFINE(MILLION_DB_API, SqlUpdateReq, (DBRow) db_row, (uint64_t) old_db_version)
