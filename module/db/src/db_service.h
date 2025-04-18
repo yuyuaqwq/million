@@ -145,7 +145,7 @@ public:
         if (msg->tick_write_back) {
             // 需要tick回写，缓存一下
             auto sql_db_version = res->db_row->db_version();
-            LocalCacheDBRow(desc, msg->key_field_number, std::move(msg->key), db_row, sql_db_version);
+            LocalCacheDBRow(desc, options.primary_key(), ProtoMsgGetFieldAny(db_row.GetReflection(), db_row.get(), *primary_key_field_desc), db_row, sql_db_version);
         }
 
         co_return make_msg<DBRowLoadResp>(std::move(db_row));
@@ -163,8 +163,7 @@ public:
         
         const auto* primary_key_field_desc = desc.FindFieldByNumber(options.primary_key());
         TaskAssert(primary_key_field_desc, "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
-        auto primary_key = GetField(db_row.get(), *primary_key_field_desc);
-        TaskAssert(!primary_key.empty(), "primary_key is empty:{}.{}", table_name, options.primary_key());
+        auto primary_key = ProtoMsgGetFieldAny(db_row.GetReflection(), db_row.get(), *primary_key_field_desc);
 
         auto table_iter = tables_.find(&desc);
         TaskAssert(table_iter != tables_.end(), "Table does not exist.");

@@ -143,59 +143,68 @@ struct MILLION_API CompositeProtoFieldAnyEqual {
 
 
 inline ProtoFieldAny ProtoMsgGetFieldAny(const google::protobuf::Reflection& reflection
-    , const ProtoMsg& row
-    , const google::protobuf::FieldDescriptor* field_desc)
+    , const ProtoMsg& proto_msg
+    , const google::protobuf::FieldDescriptor& field_desc)
 {
-    switch (field_desc->cpp_type()) {
+    switch (field_desc.cpp_type()) {
     case google::protobuf::FieldDescriptor::CPPTYPE_INT32:
-        return reflection.GetInt32(row, field_desc);
+        return reflection.GetInt32(proto_msg, &field_desc);
     case google::protobuf::FieldDescriptor::CPPTYPE_INT64:
-        return reflection.GetInt64(row, field_desc);
+        return reflection.GetInt64(proto_msg, &field_desc);
     case google::protobuf::FieldDescriptor::CPPTYPE_UINT32:
-        return reflection.GetUInt32(row, field_desc);
+        return reflection.GetUInt32(proto_msg, &field_desc);
     case google::protobuf::FieldDescriptor::CPPTYPE_UINT64:
-        return reflection.GetUInt64(row, field_desc);
+        return reflection.GetUInt64(proto_msg, &field_desc);
     case google::protobuf::FieldDescriptor::CPPTYPE_DOUBLE:
-        return reflection.GetDouble(row, field_desc);
+        return reflection.GetDouble(proto_msg, &field_desc);
     case google::protobuf::FieldDescriptor::CPPTYPE_FLOAT:
-        return reflection.GetFloat(row, field_desc);
+        return reflection.GetFloat(proto_msg, &field_desc);
     case google::protobuf::FieldDescriptor::CPPTYPE_BOOL:
-        return reflection.GetBool(row, field_desc);
+        return reflection.GetBool(proto_msg, &field_desc);
     case google::protobuf::FieldDescriptor::CPPTYPE_ENUM:
-        return reflection.GetEnumValue(row, field_desc);
+        return reflection.GetEnumValue(proto_msg, &field_desc);
     case google::protobuf::FieldDescriptor::CPPTYPE_STRING:
-        return reflection.GetString(row, field_desc);
+        return reflection.GetString(proto_msg, &field_desc);
+    //case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
+    //    const google::protobuf::Message& sub_message = reflection.GetMessage(proto_msg, field_desc);
+    //    return sub_message.SerializeAsString();
+    //}
     default:
-        TaskAbort("Unsupported field type : {}", field_desc->cpp_type_name());
+        TaskAbort("Unsupported field type : {}", field_desc.cpp_type_name());
     }
 }
 
 inline void ProtoMsgSetFieldAny(const google::protobuf::Reflection& reflection
-    , ProtoMsg* row
-    , const google::protobuf::FieldDescriptor* field_desc
+    , ProtoMsg* proto_msg
+    , const google::protobuf::FieldDescriptor& field_desc
     , const ProtoFieldAny& any)
 {
-    switch (field_desc->cpp_type()) {
+    switch (field_desc.cpp_type()) {
     case google::protobuf::FieldDescriptor::CPPTYPE_INT32:
-        return reflection.SetInt32(row, field_desc, any.get<int32_t>());
+        return reflection.SetInt32(proto_msg, &field_desc, any.get<int32_t>());
     case google::protobuf::FieldDescriptor::CPPTYPE_INT64:
-        return reflection.SetInt64(row, field_desc, any.get<int64_t>());
+        return reflection.SetInt64(proto_msg, &field_desc, any.get<int64_t>());
     case google::protobuf::FieldDescriptor::CPPTYPE_UINT32:
-        return reflection.SetUInt32(row, field_desc, any.get<uint32_t>());
+        return reflection.SetUInt32(proto_msg, &field_desc, any.get<uint32_t>());
     case google::protobuf::FieldDescriptor::CPPTYPE_UINT64:
-        return reflection.SetUInt64(row, field_desc, any.get<uint64_t>());
+        return reflection.SetUInt64(proto_msg, &field_desc, any.get<uint64_t>());
     case google::protobuf::FieldDescriptor::CPPTYPE_DOUBLE:
-        return reflection.SetDouble(row, field_desc, any.get<double>());
+        return reflection.SetDouble(proto_msg, &field_desc, any.get<double>());
     case google::protobuf::FieldDescriptor::CPPTYPE_FLOAT:
-        return reflection.SetFloat(row, field_desc, any.get<float>());
+        return reflection.SetFloat(proto_msg, &field_desc, any.get<float>());
     case google::protobuf::FieldDescriptor::CPPTYPE_BOOL:
-        return reflection.SetBool(row, field_desc, any.get<bool>());
+        return reflection.SetBool(proto_msg, &field_desc, any.get<bool>());
     case google::protobuf::FieldDescriptor::CPPTYPE_ENUM:
-        return reflection.SetEnumValue(row, field_desc, any.get<int>());
+        return reflection.SetEnumValue(proto_msg, &field_desc, any.get<int>());
     case google::protobuf::FieldDescriptor::CPPTYPE_STRING:
-        return reflection.SetString(row, field_desc, any.get<std::string>());
+        return reflection.SetString(proto_msg, &field_desc, any.get<std::string>());
+    //case google::protobuf::FieldDescriptor::TYPE_MESSAGE: {
+    //    google::protobuf::Message* sub_message = reflection.MutableMessage(proto_msg, field_desc);
+    //    sub_message->ParseFromString(any);
+    //    return;
+    //}
     default:
-        TaskAbort("Unsupported field type : {}", field_desc->cpp_type_name());
+        TaskAbort("Unsupported field type : {}", field_desc.cpp_type_name());
     }
 }
 

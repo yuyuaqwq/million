@@ -65,9 +65,5 @@ private:
     std::vector<bool> dirty_fields_;
 };
 
-
-void SetField(google::protobuf::Message* proto_msg, const google::protobuf::FieldDescriptor& field, const std::string& value);
-std::string GetField(const google::protobuf::Message& proto_msg, const google::protobuf::FieldDescriptor& field);
-
 } // namespace db
 } // namespace million

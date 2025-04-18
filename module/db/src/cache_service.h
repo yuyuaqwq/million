@@ -57,6 +57,7 @@ public:
 
         auto& proto_msg = db_row.get();
         const auto& desc = db_row.GetDescriptor();
+        const auto& refl = db_row.GetReflection();
 
         auto redis_key = GetRedisKey(db_row);
 
@@ -78,7 +79,7 @@ public:
                 if (iter == redis_hash.end()) {
                     continue;
                 }
-                SetField(&proto_msg, *field, iter->second);
+                ProtoMsgSetFieldAny(refl, &proto_msg, *field, iter->second);
             }
         }
 
@@ -148,6 +149,7 @@ private:
     std::string GetRedisKey(const DBRow& db_row) {
         auto& proto_msg = db_row.get();
         const auto& desc = db_row.GetDescriptor();
+        const auto& refl = db_row.GetReflection();
 
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         const MessageOptionsTable& options = desc.options().GetExtension(table);
@@ -165,14 +167,13 @@ private:
         TaskAssert(primary_key_field_desc,
             "FindFieldByNumber failed, options.primary_key:{}.{}", table_name, options.primary_key());
 
-        auto primary_key = GetField(proto_msg, *primary_key_field_desc);
-        TaskAssert(!primary_key.empty(), "primary_key is empty:{}.{}", table_name, options.primary_key());
+        auto primary_key = ProtoMsgGetFieldAny(refl, proto_msg, *primary_key_field_desc);
 
         // 使用 std::unordered_map 来存储要更新到 Redis 的字段和值
         // std::unordered_map<std::string, std::string> redis_hash;
 
         // 遍历 Protobuf 的所有字段，将字段和值存入 redis_hash 中
-        auto redis_key = std::format("million:db:{}:{}", table_name, primary_key);
+        auto redis_key = std::format("million:db:{}:{}", table_name, primary_key.ToString());
 
         return redis_key;
     }
@@ -180,6 +181,7 @@ private:
     void MakeKeysAndArgs(const DBRow& db_row, uint64_t old_db_version, std::vector<std::string>* keys, std::vector<std::string>* args) {
         auto& proto_msg = db_row.get();
         const auto& desc = db_row.GetDescriptor();
+        const auto& refl = db_row.GetReflection();
 
         auto redis_key = GetRedisKey(db_row);
 
@@ -204,7 +206,7 @@ private:
             //redis_hash[field->name()] = GetField(proto_msg, *field);
 
             args->emplace_back(field->name());
-            args->emplace_back(GetField(proto_msg, *field));
+            args->emplace_back(ProtoMsgGetFieldAny(refl, proto_msg, *field).ToString());
 
             // 主键在上面获取
             //if (options.has_cache()) {

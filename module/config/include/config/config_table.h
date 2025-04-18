@@ -101,7 +101,7 @@ public:
             const auto& row = reflection->GetRepeatedMessage(*table_, table_field_, i);
             const auto& field_reflection = *row.GetReflection();
 
-            ProtoFieldAny key = ProtoMsgGetFieldAny(field_reflection, row, field_desc);
+            ProtoFieldAny key = ProtoMsgGetFieldAny(field_reflection, row, *field_desc);
 
             auto [it, inserted] = index.emplace(key, i);
             TaskAssert(inserted, "Duplicate key found when building index for field {}", field_desc->full_name());
@@ -148,7 +148,7 @@ public:
 
             for (const auto* field_desc : field_descriptors) {
                 const auto& field_reflection = *row.GetReflection();
-                composite_key.push_back(ProtoMsgGetFieldAny(field_reflection, row, field_desc));
+                composite_key.push_back(ProtoMsgGetFieldAny(field_reflection, row, *field_desc));
             }
 
             auto [it, inserted] = index.emplace(std::move(composite_key), i);
