@@ -482,26 +482,33 @@ private:
         return js_value;
     }
 
+    void ProtoMsgToJsObjOne(const million::ProtoMsg& msg, JSValue obj, const google::protobuf::FieldDescriptor& field_desc) {
+        const auto desc = msg.GetDescriptor();
+        const auto refl = msg.GetReflection();
+
+        if (field_desc.is_repeated()) {
+            JSValue js_array = JS_NewArray(js_ctx_);
+            for (size_t j = 0; j < refl->FieldSize(msg, &field_desc); ++j) {
+                JSValue js_value = GetJsValueByProtoMsgRepeatedField(msg, *refl, field_desc, j);
+                JS_SetPropertyUint32(js_ctx_, js_array, j, js_value);  // 添加到数组中
+            }
+            JS_SetPropertyStr(js_ctx_, obj, field_desc.name().c_str(), js_array);
+        }
+        else {
+            JSValue js_value = GetJsValueByProtoMsgField(msg, *refl, field_desc);
+            JS_SetPropertyStr(js_ctx_, obj, field_desc.name().c_str(), js_value);  // 添加字段到对象中
+        }
+    }
+
     JSValue ProtoMsgToJsObj(const million::ProtoMsg& msg) {
         JSValue obj = JS_NewObject(js_ctx_);
 
         const auto desc = msg.GetDescriptor();
-        const auto reflection = msg.GetReflection();
+        const auto refl = msg.GetReflection();
 
         for (size_t i = 0; i < desc->field_count(); ++i) {
             const auto field_desc = desc->field(i);
-            if (field_desc->is_repeated()) {
-                JSValue js_array = JS_NewArray(js_ctx_);
-                for (size_t j = 0; j < reflection->FieldSize(msg, field_desc); ++j) {
-                    JSValue js_value = GetJsValueByProtoMsgRepeatedField(msg, *reflection, *field_desc, j);
-                    JS_SetPropertyUint32(js_ctx_, js_array, j, js_value);  // 添加到数组中
-                }
-                JS_SetPropertyStr(js_ctx_, obj, field_desc->name().c_str(), js_array);
-            }
-            else {
-                JSValue js_value = GetJsValueByProtoMsgField(msg, *reflection, *field_desc);
-                JS_SetPropertyStr(js_ctx_, obj, field_desc->name().c_str(), js_value);  // 添加字段到对象中
-            }
+            ProtoMsgToJsObjOne(msg, obj, *field_desc);
         }
 
         return obj;
@@ -806,38 +813,45 @@ private:
     }
 
 
+    void JsObjToProtoMsgOne(million::ProtoMsg* msg, JSValue field_value, const google::protobuf::FieldDescriptor& field_desc) {
+        const auto desc = msg->GetDescriptor();
+        const auto refl = msg->GetReflection();
+
+        if (JS_IsUndefined(field_value)) {
+            return;  // 如果 JS 对象没有该属性，则跳过
+        }
+
+        if (field_desc.is_repeated()) {
+            if (!JS_IsArray(js_ctx_, field_value)) {
+                TaskAbort("JsObjToProtoMsg: Not an array.");
+                return;
+            }
+
+            JSValue len_val = JS_GetPropertyStr(js_ctx_, field_value, "length");
+            uint32_t len;
+            JS_ToUint32(js_ctx_, &len, len_val);
+            JS_FreeValue(js_ctx_, len_val);
+
+            for (size_t j = 0; j < len; ++j) {
+                JSValue repeated_value = JS_GetPropertyUint32(js_ctx_, field_value, j);
+                SetProtoMsgRepeatedFieldFromJsValue(msg, *desc, *refl, field_desc, repeated_value, j);
+            }
+        }
+        else {
+            SetProtoMsgFieldFromJsValue(msg, *desc, *refl, field_desc, field_value);
+        }
+    }
+
     void JsObjToProtoMsg(million::ProtoMsg* msg, JSValue obj) {
         const auto desc = msg->GetDescriptor();
-        const auto reflection = msg->GetReflection();
+        const auto refl = msg->GetReflection();
 
         for (size_t i = 0; i < desc->field_count(); ++i) {
             const auto field_desc = desc->field(i);
 
             JSValue field_value = JS_GetPropertyStr(js_ctx_, obj, field_desc->name().c_str());
 
-            if (JS_IsUndefined(field_value)) {
-                continue;  // 如果 JS 对象没有该属性，则跳过
-            }
-
-            if (field_desc->is_repeated()) {
-                if (!JS_IsArray(js_ctx_, field_value)) {
-                    TaskAbort("JsObjToProtoMsg: Not an array.");
-                    continue;
-                }
-
-                JSValue len_val = JS_GetPropertyStr(js_ctx_, field_value, "length");
-                uint32_t len;
-                JS_ToUint32(js_ctx_, &len, len_val);
-                JS_FreeValue(js_ctx_, len_val);
-
-                for (size_t j = 0; j < len; ++j) {
-                    JSValue repeated_value = JS_GetPropertyUint32(js_ctx_, field_value, j);
-                    SetProtoMsgRepeatedFieldFromJsValue(msg, *desc, *reflection, *field_desc, repeated_value, j);
-                }
-            }
-            else {
-                SetProtoMsgFieldFromJsValue(msg, *desc, *reflection, *field_desc, field_value);
-            }
+            JsObjToProtoMsgOne(msg, field_value, *field_desc);
         }
     }
 
@@ -1330,8 +1344,35 @@ private:
 
     using DBRow = db::DBRow;
 
+    class DBMsgField {
+    public:
+        DBMsgField(DBRow* db_row, ProtoMsg* proto_msg, int field_index)
+            : db_row_(db_row)
+            , proto_msg_(proto_msg)
+            , field_index_(field_index) {}
+
+        ProtoMsg& get() {
+            return *proto_msg_;
+        }
+        const ProtoMsg& get() const {
+            return *proto_msg_;
+        }
+
+        void MarkDirty() { 
+            db_row_->MarkDirtyByFieldIndex(field_index_);
+        }
+
+        auto& db_row() { return *db_row_; }
+
+    private:
+        DBRow* db_row_;
+        ProtoMsg* proto_msg_;
+        int field_index_;
+    };
+
     // 定义 JS 对象类 ID
     inline static JSClassID js_dbrow_class_id;
+    inline static JSClassID js_dbmsgfield_class_id;
 
     // DBRow 的 Finalizer
     static void js_dbrow_finalizer(JSRuntime* rt, JSValue val) {
@@ -1340,6 +1381,15 @@ private:
             delete dbrow;
         }
     }
+
+    // DBMsgField 的 Finalizer
+    static void js_dbmsgfield_finalizer(JSRuntime* rt, JSValue val) {
+        DBMsgField* dbmsgfield = (DBMsgField*)JS_GetOpaque(val, js_dbmsgfield_class_id);
+        if (dbmsgfield) {
+            delete dbmsgfield;
+        }
+    }
+
 
     // 属性获取回调
     static JSValue js_dbrow_get_property(JSContext* ctx, JSValueConst this_val, JSAtom atom, JSValue receiver) {
@@ -1375,9 +1425,16 @@ private:
             return JS_UNDEFINED;
         }
 
-        auto value = service->GetJsValueByProtoMsgField(msg, *msg.GetReflection(), *field);
-
-        return value;
+        if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
+            // new一个DBMsgField对象
+            const auto& sub_msg = msg.GetReflection()->MutableMessage(&msg, field);
+            auto db_msg_field = DBMsgField(dbrow, sub_msg, field->index());
+            return service->JSDBMsgFieldMake(std::move(db_msg_field));
+        }
+        else {
+            auto value = service->GetJsValueByProtoMsgField(msg, *msg.GetReflection(), *field);
+            return value;
+        }
     }
 
     // 属性设置回调
@@ -1411,6 +1468,82 @@ private:
 
         return 0;
     }
+
+    // 属性获取回调
+    static JSValue js_dbmsgfield_get_property(JSContext* ctx, JSValueConst this_val, JSAtom atom, JSValue receiver) {
+
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+
+        DBMsgField* dbmsgfield = (DBMsgField*)JS_GetOpaque(this_val, js_dbmsgfield_class_id);
+        if (!dbmsgfield) {
+            return JS_EXCEPTION;
+        }
+
+        const char* prop = JS_AtomToCString(ctx, atom);
+        if (!prop) {
+            return JS_EXCEPTION;
+        }
+
+        // 通过反射访问属性
+        auto& msg = dbmsgfield->get();
+
+        const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
+        const google::protobuf::FieldDescriptor* field =
+            descriptor->FindFieldByName(prop);
+
+        JS_FreeCString(ctx, prop);
+
+        if (!field) {
+            return JS_UNDEFINED;
+        }
+
+
+        if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
+            // new一个DBMsgField对象
+            const auto& sub_msg = msg.GetReflection()->MutableMessage(&msg, field);
+            auto db_msg_field = DBMsgField(&dbmsgfield->db_row(), sub_msg, field->index());
+            return service->JSDBMsgFieldMake(std::move(db_msg_field));
+        }
+        else {
+            auto value = service->GetJsValueByProtoMsgField(msg, *msg.GetReflection(), *field);
+            return value;
+        }
+    }
+
+    // 属性设置回调
+    static int js_dbmsgfield_set_property(JSContext* ctx, JSValueConst this_val, JSAtom atom, JSValueConst value, JSValueConst receiver, int flags) {
+        JsService* service = static_cast<JsService*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+
+        DBMsgField* dbmsgfield = (DBMsgField*)JS_GetOpaque(this_val, js_dbmsgfield_class_id);
+        if (!dbmsgfield) {
+            return -1;
+        }
+
+        const char* prop = JS_AtomToCString(ctx, atom);
+        if (!prop) {
+            return -1;
+        }
+
+        auto& msg = dbmsgfield->get();
+
+        const google::protobuf::Descriptor* descriptor = msg.GetDescriptor();
+        const google::protobuf::FieldDescriptor* field =
+            descriptor->FindFieldByName(prop);
+
+        JS_FreeCString(ctx, prop);
+
+        if (!field) {
+            return -1;
+        }
+
+        service->JsObjToProtoMsgOne(&msg, value, *field);
+        dbmsgfield->MarkDirty();
+
+        return 0;
+    }
+
+
 
     // commit 方法实现
     static JSValue js_dbrow_commit(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -1451,6 +1584,19 @@ private:
         return obj;
     }
 
+    JSValue JSDBMsgFieldMake(DBMsgField&& db_msg_field) {
+        JSValue obj = JS_NewObjectClass(js_ctx_, js_dbmsgfield_class_id);
+        if (JS_IsException(obj)) {
+            return obj;
+        }
+
+        DBMsgField* new_obj = new DBMsgField(std::move(db_msg_field));
+        JS_SetOpaque(obj, new_obj);
+
+        return obj;
+    }
+
+
     // 注册 DBRow 类到 QuickJS
     void js_init_dbrow(JSContext* ctx) {
         JS_NewClassID(JS_GetRuntime(ctx), &js_dbrow_class_id);
@@ -1481,6 +1627,30 @@ private:
         //JS_SetPropertyStr(ctx, JS_GetGlobalObject(ctx), "DBRow", constructor);
     }
 
+    void js_init_dbmsgfield(JSContext* ctx) {
+        JS_NewClassID(JS_GetRuntime(ctx), &js_dbmsgfield_class_id);
+
+        static JSClassExoticMethods js_exotic_methods = {
+                .get_property = js_dbmsgfield_get_property,
+                .set_property = js_dbmsgfield_set_property,
+        };
+
+        JSClassDef dbrow_class = {
+            .class_name = "DBMsgField",
+            .finalizer = js_dbmsgfield_finalizer,
+            .exotic = &js_exotic_methods,
+        };
+
+        JS_NewClass(JS_GetRuntime(ctx), js_dbmsgfield_class_id, &dbrow_class);
+
+        JSValue proto = JS_NewObject(ctx);
+
+        JS_SetClassProto(ctx, js_dbmsgfield_class_id, proto);
+
+        // 将构造函数添加到全局对象
+        //JSValue constructor = JS_NewCFunction2(ctx, js_dbrow_init, "DBRow", 0, JS_CFUNC_constructor, 0);
+        //JS_SetPropertyStr(ctx, JS_GetGlobalObject(ctx), "DBRow", constructor);
+    }
 
     static JSValue DBModuleLoad(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         if (argc < 3) {
@@ -1577,8 +1747,9 @@ private:
             return nullptr;
         }
 
-
         js_init_dbrow(js_ctx_);
+
+        js_init_dbmsgfield(js_ctx_);
 
         return module;
     }

@@ -30,8 +30,8 @@ public:
         return static_cast<T&>(get());
     }
 
-    google::protobuf::Message& get();
-    const google::protobuf::Message& get() const;
+    ProtoMsg& get();
+    const ProtoMsg& get() const;
 
     const protobuf::Descriptor& GetDescriptor() const;
     const protobuf::Reflection& GetReflection() const;
