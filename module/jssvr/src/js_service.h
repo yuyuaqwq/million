@@ -1532,7 +1532,7 @@ private:
 
             // 这里只能让OnMsg等待，发现是C++消息再做分发
             func_ctx->waiting_session_id = service->Send<db::DBRowLoadReq>(func_ctx->sender, *desc
-                , field->number(), std::move(key_str), true);
+                , field->number(), std::move(key_str));
 
             /*auto msg = service->imillion().proto_mgr().NewMessage(*desc);
             if (!msg) {
@@ -1550,7 +1550,7 @@ private:
     static JSCFunctionListEntry* DBModuleExportList(size_t* count) {
         static JSCFunctionListEntry list[] = {
             JS_CFUNC_DEF("load", 1, DBModuleLoad),
-
+            // JS_CFUNC_DEF("query", 1, DBModuleQuery),
         };
         *count = sizeof(list) / sizeof(JSCFunctionListEntry);
         return list;

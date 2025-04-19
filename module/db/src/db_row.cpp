@@ -44,9 +44,13 @@ void DBRow::operator=(DBRow&& rv) noexcept {
     dirty_fields_ = std::move(rv.dirty_fields_);
 }
 
-const google::protobuf::Message& DBRow::get() const { return *proto_msg_.get(); }
+const google::protobuf::Message& DBRow::get() const { 
+    return *proto_msg_.get();
+}
 
-google::protobuf::Message& DBRow::get() { return *proto_msg_.get(); }
+google::protobuf::Message& DBRow::get() { 
+    return *proto_msg_.get();
+}
 
 
 const protobuf::Descriptor& DBRow::GetDescriptor() const { return *proto_msg_->GetDescriptor(); }

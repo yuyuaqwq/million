@@ -19,10 +19,16 @@ public:
     void operator=(DBRow&& rv) noexcept;
 
     template <typename T>
-    const T& get() const { return static_cast<T&>(get()); }
+    const T& get() const { 
+        TaskAssert(&GetDescriptor() == T::GetDescriptor(), "DBRow message type mismatch.");
+        return static_cast<const T&>(get());
+    }
 
     template <typename T>
-    T& get() { return static_cast<T&>(get()); }
+    T& get() {
+        TaskAssert(&GetDescriptor() == T::GetDescriptor(), "DBRow message type mismatch.");
+        return static_cast<T&>(get());
+    }
 
     google::protobuf::Message& get();
     const google::protobuf::Message& get() const;
