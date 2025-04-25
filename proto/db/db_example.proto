@@ -78,4 +78,7 @@ message User {
     UserEx user_ex = 10 [(column) = {
         sql: { comment: "extended fields" }
     }];
+    int64 add_test = 11 [(column) = {
+        sql: { index: UNIQUE, comment: "add_test" }
+    }];
 }

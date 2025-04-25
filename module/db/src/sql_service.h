@@ -31,20 +31,54 @@ public:
     using Base = IService;
     using Base::Base;
 
-    static inline const std::string_view db = "pokemon_server";
-    static inline const std::string_view host = "121.37.17.176";
-    static inline const std::string_view user = "root";
-    static inline const std::string_view password = "You_Yu666";
+    static inline std::string name;
+    static inline std::string host;
+    static inline std::string user;
+    static inline std::string password;
 
     virtual bool OnInit() override {
+        // Set service name and enable separate worker
         imillion().SetServiceName(service_handle(), kSqlServiceName);
         imillion().EnableSeparateWorker(service_handle());
+
+        // Read configuration
+        const auto& settings = imillion().YamlSettings();
+        const auto& db_settings = settings["db"];
+        if (!db_settings) {
+            logger().Err("cannot find 'database' configuration.");
+            return false;
+        }
+
+        const auto& sql_settings = db_settings["sql"];
+        if (!sql_settings) {
+            logger().Err("cannot find 'db.sql' configuration.");
+            return false;
+        }
+
+        // Get database configuration values
+        const auto& db_host = sql_settings["host"];
+        const auto& db_name = sql_settings["name"];
+        const auto& db_user = sql_settings["user"];
+        const auto& db_password = sql_settings["password"];
+
+        if (!db_host || !db_name || !db_user || !db_password) {
+            logger().Err("incomplete database configuration.");
+            return false;
+        }
+
+        // Assign values (note: this assumes the strings will persist)
+        host = db_host.as<std::string>();
+        name = db_name.as<std::string>();
+        user = db_user.as<std::string>();
+        password = db_password.as<std::string>();
+
         return true;
     }
 
+
     virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
         try {
-            sql_ = soci::session(soci::mysql, std::format("db={} user={} password={} host={}", db, user, password, host));
+            sql_ = soci::session(soci::mysql, std::format("db={} user={} password={} host={}", name, user, password, host));
         }
         catch (const soci::mysql_soci_error& e) {
             logger().Err("MySQL error : {}", e.what());
@@ -72,7 +106,62 @@ public:
             "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name",
             soci::use(table_name), soci::into(count);
         if (count > 0) {
-            co_return make_msg<SqlTableInitResp>(false);
+            // 新增字段对比逻辑
+            std::unordered_set<std::string> existing_columns;
+            soci::rowset<std::string> rs =
+                (sql_.prepare << "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS "
+                    "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name",
+                    soci::use(table_name));
+            for (const auto& column : rs) {
+                existing_columns.insert(column);
+            }
+
+            std::vector<const google::protobuf::FieldDescriptor*> missing_fields;
+            for (int i = 0; i < desc.field_count(); ++i) {
+                const auto* field = desc.field(i);
+                if (!field || field->name().empty()) continue;
+                if (!existing_columns.count(field->name())) {
+                    missing_fields.push_back(field);
+                }
+            }
+
+            if (missing_fields.empty()) {
+                co_return make_msg<SqlTableInitResp>(true);
+            }
+
+            for (const auto* field : missing_fields) {
+                // 复用类型映射逻辑（需提取为独立函数）
+                std::string sql_type = MapProtoTypeToSql(table_name, field);
+
+                std::string alter_sql = "ALTER TABLE " + table_name +
+                    " ADD COLUMN ";
+
+                // 处理字段选项（索引、约束等）
+                ColumnSqlOptionsIndex index;
+                ProcessFieldOptions(table_name, field, &sql_type, &index);
+
+                alter_sql += field->name() + " " + sql_type;
+
+                if (index == ColumnSqlOptionsIndex::PRIMARY_KEY) {
+                    TaskAbort("Cannot add PRIMARY_KEY to existing table: {}.{} "
+                        "(Modifying primary keys via incremental updates is not allowed)",
+                        table_name, field->name());
+                }
+                else if (index == ColumnSqlOptionsIndex::UNIQUE) {
+                    alter_sql += "    , ADD UNIQUE (" + field->name() + ")\n";
+                }
+                else if (index == ColumnSqlOptionsIndex::INDEX) {
+                    alter_sql += "    , ADD INDEX (" + field->name() + ")\n";
+                }
+                else if (index == ColumnSqlOptionsIndex::FULLTEXT) {
+                    alter_sql += "    , ADD FULLTEXT (" + field->name() + ")\n";
+                }
+
+                alter_sql += ";";
+
+                sql_ << alter_sql;
+            }
+            co_return make_msg<SqlTableInitResp>(true);
         }
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
@@ -87,105 +176,33 @@ public:
                 continue;
             }
             const std::string& field_name = field->name();
-            std::string field_type;
+            std::string sql_type;
 
             if (field->is_repeated()) {
                 logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
+                continue;
             }
             else {
-                switch (field->type()) {
-                case google::protobuf::FieldDescriptor::TYPE_DOUBLE:
-                    field_type = "DOUBLE";
-                    break;
-                case google::protobuf::FieldDescriptor::TYPE_FLOAT:
-                    field_type = "FLOAT";
-                    break;
-                case google::protobuf::FieldDescriptor::TYPE_INT32:
-                case google::protobuf::FieldDescriptor::TYPE_SINT32:
-                case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
-                    field_type = "INTEGER";
-                    break;
-                case google::protobuf::FieldDescriptor::TYPE_FIXED32:
-                case google::protobuf::FieldDescriptor::TYPE_UINT32:
-                    field_type = "INT UNSIGNED";
-                    break;
-                case google::protobuf::FieldDescriptor::TYPE_INT64:
-                case google::protobuf::FieldDescriptor::TYPE_SINT64:
-                case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
-                    field_type = "BIGINT";
-                    break;
-                case google::protobuf::FieldDescriptor::TYPE_FIXED64:
-                case google::protobuf::FieldDescriptor::TYPE_UINT64:
-                    field_type = "BIGINT UNSIGNED";
-                    break;
-                case google::protobuf::FieldDescriptor::TYPE_BOOL:
-                    field_type = "BOOLEAN";
-                    break;
-                case google::protobuf::FieldDescriptor::TYPE_STRING:
-                    field_type = "LONGTEXT";
-                    break;
-                case google::protobuf::FieldDescriptor::TYPE_BYTES:
-                    field_type = "LONGTEXT";
-                    break;
-                case google::protobuf::FieldDescriptor::TYPE_MESSAGE:
-                    field_type = "LONGTEXT"; // Using TEXT for simplicity
-                    break;
-                case google::protobuf::FieldDescriptor::TYPE_ENUM:
-                    field_type = "INTEGER"; // Enum can be stored as INTEGER
-                    break;
-                default:
-                    TaskAbort("Cannot be converted to SQL type: {}.{}.", table_name, field->name());
-                }
+                sql_type = MapProtoTypeToSql(table_name, field);
             }
 
-            // 处理字段选项
-            if (field->options().HasExtension(column)) {
-                const FieldOptionsColumn& field_options = field->options().GetExtension(column);
-                if (field_options.has_sql()) {
-                    const ColumnSqlOptions& sql_options = field_options.sql();
-                    if (sql_options.str_len()) {
-                        if (sql_options.str_len() > 0) {
-                            field_type = "VARCHAR(";
-                        }
-                        else {
-                            field_type = "CHAR(";
-                        }
-                        field_type += std::to_string(std::abs(sql_options.str_len()));
-                        field_type += ")";
-                    }
-                    
-                    if (sql_options.index() == ColumnSqlOptionsIndex::PRIMARY_KEY) {
-                        primary_keys.emplace_back(&field_name);
-                    }
-                    else if (sql_options.index() == ColumnSqlOptionsIndex::UNIQUE) {
-                        sql += "    UNIQUE (" + field_name + "),\n";
-                    }
-                    else if (sql_options.index() == ColumnSqlOptionsIndex::INDEX) {
-                        sql += "    INDEX (" + field_name + "),\n";
-                    }
-                    else if (sql_options.index() == ColumnSqlOptionsIndex::FULLTEXT) {
-                        sql += "    FULLTEXT (" + field_name + "),\n";
-                    }
+            ColumnSqlOptionsIndex index;
+            ProcessFieldOptions(table_name, field, &sql_type, &index);
 
-
-                    if (sql_options.auto_increment()) {
-                        field_type += " AUTO_INCREMENT";
-                    }
-                    if (sql_options.not_null()) {
-                        field_type += " NOT NULL";
-                    }
-                    
-                    if (!sql_options.default_value().empty()) {
-                        field_type += " DEFAULT " + sql_options.default_value();
-                    }
-                    
-                    if (!sql_options.comment().empty()) {
-                        field_type += " COMMENT '" + sql_options.comment() + "'";
-                    }
-                }
+            if (index == ColumnSqlOptionsIndex::PRIMARY_KEY) {
+                primary_keys.emplace_back(&field->name());
+            }
+            else if (index == ColumnSqlOptionsIndex::UNIQUE) {
+                sql += "    UNIQUE (" + field->name() + "),\n";
+            }
+            else if (index == ColumnSqlOptionsIndex::INDEX) {
+                sql += "    INDEX (" + field->name() + "),\n";
+            }
+            else if (index == ColumnSqlOptionsIndex::FULLTEXT) {
+                sql += "    FULLTEXT (" + field->name() + "),\n";
             }
 
-            sql += "    " + field_name + " " + field_type;
+            sql += "    " + field_name + " " + sql_type;
 
             sql += ",\n"; 
         }
@@ -508,6 +525,96 @@ public:
     }
 
 private:
+    const char* MapProtoTypeToSql(const std::string& table_name, const google::protobuf::FieldDescriptor* field) {
+        switch (field->type()) {
+        case google::protobuf::FieldDescriptor::TYPE_DOUBLE:
+            return "DOUBLE";
+        case google::protobuf::FieldDescriptor::TYPE_FLOAT:
+            return "FLOAT";
+            break;
+        case google::protobuf::FieldDescriptor::TYPE_INT32:
+        case google::protobuf::FieldDescriptor::TYPE_SINT32:
+        case google::protobuf::FieldDescriptor::TYPE_SFIXED32:
+            return "INTEGER";
+            break;
+        case google::protobuf::FieldDescriptor::TYPE_FIXED32:
+        case google::protobuf::FieldDescriptor::TYPE_UINT32:
+            return "INT UNSIGNED";
+            break;
+        case google::protobuf::FieldDescriptor::TYPE_INT64:
+        case google::protobuf::FieldDescriptor::TYPE_SINT64:
+        case google::protobuf::FieldDescriptor::TYPE_SFIXED64:
+            return "BIGINT";
+            break;
+        case google::protobuf::FieldDescriptor::TYPE_FIXED64:
+        case google::protobuf::FieldDescriptor::TYPE_UINT64:
+            return "BIGINT UNSIGNED";
+            break;
+        case google::protobuf::FieldDescriptor::TYPE_BOOL:
+            return "BOOLEAN";
+            break;
+        case google::protobuf::FieldDescriptor::TYPE_STRING:
+            return "LONGTEXT";
+            break;
+        case google::protobuf::FieldDescriptor::TYPE_BYTES:
+            return "LONGTEXT";
+            break;
+        case google::protobuf::FieldDescriptor::TYPE_MESSAGE:
+            return "LONGTEXT"; // Using TEXT for simplicity
+            break;
+        case google::protobuf::FieldDescriptor::TYPE_ENUM:
+            return "INTEGER"; // Enum can be stored as INTEGER
+            break;
+        default:
+            TaskAbort("Cannot be converted to SQL type: {}.{}.", table_name, field->name());
+        }
+    }
+
+    void ProcessFieldOptions(const std::string& table_name, const google::protobuf::FieldDescriptor* field,
+        std::string* sql_type, ColumnSqlOptionsIndex* index) {
+
+        *index = ColumnSqlOptionsIndex::NONE;
+
+        // 处理字段选项
+        if (!field->options().HasExtension(column)) {
+            return;
+        }
+
+        const FieldOptionsColumn& field_options = field->options().GetExtension(column);
+        if (!field_options.has_sql()) {
+            return;
+        }
+
+        const ColumnSqlOptions& sql_options = field_options.sql();
+        if (sql_options.str_len()) {
+            if (sql_options.str_len() > 0) {
+                *sql_type = "VARCHAR(";
+            }
+            else {
+                *sql_type = "CHAR(";
+            }
+            *sql_type += std::to_string(std::abs(sql_options.str_len()));
+            *sql_type += ")";
+        }
+
+        if (sql_options.auto_increment()) {
+            *sql_type += " AUTO_INCREMENT";
+        }
+        if (sql_options.not_null()) {
+            *sql_type += " NOT NULL";
+        }
+
+        if (!sql_options.default_value().empty()) {
+            *sql_type += " DEFAULT " + sql_options.default_value();
+        }
+
+        if (!sql_options.comment().empty()) {
+            *sql_type += " COMMENT '" + sql_options.comment() + "'";
+        }
+
+        *index = sql_options.index();
+    }
+
     void BindValuesToStatement(const DBRow& db_row, std::vector<std::any>* values, soci::statement& stmt) {
         auto& msg = db_row.get();
 

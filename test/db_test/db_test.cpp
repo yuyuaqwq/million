@@ -34,7 +34,7 @@ public:
         }
         db_service_ = *handle;
 
-        handle = imillion().GetServiceByName(db::kDBServiceName);
+        handle = imillion().GetServiceByName(db::kSqlServiceName);
         if (!handle) {
             logger().Err("Unable to find SqlService.");
             return false;
@@ -45,7 +45,7 @@ public:
     }
 
     virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id, million::MsgPtr with_msg) override {
-        // co_await Call<db::SqlTableInitMsg>(sql_service_, *million::db::example::User::GetDescriptor());
+        auto init_resp = co_await Call<db::SqlTableInitReq>(sql_service_, *million::db::example::User::GetDescriptor());
         
         auto user = million::make_proto_msg<million::db::example::User>();
         user->set_id(100);
