@@ -81,4 +81,7 @@ message User {
     int64 add_test = 11 [(column) = {
         sql: { index: UNIQUE, comment: "add_test" }
     }];
+    string add_test2 = 12 [(column) = {
+        sql: { comment: "add_test2" }
+    }];
 }
