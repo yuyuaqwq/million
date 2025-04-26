@@ -27,12 +27,41 @@ public:
     using Base = IService;
     using Base::Base;
 
-    static inline const std::string_view host = "127.0.0.1";
-    static inline const std::string_view port = "6379";
+    static inline std::string host;
+    static inline std::string port;
 
     virtual bool OnInit() override {
+        // Set service name and enable separate worker
         imillion().SetServiceName(service_handle(), kCacheServiceName);
         imillion().EnableSeparateWorker(service_handle());
+
+        // Read configuration
+        const auto& settings = imillion().YamlSettings();
+        const auto& db_settings = settings["db"];
+        if (!db_settings) {
+            logger().Err("cannot find 'db' configuration.");
+            return false;
+        }
+
+        const auto& cache_settings = db_settings["cache"];
+        if (!cache_settings) {
+            logger().Err("cannot find 'db.cache' configuration.");
+            return false;
+        }
+
+        // Get database configuration values
+        const auto& db_host = cache_settings["host"];
+        const auto& db_port = cache_settings["port"];
+
+        if (!db_host || !db_port) {
+            logger().Err("incomplete cache configuration.");
+            return false;
+        }
+
+        // Assign values (note: this assumes the strings will persist)
+        host = db_host.as<std::string>();
+        port = db_port.as<std::string>();
+
         return true;
     }
 

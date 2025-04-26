@@ -45,7 +45,7 @@ public:
         const auto& settings = imillion().YamlSettings();
         const auto& db_settings = settings["db"];
         if (!db_settings) {
-            logger().Err("cannot find 'database' configuration.");
+            logger().Err("cannot find 'db' configuration.");
             return false;
         }
 
@@ -62,7 +62,7 @@ public:
         const auto& db_password = sql_settings["password"];
 
         if (!db_host || !db_name || !db_user || !db_password) {
-            logger().Err("incomplete database configuration.");
+            logger().Err("incomplete sql configuration.");
             return false;
         }
 
