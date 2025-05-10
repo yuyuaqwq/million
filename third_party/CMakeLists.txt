@@ -71,6 +71,15 @@ add_library(${QUICK_JS_LIB} INTERFACE)
 target_link_libraries(${QUICK_JS_LIB} INTERFACE qjs)
 target_include_directories(${QUICK_JS_LIB} INTERFACE ${QUICK_JS_HEADER_DIR})
 
+# multjs
+set(MULT_JS_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/multjs/include CACHE STRING "multjs header dir")
+set(MULT_JS_LIB mjs CACHE STRING "multjs lib")
+add_subdirectory(multjs)
+#add_library(${MULT_JS_LIB} INTERFACE)
+#target_link_libraries(${MULT_JS_LIB} INTERFACE mjs)
+target_include_directories(${MULT_JS_LIB} INTERFACE ${MULT_JS_HEADER_DIR})
+
+
 # hiredis
 set(HIREDIS_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/hiredis CACHE STRING "hiredis header dir")
 set(HIREDIS_HEADER ${HIREDIS_HEADER_DIR} CACHE STRING "hiredis lib")

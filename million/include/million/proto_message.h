@@ -14,13 +14,13 @@ namespace million {
 
 namespace protobuf = google::protobuf;
 
-using ProtoMsg = protobuf::Message;
-using ProtoMsgUnique = std::unique_ptr<ProtoMsg>;
-using ProtoMsgShared = std::shared_ptr<const ProtoMsg>;
-using ProtoMsgWeak = std::weak_ptr<const ProtoMsg>;
+using ProtoMessage = protobuf::Message;
+using ProtoMessageUnique = std::unique_ptr<ProtoMessage>;
+using ProtoMessageShared = std::shared_ptr<const ProtoMessage>;
+using ProtoMessageWeak = std::weak_ptr<const ProtoMessage>;
 
-inline const google::protobuf::FieldDescriptor& GetFieldDescriptor(const google::protobuf::Descriptor& desc, int index) {
-    const auto* field_desc = desc.field(index);
+inline const google::protobuf::FieldDescriptor& GetFieldDescriptor(const google::protobuf::Descriptor& descriptor, int index) {
+    const auto* field_desc = descriptor.field(index);
     if (!field_desc) {
         throw std::runtime_error(std::format("field{} is nullptr.", index));
     }
@@ -28,24 +28,24 @@ inline const google::protobuf::FieldDescriptor& GetFieldDescriptor(const google:
 }
 
 // 函数重载：为每个字段类型实现专门的 SetValue 方法
-inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, double value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
+inline void ProtoMessageSetField(ProtoMessage* msg, const google::protobuf::Descriptor& descriptor, const google::protobuf::Reflection& reflection, int index, double value) {
+    const auto& field_desc = GetFieldDescriptor(descriptor, index);
     if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_DOUBLE) {
         throw std::runtime_error("Type mismatch: expected TYPE_DOUBLE");
     }
     reflection.SetDouble(msg, &field_desc, value);
 }
 
-inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, float value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
+inline void ProtoMessageSetField(ProtoMessage* msg, const google::protobuf::Descriptor& descriptor, const google::protobuf::Reflection& reflection, int index, float value) {
+    const auto& field_desc = GetFieldDescriptor(descriptor, index);
     if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_FLOAT) {
         throw std::runtime_error("Type mismatch: expected TYPE_FLOAT");
     }
     reflection.SetFloat(msg, &field_desc, value);
 }
 
-inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, int64_t value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
+inline void ProtoMessageSetField(ProtoMessage* msg, const google::protobuf::Descriptor& descriptor, const google::protobuf::Reflection& reflection, int index, int64_t value) {
+    const auto& field_desc = GetFieldDescriptor(descriptor, index);
     if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_INT64 &&
         field_desc.type() != google::protobuf::FieldDescriptor::TYPE_SINT64 &&
         field_desc.type() != google::protobuf::FieldDescriptor::TYPE_SFIXED64) {
@@ -54,8 +54,8 @@ inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& 
     reflection.SetInt64(msg, &field_desc, value);
 }
 
-inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, uint64_t value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
+inline void ProtoMessageSetField(ProtoMessage* msg, const google::protobuf::Descriptor& descriptor, const google::protobuf::Reflection& reflection, int index, uint64_t value) {
+    const auto& field_desc = GetFieldDescriptor(descriptor, index);
     if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_UINT64 &&
         field_desc.type() != google::protobuf::FieldDescriptor::TYPE_FIXED64) {
         throw std::runtime_error("Type mismatch: expected TYPE_UINT64 or TYPE_FIXED64");
@@ -63,8 +63,8 @@ inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& 
     reflection.SetUInt64(msg, &field_desc, value);
 }
 
-inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, int32_t value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
+inline void ProtoMessageSetField(ProtoMessage* msg, const google::protobuf::Descriptor& descriptor, const google::protobuf::Reflection& reflection, int index, int32_t value) {
+    const auto& field_desc = GetFieldDescriptor(descriptor, index);
     if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_INT32 &&
         field_desc.type() != google::protobuf::FieldDescriptor::TYPE_SINT32 &&
         field_desc.type() != google::protobuf::FieldDescriptor::TYPE_SFIXED32) {
@@ -73,8 +73,8 @@ inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& 
     reflection.SetInt32(msg, &field_desc, value);
 }
 
-inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, uint32_t value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
+inline void ProtoMessageSetField(ProtoMessage* msg, const google::protobuf::Descriptor& descriptor, const google::protobuf::Reflection& reflection, int index, uint32_t value) {
+    const auto& field_desc = GetFieldDescriptor(descriptor, index);
     if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_UINT32 &&
         field_desc.type() != google::protobuf::FieldDescriptor::TYPE_FIXED32) {
         throw std::runtime_error("Type mismatch: expected TYPE_UINT32 or TYPE_FIXED32");
@@ -82,16 +82,16 @@ inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& 
     reflection.SetUInt32(msg, &field_desc, value);
 }
 
-inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, bool value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
+inline void ProtoMessageSetField(ProtoMessage* msg, const google::protobuf::Descriptor& descriptor, const google::protobuf::Reflection& reflection, int index, bool value) {
+    const auto& field_desc = GetFieldDescriptor(descriptor, index);
     if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_BOOL) {
         throw std::runtime_error("Type mismatch: expected TYPE_BOOL");
     }
     reflection.SetBool(msg, &field_desc, value);
 }
 
-inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, const std::string& value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
+inline void ProtoMessageSetField(ProtoMessage* msg, const google::protobuf::Descriptor& descriptor, const google::protobuf::Reflection& reflection, int index, const std::string& value) {
+    const auto& field_desc = GetFieldDescriptor(descriptor, index);
     if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_STRING &&
         field_desc.type() != google::protobuf::FieldDescriptor::TYPE_BYTES) {
         throw std::runtime_error("Type mismatch: expected TYPE_STRING or TYPE_BYTES");
@@ -99,8 +99,8 @@ inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& 
     reflection.SetString(msg, &field_desc, value);
 }
 
-inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, const char* value) {
-    const auto& field_desc = GetFieldDescriptor(desc, index);
+inline void ProtoMessageSetField(ProtoMessage* msg, const google::protobuf::Descriptor& descriptor, const google::protobuf::Reflection& reflection, int index, const char* value) {
+    const auto& field_desc = GetFieldDescriptor(descriptor, index);
     if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_STRING) {
         throw std::runtime_error("Type mismatch: expected TYPE_STRING");
     }
@@ -108,9 +108,9 @@ inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& 
 }
 
 template <typename T>
-inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& desc, const google::protobuf::Reflection& reflection, int index, T&& value) {
+inline void ProtoMessageSetField(ProtoMessage* msg, const google::protobuf::Descriptor& descriptor, const google::protobuf::Reflection& reflection, int index, T&& value) {
     if constexpr (std::is_enum_v<std::remove_reference_t<T>>) {
-        const auto& field_desc = GetFieldDescriptor(desc, index);
+        const auto& field_desc = GetFieldDescriptor(descriptor, index);
         if (field_desc.type() != google::protobuf::FieldDescriptor::TYPE_ENUM) {
             throw std::runtime_error("Type mismatch: expected type_enum");
         }
@@ -126,25 +126,25 @@ inline void ProtoMsgSetField(ProtoMsg* msg, const google::protobuf::Descriptor& 
 }
 
 // 主要的 make_msg 实现，用于递归设置每个字段的值
-template <typename MsgT, typename... Args>
-inline std::unique_ptr<MsgT> make_proto_msg(Args&&... args) {
-    auto msg = std::make_unique<MsgT>();
+template <typename MessageT, typename... Args>
+inline std::unique_ptr<MessageT> make_proto_message(Args&&... args) {
+    auto msg = std::make_unique<MessageT>();
     const auto* desc = msg->GetDescriptor();
     if (!desc) {
         throw std::runtime_error("GetDescriptor is nullptr.");
     }
-    const auto* reflection = msg->GetReflection();
-    if (!reflection) {
+    const auto* refl = msg->GetReflection();
+    if (!refl) {
         throw std::runtime_error("GetReflection is nullptr.");
     }
 
     // 填充字段的辅助函数
     size_t index = 0;
-    (ProtoMsgSetField(msg.get(), *desc, *reflection, index++, std::forward<decltype(args)>(args)),  ...);
+    (ProtoMessageSetField(msg.get(), *desc, *refl, index++, std::forward<decltype(args)>(args)),  ...);
     return msg;
 }
 
-template <class MsgT>
-inline constexpr bool is_proto_msg_v = std::is_base_of_v<ProtoMsg, MsgT>;
+template <class MessageT>
+inline constexpr bool is_proto_message_v = std::is_base_of_v<ProtoMessage, MessageT>;
 
 } // namespace million

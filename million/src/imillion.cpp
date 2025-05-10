@@ -31,7 +31,7 @@ std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iser
 }
 
 
-std::optional<SessionId> IMillion::StartService(const ServiceHandle& service, MsgPtr with_msg) {
+std::optional<SessionId> IMillion::StartService(const ServiceHandle& service, MessagePointer with_msg) {
     auto lock = service.lock();
     if (!lock) {
         return std::nullopt;
@@ -39,7 +39,7 @@ std::optional<SessionId> IMillion::StartService(const ServiceHandle& service, Ms
     return impl_->StartService(lock, std::move(with_msg));
 }
 
-std::optional<SessionId> IMillion::StopService(const ServiceHandle& service, MsgPtr with_msg) {
+std::optional<SessionId> IMillion::StopService(const ServiceHandle& service, MessagePointer with_msg) {
     auto lock = service.lock();
     if (!lock) {
         return std::nullopt;
@@ -70,7 +70,7 @@ SessionId IMillion::NewSession() {
 }
 
 
-std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MsgPtr msg) {
+std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MessagePointer msg) {
     auto sender_lock = sender.lock();
     if (!sender_lock) {
         return std::nullopt;
@@ -82,7 +82,7 @@ std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const Servi
     return impl_->Send(sender_lock, target_lock, std::move(msg));
 }
 
-bool IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgPtr msg) {
+bool IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MessagePointer msg) {
     auto sender_lock = sender.lock();
     if (!sender_lock) {
         return false;
@@ -99,7 +99,7 @@ const YAML::Node& IMillion::YamlSettings() const {
     return impl_->YamlSettings();
 }
 
-bool IMillion::Timeout(uint32_t tick, const ServiceHandle& service, MsgPtr msg) {
+bool IMillion::Timeout(uint32_t tick, const ServiceHandle& service, MessagePointer msg) {
     auto lock = service.lock();
     if (!lock) {
         return false;

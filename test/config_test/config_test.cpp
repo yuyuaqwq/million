@@ -13,7 +13,7 @@ namespace protobuf = google::protobuf;
 namespace config = million::config;
 namespace example = config::example;
 
-MILLION_MSG_DEFINE_EMPTY(, Test1Msg)
+MILLION_MESSAGE_DEFINE_EMPTY(, Test1Msg)
 
 class TestService : public million::IService {
     MILLION_SERVICE_DEFINE(TestService);
@@ -34,7 +34,7 @@ public:
         return true;
     }
 
-    virtual million::Task<million::MsgPtr> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr with_msg) override {
+    virtual million::Task<million::MessagePointer> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer with_msg) override {
         example_kv_config_ = co_await config::QueryConfig<config::example::ExampleKV>(this, config_service_);
         
         Send<Test1Msg>(service_handle());
@@ -43,7 +43,7 @@ public:
     }
 
 
-    MILLION_MSG_HANDLE(Test1Msg, msg) {
+    MILLION_MESSAGE_HANDLE(Test1Msg, msg) {
         auto config_lock = co_await example_kv_config_.Lock(this, config_service_);
 
         million::ProtoFieldAny f;

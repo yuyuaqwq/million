@@ -5,9 +5,6 @@
 #include <list>
 #include <optional>
 
-#include <asio.hpp>
-
-#include <million/noncopyable.h>
 #include <million/imillion.h>
 #include <million/net/packet.h>
 #include <million/net/tcp_connection.h>

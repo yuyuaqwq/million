@@ -2,7 +2,7 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <million/iservice.h>
+#include <million/imillion.h>
 
 #include <gateway/api.h>
 #include <gateway/gateway.h>
@@ -14,10 +14,10 @@ namespace gateway {
 
 namespace protobuf = google::protobuf; 
 
-MILLION_MSG_DEFINE(, GatewayTcpConnection, (UserSessionShared) user_session)
-MILLION_MSG_DEFINE(, GatewayTcpRecvPacket, (UserSessionShared) user_session, (net::Packet) packet)
+MILLION_MESSAGE_DEFINE(, GatewayTcpConnection, (UserSessionShared) user_session)
+MILLION_MESSAGE_DEFINE(, GatewayTcpRecvPacket, (UserSessionShared) user_session, (net::Packet) packet)
 
-MILLION_MSG_DEFINE(, GatewayPersistentUserSession, (UserSessionShared) user_session);
+MILLION_MESSAGE_DEFINE(, GatewayPersistentUserSession, (UserSessionShared) user_session);
 
 // 跨节点：
     // 网关服务分为主服务及代理服务，主服务负责收包，部署在网关节点上
@@ -36,7 +36,7 @@ public:
     }
 
 
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+    virtual Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         const auto& settings = imillion().YamlSettings();
         const auto& gateway_settings = settings["gateway"];
         if (!gateway_settings) {
@@ -64,16 +64,16 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(GatewayPersistentUserSession, session_msg) {
+    MILLION_MESSAGE_HANDLE(GatewayPersistentUserSession, session_msg) {
         auto& user_session = *session_msg->user_session;
         do {
             auto recv_msg = co_await RecvWithTimeout(session_id, ::million::kSessionNeverTimeout);
             // imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
-            if (recv_msg.IsProtoMsg()) {
+            if (recv_msg.IsProtoMessage()) {
                 logger().Trace("Gateway Recv ProtoMessage: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
 
-                auto proto_msg = std::move(recv_msg.GetProtoMsg());
+                auto proto_msg = std::move(recv_msg.GetProtoMessage());
                 auto packet = imillion().proto_mgr().codec().EncodeMessage(*proto_msg);
                 if (!packet) {
                     logger().Err("Gateway Recv ProtoMessage EncodeMessage failed: {}.", session_id);
@@ -87,18 +87,18 @@ public:
             else if (recv_msg.IsType<GatewaySendPacket>()) {
                 logger().Trace("GatewaySendPacket: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
-                auto msg = recv_msg.GetMutMsg<GatewaySendPacket>();
+                auto msg = recv_msg.GetMutableMessage<GatewaySendPacket>();
                 auto span = net::PacketSpan(header_packet);
                 user_session.Send(std::move(header_packet), span, header_packet.size() + msg->packet.size());
                 span = net::PacketSpan(msg->packet);
                 user_session.Send(std::move(msg->packet), span, 0);
             }
             else if (recv_msg.IsType<GatewaySureAgent>()) {
-                auto msg = recv_msg.GetMutMsg<GatewaySureAgent>();
+                auto msg = recv_msg.GetMutableMessage<GatewaySureAgent>();
                 user_session.set_agent_handle(std::move(msg->agent_service));
             }
             else if (recv_msg.IsType<GatewayResetAgentId>()) {
-                auto msg = recv_msg.GetMsg<GatewayResetAgentId>();
+                auto msg = recv_msg.GetMessage<GatewayResetAgentId>();
                 user_session.set_agent_id(msg->agent_id);
                 SendTo(service_handle(), msg->agent_id, std::move(msg_));
                 break;
@@ -110,7 +110,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(GatewayTcpConnection, msg) {
+    MILLION_MESSAGE_HANDLE(GatewayTcpConnection, msg) {
         auto& user_session = *msg->user_session;
 
         auto& ep = user_session.remote_endpoint();
@@ -133,7 +133,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(GatewayTcpRecvPacket, msg) {
+    MILLION_MESSAGE_HANDLE(GatewayTcpRecvPacket, msg) {
         auto& user_session = *msg->user_session;
         auto agent_id = user_session.agent_id();
 
@@ -175,10 +175,10 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(GatewayRegisterUserServiceReq, msg) {
+    MILLION_MESSAGE_HANDLE(GatewayRegisterUserServiceReq, msg) {
         logger().Trace("GatewayRegisterUserServiceReq.");
         user_service_ = msg->user_service;
-        co_return make_msg<GatewayRegisterUserServiceResp>();
+        co_return make_message<GatewayRegisterUserServiceResp>();
     }
 
 

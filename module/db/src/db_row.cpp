@@ -5,7 +5,7 @@
 namespace million {
 namespace db {
 
-DBRow::DBRow(ProtoMsgUnique proto_msg)
+DBRow::DBRow(ProtoMessageUnique proto_msg)
     : proto_msg_(std::move(proto_msg))
 {
     auto desc = proto_msg_->GetDescriptor();
@@ -44,11 +44,11 @@ void DBRow::operator=(DBRow&& rv) noexcept {
     dirty_fields_ = std::move(rv.dirty_fields_);
 }
 
-const ProtoMsg& DBRow::get() const {
+const ProtoMessage& DBRow::get() const {
     return *proto_msg_.get();
 }
 
-ProtoMsg& DBRow::get() {
+ProtoMessage& DBRow::get() {
     return *proto_msg_.get();
 }
 
@@ -63,7 +63,7 @@ DBRow DBRow::CopyDirtyTo(bool copy_primary_key) {
     if (proto_msg == nullptr) {
         throw std::bad_alloc();
     }
-    auto row = DBRow(ProtoMsgUnique(proto_msg));
+    auto row = DBRow(ProtoMessageUnique(proto_msg));
     row.dirty_fields_ = dirty_fields_;
 
     row.CopyFromDirty(*this, copy_primary_key);

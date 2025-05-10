@@ -91,7 +91,7 @@ std::optional<MsgKey> ProtoCodec::GetMsgKey(const protobuf::Descriptor* desc) co
     return iter->second;
 }
 
-std::optional<ProtoMsgUnique> ProtoCodec::NewMessage(MsgId msg_id, SubMsgId sub_msg_id) const {
+std::optional<ProtoMessageUnique> ProtoCodec::NewMessage(MsgId msg_id, SubMsgId sub_msg_id) const {
     auto desc = GetMsgDesc(msg_id, sub_msg_id);
     if (!desc) return std::nullopt;
     auto msg = proto_mgr_.NewMessage(*desc);

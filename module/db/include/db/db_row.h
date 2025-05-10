@@ -11,7 +11,7 @@ namespace db {
 
 class MILLION_DB_API DBRow {
 public:
-    DBRow(ProtoMsgUnique proto_msg);
+    DBRow(ProtoMessageUnique proto_msg);
     DBRow(const DBRow& rv);
     DBRow(DBRow&& rv) noexcept;
 
@@ -30,8 +30,8 @@ public:
         return static_cast<T&>(get());
     }
 
-    ProtoMsg& get();
-    const ProtoMsg& get() const;
+    ProtoMessage& get();
+    const ProtoMessage& get() const;
 
     const protobuf::Descriptor& GetDescriptor() const;
     const protobuf::Reflection& GetReflection() const;
@@ -67,7 +67,7 @@ private:
 
 private:
     uint64_t db_version_ = 0;
-    ProtoMsgUnique proto_msg_;
+    ProtoMessageUnique proto_msg_;
     std::vector<bool> dirty_fields_;
 };
 

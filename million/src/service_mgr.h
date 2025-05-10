@@ -11,9 +11,9 @@
 
 namespace million {
 
-MILLION_MSG_DEFINE_NONCOPYABLE(, ServiceStartMsg, (MsgPtr) with_msg);
-MILLION_MSG_DEFINE_NONCOPYABLE(, ServiceStopMsg, (MsgPtr) with_msg);
-MILLION_MSG_DEFINE_EMPTY(, ServiceExitMsg);
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(, ServiceStartMsg, (MessagePointer) with_msg);
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(, ServiceStopMsg, (MessagePointer) with_msg);
+MILLION_MESSAGE_DEFINE_EMPTY(, ServiceExitMsg);
 
 class Million;
 class ServiceMgr {
@@ -28,8 +28,8 @@ public:
     std::optional<ServiceShared> AddService(std::unique_ptr<IService> service);
     void DeleteService(ServiceCore* service);
 
-    std::optional<SessionId> StartService(const ServiceShared& service, MsgPtr with_msg);
-    std::optional<SessionId> StopService(const ServiceShared& service, MsgPtr with_msg);
+    std::optional<SessionId> StartService(const ServiceShared& service, MessagePointer with_msg);
+    std::optional<SessionId> StopService(const ServiceShared& service, MessagePointer with_msg);
     std::optional<SessionId> ExitService(const ServiceShared& service);
 
     void PushService(ServiceCore* service);
@@ -41,7 +41,7 @@ public:
     bool SetServiceId(const ServiceShared& handle, ServiceId id);
     std::optional<ServiceShared> GetServiceById(ServiceId id);
 
-    bool Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgPtr msg);
+    bool Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MessagePointer msg);
     
     Million& million() const { return *million_; }
 

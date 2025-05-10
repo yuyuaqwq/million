@@ -12,7 +12,6 @@
 #include <db/db_options.pb.h>
 
 #include <million/imillion.h>
-#include <million/msg.h>
 
 #include <db/cache.h>
 
@@ -65,7 +64,7 @@ public:
         return true;
     }
 
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+    virtual Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         try {
             // 创建 Redis 对象并连接到 Redis 服务器
             redis_.emplace(std::format("tcp://{}:{}", host, port));
@@ -76,12 +75,12 @@ public:
         co_return nullptr;
     }
 
-    virtual Task<MsgPtr> OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+    virtual Task<MessagePointer> OnStop(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         redis_ = std::nullopt;
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(CacheGetReq, msg) {
+    MILLION_MESSAGE_HANDLE(CacheGetReq, msg) {
         auto db_row = std::move(msg->db_row);
 
         auto& proto_msg = db_row.get();
@@ -94,7 +93,7 @@ public:
         std::unordered_map<std::string, std::string> redis_hash;
         redis_->hgetall(redis_key, std::inserter(redis_hash, redis_hash.end()));
         if (redis_hash.empty()) {
-            co_return make_msg<CacheGetResp>(std::nullopt);
+            co_return make_message<CacheGetResp>(std::nullopt);
         }
         else {
             auto db_version = std::stoull(redis_hash["__db_version__"]);
@@ -112,29 +111,29 @@ public:
             }
         }
 
-        co_return make_msg<CacheGetResp>(std::move(db_row));
+        co_return make_message<CacheGetResp>(std::move(db_row));
     }
 
-    MILLION_MSG_HANDLE(CacheSetReq, msg) {
+    MILLION_MESSAGE_HANDLE(CacheSetReq, msg) {
         std::vector<std::string> keys; 
         std::vector<std::string> args;
         MakeKeysAndArgs(msg->db_row, msg->old_db_version, &keys, &args);
         
         auto res = redis_->eval<long long>(kLuaSetScript, keys.begin(), keys.end(), args.begin(), args.end());
         if (res < 0) {
-            co_return make_msg<CacheSetResp>(false);
+            co_return make_message<CacheSetResp>(false);
         }
-        co_return make_msg<CacheSetResp>(true);
+        co_return make_message<CacheSetResp>(true);
     }
 
-    MILLION_MSG_HANDLE(CacheDelReq, msg) {
+    MILLION_MESSAGE_HANDLE(CacheDelReq, msg) {
         auto redis_key = GetRedisKey(msg->db_row);
         auto db_version = std::to_string(msg->db_row.db_version());
         auto res = redis_->eval<long long>(kLuaDelScript, { redis_key , db_version }, {});
         if (res < 0) {
-            co_return make_msg<CacheSetResp>(false);
+            co_return make_message<CacheSetResp>(false);
         }
-        co_return make_msg<CacheSetResp>(true);
+        co_return make_message<CacheSetResp>(true);
     }
 
 
@@ -160,18 +159,18 @@ public:
     //    co_return std::move(msg_);
     //}
 
-    MILLION_MSG_HANDLE(CacheGetBytesReq, msg) {
+    MILLION_MESSAGE_HANDLE(CacheGetBytesReq, msg) {
         auto value =  redis_->get(msg->key);
-        co_return make_msg<CacheGetBytesResp>(std::move(value));
+        co_return make_message<CacheGetBytesResp>(std::move(value));
     }
 
-    MILLION_MSG_HANDLE(CacheSetBytesReq, msg) {
+    MILLION_MESSAGE_HANDLE(CacheSetBytesReq, msg) {
         std::string value;
         bool success = redis_->set(msg->key, value);
         if (!success) {
-            co_return make_msg<CacheSetBytesResp>(std::nullopt);
+            co_return make_message<CacheSetBytesResp>(std::nullopt);
         }
-        co_return make_msg<CacheSetBytesResp>(std::move(value));
+        co_return make_message<CacheSetBytesResp>(std::move(value));
     }
 
 private:

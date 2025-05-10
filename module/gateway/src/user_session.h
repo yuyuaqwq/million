@@ -2,9 +2,8 @@
 
 #include <google/protobuf/message.h>
 
-#include <million/noncopyable.h>
+#include <million/imillion.h>
 #include <million/net/tcp_connection.h>
-#include <million/msg.h>
 
 #include <gateway/gateway.h>
 

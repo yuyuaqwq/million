@@ -2,9 +2,6 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <million/iservice.h>
-#include <million/proto_codec.h>
-
 #include <ss/ss_cluster.pb.h>
 
 #include <cluster/cluster.h>
@@ -14,10 +11,10 @@
 namespace million {
 namespace cluster {
 
-MILLION_MSG_DEFINE(, ClusterTcpConnectionMsg, (NodeSessionShared) node_session)
-MILLION_MSG_DEFINE(, ClusterTcpRecvPacketMsg, (NodeSessionShared) node_session, (net::Packet) packet)
+MILLION_MESSAGE_DEFINE(, ClusterTcpConnectionMsg, (NodeSessionShared) node_session)
+MILLION_MESSAGE_DEFINE(, ClusterTcpRecvPacketMsg, (NodeSessionShared) node_session, (net::Packet) packet)
 
-MILLION_MSG_DEFINE(, ClusterPersistentNodeServiceSessionMsg, (NodeSessionShared) node_session, (ServiceName) src_service, (ServiceName) target_service);
+MILLION_MESSAGE_DEFINE(, ClusterPersistentNodeServiceSessionMsg, (NodeSessionShared) node_session, (ServiceName) src_service, (ServiceName) target_service);
 
 // SessionId部分，必须是a只能等待自己节点alloc的SessionId，想等待b的消息，必须是a把sessionid发给b，b再发回这个sessionid
 
@@ -69,17 +66,17 @@ public:
         return true;
     }
 
-    MILLION_MSG_HANDLE(const ClusterPersistentNodeServiceSessionMsg, msg) {
+    MILLION_MESSAGE_HANDLE(const ClusterPersistentNodeServiceSessionMsg, msg) {
         auto& node_session = *msg->node_session;
         auto& src_service = msg->src_service;
         auto& target_service = msg->target_service;
         do {
             // 这里未来可以修改超时时间，来自动回收协程
             auto recv_msg = co_await RecvWithTimeout(session_id, ::million::kSessionNeverTimeout);
-            if (recv_msg.IsProtoMsg()) {
+            if (recv_msg.IsProtoMessage()) {
                 logger().Trace("Cluster Recv ProtoMessage: {}.", session_id);
 
-                auto proto_msg = std::move(recv_msg.GetProtoMsg());
+                auto proto_msg = std::move(recv_msg.GetProtoMessage());
                 PacketForward(&node_session, ServiceName(src_service)
                     , ServiceName(target_service), *proto_msg);
             }
@@ -90,7 +87,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(ClusterTcpConnectionMsg, msg) {
+    MILLION_MESSAGE_HANDLE(ClusterTcpConnectionMsg, msg) {
         auto& node_session = *msg->node_session;
 
         auto& ep = node_session.remote_endpoint();
@@ -114,7 +111,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(ClusterTcpRecvPacketMsg, msg) {
+    MILLION_MESSAGE_HANDLE(ClusterTcpRecvPacketMsg, msg) {
         auto& node_session = *msg->node_session;
 
         auto& ep = node_session.remote_endpoint();
@@ -184,7 +181,7 @@ public:
 
             // 完成连接，发送所有队列包
             for (auto iter = send_queue_.begin(); iter != send_queue_.end(); ) {
-                auto msg = iter->GetMutMsg<ClusterSend>();
+                auto msg = iter->GetMutableMessage<ClusterSend>();
                 if (msg->target_node == res.target_node()) {
                     PacketForward(&node_session, std::move(msg->src_service)
                         , std::move(msg->target_service), *msg->msg);
@@ -235,7 +232,7 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(ClusterSend, msg) {
+    MILLION_MESSAGE_HANDLE(ClusterSend, msg) {
         auto node_session = GetNodeSession(msg->target_node);
         if (node_session) {
             PacketForward(node_session, std::move(msg->src_service)
@@ -376,7 +373,7 @@ private:
         node_session->Send(std::move(size_packet), size_span, total_size);
     }
 
-    void PacketForward(NodeSession* node_session, ServiceName&& src_service, ServiceName&& target_service, const ProtoMsg& msg) {
+    void PacketForward(NodeSession* node_session, ServiceName&& src_service, ServiceName&& target_service, const ProtoMessage& msg) {
         auto packet_opt = imillion().proto_mgr().codec().EncodeMessage(msg);
         if (!packet_opt) {
             return;
@@ -406,7 +403,7 @@ private:
     std::unordered_map<NodeName, NodeSessionShared> nodes_;
 
     std::set<NodeName> wait_nodes_;
-    std::list<MsgPtr> send_queue_;
+    std::list<MessagePointer> send_queue_;
 };
 
 } // namespace cluster

@@ -8,7 +8,7 @@
 #include <functional>
 
 #include <million/exception.h>
-#include <million/proto_msg.h>
+#include <million/proto_message.h>
 
 namespace million {
 
@@ -143,7 +143,7 @@ struct MILLION_API CompositeProtoFieldAnyEqual {
 
 
 inline ProtoFieldAny ProtoMsgGetFieldAny(const google::protobuf::Reflection& reflection
-    , const ProtoMsg& proto_msg
+    , const ProtoMessage& proto_msg
     , const google::protobuf::FieldDescriptor& field_desc)
 {
     switch (field_desc.cpp_type()) {
@@ -175,7 +175,7 @@ inline ProtoFieldAny ProtoMsgGetFieldAny(const google::protobuf::Reflection& ref
 }
 
 inline void ProtoMsgSetFieldAny(const google::protobuf::Reflection& reflection
-    , ProtoMsg* proto_msg
+    , ProtoMessage* proto_msg
     , const google::protobuf::FieldDescriptor& field_desc
     , const ProtoFieldAny& any)
 {

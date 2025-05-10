@@ -8,7 +8,7 @@ namespace million {
 EventMgr::EventMgr(IMillion* imillion)
 	: imillion_(imillion) {}
 
-void EventMgr::Subscribe(MsgTypeKey key, const ServiceHandle& handle, uint32_t priority) {
+void EventMgr::Subscribe(MessageTypeKey key, const ServiceHandle& handle, uint32_t priority) {
 	auto iter = services_.find(key);
 	if (iter == services_.end()) {
 		auto res = services_.emplace(key, EventMap());
@@ -18,7 +18,7 @@ void EventMgr::Subscribe(MsgTypeKey key, const ServiceHandle& handle, uint32_t p
 	iter->second.emplace(priority, handle);
 }
 
-bool EventMgr::Unsubscribe(MsgTypeKey key, const ServiceHandle& subscriber) {
+bool EventMgr::Unsubscribe(MessageTypeKey key, const ServiceHandle& subscriber) {
 	auto iter = services_.find(key);
 	if (iter == services_.end()) {
 		return false;
@@ -34,7 +34,7 @@ bool EventMgr::Unsubscribe(MsgTypeKey key, const ServiceHandle& subscriber) {
 	return false;
 }
 
-void EventMgr::Send(const ServiceHandle& sender, MsgPtr msg) {
+void EventMgr::Send(const ServiceHandle& sender, MessagePointer msg) {
 	auto iter = services_.find(msg.GetTypeKey());
 	if (iter == services_.end()) {
 		// 没有关注此事件的服务
@@ -54,12 +54,12 @@ void EventMgr::Send(const ServiceHandle& sender, MsgPtr msg) {
 			services.erase(service_iter++);
 			continue;
 		}
-		imillion_->impl().Send(sender_lock, target_lock, MsgPtr(msg.Copy()));
+		imillion_->impl().Send(sender_lock, target_lock, MessagePointer(msg.Copy()));
 		++service_iter;
 	}
 }
 
-Task<> EventMgr::Call(const ServiceHandle& caller, MsgPtr msg, std::function<bool(MsgPtr)> res_handle) {
+Task<> EventMgr::Call(const ServiceHandle& caller, MessagePointer msg, std::function<bool(MessagePointer)> res_handle) {
 	auto iter = services_.find(msg.GetTypeKey());
 	if (iter == services_.end()) {
 		// 没有关注此事件的服务
@@ -78,17 +78,17 @@ Task<> EventMgr::Call(const ServiceHandle& caller, MsgPtr msg, std::function<boo
 			continue;
 		}
 
-		auto session_id = imillion_->impl().Send(caller_lock, target_lock, MsgPtr(msg.Copy()));
+		auto session_id = imillion_->impl().Send(caller_lock, target_lock, MessagePointer(msg.Copy()));
 
-		if (msg.IsProtoMsg()) {
-			auto res = co_await imillion_->RecvOrNull<ProtoMsg>(session_id.value());
-			if (res && !res_handle(MsgPtr(std::move(res)))) {
+		if (msg.IsProtoMessage()) {
+			auto res = co_await imillion_->RecvOrNull<ProtoMessage>(session_id.value());
+			if (res && !res_handle(MessagePointer(std::move(res)))) {
 				break;
 			}
 		}
-		else if (msg.IsCppMsg()) {
-			auto res = co_await imillion_->RecvOrNull<CppMsg>(session_id.value());
-			if (res && !res_handle(MsgPtr(std::move(res)))) {
+		else if (msg.IsCppMessage()) {
+			auto res = co_await imillion_->RecvOrNull<CppMessage>(session_id.value());
+			if (res && !res_handle(MessagePointer(std::move(res)))) {
 				break;
 			}
 		}

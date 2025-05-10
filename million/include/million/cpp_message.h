@@ -12,25 +12,25 @@
 
 namespace million {
 	 
-class MILLION_API CppMsg {
+class MILLION_API CppMessage {
 public:
-	CppMsg() = default;
-    virtual ~CppMsg() = default;
+	CppMessage() = default;
+    virtual ~CppMessage() = default;
 
 	virtual const std::type_info& type() const { return type_static(); };
-	static const std::type_info& type_static() { return typeid(CppMsg); };
+	static const std::type_info& type_static() { return typeid(CppMessage); };
 
     template<typename MsgT>
     MsgT* get() { return static_cast<MsgT*>(this); }
 
-	virtual CppMsg* Copy() const { return new CppMsg(*this); };
+	virtual CppMessage* Copy() const { return new CppMessage(*this); };
 };
 
-using CppMsgUnique = std::unique_ptr<CppMsg>;
-using CppMsgShared = std::shared_ptr<const CppMsg>;
+using CppMessageUnique = std::unique_ptr<CppMessage>;
+using CppMessageShared = std::shared_ptr<const CppMessage>;
 
-template <class MsgT>
-inline constexpr bool is_cpp_msg_v = std::is_base_of_v<CppMsg, MsgT>;
+template <class MessageT>
+inline constexpr bool is_cpp_message_v = std::is_base_of_v<CppMessage, MessageT>;
 
 // 生成一个逗号
 // (由COMMON_IF_NOT_END调用)
@@ -122,8 +122,8 @@ inline constexpr bool is_cpp_msg_v = std::is_base_of_v<CppMsg, MsgT>;
 #define _MILLION_META_FIELD_DATAS(name, ...) META_FOR(_MILLION_DEF_META_FIELD_DATA_IMPL, 0, META_COUNT(__VA_ARGS__), name, __VA_ARGS__)
 
 // 数据定义的主宏
-#define MILLION_MSG_DEFINE(API_, NAME_, ...) \
-    class API_ NAME_ : public ::million::CppMsg { \
+#define MILLION_MESSAGE_DEFINE(API_, NAME_, ...) \
+    class API_ NAME_ : public ::million::CppMessage { \
 	public: \
         NAME_() = delete; \
 		NAME_(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
@@ -131,14 +131,14 @@ inline constexpr bool is_cpp_msg_v = std::is_base_of_v<CppMsg, MsgT>;
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \
-		virtual CppMsg* Copy() const override { return new NAME_(*this); } \
+		virtual CppMessage* Copy() const override { return new NAME_(*this); } \
 		template<size_t index> struct MetaFieldData; \
 		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
 		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
 	};
 
-#define MILLION_MSG_DEFINE_NONCOPYABLE(API_, NAME_, ...) \
-    class API_ NAME_ : public ::million::CppMsg { \
+#define MILLION_MESSAGE_DEFINE_NONCOPYABLE(API_, NAME_, ...) \
+    class API_ NAME_ : public ::million::CppMessage { \
 	public: \
         NAME_() = delete; \
 		NAME_(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
@@ -146,14 +146,14 @@ inline constexpr bool is_cpp_msg_v = std::is_base_of_v<CppMsg, MsgT>;
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \
-		virtual CppMsg* Copy() const override { throw std::runtime_error("Non copy messages."); } \
+		virtual CppMessage* Copy() const override { throw std::runtime_error("Non copy messages."); } \
 		template<size_t index> struct MetaFieldData; \
 		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
 		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
 	};
 
-#define MILLION_MSG_DEFINE_EMPTY(API_, NAME_) \
-    class API_ NAME_ : public ::million::CppMsg { \
+#define MILLION_MESSAGE_DEFINE_EMPTY(API_, NAME_) \
+    class API_ NAME_ : public ::million::CppMessage { \
 	public: \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \
@@ -168,7 +168,7 @@ void ForeachMetaFieldData(T&& obj, Func&& cb) {
 }
 
 template <typename MsgT, typename... Args>
-inline std::unique_ptr<MsgT> make_cpp_msg(Args&&... args) {
+inline std::unique_ptr<MsgT> make_cpp_message(Args&&... args) {
     return std::make_unique<MsgT>(std::forward<Args>(args)...);
 }
 

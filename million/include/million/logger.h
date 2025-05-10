@@ -4,7 +4,7 @@
 #include <format>
 #include <source_location>
 
-#include <million/msg.h>
+#include <million/message.h>
 #include <million/service_handle.h>
 
 namespace million {
@@ -52,8 +52,8 @@ private:
     ServiceHandle logger_svr_handle_;
 };
 
-MILLION_MSG_DEFINE(MILLION_API, LoggerLog, (const std::source_location) source, (Logger::LogLevel) level, (const std::string) msg);
-MILLION_MSG_DEFINE(MILLION_API, LoggerSetLevel, (Logger::LogLevel) new_level);
+MILLION_MESSAGE_DEFINE(MILLION_API, LoggerLog, (const std::source_location) source, (Logger::LogLevel) level, (const std::string) msg);
+MILLION_MESSAGE_DEFINE(MILLION_API, LoggerSetLevel, (Logger::LogLevel) new_level);
 
 #define Trace(fmt, ...) Log(std::source_location::current(), ::million::Logger::LogLevel::kTrace, ::std::format(fmt, __VA_ARGS__))
 #define Debug(fmt, ...) Log(std::source_location::current(), ::million::Logger::LogLevel::kDebug, ::std::format(fmt, __VA_ARGS__))

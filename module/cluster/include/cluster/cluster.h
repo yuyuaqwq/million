@@ -5,7 +5,6 @@
 #include <utility>
 
 #include <million/imillion.h>
-#include <million/msg.h>
 #include <million/net/packet.h>
 
 #include <cluster/api.h>
@@ -17,7 +16,7 @@ constexpr const char* kClusterServiceName = "ClusterService";
 
 using NodeName = std::string;
 
-MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterSend, (ServiceName) src_service, (NodeName) target_node, (ServiceName) target_service, (ProtoMsgUnique) msg)
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterSend, (ServiceName) src_service, (NodeName) target_node, (ServiceName) target_service, (ProtoMessageUnique) msg)
 
 // Cluster.Call返回一个Task<ProtoMsgUnique>，通过co_return 将proto_msg返回回来
 // Cluster.Call内部：

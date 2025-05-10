@@ -3,7 +3,6 @@
 #include <initializer_list>
 
 #include <million/imillion.h>
-#include <million/proto_field_any.h>
 
 #include <config/api.h>
 
@@ -20,7 +19,7 @@ class MILLION_CONFIG_API ConfigTableBase : public noncopyable {
 public:
     
 public:
-    ConfigTableBase(ProtoMsgUnique table, const google::protobuf::Descriptor* config_descriptor)
+    ConfigTableBase(ProtoMessageUnique table, const google::protobuf::Descriptor* config_descriptor)
         : table_(std::move(table))
         , table_field_(nullptr)
     {
@@ -56,7 +55,7 @@ public:
     }
 
 public:
-    const ProtoMsg* FindRow(const std::function<bool(const ProtoMsg& row)>& predicate) {
+    const ProtoMessage* FindRow(const std::function<bool(const ProtoMessage& row)>& predicate) {
         auto reflection = table_->GetReflection();
         size_t row_count = GetRowCount();
 
@@ -70,7 +69,7 @@ public:
         return nullptr;
     }
 
-    const ProtoMsg* GetRowByIndex(size_t idx) {
+    const ProtoMessage* GetRowByIndex(size_t idx) {
         TaskAssert(idx < GetRowCount(), "Access row out of bounds: {}.", table_field_->message_type()->full_name());
 
         auto reflection = table_->GetReflection();
@@ -87,7 +86,7 @@ public:
         return table_->DebugString();
     }
 
-    // Ë÷Òý
+    // ï¿½ï¿½ï¿½ï¿½
     void BuildIndex(int32_t field_number) {
         const auto* row_descriptor = table_field_->message_type();
         const auto* field_desc = row_descriptor->FindFieldByNumber(field_number);
@@ -111,7 +110,7 @@ public:
     }
 
 
-    const ProtoMsg* FindRowByIndex(int32_t field_number, const ProtoFieldAny& key) {
+    const ProtoMessage* FindRowByIndex(int32_t field_number, const ProtoFieldAny& key) {
         auto it = field_index_.find(field_number);
         if (it == field_index_.end()) {
             return nullptr;
@@ -126,14 +125,14 @@ public:
         return GetRowByIndex(entry->second);
     }
 
-    // ×éºÏË÷Òý
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void BuildCompositeIndex(std::initializer_list<int32_t> field_numbers) {
         CompositeIndex index;
         auto reflection = table_->GetReflection();
         size_t row_count = GetRowCount();
         const auto* row_descriptor = table_field_->message_type();
 
-        // ÑéÖ¤ËùÓÐ×Ö¶Î¶¼´æÔÚ
+        // ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î¶ï¿½ï¿½ï¿½ï¿½ï¿½
         std::vector<const google::protobuf::FieldDescriptor*> field_descriptors;
         for (auto field_number : field_numbers) {
             const auto* field_desc = row_descriptor->FindFieldByNumber(field_number);
@@ -141,7 +140,7 @@ public:
             field_descriptors.push_back(field_desc);
         }
 
-        // ¹¹½¨Ë÷Òý
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         for (size_t i = 0; i < row_count; ++i) {
             const auto& row = reflection->GetRepeatedMessage(*table_, table_field_, i);
             CompositeProtoFieldAny composite_key;
@@ -155,13 +154,13 @@ public:
             TaskAssert(inserted, "Duplicate composite key found when building index");
         }
 
-        // ´æ´¢Ë÷Òý£¬Ê¹ÓÃ×Ö¶ÎºÅµÄ×éºÏ×÷Îªkey
+        // ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½Ö¶ÎºÅµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªkey
         auto field_numbers_vec = std::vector<int32_t>(field_numbers);
         composite_indices_.emplace(std::move(field_numbers_vec), std::move(index));
     }
 
     template <typename... Args>
-    const ProtoMsg* FindRowByCompositeIndex(std::initializer_list<int32_t> field_numbers, Args&&... args) {
+    const ProtoMessage* FindRowByCompositeIndex(std::initializer_list<int32_t> field_numbers, Args&&... args) {
         static_assert(sizeof...(Args) > 1, "Composite index requires at least 2 fields");
 
         auto it = composite_indices_.find(field_numbers);
@@ -185,13 +184,13 @@ private:
 
 
 private:
-    ProtoMsgUnique table_;
+    ProtoMessageUnique table_;
     const google::protobuf::FieldDescriptor* table_field_;
 
-    // ×Ö¶ÎË÷Òý
+    // ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½
     std::unordered_map<int32_t, Index> field_index_;
 
-    // ×éºÏË÷Òý
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     struct VectorIntHash {
         size_t operator()(const std::vector<int32_t>& vec) const {
             size_t seed = vec.size();
@@ -223,7 +222,7 @@ public:
 
 public:
     const ConfigMsgT* FindRow(const std::function<bool(const ConfigMsgT&)>& predicate) {
-        return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRow([predicate](const ProtoMsg& row) -> bool {
+        return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRow([predicate](const ProtoMessage& row) -> bool {
             return predicate(static_cast<const ConfigMsgT&>(row));
         }));
     }

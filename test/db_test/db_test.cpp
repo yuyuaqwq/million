@@ -15,7 +15,7 @@ MILLION_MODULE_INIT();
 namespace protobuf = google::protobuf;
 namespace db = million::db;
 
-MILLION_MSG_DEFINE_EMPTY(, Test1Msg)
+MILLION_MESSAGE_DEFINE_EMPTY(, Test1Msg)
 
 class TestService : public million::IService {
     MILLION_SERVICE_DEFINE(TestService);
@@ -44,10 +44,10 @@ public:
         return true;
     }
 
-    virtual million::Task<million::MsgPtr> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id, million::MsgPtr with_msg) override {
+    virtual million::Task<million::MessagePointer> OnStart(::million::ServiceHandle sender, ::million::SessionId session_id, million::MessagePointer with_msg) override {
         auto init_resp = co_await Call<db::SqlTableInitReq>(sql_service_, *million::db::example::User::GetDescriptor());
         
-        auto user = million::make_proto_msg<million::db::example::User>();
+        auto user = million::make_proto_message<million::db::example::User>();
         user->set_id(100);
         user->set_password_hash("sadawd");
         user->set_is_active(true);
@@ -73,7 +73,7 @@ public:
     }
 
 
-    MILLION_MSG_HANDLE(Test1Msg, msg) {
+    MILLION_MESSAGE_HANDLE(Test1Msg, msg) {
         std::printf("?? ");
         //auto msg2 = std::make_unique<Test1Msg>();
         //Timeout(100, std::move(msg2));

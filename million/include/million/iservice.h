@@ -8,7 +8,7 @@
 #include <million/api.h>
 #include <million/noncopyable.h>
 #include <million/session_def.h>
-#include <million/msg.h>
+#include <million/message.h>
 #include <million/service_handle.h>
 #include <million/service_lock.h>
 #include <million/task.h>
@@ -18,10 +18,10 @@ namespace million {
 
 using ServiceTypeKey = std::type_index;
 
-template <typename MsgT, typename ServiceT>
+template <typename MessageT, typename ServiceT>
 class AutoRegisterMsgHandler {
 public:
-    using OnHandlePtr = Task<MsgPtr>(ServiceT::*)(const ServiceHandle&, SessionId, MsgPtr, MsgT*);
+    using OnHandlePtr = Task<MessagePointer>(ServiceT::*)(const ServiceHandle&, SessionId, MessagePointer, MessageT*);
 
     AutoRegisterMsgHandler() {
         handler_ = &ServiceT::OnHandle;
@@ -44,22 +44,22 @@ public:
     virtual ~IService() = default;
 
 public:
-    std::optional<SessionId> Send(const ServiceHandle& target, MsgPtr msg);
+    std::optional<SessionId> Send(const ServiceHandle& target, MessagePointer msg);
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> Send(const ServiceHandle& target, Args&&... args) {
-        return Send(target, make_msg<MsgT>(std::forward<Args>(args)...));
+        return Send(target, make_message<MsgT>(std::forward<Args>(args)...));
     }
 
-    bool SendTo(const ServiceHandle& target, SessionId session_id, MsgPtr msg);
+    bool SendTo(const ServiceHandle& target, SessionId session_id, MessagePointer msg);
     template <typename MsgT, typename ...Args>
     bool SendTo(const ServiceHandle& target, SessionId session_id, Args&&... args) {
-        return SendTo(target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
+        return SendTo(target, session_id, make_message<MsgT>(std::forward<Args>(args)...));
     }
 
-    bool Reply(const ServiceHandle& target, SessionId session_id, MsgPtr msg);
+    bool Reply(const ServiceHandle& target, SessionId session_id, MessagePointer msg);
     template <typename MsgT, typename ...Args>
     bool Reply(const ServiceHandle& target, SessionId session_id, Args&&... args) {
-        return Reply(target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
+        return Reply(target, session_id, make_message<MsgT>(std::forward<Args>(args)...));
     }
 
     SessionAwaiterBase Recv(SessionId session_id) {
@@ -141,7 +141,7 @@ public:
         return RecvOrNullWithTimeout(session_id.value(), timeout_s);
     }
 
-    void Timeout(uint32_t tick, MsgPtr msg);
+    void Timeout(uint32_t tick, MessagePointer msg);
     template <typename MsgT, typename ...Args>
     void Timeout(uint32_t tick, Args&&... args) {
         Timeout(tick, std::make_unique<MsgT>(std::forward<Args>(args)...));
@@ -154,15 +154,15 @@ public:
 
 protected:
     virtual bool OnInit() { return true; }
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) { co_return nullptr; }
-    virtual Task<MsgPtr> OnMsg(ServiceHandle sender, SessionId session_id, MsgPtr msg) { co_return co_await MsgDispatch(std::move(sender), session_id, std::move(msg)); }
-    virtual Task<MsgPtr> OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) { co_return nullptr; }
+    virtual Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) { co_return nullptr; }
+    virtual Task<MessagePointer> OnMsg(ServiceHandle sender, SessionId session_id, MessagePointer msg) { co_return co_await MessageDispatch(std::move(sender), session_id, std::move(msg)); }
+    virtual Task<MessagePointer> OnStop(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) { co_return nullptr; }
     virtual void OnExit() { }
 
 
     virtual ServiceTypeKey GetTypeKey() = 0;
 
-    Task<MsgPtr> MsgDispatch(ServiceHandle sender, SessionId session_id, MsgPtr msg) {
+    Task<MessagePointer> MessageDispatch(ServiceHandle sender, SessionId session_id, MessagePointer msg) {
         auto service_type_key = GetTypeKey();
         auto msg_type_key = msg.GetTypeKey();
         auto it = msg_handlers_.find({service_type_key, msg_type_key});
@@ -173,23 +173,23 @@ protected:
     }
 
     template <typename MsgT, typename ServiceT>
-    static void BindMsgHandler(Task<MsgPtr>(ServiceT::* handler)(const ServiceHandle&, SessionId, MsgPtr, MsgT*)) {
-        msg_handlers_[{ typeid(ServiceT), GetMsgTypeKey<MsgT>() }] = [handler](IService* iservice, ServiceHandle sender, SessionId session_id, MsgPtr msg_ptr) -> Task<MsgPtr> {
+    static void BindMsgHandler(Task<MessagePointer>(ServiceT::* handler)(const ServiceHandle&, SessionId, MessagePointer, MsgT*)) {
+        msg_handlers_[{ typeid(ServiceT), GetMessageTypeKey<MsgT>() }] = [handler](IService* iservice, ServiceHandle sender, SessionId session_id, MessagePointer msg_ptr) -> Task<MessagePointer> {
             ServiceT* service = static_cast<ServiceT*>(iservice);
             if constexpr (std::is_const_v<std::remove_pointer_t<MsgT>>) {
-                auto* msg = msg_ptr.GetMsg<MsgT>();
+                auto* msg = msg_ptr.GetMessage<MsgT>();
                 co_return co_await (service->*handler)(std::move(sender), session_id, std::move(msg_ptr), msg);
             }
             else {
-                auto* msg = msg_ptr.GetMutMsg<MsgT>();
+                auto* msg = msg_ptr.GetMutableMessage<MsgT>();
                 co_return co_await (service->*handler)(std::move(sender), session_id, std::move(msg_ptr), msg);
             }
         };
     }
 
     template <typename MsgT, typename ServiceT>
-    static void RemoveMsgHandler(Task<MsgPtr>(ServiceT::* handler)(const ServiceHandle&, SessionId, MsgPtr, MsgT*)) {
-        msg_handlers_.erase({ typeid(ServiceT), GetMsgTypeKey<MsgT>() });
+    static void RemoveMsgHandler(Task<MessagePointer>(ServiceT::* handler)(const ServiceHandle&, SessionId, MessagePointer, MsgT*)) {
+        msg_handlers_.erase({ typeid(ServiceT), GetMessageTypeKey<MsgT>() });
     }
 
     //template <typename MsgT, typename ServiceT>
@@ -216,7 +216,7 @@ private:
 
     struct TypeIndexPair {
         ServiceTypeKey service_type_key;
-        MsgTypeKey msg_type_key;
+        MessageTypeKey msg_type_key;
 
         bool operator==(const TypeIndexPair& other) const {
             return service_type_key == other.service_type_key && msg_type_key == other.msg_type_key;
@@ -230,7 +230,7 @@ private:
     };
 
     using MsgHandlerMap = std::unordered_map<TypeIndexPair
-        , std::function<Task<MsgPtr>(IService*, ServiceHandle, SessionId, MsgPtr)>
+        , std::function<Task<MessagePointer>(IService*, ServiceHandle, SessionId, MessagePointer)>
         , TypeIndexPairHash>;
 
     static inline MsgHandlerMap msg_handlers_;
@@ -266,8 +266,8 @@ private:
 #define MILLION_PRIMITIVE_CAT(A_, B_) A_##B_
 #define MILLION_CAT(NAME_, LINE_) MILLION_PRIMITIVE_CAT(NAME_, LINE_)
 
-#define MILLION_MSG_HANDLE(MSG_TYPE_, MSG_NAME_) \
+#define MILLION_MESSAGE_HANDLE(MSG_TYPE_, MSG_NAME_) \
     static inline auto MILLION_CAT(MILLION_CAT(on_handle_, __LINE__), _) = ::million::AutoRegisterMsgHandler<MSG_TYPE_, SELF_CLASS_>(); \
-    ::million::Task<::million::MsgPtr> OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MsgPtr msg_, MSG_TYPE_* MSG_NAME_)
+    ::million::Task<::million::MessagePointer> OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MessagePointer msg_, MSG_TYPE_* MSG_NAME_)
 
 } // namespace million

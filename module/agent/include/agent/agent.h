@@ -1,5 +1,3 @@
-#include <million/api.h>
-
 #include <million/imillion.h>
 
 #include <gateway/gateway.h>
@@ -12,11 +10,11 @@ namespace agent {
 constexpr const char* kAgentServiceName = "AgentService";
 constexpr const char* kAgentMgrServiceName = "AgentMgrService";
 
-MILLION_MSG_DEFINE(MILLION_AGENT_API, NewAgentReq, (SessionId) user_session_id);
-MILLION_MSG_DEFINE(MILLION_AGENT_API, NewAgentResp, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MESSAGE_DEFINE(MILLION_AGENT_API, NewAgentReq, (SessionId) user_session_id);
+MILLION_MESSAGE_DEFINE(MILLION_AGENT_API, NewAgentResp, (std::optional<ServiceHandle>) agent_handle);
 
 class AgentService;
-using AgentLogicHandleFunc = Task<MsgPtr>(*)(AgentService* agent, MsgPtr msg_ptr);
+using AgentLogicHandleFunc = Task<MessagePointer>(*)(AgentService* agent, MessagePointer msg_ptr);
 
 class MILLION_AGENT_API AgentLogicHandler {
 public:
@@ -44,7 +42,7 @@ public:
         });
     }
 
-    void RegisterLogicHandle(MsgTypeKey msg_type_key, AgentLogicHandleFunc handle) {
+    void RegisterLogicHandle(MessageTypeKey msg_type_key, AgentLogicHandleFunc handle) {
         logic_init_queue_.emplace_back([this, msg_type_key, handle] {
             auto res = logic_handle_map_.emplace(msg_type_key, handle);
             if (!res.second) {
@@ -54,7 +52,7 @@ public:
         });
     }
 
-    std::optional<AgentLogicHandleFunc> GetLogicHandle(MsgTypeKey msg_type_key) {
+    std::optional<AgentLogicHandleFunc> GetLogicHandle(MessageTypeKey msg_type_key) {
         auto iter = logic_handle_map_.find(msg_type_key);
         if (iter == logic_handle_map_.end()) {
             return std::nullopt;
@@ -67,12 +65,12 @@ private:
 
     IMillion* imillion_;
 
-    std::unordered_map<MsgTypeKey, AgentLogicHandleFunc> logic_handle_map_;
+    std::unordered_map<MessageTypeKey, AgentLogicHandleFunc> logic_handle_map_;
     std::vector<std::function<void()>> logic_init_queue_;
 };
 
-MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginReq, (SessionId) agent_id);
-MILLION_MSG_DEFINE(MILLION_AGENT_API, AgentMgrLoginResp, (std::optional<ServiceHandle>) agent_handle);
+MILLION_MESSAGE_DEFINE(MILLION_AGENT_API, AgentMgrLoginReq, (SessionId) agent_id);
+MILLION_MESSAGE_DEFINE(MILLION_AGENT_API, AgentMgrLoginResp, (std::optional<ServiceHandle>) agent_handle);
 
 
 class MILLION_AGENT_API AgentService : public IService {
@@ -83,8 +81,8 @@ public:
         , agent_id_(agent_id) {}
 
 private:
-    virtual Task<MsgPtr> OnMsg(ServiceHandle sender, SessionId session_id, MsgPtr msg) override {
-        if (!msg.IsProtoMsg()) {
+    virtual Task<MessagePointer> OnMsg(ServiceHandle sender, SessionId session_id, MessagePointer msg) override {
+        if (!msg.IsProtoMessage()) {
             co_return nullptr;
         }
         auto func = AgentLogicHandler::Instance().GetLogicHandle(msg.GetTypeKey());
@@ -96,7 +94,7 @@ private:
     }
 
 public:
-    void SendToClient(ProtoMsgUnique proto_msg) {
+    void SendToClient(ProtoMessageUnique proto_msg) {
         Reply(gateway_, agent_id_, std::move(proto_msg));
     }
 
@@ -115,8 +113,8 @@ private:
         }() \
 
 #define MILLION_AGENT_LOGIC_HANDLE(AGENT_SERVICE_TYPE_, AGENT_SERVICE_NAME_, MSG_TYPE_, MSG_PTR_NAME_) \
-    ::million::Task<::million::MsgPtr> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(AGENT_SERVICE_TYPE_* AGENT_SERVICE_NAME_, ::million::MsgPtr msg_, const MSG_TYPE_* msg); \
-    ::million::Task<::million::MsgPtr> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::agent::AgentService* agent, ::million::MsgPtr msg_) { \
+    ::million::Task<::million::MessagePointer> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(AGENT_SERVICE_TYPE_* AGENT_SERVICE_NAME_, ::million::MessagePointer msg_, const MSG_TYPE_* msg); \
+    ::million::Task<::million::MessagePointer> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I(::million::agent::AgentService* agent, ::million::MessagePointer msg_) { \
         auto msg = msg_.GetMsg<MSG_TYPE_>(); \
         return _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(static_cast<AGENT_SERVICE_TYPE_*>(agent), std::move(msg_), msg); \
     } \
@@ -126,7 +124,7 @@ private:
                 _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_I); \
             return true; \
         }(); \
-    ::million::Task<::million::MsgPtr> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(AGENT_SERVICE_TYPE_* agent, ::million::MsgPtr msg_ptr, const MSG_TYPE_* MSG_PTR_NAME_)
+    ::million::Task<::million::MessagePointer> _MILLION_AGENT_LOGIC_HANDLE_##MSG_TYPE_##_II(AGENT_SERVICE_TYPE_* agent, ::million::MessagePointer msg_ptr, const MSG_TYPE_* MSG_PTR_NAME_)
 
 
 } // namespace agent

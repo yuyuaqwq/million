@@ -13,16 +13,16 @@ class MILLION_API EventMgr : noncopyable {
 public:
 	EventMgr(IMillion* imillion);
 
-	void Subscribe(MsgTypeKey key, const ServiceHandle& subscriber, uint32_t priority = 0);
-	bool Unsubscribe(MsgTypeKey key, const ServiceHandle& subscriber);
+	void Subscribe(MessageTypeKey key, const ServiceHandle& subscriber, uint32_t priority = 0);
+	bool Unsubscribe(MessageTypeKey key, const ServiceHandle& subscriber);
 
-	void Send(const ServiceHandle& sender, MsgPtr msg);
-	Task<> Call(const ServiceHandle& caller, MsgPtr msg, std::function<bool(MsgPtr)> res_handle);
+	void Send(const ServiceHandle& sender, MessagePointer msg);
+	Task<> Call(const ServiceHandle& caller, MessagePointer msg, std::function<bool(MessagePointer)> res_handle);
 
 private:
 	IMillion* imillion_;
 	using EventMap = std::multimap<uint32_t, ServiceHandle, std::greater<uint32_t>>;
-	std::unordered_map<MsgTypeKey, EventMap> services_;
+	std::unordered_map<MessageTypeKey, EventMap> services_;
 };
 
 } // namespace million

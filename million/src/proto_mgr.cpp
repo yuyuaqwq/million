@@ -49,10 +49,10 @@ const google::protobuf::Message* ProtoMgr::GetPrototype(const google::protobuf::
     return msg_factory().GetPrototype(&desc);
 }
 
-ProtoMsgUnique ProtoMgr::NewMessage(const google::protobuf::Descriptor& desc) const {
+ProtoMessageUnique ProtoMgr::NewMessage(const google::protobuf::Descriptor& desc) const {
     auto prototype = GetPrototype(desc);
     if (!prototype) return nullptr;
-    return ProtoMsgUnique(prototype->New());
+    return ProtoMessageUnique(prototype->New());
 }
 
 } // namespace million

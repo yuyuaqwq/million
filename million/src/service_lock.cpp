@@ -5,7 +5,7 @@
 
 namespace million {
 
-MILLION_MSG_DEFINE_EMPTY(, ServiceLockMsg);
+MILLION_MESSAGE_DEFINE_EMPTY(, ServiceLockMsg);
 
 ServiceLock::ServiceLock(IService* iservice)
 	: iservice_(iservice)

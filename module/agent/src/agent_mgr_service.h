@@ -24,7 +24,7 @@ public:
         return true;
     }
 
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+    virtual Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         auto handle = imillion().GetServiceByName("NodeMgrService");
         TaskAssert(handle, "NodeMgrService not found.");
         
@@ -37,13 +37,13 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(AgentMgrLoginReq, msg) {
+    MILLION_MESSAGE_HANDLE(AgentMgrLoginReq, msg) {
         auto new_resp = co_await Call<NewAgentReq, NewAgentResp>(node_mgr_, msg->agent_id);
         if (!new_resp->agent_handle) {
             TaskAbort("New agent failed.");
         }
         Reply<gateway::GatewaySureAgent>(gateway_, msg->agent_id, *new_resp->agent_handle);
-        co_return make_msg<AgentMgrLoginResp>(std::move(new_resp->agent_handle));
+        co_return make_message<AgentMgrLoginResp>(std::move(new_resp->agent_handle));
     }
 
 private:

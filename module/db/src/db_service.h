@@ -10,7 +10,6 @@
 #include <google/protobuf/compiler/importer.h>
 
 #include <million/imillion.h>
-#include <million/msg.h>
 
 #include <db/db.h>
 #include <db/cache.h>
@@ -48,7 +47,7 @@ private:
     int primary_key_field_number_;
 };
 
-MILLION_MSG_DEFINE(, DBRowTickSync, (int32_t) sync_tick, (DBRowCache*) cache);
+MILLION_MESSAGE_DEFINE(, DBRowTickSync, (int32_t) sync_tick, (DBRowCache*) cache);
 
 class DBService : public IService {
     MILLION_SERVICE_DEFINE(DBService);
@@ -80,7 +79,7 @@ public:
         return true;
     }
 
-    MILLION_MSG_HANDLE(DBRowTickSync, msg) {
+    MILLION_MESSAGE_HANDLE(DBRowTickSync, msg) {
         if (msg->cache->db_row.db_version() > msg->cache->sql_db_version) {
             // co_await期间可能会有新的DbRowUpdateMsg消息被处理，这里复制过来再回写
             // 可以考虑优化成移动
@@ -107,22 +106,22 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(DBRowCreateReq, msg) {
+    MILLION_MESSAGE_HANDLE(DBRowCreateReq, msg) {
         auto res = co_await Call<SqlInsertReq, SqlInsertResp>(sql_service_, DBRow(std::move(msg->row_msg)), false);
-        co_return make_msg<DBRowCreateResp>(res->success);
+        co_return make_message<DBRowCreateResp>(res->success);
     }
 
-    MILLION_MSG_HANDLE(DBRowQueryReq, msg) {
+    MILLION_MESSAGE_HANDLE(DBRowQueryReq, msg) {
         auto db_row = co_await QueryDBRow(msg->table_desc, msg->key_field_number, std::move(msg->key), true);
-        co_return make_msg<DBRowQueryResp>(std::move(db_row));
+        co_return make_message<DBRowQueryResp>(std::move(db_row));
     }
 
-    MILLION_MSG_HANDLE(DBRowLoadReq, msg) {
+    MILLION_MESSAGE_HANDLE(DBRowLoadReq, msg) {
         auto db_row = co_await QueryDBRow(msg->table_desc, msg->key_field_number, std::move(msg->key), true);
-        co_return make_msg<DBRowLoadResp>(std::move(db_row));
+        co_return make_message<DBRowLoadResp>(std::move(db_row));
     }
 
-    MILLION_MSG_HANDLE(DBRowUpdateReq, msg) {
+    MILLION_MESSAGE_HANDLE(DBRowUpdateReq, msg) {
         auto db_row = msg->db_row;
         const auto& desc = db_row.GetDescriptor();
         const auto& reflection = db_row.GetReflection();
@@ -165,7 +164,7 @@ public:
 
         row_iter->second.db_row = std::move(msg->db_row);
 
-        co_return make_msg<DBRowUpdateResp>();
+        co_return make_message<DBRowUpdateResp>();
     }
 
 private:

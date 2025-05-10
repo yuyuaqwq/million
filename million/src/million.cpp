@@ -237,11 +237,11 @@ std::optional<ServiceShared> Million::AddService(std::unique_ptr<IService> iserv
 }
 
 
-std::optional<SessionId> Million::StartService(const ServiceShared& service, MsgPtr with_msg) {
+std::optional<SessionId> Million::StartService(const ServiceShared& service, MessagePointer with_msg) {
     return service_mgr_->StartService(service, std::move(with_msg));
 }
 
-std::optional<SessionId> Million::StopService(const ServiceShared& service, MsgPtr with_msg) {
+std::optional<SessionId> Million::StopService(const ServiceShared& service, MessagePointer with_msg) {
     return service_mgr_->StopService(service, std::move(with_msg));
 }
 
@@ -260,11 +260,11 @@ SessionId Million::NewSession() {
 }
 
 
-bool Million::SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgPtr msg) {
+bool Million::SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MessagePointer msg) {
     return service_mgr_->Send(sender, target, session_id, std::move(msg));
 }
 
-std::optional<SessionId> Million::Send(const ServiceShared& sender, const ServiceShared& target, MsgPtr msg) {
+std::optional<SessionId> Million::Send(const ServiceShared& sender, const ServiceShared& target, MessagePointer msg) {
     auto session_id = session_mgr_->NewSession();
     if (SendTo(sender, target, session_id, std::move(msg))) {
         return session_id;
@@ -277,7 +277,7 @@ const YAML::Node& Million::YamlSettings() const {
     return *settings_;
 }
 
-void Million::Timeout(uint32_t tick, const ServiceShared& service, MsgPtr msg) {
+void Million::Timeout(uint32_t tick, const ServiceShared& service, MessagePointer msg) {
     timer_->AddTask(tick, service, std::move(msg));
 }
 

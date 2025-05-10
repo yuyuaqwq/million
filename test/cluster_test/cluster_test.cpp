@@ -11,7 +11,7 @@
 namespace ss = million::ss;
 namespace protobuf = google::protobuf;
 
-MILLION_MSG_DEFINE_NONCOPYABLE(, TestMsg, (million::cluster::NodeName) target_node, (million::ProtoMsgUnique) req);
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(, TestMsg, (million::cluster::NodeName) target_node, (million::ProtoMessageUnique) req);
 
 class TestService : public million::IService {
     MILLION_SERVICE_DEFINE(TestService);
@@ -39,19 +39,19 @@ public:
         return true;
     }
 
-    MILLION_MSG_HANDLE(ss::test::LoginReq, req) {
+    MILLION_MESSAGE_HANDLE(ss::test::LoginReq, req) {
         logger().Info("ss::test::LoginReq, value:{}", req->value());
 
         // 回复LoginRes
-        co_return million::make_proto_msg<ss::test::LoginRes>("LoginRes res");
+        co_return million::make_proto_message<ss::test::LoginRes>("LoginRes res");
     }
 
-    MILLION_MSG_HANDLE(ss::test::LoginRes, res) {
+    MILLION_MESSAGE_HANDLE(ss::test::LoginRes, res) {
         logger().Info("ss::test::LoginRes, value:{}", res->value());
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(TestMsg, msg) {
+    MILLION_MESSAGE_HANDLE(TestMsg, msg) {
         Send<million::cluster::ClusterSend>(cluster_
             , "TestService", msg->target_node, "TestService"
             , std::move(msg->req));
@@ -86,7 +86,7 @@ int main() {
 
     getchar();
 
-    auto req = million::make_proto_msg<ss::test::LoginReq>("LoginReq req");
+    auto req = million::make_proto_message<ss::test::LoginReq>("LoginReq req");
 
     const auto& settings = test_app->YamlSettings();
     if (settings["cluster"]["name"].as<std::string>() == "node1") {

@@ -87,24 +87,24 @@ public:
         return true;
     }
 
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+    virtual Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         logger().BindService(service_handle());
         co_return nullptr;
     }
 
-    virtual Task<MsgPtr> OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+    virtual Task<MessagePointer> OnStop(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         logger_->flush();
         co_return nullptr;
     }
 
 
-    MILLION_MSG_HANDLE(LoggerLog, msg) {
+    MILLION_MESSAGE_HANDLE(LoggerLog, msg) {
         auto level = static_cast<spdlog::level::level_enum>(msg->level);
         logger_->log(spdlog::source_loc(msg->source.file_name(), msg->source.line(), msg->source.function_name()), level, msg->msg);
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(LoggerSetLevel, msg) {
+    MILLION_MESSAGE_HANDLE(LoggerSetLevel, msg) {
         auto new_level = static_cast<spdlog::level::level_enum>(msg->new_level);
         logger_->set_level(new_level);
         co_return nullptr;

@@ -8,7 +8,7 @@
 #include <million/noncopyable.h>
 #include <million/service_handle.h>
 #include <million/session_def.h>
-#include <million/msg.h>
+#include <million/message.h>
 
 #include "internal/wheel_timer.hpp"
 #include "internal/heap_timer.hpp"
@@ -24,14 +24,14 @@ public:
     void Start();
     void Stop();
 
-    void AddTask(uint32_t tick, const ServiceShared& service, MsgPtr msg);
+    void AddTask(uint32_t tick, const ServiceShared& service, MessagePointer msg);
 
 private:
     Million* million_;
     std::optional<std::jthread> thread_;
     struct TimedMsg {
         ServiceShared service;
-        MsgPtr msg;
+        MessagePointer msg;
     };
     internal::HeapTimer<TimedMsg> tasks_;
     //internal::WheelTimer<TimedMsg> tasks_;

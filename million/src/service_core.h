@@ -10,7 +10,7 @@
 #include <million/noncopyable.h>
 #include <million/iservice.h>
 #include <million/service_handle.h>
-#include <million/msg.h>
+#include <million/message.h>
 
 #include "task_executor.h"
 
@@ -22,14 +22,14 @@ public:
     struct MsgElement{
         ServiceShared sender;
         SessionId session_id;
-        MsgPtr msg;
+        MessagePointer msg;
     };
 
 public:
     ServiceCore(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
     ~ServiceCore();
 
-    bool PushMsg(const ServiceShared& sender, SessionId session_id, MsgPtr msg);
+    bool PushMsg(const ServiceShared& sender, SessionId session_id, MessagePointer msg);
     std::optional<MsgElement> PopMsg();
     bool MsgQueueIsEmpty();
 
@@ -53,8 +53,8 @@ public:
 
     IService& iservice() const { assert(iservice_); return *iservice_; }
 
-    std::optional<SessionId> Start(MsgPtr msg);
-    std::optional<SessionId> Stop(MsgPtr msg);
+    std::optional<SessionId> Start(MessagePointer msg);
+    std::optional<SessionId> Stop(MessagePointer msg);
     std::optional<SessionId> Exit();
 
     bool IsReady() const;

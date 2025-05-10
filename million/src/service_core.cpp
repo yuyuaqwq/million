@@ -18,7 +18,7 @@ ServiceCore::ServiceCore(ServiceMgr* service_mgr, std::unique_ptr<IService> iser
 ServiceCore::~ServiceCore() = default;
 
 
-bool ServiceCore::PushMsg(const ServiceShared& sender, SessionId session_id, MsgPtr msg) {
+bool ServiceCore::PushMsg(const ServiceShared& sender, SessionId session_id, MessagePointer msg) {
     assert(msg);
     {
         auto lock = std::lock_guard(msgs_mutex_);
@@ -59,7 +59,7 @@ void ServiceCore::ProcessMsg(MsgElement ele) {
             service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
             return;
         }
-        auto start_msg = msg.GetMutMsg<ServiceStartMsg>();
+        auto start_msg = msg.GetMutableMessage<ServiceStartMsg>();
         if (!start_msg) {
             service_mgr_->million().logger().Err("Get service start msg err.");
             return;
@@ -83,7 +83,7 @@ void ServiceCore::ProcessMsg(MsgElement ele) {
             service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
             return;
         }
-        auto stop_msg = msg.GetMutMsg<ServiceStopMsg>();
+        auto stop_msg = msg.GetMutableMessage<ServiceStopMsg>();
         if (!stop_msg) {
             service_mgr_->million().logger().Err("Get service stop msg err.");
             return;
@@ -121,7 +121,7 @@ void ServiceCore::ProcessMsg(MsgElement ele) {
 
     // Starting/Stop 都允许处理已有协程的超时
     if (msg.IsType<SessionTimeoutMsg>()) {
-        auto msg_ptr = msg.GetMsg<SessionTimeoutMsg>();
+        auto msg_ptr = msg.GetMessage<SessionTimeoutMsg>();
         auto&& [task, has_exception] = excutor_.TaskTimeout(msg_ptr->timeout_id);
         if (IsStarting() || IsStopping() || has_exception) {
             // 异常退出的OnStart/OnStop，默认回收当前服务
@@ -274,11 +274,11 @@ void ServiceCore::ReplyMsg(TaskElement* ele) {
 }
 
 
-std::optional<SessionId> ServiceCore::Start(MsgPtr msg) {
+std::optional<SessionId> ServiceCore::Start(MessagePointer msg) {
     return iservice_->Send<ServiceStartMsg>(iservice_->service_handle(), std::move(msg));
 }
 
-std::optional<SessionId> ServiceCore::Stop(MsgPtr msg) {
+std::optional<SessionId> ServiceCore::Stop(MessagePointer msg) {
     return iservice_->Send<ServiceStopMsg>(iservice_->service_handle(), std::move(msg));
 }
 

@@ -2,7 +2,7 @@
 
 #include <million/noncopyable.h>
 #include <million/exception.h>
-#include <million/msg.h>
+#include <million/message.h>
 #include <million/net/packet.h>
 
 namespace million {
@@ -27,7 +27,7 @@ public:
     struct DecodeRes {
         MsgId msg_id;
         SubMsgId sub_msg_id;
-        ProtoMsgUnique msg;
+        ProtoMessageUnique msg;
     };
     std::optional<DecodeRes> DecodeMessage(net::PacketSpan packet) const;
 
@@ -38,7 +38,7 @@ private:
     const protobuf::Descriptor* GetMsgDesc(MsgId msg_id, SubMsgId sub_msg_id) const;
     std::optional<MsgKey> GetMsgKey(const protobuf::Descriptor* desc) const;
 
-    std::optional<ProtoMsgUnique> NewMessage(MsgId msg_id, SubMsgId sub_msg_id) const;
+    std::optional<ProtoMessageUnique> NewMessage(MsgId msg_id, SubMsgId sub_msg_id) const;
 
     uint16_t host_to_network_short(uint16_t value) const;
     uint16_t network_to_host_short(uint16_t value) const;

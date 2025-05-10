@@ -5,7 +5,7 @@
 #include <million/api.h>
 #include <million/exception.h>
 #include <million/noncopyable.h>
-#include <million/msg.h>
+#include <million/message.h>
 #include <million/iservice.h>
 #include <million/logger.h>
 #include <million/proto_mgr.h>
@@ -52,13 +52,13 @@ public:
         return AddService(std::move(iservice));
     }
 
-    std::optional<SessionId> StartService(const ServiceHandle& service, MsgPtr with_msg);
+    std::optional<SessionId> StartService(const ServiceHandle& service, MessagePointer with_msg);
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> StartService(const ServiceHandle& service, Args&&... args) {
         return StartService(service, make_msg<MsgT>(std::forward<Args>(args)...));
     }
 
-    std::optional<SessionId> StopService(const ServiceHandle& service, MsgPtr with_msg);
+    std::optional<SessionId> StopService(const ServiceHandle& service, MessagePointer with_msg);
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> StopService(const ServiceHandle& service, Args&&... args) {
         return StopService(service, make_msg<MsgT>(std::forward<Args>(args)...));
@@ -80,16 +80,16 @@ public:
 
     SessionId NewSession();
 
-    std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, MsgPtr msg);
+    std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, MessagePointer msg);
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
-        return Send(sender, target, make_msg<MsgT>(std::forward<Args>(args)...));
+        return Send(sender, target, make_message<MsgT>(std::forward<Args>(args)...));
     }
 
-    bool SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MsgPtr msg);
+    bool SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MessagePointer msg);
     template <typename MsgT, typename ...Args>
     bool SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, Args&&... args) {
-        return SendTo(sender, target, session_id, make_msg<MsgT>(std::forward<Args>(args)...));
+        return SendTo(sender, target, session_id, make_message<MsgT>(std::forward<Args>(args)...));
     }
 
     template <typename MsgT>
@@ -114,10 +114,10 @@ public:
         return SessionAwaiter<MsgT>(session_id, timeout_s, true);
     }
 
-    bool Timeout(uint32_t tick, const ServiceHandle& service, MsgPtr msg);
+    bool Timeout(uint32_t tick, const ServiceHandle& service, MessagePointer msg);
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> Timeout(uint32_t tick, const ServiceHandle& service, Args&&... args) {
-        return Timeout(tick, service, make_msg<MsgT>(std::forward<Args>(args)...));
+        return Timeout(tick, service, make_message<MsgT>(std::forward<Args>(args)...));
     }
 
     void EnableSeparateWorker(const ServiceHandle& service);
@@ -141,19 +141,19 @@ private:
     Million* impl_;
 };
 
-inline std::optional<SessionId> IService::Send(const ServiceHandle& target, MsgPtr msg) {
+inline std::optional<SessionId> IService::Send(const ServiceHandle& target, MessagePointer msg) {
     return imillion_->Send(service_handle_, target, std::move(msg));
 }
 
-inline bool IService::SendTo(const ServiceHandle& target, SessionId session_id, MsgPtr msg) {
+inline bool IService::SendTo(const ServiceHandle& target, SessionId session_id, MessagePointer msg) {
     return imillion_->SendTo(service_handle_, target, session_id, std::move(msg)) != kSessionIdInvalid;
 }
 
-inline bool IService::Reply(const ServiceHandle& target, SessionId session_id, MsgPtr msg) {
+inline bool IService::Reply(const ServiceHandle& target, SessionId session_id, MessagePointer msg) {
     return imillion_->SendTo(service_handle_, target, SessionSendToReplyId(session_id), std::move(msg)) != kSessionIdInvalid;
 }
 
-inline void IService::Timeout(uint32_t tick, MsgPtr msg) {
+inline void IService::Timeout(uint32_t tick, MessagePointer msg) {
     imillion_->Timeout(tick, service_handle(), std::move(msg));
 }
 

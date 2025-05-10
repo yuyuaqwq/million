@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include <million/msg.h>
+#include <million/message.h>
 #include <million/logger.h>
 #include <million/exception.h>
 
@@ -21,7 +21,7 @@ TaskExecutor::TaskExecutor(ServiceCore* service)
 TaskExecutor::~TaskExecutor() = default;
 
 // 尝试调度
-std::variant<MsgPtr, TaskElement, TaskElement*> TaskExecutor::TrySchedule(SessionId session_id, MsgPtr msg) {
+std::variant<MessagePointer, TaskElement, TaskElement*> TaskExecutor::TrySchedule(SessionId session_id, MessagePointer msg) {
     auto iter = tasks_.find(session_id);
     if (iter == tasks_.end()) {
         return msg;
@@ -91,7 +91,7 @@ std::pair<TaskElement*, bool> TaskExecutor::TaskTimeout(SessionId session_id) {
     }
 }
 
-std::optional<MsgPtr> TaskExecutor::TrySchedule(TaskElement& ele, SessionId session_id, MsgPtr msg) {
+std::optional<MessagePointer> TaskExecutor::TrySchedule(TaskElement& ele, SessionId session_id, MessagePointer msg) {
     auto awaiter = ele.task.coroutine.promise().session_awaiter();
     if (msg) {
         if (awaiter->waiting_session_id() != session_id) {

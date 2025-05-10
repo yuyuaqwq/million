@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include <million/imillion.h>
-#include <million/exception.h>
 
 #include <gateway/gateway.h>
 
@@ -9,7 +8,7 @@ namespace gateway = million::gateway;
 
 MILLION_MODULE_INIT();
 
-MILLION_MSG_DEFINE(, Test2Msg, (int) value1, (std::string) value2);
+MILLION_MESSAGE_DEFINE(, Test2Msg, (int) value1, (std::string) value2);
 
 class TestService : public million::IService {
     MILLION_SERVICE_DEFINE(TestService);
@@ -38,18 +37,18 @@ class TestService : public million::IService {
         return true;
     }
 
-    virtual million::Task<million::MsgPtr> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr with_msg) override {
+    virtual million::Task<million::MessagePointer> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer with_msg) override {
         /*auto res = co_await Call<gateway::GatewayRegisterUserServiceMsg>(gateway_, service_handle());
         logger().Info("GatewayRegisterUserServiceMsg success.");*/
         co_return nullptr;
     }
 
-    virtual million::Task<million::MsgPtr> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MsgPtr msg) override {
+    virtual million::Task<million::MessagePointer> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer msg) override {
         auto res1000 = co_await RecvWithTimeout<Test2Msg>(1000, 5);
         auto res = co_await On6();
 
         if (msg.IsType<Test2Msg>()) {
-            auto msg_ = msg.GetMsg<Test2Msg>();
+            auto msg_ = msg.GetMessage<Test2Msg>();
             std::cout << session_id << std::endl;
             std::cout << "Test2Msg" << msg_->value1 << msg_->value2 << std::endl;
             co_return nullptr;
@@ -77,7 +76,7 @@ class TestService : public million::IService {
         co_return nullptr;
     }
 
-    million::Task<million::MsgPtr> On6() {
+    million::Task<million::MessagePointer> On6() {
         co_return nullptr;
     }
 

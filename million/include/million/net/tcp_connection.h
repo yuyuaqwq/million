@@ -5,6 +5,9 @@
 #include <mutex>
 
 #include <asio.hpp>
+#ifdef WIN32
+#undef GetMessage
+#endif
 
 #include <million/api.h>
 #include <million/net/packet.h>

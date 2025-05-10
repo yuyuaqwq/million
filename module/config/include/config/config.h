@@ -36,11 +36,11 @@ protected:
     std::weak_ptr<ConfigTableBase> weak_;
 };
 
-MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigQueryReq, (const google::protobuf::Descriptor&) config_desc)
-MILLION_MSG_DEFINE_NONCOPYABLE(MILLION_CONFIG_API, ConfigQueryResp, (const google::protobuf::Descriptor&) config_desc, (std::optional<ConfigTableWeakBase>) config)
+MILLION_MESSAGE_DEFINE(MILLION_CONFIG_API, ConfigQueryReq, (const google::protobuf::Descriptor&) config_desc)
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CONFIG_API, ConfigQueryResp, (const google::protobuf::Descriptor&) config_desc, (std::optional<ConfigTableWeakBase>) config)
 
-MILLION_MSG_DEFINE(MILLION_CONFIG_API, ConfigUpdateReq, (const google::protobuf::Descriptor&) config_desc)
-MILLION_MSG_DEFINE_EMPTY(MILLION_CONFIG_API, ConfigUpdateResp)
+MILLION_MESSAGE_DEFINE(MILLION_CONFIG_API, ConfigUpdateReq, (const google::protobuf::Descriptor&) config_desc)
+MILLION_MESSAGE_DEFINE_EMPTY(MILLION_CONFIG_API, ConfigUpdateResp)
 
 Task<ConfigTableShared> ConfigTableWeakBase::Lock(IService* this_service, const ServiceHandle& config_service, const google::protobuf::Descriptor* descriptor) {
     TaskAssert(descriptor, "descriptor is nullptr.");

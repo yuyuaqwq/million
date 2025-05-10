@@ -29,4 +29,5 @@ target_link_libraries(${JSSVR_LIB} PUBLIC ${PROTOGEN_LIB})
 target_link_libraries(${JSSVR_LIB} PUBLIC ${DB_LIB})
 target_link_libraries(${JSSVR_LIB} PUBLIC ${CONFIG_LIB})
 
-target_link_libraries(${JSSVR_LIB} PRIVATE ${QUICK_JS_LIB})
+# target_link_libraries(${JSSVR_LIB} PRIVATE ${QUICK_JS_LIB})
+target_link_libraries(${JSSVR_LIB} PRIVATE ${MULT_JS_LIB})

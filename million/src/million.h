@@ -29,19 +29,19 @@ public:
 
     std::optional<ServiceShared> AddService(std::unique_ptr<IService> iservice);
 
-    std::optional<SessionId> StartService(const ServiceShared& service, MsgPtr with_msg);
-    std::optional<SessionId> StopService(const ServiceShared& service, MsgPtr with_msg);
+    std::optional<SessionId> StartService(const ServiceShared& service, MessagePointer with_msg);
+    std::optional<SessionId> StopService(const ServiceShared& service, MessagePointer with_msg);
 
     bool SetServiceName(const ServiceShared& service, const ServiceName& name);
     std::optional<ServiceShared> GetServiceByName(const ServiceName& name);
 
     SessionId NewSession();
 
-    bool SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MsgPtr msg);
-    std::optional<SessionId> Send(const ServiceShared& sender, const ServiceShared& target, MsgPtr msg);
+    bool SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MessagePointer msg);
+    std::optional<SessionId> Send(const ServiceShared& sender, const ServiceShared& target, MessagePointer msg);
 
     const YAML::Node& YamlSettings() const;
-    void Timeout(uint32_t tick, const ServiceShared& service, MsgPtr msg);
+    void Timeout(uint32_t tick, const ServiceShared& service, MessagePointer msg);
     asio::io_context& NextIoContext();
     void EnableSeparateWorker(const ServiceShared& service);
 

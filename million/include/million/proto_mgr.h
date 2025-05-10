@@ -16,7 +16,7 @@ public:
 
     const google::protobuf::Message* GetPrototype(const google::protobuf::Descriptor& desc) const;
 
-    ProtoMsgUnique NewMessage(const google::protobuf::Descriptor& desc) const;
+    ProtoMessageUnique NewMessage(const google::protobuf::Descriptor& desc) const;
 
     const ProtoCodec& codec() const { return codec_; }
     ProtoCodec& codec() { return codec_; }

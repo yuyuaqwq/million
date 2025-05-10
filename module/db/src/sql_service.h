@@ -17,7 +17,6 @@
 #include <db/db_options.pb.h>
 
 #include <million/imillion.h>
-#include <million/msg.h>
 
 #include <db/sql.h>
 
@@ -76,7 +75,7 @@ public:
     }
 
 
-    virtual Task<MsgPtr> OnStart(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+    virtual Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         try {
             sql_ = soci::session(soci::mysql, std::format("db={} user={} password={} host={}", name, user, password, host));
         }
@@ -87,12 +86,12 @@ public:
         co_return nullptr;
     }
 
-    virtual Task<MsgPtr> OnStop(ServiceHandle sender, SessionId session_id, MsgPtr with_msg) override {
+    virtual Task<MessagePointer> OnStop(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         sql_.close();
         co_return nullptr;
     }
 
-    MILLION_MSG_HANDLE(SqlTableInitReq, msg) {
+    MILLION_MESSAGE_HANDLE(SqlTableInitReq, msg) {
         const auto& desc = msg->desc;
         TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
         
@@ -126,7 +125,7 @@ public:
             }
 
             if (missing_fields.empty()) {
-                co_return make_msg<SqlTableInitResp>(true);
+                co_return make_message<SqlTableInitResp>(true);
             }
 
             for (const auto* field : missing_fields) {
@@ -161,7 +160,7 @@ public:
 
                 sql_ << alter_sql;
             }
-            co_return make_msg<SqlTableInitResp>(true);
+            co_return make_message<SqlTableInitResp>(true);
         }
 
         std::string sql = "CREATE TABLE " + table_name + " (\n";
@@ -270,10 +269,10 @@ public:
 
         sql_ << sql;
 
-        co_return make_msg<SqlTableInitResp>(true);
+        co_return make_message<SqlTableInitResp>(true);
     }
 
-    MILLION_MSG_HANDLE(SqlQueryReq, msg) {
+    MILLION_MESSAGE_HANDLE(SqlQueryReq, msg) {
         auto& proto_msg = msg->db_row.get();
         const auto& desc = msg->db_row.GetDescriptor();
         const auto& reflection = msg->db_row.GetReflection();
@@ -312,7 +311,7 @@ public:
 
         auto it = rs.begin();
         if (it == rs.end()) {
-            co_return make_msg<SqlQueryResp>(std::nullopt);
+            co_return make_message<SqlQueryResp>(std::nullopt);
         }
 
         auto db_version = it->get<uint64_t>(0);
@@ -389,10 +388,10 @@ public:
             }
         }
 
-        co_return make_msg<SqlQueryResp>(std::move(msg->db_row));
+        co_return make_message<SqlQueryResp>(std::move(msg->db_row));
     }
 
-    MILLION_MSG_HANDLE(SqlInsertReq, msg) {
+    MILLION_MESSAGE_HANDLE(SqlInsertReq, msg) {
         auto& db_row = msg->db_row;
         db_row.MarkDirty();
 
@@ -461,10 +460,10 @@ public:
         auto rows = stmt.get_affected_rows();
         msg->success = rows > 0;
 
-        co_return make_msg<SqlInsertResp>(true);
+        co_return make_message<SqlInsertResp>(true);
     }
 
-    MILLION_MSG_HANDLE(SqlUpdateReq, msg) {
+    MILLION_MESSAGE_HANDLE(SqlUpdateReq, msg) {
         auto& db_row = msg->db_row;
 
         const auto& proto_msg = db_row.get();
@@ -521,7 +520,7 @@ public:
         stmt.execute(true);
         auto rows = stmt.get_affected_rows();
 
-        co_return make_msg<SqlUpdateResp>(rows > 0);
+        co_return make_message<SqlUpdateResp>(rows > 0);
     }
 
 private:

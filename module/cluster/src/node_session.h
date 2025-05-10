@@ -4,7 +4,6 @@
 
 #include <million/noncopyable.h>
 #include <million/net/tcp_connection.h>
-#include <million/msg.h>
 
 #include <cluster/cluster.h>
 
