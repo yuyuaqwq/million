@@ -25,3 +25,6 @@
 [submodule "third_party/quickjs/quickjs"]
 	path = third_party/quickjs/quickjs
 	url = git@github.com:quickjs-ng/quickjs.git
+[submodule "third_party/multjs"]
+	path = third_party/multjs
+	url = https://github.com/yuyuaqwq/multjs.git
