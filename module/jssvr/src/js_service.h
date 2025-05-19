@@ -9,7 +9,6 @@
 #include <mjs/context.h>
 #include <mjs/value.h>
 #include <mjs/object.h>
-#include <mjs/module_mgr.h>
 #include <mjs/object_impl/array_object.h>
 #include <mjs/object_impl/module_object.h>
 #include <mjs/object_impl/promise_object.h>
