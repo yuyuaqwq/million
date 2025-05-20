@@ -90,16 +90,39 @@ public:
         , js_ctx_(&js_runtime_service->js_rt())
         , package_(package) {}
 
+private:
+    // 初始化JS运行时和上下文
+    bool OnInit() override {
+        //if (!CreateMillionModule()) {
+        //    TaskAbort("CreateMillionModule failed.");
+        //}
+        //if (!CreateServiceModule()) {
+        //    TaskAbort("CreateServiceModule failed.");
+        //}
+        //if (!CreateLoggerModule()) {
+        //    TaskAbort("CreateLoggerModule failed.");
+        //}
+        //if (!CreateDBModule()) {
+        //    TaskAbort("CreateDBModule failed.");
+        //}
+        //if (!CreateConfigModule()) {
+        //    TaskAbort("CreateConfigModule failed.");
+        //}
+
+        LoadScript(package_);
+        return true;
+    }
+
     // 消息处理函数
-    virtual million::Task<million::MessagePointer> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer with_msg) override {
+    million::Task<million::MessagePointer> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer with_msg) override {
         co_return co_await CallFunc(std::move(with_msg), "onStart");
     }
 
-    virtual million::Task<million::MessagePointer> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer msg) override {
+    million::Task<million::MessagePointer> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer msg) override {
         co_return co_await CallFunc(std::move(msg), "onMsg");
     }
 
-    virtual million::Task<million::MessagePointer> OnStop(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer with_msg) override {
+    million::Task<million::MessagePointer> OnStop(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer with_msg) override {
         co_return co_await CallFunc(std::move(with_msg), "onStop");
     }
 
@@ -654,27 +677,6 @@ private:
         co_return std::move(ret_msg);
     }
 
-    // 初始化JS运行时和上下文
-    virtual bool OnInit() override {
-        //if (!CreateMillionModule()) {
-        //    TaskAbort("CreateMillionModule failed.");
-        //}
-        //if (!CreateServiceModule()) {
-        //    TaskAbort("CreateServiceModule failed.");
-        //}
-        //if (!CreateLoggerModule()) {
-        //    TaskAbort("CreateLoggerModule failed.");
-        //}
-        //if (!CreateDBModule()) {
-        //    TaskAbort("CreateDBModule failed.");
-        //}
-        //if (!CreateConfigModule()) {
-        //    TaskAbort("CreateConfigModule failed.");
-        //}
-
-        LoadScript(package_);
-        return true;
-    }
 
     // 加载JS脚本
     void LoadScript(const std::string& package) {

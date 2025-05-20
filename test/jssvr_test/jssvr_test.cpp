@@ -53,7 +53,7 @@ int main() {
     
     test_app->Start();
 
-    auto js_svr = million::jssvr::NewJsService(test_app.get(), "test");
+    auto js_svr = million::jssvr::NewJSService(test_app.get(), "test");
     test_app->Send<ss::test::LoginReq>(*svr, *js_svr, "test_value");
 
     // test_app->Send(*service, *service, );

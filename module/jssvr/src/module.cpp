@@ -16,7 +16,7 @@ namespace jssvr {
 
 static ServiceHandle js_runtime_service;
 
-std::optional<ServiceHandle> NewJsService(IMillion* imillion, std::string_view package) {
+std::optional<ServiceHandle> NewJSService(IMillion* imillion, std::string_view package) {
     auto lock = js_runtime_service.lock();
     auto ptr = js_runtime_service.get_ptr<JSRuntimeService>(lock);
 
@@ -44,7 +44,7 @@ extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
     if (bootstarp_settings) {
         auto bootstarp = bootstarp_settings.as<std::string>();
 
-        handle = NewJsService(imillion, bootstarp);
+        handle = NewJSService(imillion, bootstarp);
     }
 
     return true;
