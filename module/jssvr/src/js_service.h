@@ -222,11 +222,11 @@ private:
                 auto js_value = GetJSValueByProtoMessgaeRepeatedField(msg, *refl, field_desc, j);
                 js_array->operator[](j) = js_value;
             }
-            obj->SetProperty(&js_ctx_, field_desc.name(), mjs::Value(js_array));
+            obj->SetComputedProperty(&js_ctx_, mjs::Value(field_desc.name()), mjs::Value(js_array));
         }
         else {
             auto js_value = GetJSValueByProtoMessageField(msg, *refl, field_desc);
-            obj->SetProperty(&js_ctx_, field_desc.name(), std::move(js_value));
+            obj->SetComputedProperty(&js_ctx_, mjs::Value(field_desc.name()), std::move(js_value));
         }
     }
 
@@ -500,7 +500,7 @@ private:
         for (size_t i = 0; i < desc->field_count(); ++i) {
             const auto field_desc = desc->field(i);
             mjs::Value field_value;
-            if (obj.GetProperty(&js_ctx_, field_desc->name().c_str(), &field_value)) {
+            if (obj.GetComputedProperty(&js_ctx_, mjs::Value(field_desc->name().c_str()), &field_value)) {
                 JSObjectToProtoMessageOne(msg, field_value, *field_desc);
             }
         }
@@ -522,8 +522,8 @@ private:
 
         // 获取函数
         mjs::Value func;
-        auto func = js_service_module_.module().GetProperty(&js_ctx_, func_name.data(), &func);
-        if (!func.IsFunctionObject()) {
+        auto success = js_service_module_.module().GetComputedProperty(&js_ctx_, mjs::Value(func_name.data()), &func);
+        if (!success) {
             co_return nullptr;
         }
 

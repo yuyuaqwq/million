@@ -14,13 +14,13 @@
 namespace million {
 namespace jssvr {
 
-static ServiceHandle s_js_module_service;
+static ServiceHandle js_runtime_service;
 
 std::optional<ServiceHandle> NewJsService(IMillion* imillion, std::string_view package) {
-    auto lock = s_js_module_service.lock();
-    auto ptr = s_js_module_service.get_ptr<JsModuleService>(lock);
+    auto lock = js_runtime_service.lock();
+    auto ptr = js_runtime_service.get_ptr<JSRuntimeService>(lock);
 
-    auto handle = imillion->NewService<JsService>(ptr, std::string(package));
+    auto handle = imillion->NewService<JSService>(ptr, std::string(package));
     if (!handle) {
         return std::nullopt;
     }
@@ -30,8 +30,8 @@ std::optional<ServiceHandle> NewJsService(IMillion* imillion, std::string_view p
 }
 
 extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
-    auto handle = imillion->NewService<JsModuleService>();
-    s_js_module_service = *handle;
+    auto handle = imillion->NewService<JSRuntimeService>();
+    js_runtime_service = *handle;
 
     auto settings = imillion->YamlSettings();
     const auto& jssvr_settings = settings["jssvr"];
