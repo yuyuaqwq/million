@@ -1,2 +1,6 @@
-cmake .. -DPROTOBUF_LIB_DIR=? -DPROTOBUF_INCLUDE_DIR=? -DMYSQL_HEADER_DIR="?/mysql-*/include" -DMYSQL_LIB="?/mysql-*/lib/libmysql.lib"
+cmake .. ^
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+    -DProtobuf_ROOT="?" ^
+    -DMYSQL_HEADER_DIR="?/mysql-*/include" ^
+    -DMYSQL_LIB="?/mysql-*/lib/libmysql.lib"
 pause
