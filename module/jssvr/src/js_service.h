@@ -25,6 +25,8 @@
 namespace million {
 namespace jssvr {
 
+namespace fs = std::filesystem;
+
 // 服务函数上下文，用于处理异步调用
 struct ServiceFuncContext {
     //mjs::Value promise_cap;
@@ -33,16 +35,26 @@ struct ServiceFuncContext {
     std::optional<SessionId> waiting_session_id;
 };
 
+
+
+
 // JS运行时服务
 class JSRuntimeService : public IService {
     MILLION_SERVICE_DEFINE(JSRuntimeService);
 
 public:
     using Base = IService;
-    using Base::Base;
+    JSRuntimeService(IMillion* imillion)
+        : Base(imillion)
+        , js_runtime_(std::make_unique<JSModuleManager>()) {}
 
-    mjs::Runtime& js_rt() {
-        return js_rt_;
+
+    mjs::Runtime& js_runtime() {
+        return js_runtime_;
+    }
+
+    auto& jssvr_dirs() {
+        return jssvr_dirs_;
     }
 
 private:
@@ -65,11 +77,15 @@ private:
     Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         db_handle_ = *imillion().GetServiceByName(db::kDBServiceName);
         config_handle_ = *imillion().GetServiceByName(config::kConfigServiceName);
+
+
+
         co_return nullptr;
     }
 
+
 private:
-    mjs::Runtime js_rt_;
+    mjs::Runtime js_runtime_;
     std::vector<std::string> jssvr_dirs_;
     ServiceHandle db_handle_;
     ServiceHandle config_handle_;
@@ -86,9 +102,7 @@ public:
     using Base = IService;
     JSService(IMillion* imillion, JSRuntimeService* js_runtime_service, const std::string& package)
         : Base(imillion)
-        , js_runtime_service_(js_runtime_service)
-        , js_ctx_(&js_runtime_service->js_rt())
-        , package_(package) {}
+        , js_context_(&js_runtime_service->js_runtime()) {}
 
 private:
     // 初始化JS运行时和上下文
@@ -109,12 +123,17 @@ private:
         //    TaskAbort("CreateConfigModule failed.");
         //}
 
-        LoadScript(package_);
+        js_module_ = LoadModule(package_);
+        if (JSCheckExceptionAndLog(js_module_)) {
+            TaskAbort("LoadModule failed with exception.");
+        }
         return true;
     }
 
     // 消息处理函数
     million::Task<million::MessagePointer> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer with_msg) override {
+        
+        
         co_return co_await CallFunc(std::move(with_msg), "onStart");
     }
 
@@ -240,22 +259,22 @@ private:
         const auto refl = msg.GetReflection();
 
         if (field_desc.is_repeated()) {
-            auto js_array = mjs::ArrayObject::New(&js_ctx_, {});
+            auto js_array = mjs::ArrayObject::New(&js_context_, {});
             for (size_t j = 0; j < refl->FieldSize(msg, &field_desc); ++j) {
                 auto js_value = GetJSValueByProtoMessgaeRepeatedField(msg, *refl, field_desc, j);
                 js_array->operator[](j) = js_value;
             }
-            obj->SetComputedProperty(&js_ctx_, mjs::Value(field_desc.name()), mjs::Value(js_array));
+            obj->SetComputedProperty(&js_context_, mjs::Value(field_desc.name()), mjs::Value(js_array));
         }
         else {
             auto js_value = GetJSValueByProtoMessageField(msg, *refl, field_desc);
-            obj->SetComputedProperty(&js_ctx_, mjs::Value(field_desc.name()), std::move(js_value));
+            obj->SetComputedProperty(&js_context_, mjs::Value(field_desc.name()), std::move(js_value));
         }
     }
 
     // Protobuf消息转JS对象
     mjs::Value ProtoMessageToJSObject(const million::ProtoMessage& msg) {
-        auto obj = mjs::Object::New(&js_ctx_);
+        auto obj = mjs::Object::New(&js_context_);
 
         const auto desc = msg.GetDescriptor();
         const auto refl = msg.GetReflection();
@@ -523,7 +542,7 @@ private:
         for (size_t i = 0; i < desc->field_count(); ++i) {
             const auto field_desc = desc->field(i);
             mjs::Value field_value;
-            if (obj.GetComputedProperty(&js_ctx_, mjs::Value(field_desc->name().c_str()), &field_value)) {
+            if (obj.GetComputedProperty(&js_context_, mjs::Value(field_desc->name().c_str()), &field_value)) {
                 JSObjectToProtoMessageOne(msg, field_value, *field_desc);
             }
         }
@@ -539,13 +558,13 @@ private:
         million::MessagePointer ret_msg;
 
         // 获取模块的 namespace 对象
-        // auto space = js_service_module_.module().namespace_obj();
+        // auto space = js_module_.module().namespace_obj();
         
 
 
         // 获取函数
         mjs::Value func;
-        auto success = js_service_module_.module().GetComputedProperty(&js_ctx_, mjs::Value(func_name.data()), &func);
+        auto success = js_module_.module().GetComputedProperty(&js_context_, mjs::Value(func_name.data()), &func);
         if (!success) {
             co_return nullptr;
         }
@@ -558,7 +577,7 @@ private:
         }
 
         // 调用函数
-        auto result = js_ctx_.CallFunction(&func, mjs::Value(), args.begin(), args.end());
+        auto result = js_context_.CallFunction(&func, mjs::Value(), args.begin(), args.end());
         
         // 处理返回值
         if (result.IsPromiseObject()) {
@@ -580,22 +599,22 @@ private:
                         auto proto_res_msg = res_msg.GetProtoMessage();
                         auto msg_obj = ProtoMessageToJSObject(*proto_res_msg);
 
-                        promise.Resolve(&js_ctx_, msg_obj);
+                        promise.Resolve(&js_context_, msg_obj);
 
-                        // js_ctx_.CallFunction(&func_ctx_.resolving_funcs[0], mjs::Value(), &msg_obj, &msg_obj + 1);
+                        // js_context_.CallFunction(&func_ctx_.resolving_funcs[0], mjs::Value(), &msg_obj, &msg_obj + 1);
                     }
                     else if (res_msg.IsType<JSValueMsg>()) {
                         auto msg_obj = res_msg.GetMessage<JSValueMsg>()->value;
 
-                        promise.Resolve(&js_ctx_, msg_obj);
-                        // js_ctx_.CallFunction(&func_ctx_.resolving_funcs[0], mjs::Value(), &msg_obj, &msg_obj + 1);
+                        promise.Resolve(&js_context_, msg_obj);
+                        // js_context_.CallFunction(&func_ctx_.resolving_funcs[0], mjs::Value(), &msg_obj, &msg_obj + 1);
                     }
 
                     func_ctx_.waiting_session_id.reset();
                 }
 
                 // 执行微任务
-                js_ctx_.ExecuteMicrotasks();
+                js_context_.ExecuteMicrotasks();
             }
 
             if (promise.IsFulfilled()) {
@@ -641,7 +660,7 @@ private:
             else if (promise.IsRejected()) {
                 // Promise被拒绝，获取错误
                 auto& error = promise.reason();
-                logger().Err("JS Promise rejected: {}.", error.ToString(&js_ctx_).string_view());
+                logger().Err("JS Promise rejected: {}.", error.ToString(&js_context_).string_view());
             }
         }
         else if (result.IsArrayObject()) {
@@ -678,27 +697,73 @@ private:
     }
 
 
-    // 加载JS脚本
-    void LoadScript(const std::string& package) {
-        try {
-            auto script = ReadModuleScript(package);
-            if (!script) {
-                TaskAbort("LoadModule failed: {}.", package);
-            }
 
-            js_service_module_ = js_ctx_.Eval(package, *script);
-            if (js_service_module_.IsException()) {
-                TaskAbort("LoadModule failed with exception.");
-            }
+
+
+
+    // 添加模块
+    //bool AddModule(const std::string& module_name, mjs::ModuleObject* module) {
+    //    if (modules_.find(module_name) != modules_.end()) {
+    //        logger().Err("Module already exists: {}.", module_name);
+    //        return false;
+    //    }
+    //    modules_[module_name] = mjs::Value(module);
+    //    return true;
+    //}
+
+    // 检查JS异常
+    bool JSCheckExceptionAndLog(const mjs::Value& value) {
+        if (value.IsException()) {
+            logger().Err("JS Exception: {}.", value.ToString(&js_context_).string_view());
+            return false;
         }
-        catch (...) {
-            if (js_service_module_.IsModuleObject()) {
-                js_service_module_ = mjs::Value();
-            }
-            throw;
-        }
+        return true;
     }
 
+public:
+    auto& js_context() { return js_context_; }
+    auto& js_module() { return js_module_; }
+    auto& js_module_cache() { return js_module_cache_; }
+private:
+    friend class JSModuleManager;
+    JSRuntimeService* js_runtime_service_;
+
+    // mjs上下文
+    mjs::Context js_context_;
+    
+    // 模块相关
+    mjs::Value js_module_;
+    std::unordered_map<fs::path, mjs::Value> js_module_cache_;
+    
+
+    ServiceFuncContext func_ctx_;
+};
+
+class JSModuleManager : public mjs::ModuleManagerBase {
+public:
+    void AddCppModule(std::string_view path, mjs::CppModuleObject* cpp_module_object) override {
+        cpp_modules_.emplace(path, mjs::Value(cpp_module_object));
+    }
+
+    mjs::Value GetModule(mjs::Context* ctx, std::string_view path) override {
+        auto iter = cpp_modules_.find(path);
+        if (iter != cpp_modules_.end()) {
+            return iter->second;
+        }
+        size_t offset = offsetof(JSService, js_context_);
+        auto* js_service = reinterpret_cast<JSService*>(reinterpret_cast<char*>(ctx) - offset);
+        return LoadJSModule(js_service, path);
+    }
+
+    mjs::Value GetModuleAsync(mjs::Context* ctx, std::string_view path) override {
+        return GetModule(ctx, path);
+    }
+
+    void ClearModuleCache() override {
+        module_defs_.clear();
+    }
+
+private:
     // 读取模块脚本
     std::optional<std::string> ReadModuleScript(const std::filesystem::path& module_path) {
         auto file = std::ifstream(module_path);
@@ -710,39 +775,74 @@ private:
         return content;
     }
 
-    // 添加模块
-    bool AddModule(const std::string& module_name, mjs::ModuleObject* module) {
-        if (modules_.find(module_name) != modules_.end()) {
-            logger().Err("Module already exists: {}.", module_name);
-            return false;
+    mjs::Value LoadJSModule(JSService* js_service, std::string_view module_name) {
+        std::filesystem::path path;
+        mjs::Value module;
+        auto& js_module = js_service->js_module();
+        if (!js_module.IsUndefined()) {
+            fs::path cur_module_path = js_module.module_def().name();
+
+            path = cur_module_path.parent_path();
+            assert(path.is_absolute());
+            // 从模块所在路径找模块
+            path /= module_name;
+            path = path.lexically_normal();
+            module = FindJSModule(js_service, path);
         }
-        modules_[module_name] = mjs::Value(module);
-        return true;
+        
+        if (module.IsUndefined()) {
+            // 当前路径找不到，去配置路径找
+            for (const auto& dir : jssvr_dirs_) {
+                path = dir;
+                path /= module_name;
+                module = FindJSModule(js_service, path);
+                if (!module.IsUndefined()) break;
+            }
+
+            if (!module.IsUndefined()) {
+                return mjs::Value(std::format("LoadModule failed: {}.", module_name));
+            }
+        }
+
+        if (module.IsModuleDef()) {
+            js_service->js_context().CallModule(&module);
+            js_service->js_module_cache().emplace(path, module);
+        }
+        return module;
     }
 
-    // 检查JS异常
-    bool JSCheckException(const mjs::Value& value) {
-        if (value.IsException()) {
-            logger().Err("JS Exception: {}.", value.ToString(&js_ctx_).string_view());
-            return false;
+    mjs::Value FindJSModule(JSService* js_service, std::filesystem::path path) {
+        assert(path.is_absolute());
+
+        // 找Context缓存是否存在此模块
+        auto& context_cache = js_service->js_module_cache();
+        auto iter = context_cache.find(path);
+        if (iter != module_defs_.end()) {
+            return iter->second;
         }
-        return true;
+
+        // 找Runtime缓存的模块定义
+        iter = module_defs_.find(path);
+        if (iter != module_defs_.end()) {
+            return iter->second;
+        }
+
+        auto script = ReadModuleScript(path);
+        if (!script) {
+            return mjs::Value();
+        }
+
+        auto module_def = js_service->js_context().CompileModule(path.string(), *script);
+        module_defs_.emplace(path, module_def);
+        return module_def;
     }
 
 private:
-    // mjs上下文
-    mjs::Context js_ctx_;
-    
-    // 模块相关
-    mjs::Value js_service_module_;
-    std::unordered_map<std::string, mjs::Value> modules_;
-    
-    // 其他成员
-    JSRuntimeService* js_runtime_service_;
-    std::string package_;
-    std::filesystem::path cur_path_;
-    ServiceFuncContext func_ctx_;
+    std::vector<std::string> jssvr_dirs_;
+    std::unordered_map<fs::path, mjs::Value> cpp_modules_;
+    std::unordered_map<fs::path, mjs::Value> module_defs_;
 };
+
 
 } // namespace jssvr
 } // namespace million
