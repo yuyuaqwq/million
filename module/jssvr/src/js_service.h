@@ -12,6 +12,7 @@
 #include <mjs/object_impl/array_object.h>
 #include <mjs/object_impl/module_object.h>
 #include <mjs/object_impl/promise_object.h>
+#include <mjs/object_impl/cpp_module_object.h>
 
 #include <yaml-cpp/yaml.h>
 
@@ -35,6 +36,33 @@ struct ServiceFuncContext {
     std::optional<SessionId> waiting_session_id;
 };
 
+class MillionModuleObject : public mjs::CppModuleObject {
+public:
+    MillionModuleObject(mjs::Runtime* rt)
+        : CppModuleObject(rt)
+    {
+        AddExportMethod(rt, "newservice", [](mjs::Context * context, uint32_t par_count, const mjs::StackFrame & stack) -> mjs::Value {
+            
+            return mjs::Value();
+        });
+    }
+};
+
+class LoggerModuleObject : public mjs::CppModuleObject {
+public:
+    LoggerModuleObject(mjs::Runtime* rt)
+        : CppModuleObject(rt)
+    {
+        AddExportMethod(rt, "err", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+
+            return mjs::Value();
+        });
+        AddExportMethod(rt, "info", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+
+            return mjs::Value();
+        });
+    }
+};
 
 class JSService;
 class JSModuleManager : public mjs::ModuleManagerBase {
@@ -89,13 +117,16 @@ private:
             return false;
         }
         jssvr_dirs_ = jssvr_settings["dirs"].as<std::vector<std::string>>();
+
+        js_runtime_.module_manager().AddCppModule("million", new MillionModuleObject(&js_runtime_));
+        js_runtime_.module_manager().AddCppModule("logger", new LoggerModuleObject(&js_runtime_));
+
         return true;
     }
 
     Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         db_handle_ = *imillion().GetServiceByName(db::kDBServiceName);
         config_handle_ = *imillion().GetServiceByName(config::kConfigServiceName);
-
 
 
         co_return nullptr;
