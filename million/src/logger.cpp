@@ -18,23 +18,23 @@ bool Logger::Init() {
     return true;
 }
 
-void Logger::Log(const ServiceHandle& sender, const std::source_location& source, LogLevel level, const std::string& msg) {
+void Logger::Log(const ServiceHandle& sender, const std::source_location& source, LogLevel level, std::string msg) {
     if (!is_bind_) {
         std::string short_func = ExtractFunctionName(source.function_name());
         InitLog(level, short_func.c_str(), source.line(), msg.c_str());
     }
     else {
-        million_->imillion().Send<LoggerLog>(sender, logger_svr_handle_, source, level, msg);
+        million_->imillion().Send<LoggerLog>(sender, logger_svr_handle_, source, level, std::move(msg));
     }
 }
 
-void Logger::Log(const ServiceHandle& sender, SourceLocation source, LogLevel level, const std::string& msg) {
+void Logger::Log(const ServiceHandle& sender, SourceLocation source, LogLevel level, std::string msg) {
     if (!is_bind_) {
         std::string short_func = ExtractFunctionName(source.function_name);
         InitLog(level, short_func.c_str(), source.line, msg.c_str());
     }
     else {
-        million_->imillion().Send<LoggerLog2>(sender, logger_svr_handle_, source, level, msg);
+        million_->imillion().Send<LoggerLog2>(sender, logger_svr_handle_, source, level, std::move(msg));
     }
 }
 

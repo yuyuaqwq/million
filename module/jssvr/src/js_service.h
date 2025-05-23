@@ -110,9 +110,13 @@ public:
         : CppModuleObject(rt)
     {
         AddExportMethod(rt, "newservice", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-
+            auto& service = GetJSRuntineService(&context->runtime());
+            if (par_count < 1) {
+                return mjs::Value("Creating a service requires a parameter.").SetException();
+            }
+            NewJSService(&service.imillion(), stack.get(0).ToString(context).string_view());
             return mjs::Value();
-            });
+        });
     }
 };
 
@@ -122,11 +126,11 @@ public:
     LoggerModuleObject(mjs::Runtime* rt)
         : CppModuleObject(rt)
     {
-        AddExportMethod(rt, "error", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+        AddExportMethod(rt, "debug", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
             auto& service = GetJSRuntineService(&context->runtime());
             auto source_location = GetSourceLocation(stack);
             for (uint32_t i = 0; i < par_count; ++i) {
-                service.logger().Log(source_location, ::million::Logger::LogLevel::kError, stack.get(i).ToString(context).string_view());
+                service.logger().Log(source_location, ::million::Logger::LogLevel::kDebug, stack.get(i).ToString(context).string_view());
             }
             return mjs::Value();
         });
@@ -135,6 +139,14 @@ public:
             auto source_location = GetSourceLocation(stack);
             for (uint32_t i = 0; i < par_count; ++i) {
                 service.logger().Log(source_location, ::million::Logger::LogLevel::kInfo, stack.get(i).ToString(context).string_view());
+            }
+            return mjs::Value();
+        });
+        AddExportMethod(rt, "error", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+            auto& service = GetJSRuntineService(&context->runtime());
+            auto source_location = GetSourceLocation(stack);
+            for (uint32_t i = 0; i < par_count; ++i) {
+                service.logger().Log(source_location, ::million::Logger::LogLevel::kError, stack.get(i).ToString(context).string_view());
             }
             return mjs::Value();
         });
@@ -154,8 +166,8 @@ private:
             auto source_location = million::SourceLocation{
                 .line = debug_info->source_line,
                 .column = 0,
-                .file_name = js_stack->function_def()->module_def().name().c_str(),
-                .function_name = js_stack->function_def()->name().c_str(),
+                .file_name = js_stack->function_def()->module_def().name(),
+                .function_name = js_stack->function_def()->name(),
             };
             return source_location;
         }
@@ -214,7 +226,7 @@ private:
     bool OnInit() override {
         auto js_module_name = std::move(js_module_);
         js_module_ = js_context_.runtime().module_manager().GetModule(&js_context_, js_module_name.string_view());
-        if (JSCheckExceptionAndLog(js_module_)) {
+        if (!JSCheckExceptionAndLog(js_module_)) {
             TaskAbort("LoadModule failed with exception.");
         }
         return true;
@@ -222,8 +234,6 @@ private:
 
     // 消息处理函数
     million::Task<million::MessagePointer> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer with_msg) override {
-        
-        
         co_return co_await CallFunc(std::move(with_msg), "onStart");
     }
 
@@ -640,17 +650,10 @@ private:
 
     // 调用JS函数
     million::Task<million::MessagePointer> CallFunc(million::MessagePointer msg, std::string_view func_name) {
-        if (!msg.IsProtoMessage()) {
-            co_return nullptr;
-        }
-
-        auto proto_msg = std::move(msg.GetProtoMessage());
-        million::MessagePointer ret_msg;
-
         // 获取模块的 namespace 对象
         // auto space = js_module_.module().namespace_obj();
         
-
+        million::MessagePointer ret_msg;
 
         // 获取函数
         mjs::Value func;
@@ -661,9 +664,15 @@ private:
 
         // 准备参数
         std::vector<mjs::Value> args;
-        if (proto_msg) {
+        if (msg.IsProtoMessage()) {
+            auto proto_msg = std::move(msg.GetProtoMessage());
+            
             args.push_back(mjs::Value(proto_msg->GetDescriptor()->full_name().c_str()));
             args.push_back(ProtoMessageToJSObject(*proto_msg));
+        }
+        else {
+            args.push_back(mjs::Value());
+            args.push_back(mjs::Value());
         }
 
         // 调用函数

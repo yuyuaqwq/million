@@ -68,8 +68,8 @@ public:
     }
 
 private:
-    void Log(const ServiceHandle& sender, const std::source_location& source, LogLevel level, const std::string& msg);
-    void Log(const ServiceHandle& sender, SourceLocation source, LogLevel level, const std::string& msg);
+    void Log(const ServiceHandle& sender, const std::source_location& source, LogLevel level, std::string msg);
+    void Log(const ServiceHandle& sender, SourceLocation source, LogLevel level, std::string msg);
     void InitLog(LogLevel level, const char* function_name, uint32_t line, const char* msg);
     void SetLevel(const ServiceHandle& sender, LogLevel level);
 
