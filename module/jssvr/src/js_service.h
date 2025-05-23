@@ -212,21 +212,6 @@ public:
 private:
     // 初始化JS运行时和上下文
     bool OnInit() override {
-        //if (!CreateMillionModule()) {
-        //    TaskAbort("CreateMillionModule failed.");
-        //}
-        //if (!CreateServiceModule()) {
-        //    TaskAbort("CreateServiceModule failed.");
-        //}
-        //if (!CreateLoggerModule()) {
-        //    TaskAbort("CreateLoggerModule failed.");
-        //}
-        //if (!CreateDBModule()) {
-        //    TaskAbort("CreateDBModule failed.");
-        //}
-        //if (!CreateConfigModule()) {
-        //    TaskAbort("CreateConfigModule failed.");
-        //}
         auto js_module_name = std::move(js_module_);
         js_module_ = js_context_.runtime().module_manager().GetModule(&js_context_, js_module_name.string_view());
         if (JSCheckExceptionAndLog(js_module_)) {
