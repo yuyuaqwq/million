@@ -28,6 +28,9 @@ namespace jssvr {
 
 namespace fs = std::filesystem;
 
+class JSRuntimeService;
+inline JSRuntimeService& GetJSRuntineService(mjs::Runtime* runtime);
+
 // 服务函数上下文，用于处理异步调用
 struct ServiceFuncContext {
     //mjs::Value promise_cap;
@@ -36,33 +39,6 @@ struct ServiceFuncContext {
     std::optional<SessionId> waiting_session_id;
 };
 
-class MillionModuleObject : public mjs::CppModuleObject {
-public:
-    MillionModuleObject(mjs::Runtime* rt)
-        : CppModuleObject(rt)
-    {
-        AddExportMethod(rt, "newservice", [](mjs::Context * context, uint32_t par_count, const mjs::StackFrame & stack) -> mjs::Value {
-            
-            return mjs::Value();
-        });
-    }
-};
-
-class LoggerModuleObject : public mjs::CppModuleObject {
-public:
-    LoggerModuleObject(mjs::Runtime* rt)
-        : CppModuleObject(rt)
-    {
-        AddExportMethod(rt, "err", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-
-            return mjs::Value();
-        });
-        AddExportMethod(rt, "info", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-
-            return mjs::Value();
-        });
-    }
-};
 
 class JSService;
 class JSModuleManager : public mjs::ModuleManagerBase {
@@ -104,25 +80,7 @@ public:
     }
 
 private:
-    virtual bool OnInit() override {
-        const auto& settings = imillion().YamlSettings();
-
-        const auto& jssvr_settings = settings["jssvr"];
-        if (!jssvr_settings) {
-            logger().LOG_ERROR("cannot find 'jssvr'.");
-            return false;
-        }
-        if (!jssvr_settings["dirs"]) {
-            logger().LOG_ERROR("cannot find 'jssvr.dirs'.");
-            return false;
-        }
-        jssvr_dirs_ = jssvr_settings["dirs"].as<std::vector<std::string>>();
-
-        js_runtime_.module_manager().AddCppModule("million", new MillionModuleObject(&js_runtime_));
-        js_runtime_.module_manager().AddCppModule("logger", new LoggerModuleObject(&js_runtime_));
-
-        return true;
-    }
+    virtual bool OnInit() override;
 
     Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         db_handle_ = *imillion().GetServiceByName(db::kDBServiceName);
@@ -132,12 +90,108 @@ private:
 
 
 private:
-    friend class JSService;
+    friend JSRuntimeService& GetJSRuntineService(mjs::Runtime* runtime);
     mjs::Runtime js_runtime_;
     std::vector<std::string> jssvr_dirs_;
     ServiceHandle db_handle_;
     ServiceHandle config_handle_;
 };
+
+JSRuntimeService& GetJSRuntineService(mjs::Runtime* runtime) {
+    size_t offset = offsetof(JSRuntimeService, js_runtime_);
+    auto* js_runtime_service = reinterpret_cast<JSRuntimeService*>(reinterpret_cast<char*>(runtime) - offset);
+    return *js_runtime_service;
+}
+
+
+class MillionModuleObject : public mjs::CppModuleObject {
+public:
+    MillionModuleObject(mjs::Runtime* rt)
+        : CppModuleObject(rt)
+    {
+        AddExportMethod(rt, "newservice", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+
+            return mjs::Value();
+            });
+    }
+};
+
+
+class LoggerModuleObject : public mjs::CppModuleObject {
+public:
+    LoggerModuleObject(mjs::Runtime* rt)
+        : CppModuleObject(rt)
+    {
+        AddExportMethod(rt, "error", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+            auto& service = GetJSRuntineService(&context->runtime());
+            auto source_location = GetSourceLocation(stack);
+            for (uint32_t i = 0; i < par_count; ++i) {
+                service.logger().Log(source_location, ::million::Logger::LogLevel::kError, stack.get(i).ToString(context).string_view());
+            }
+            return mjs::Value();
+        });
+        AddExportMethod(rt, "info", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+            auto& service = GetJSRuntineService(&context->runtime());
+            auto source_location = GetSourceLocation(stack);
+            for (uint32_t i = 0; i < par_count; ++i) {
+                service.logger().Log(source_location, ::million::Logger::LogLevel::kInfo, stack.get(i).ToString(context).string_view());
+            }
+            return mjs::Value();
+        });
+    }
+
+private:
+    static million::SourceLocation GetSourceLocation(const mjs::StackFrame& stack) {
+        const mjs::StackFrame* js_stack = &stack;
+        while (!js_stack->function_def()) {
+            if (!js_stack->upper_stack_frame()) {
+                break;
+            }
+            js_stack = js_stack->upper_stack_frame();
+        }
+        auto debug_info = js_stack->function_def()->debug_table().FindEntry(js_stack->pc());
+        if (debug_info && js_stack) {
+            auto source_location = million::SourceLocation{
+                .line = debug_info->source_line,
+                .column = 0,
+                .file_name = js_stack->function_def()->module_def().name().c_str(),
+                .function_name = js_stack->function_def()->name().c_str(),
+            };
+            return source_location;
+        }
+        else {
+            auto source_location = million::SourceLocation{
+                .line = 0,
+                .column = 0,
+                .file_name = "<unknown>",
+                .function_name = "<unknown>",
+            };
+            return source_location;
+        }
+        
+    }
+};
+
+bool JSRuntimeService::OnInit() {
+    const auto& settings = imillion().YamlSettings();
+
+    const auto& jssvr_settings = settings["jssvr"];
+    if (!jssvr_settings) {
+        logger().LOG_ERROR("cannot find 'jssvr'.");
+        return false;
+    }
+    if (!jssvr_settings["dirs"]) {
+        logger().LOG_ERROR("cannot find 'jssvr.dirs'.");
+        return false;
+    }
+    jssvr_dirs_ = jssvr_settings["dirs"].as<std::vector<std::string>>();
+
+    js_runtime_.module_manager().AddCppModule("million", new MillionModuleObject(&js_runtime_));
+    js_runtime_.module_manager().AddCppModule("logger", new LoggerModuleObject(&js_runtime_));
+
+    return true;
+}
+
 
 // JS值消息，用于在C++和JS之间传递值
 MILLION_MESSAGE_DEFINE(, JSValueMsg, (mjs::Value) value)
@@ -773,10 +827,7 @@ private:
 
 public:
     JSRuntimeService& js_runtime_service() const { 
-        auto& runtime = js_context_.runtime();
-        size_t offset = offsetof(JSRuntimeService, js_runtime_);
-        auto* js_runtime_service = reinterpret_cast<JSRuntimeService*>(reinterpret_cast<char*>(&runtime) - offset);
-        return *js_runtime_service;
+        return GetJSRuntineService(&js_context_.runtime());
     }
     auto& js_context() { return js_context_; }
     auto& js_module() { return js_module_; }

@@ -105,6 +105,13 @@ public:
         co_return nullptr;
     }
 
+    MILLION_MESSAGE_HANDLE(LoggerLog2, msg) {
+        auto level = static_cast<spdlog::level::level_enum>(msg->level);
+        std::string short_func = logger().ExtractFunctionName(msg->source.function_name);
+        logger_->log(spdlog::source_loc(msg->source.file_name.c_str(), msg->source.line, short_func.c_str()), level, msg->msg);
+        co_return nullptr;
+    }
+
     MILLION_MESSAGE_HANDLE(LoggerSetLevel, msg) {
         auto new_level = static_cast<spdlog::level::level_enum>(msg->new_level);
         logger_->set_level(new_level);

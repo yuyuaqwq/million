@@ -9,6 +9,13 @@
 
 namespace million {
 
+struct SourceLocation {
+    uint32_t line;
+    uint32_t column;
+    std::string file_name;
+    std::string function_name;
+};
+
 class Million;
 class MILLION_API Logger {
 public:
@@ -33,9 +40,12 @@ public:
         is_bind_ = true;
     }
 
-    template <typename... Args>
     void Log(const std::source_location& source, LogLevel level, const std::string& str) {
         Log(logger_svr_handle_, source, level, str);
+    }
+
+    void Log(SourceLocation source, LogLevel level, const std::string& str) {
+        Log(logger_svr_handle_, std::move(source), level, str);
     }
 
     void SetLevel(LogLevel level) {
@@ -58,7 +68,9 @@ public:
     }
 
 private:
-    void Log(const ServiceHandle& sender, const std::source_location& source, LogLevel level, const std::string& str);
+    void Log(const ServiceHandle& sender, const std::source_location& source, LogLevel level, const std::string& msg);
+    void Log(const ServiceHandle& sender, SourceLocation source, LogLevel level, const std::string& msg);
+    void InitLog(LogLevel level, const char* function_name, uint32_t line, const char* msg);
     void SetLevel(const ServiceHandle& sender, LogLevel level);
 
 private:
@@ -68,6 +80,7 @@ private:
 };
 
 MILLION_MESSAGE_DEFINE(MILLION_API, LoggerLog, (const std::source_location) source, (Logger::LogLevel) level, (const std::string) msg);
+MILLION_MESSAGE_DEFINE(MILLION_API, LoggerLog2, (SourceLocation) source, (Logger::LogLevel) level, (const std::string) msg);
 MILLION_MESSAGE_DEFINE(MILLION_API, LoggerSetLevel, (Logger::LogLevel) new_level);
 
 #define LOG_TRACE(fmt, ...) Log(std::source_location::current(), ::million::Logger::LogLevel::kTrace, ::std::format(fmt, __VA_ARGS__))
