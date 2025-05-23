@@ -29,7 +29,7 @@ class TestService : public million::IService {
 
         /*auto handle = imillion().GetServiceByName(million::gateway::kGatewayServiceName);
         if (!handle) {
-            logger().Err("GatewayService not found.");
+            logger().LOG_ERROR("GatewayService not found.");
             return false;
         }
         gateway_ = *handle;*/
@@ -39,7 +39,7 @@ class TestService : public million::IService {
 
     virtual million::Task<million::MessagePointer> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer with_msg) override {
         /*auto res = co_await Call<gateway::GatewayRegisterUserServiceMsg>(gateway_, service_handle());
-        logger().Info("GatewayRegisterUserServiceMsg success.");*/
+        logger().LOG_INFO("GatewayRegisterUserServiceMsg success.");*/
         co_return nullptr;
     }
 
@@ -129,7 +129,7 @@ int main() {
 
     // std::is_enum_v<million::ss::logger::LogLevel&>;
 
-    test_app->logger().Info("sbsb");
+    test_app->logger().LOG_INFO("sbsb");
 
     auto service_opt = test_app->NewService<TestService>();
     if (!service_opt) {

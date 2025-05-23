@@ -60,7 +60,7 @@ public:
             co_return;
             });
         server_.Start(port);
-        logger().Info("Gateway start.");
+        logger().LOG_INFO("Gateway start.");
         co_return nullptr;
     }
 
@@ -70,13 +70,13 @@ public:
             auto recv_msg = co_await RecvWithTimeout(session_id, ::million::kSessionNeverTimeout);
             // imillion().SendTo(sender, service_handle(), session_id, std::move(recv_msg));
             if (recv_msg.IsProtoMessage()) {
-                logger().Trace("Gateway Recv ProtoMessage: {}.", session_id);
+                logger().LOG_TRACE("Gateway Recv ProtoMessage: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
 
                 auto proto_msg = std::move(recv_msg.GetProtoMessage());
                 auto packet = imillion().proto_mgr().codec().EncodeMessage(*proto_msg);
                 if (!packet) {
-                    logger().Err("Gateway Recv ProtoMessage EncodeMessage failed: {}.", session_id);
+                    logger().LOG_ERROR("Gateway Recv ProtoMessage EncodeMessage failed: {}.", session_id);
                     continue;
                 }
                 auto span = net::PacketSpan(header_packet);
@@ -85,7 +85,7 @@ public:
                 user_session.Send(std::move(*packet), span, 0);
             }
             else if (recv_msg.IsType<GatewaySendPacket>()) {
-                logger().Trace("GatewaySendPacket: {}.", session_id);
+                logger().LOG_TRACE("GatewaySendPacket: {}.", session_id);
                 auto header_packet = net::Packet(kGatewayHeaderSize);
                 auto msg = recv_msg.GetMutableMessage<GatewaySendPacket>();
                 auto span = net::PacketSpan(header_packet);
@@ -122,13 +122,13 @@ public:
             auto agent_id = Send<GatewayPersistentUserSession>(service_handle(), std::move(msg->user_session));
             user_session.set_agent_id(agent_id.value());
 
-            logger().Debug("Gateway connection establishment, agent_id:{}, ip: {}, port: {}", user_session.agent_id(), ip, port);
+            logger().LOG_DEBUG("Gateway connection establishment, agent_id:{}, ip: {}, port: {}", user_session.agent_id(), ip, port);
         }
         else {
             // 停止持久会话
             Reply<GatewayPersistentUserSession>(service_handle(), user_session.agent_id(), std::move(msg->user_session));
 
-            logger().Debug("Gateway Disconnection: ip: {}, port: {}", ip, port);
+            logger().LOG_DEBUG("Gateway Disconnection: ip: {}, port: {}", ip, port);
         }
         co_return nullptr;
     }
@@ -137,7 +137,7 @@ public:
         auto& user_session = *msg->user_session;
         auto agent_id = user_session.agent_id();
 
-        logger().Trace("GatewayTcpRecvPacketMsg: {}, {}.", agent_id, msg->packet.size());
+        logger().LOG_TRACE("GatewayTcpRecvPacketMsg: {}, {}.", agent_id, msg->packet.size());
 
         if (user_session.token() == kInvaildToken) {
             // 连接没token，但是发来了token，当成断线重连处理
@@ -148,7 +148,7 @@ public:
         // 没有token
 
         if (msg->packet.size() < kGatewayHeaderSize){
-            logger().Warn("GatewayTcpRecvPacketMsg size err: {}, {}.", agent_id, msg->packet.size());
+            logger().LOG_WARN("GatewayTcpRecvPacketMsg size err: {}, {}.", agent_id, msg->packet.size());
             co_return nullptr;
         }
 
@@ -157,7 +157,7 @@ public:
         // 将消息转发给本机节点的其他服务
         auto res = imillion().proto_mgr().codec().DecodeMessage(span);
         if (!res) {
-            logger().Warn("GatewayTcpRecvPacketMsg unresolvable message: {}, {}.", agent_id, msg->packet.size());
+            logger().LOG_WARN("GatewayTcpRecvPacketMsg unresolvable message: {}, {}.", agent_id, msg->packet.size());
             co_return nullptr;
         }
 
@@ -165,18 +165,18 @@ public:
 
         // 指定user_session_id，目标在通过Reply回包时，会在GatewayPersistentUserSessionMsg中循环接收处理
         if (!user_session.agent_handle().lock()) {
-            logger().Trace("packet send to user service.");
+            logger().LOG_TRACE("packet send to user service.");
             SendTo(user_service_, agent_id, std::move(res->msg));
         }
         else {
-            logger().Trace("packet send to agent service.");
+            logger().LOG_TRACE("packet send to agent service.");
             SendTo(user_session.agent_handle(), agent_id, std::move(res->msg));
         }
         co_return nullptr;
     }
 
     MILLION_MESSAGE_HANDLE(GatewayRegisterUserServiceReq, msg) {
-        logger().Trace("GatewayRegisterUserServiceReq.");
+        logger().LOG_TRACE("GatewayRegisterUserServiceReq.");
         user_service_ = msg->user_service;
         co_return make_message<GatewayRegisterUserServiceResp>();
     }

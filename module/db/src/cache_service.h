@@ -38,13 +38,13 @@ public:
         const auto& settings = imillion().YamlSettings();
         const auto& db_settings = settings["db"];
         if (!db_settings) {
-            logger().Err("cannot find 'db' configuration.");
+            logger().LOG_ERROR("cannot find 'db' configuration.");
             return false;
         }
 
         const auto& cache_settings = db_settings["cache"];
         if (!cache_settings) {
-            logger().Err("cannot find 'db.cache' configuration.");
+            logger().LOG_ERROR("cannot find 'db.cache' configuration.");
             return false;
         }
 
@@ -53,7 +53,7 @@ public:
         const auto& db_port = cache_settings["port"];
 
         if (!db_host || !db_port) {
-            logger().Err("incomplete cache configuration.");
+            logger().LOG_ERROR("incomplete cache configuration.");
             return false;
         }
 
@@ -70,7 +70,7 @@ public:
             redis_.emplace(std::format("tcp://{}:{}", host, port));
         }
         catch (const sw::redis::Error& e) {
-            logger().Err("Redis error:{}", e.what());
+            logger().LOG_ERROR("Redis error:{}", e.what());
         }
         co_return nullptr;
     }
@@ -225,7 +225,7 @@ private:
 
             const auto* field = desc.field(i);
             if (!field) {
-                logger().Err("desc.field failed: {}.", i);
+                logger().LOG_ERROR("desc.field failed: {}.", i);
                 continue;
             }
 
@@ -241,10 +241,10 @@ private:
             //    const auto& cache_options = options.cache();
             //    if (cache_options.index()) {
             //        if (!primary_key.empty()) {
-            //            logger().Err("there can only be one index:{}", field->name());
+            //            logger().LOG_ERROR("there can only be one index:{}", field->name());
             //        }
             //        if (field->is_repeated()) {
-            //            logger().Err("index cannot be an array:{}", field->name());
+            //            logger().LOG_ERROR("index cannot be an array:{}", field->name());
             //        }
             //        else {
             //            primary_key = redis_hash[field->name()];

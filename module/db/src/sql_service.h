@@ -44,13 +44,13 @@ public:
         const auto& settings = imillion().YamlSettings();
         const auto& db_settings = settings["db"];
         if (!db_settings) {
-            logger().Err("cannot find 'db' configuration.");
+            logger().LOG_ERROR("cannot find 'db' configuration.");
             return false;
         }
 
         const auto& sql_settings = db_settings["sql"];
         if (!sql_settings) {
-            logger().Err("cannot find 'db.sql' configuration.");
+            logger().LOG_ERROR("cannot find 'db.sql' configuration.");
             return false;
         }
 
@@ -61,7 +61,7 @@ public:
         const auto& db_password = sql_settings["password"];
 
         if (!db_host || !db_name || !db_user || !db_password) {
-            logger().Err("incomplete sql configuration.");
+            logger().LOG_ERROR("incomplete sql configuration.");
             return false;
         }
 
@@ -80,7 +80,7 @@ public:
             sql_ = soci::session(soci::mysql, std::format("db={} user={} password={} host={}", name, user, password, host));
         }
         catch (const soci::mysql_soci_error& e) {
-            logger().Err("MySQL error : {}", e.what());
+            logger().LOG_ERROR("MySQL error : {}", e.what());
         }
 
         co_return nullptr;
@@ -171,14 +171,14 @@ public:
         for (int i = 0; i < desc.field_count(); ++i) {
             const auto* field = desc.field(i);
             if (!field) {
-                logger().Err("field({}) is null.", i);
+                logger().LOG_ERROR("field({}) is null.", i);
                 continue;
             }
             const std::string& field_name = field->name();
             std::string sql_type;
 
             if (field->is_repeated()) {
-                logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
+                logger().LOG_ERROR("db repeated fields are not supported: {}.{}", table_name, field->name());
                 continue;
             }
             else {
@@ -226,7 +226,7 @@ public:
                     for (int i = 0; i < multi_index.field_numbers_size(); ++i) {
                         const auto* field = desc.FindFieldByNumber(multi_index.field_numbers(i));
                         if (!field) {
-                            logger().Err("FindFieldByNumber failed: {}.{}", multi_index.field_numbers(i), i);
+                            logger().LOG_ERROR("FindFieldByNumber failed: {}.{}", multi_index.field_numbers(i), i);
                             continue;
                         }
 
@@ -321,11 +321,11 @@ public:
         for (int i = 1; i < desc.field_count() + 1; ++i) {
             const auto* const field = desc.field(i - 1);
             if (!field) {
-                logger().Err("desc.field failed: {}.{}.", table_name, i);
+                logger().LOG_ERROR("desc.field failed: {}.{}.", table_name, i);
                 continue;
             }
             if (field->is_repeated()) {
-                logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
+                logger().LOG_ERROR("db repeated fields are not supported: {}.{}", table_name, field->name());
             }
             else {
                 auto type = field->type();
@@ -383,7 +383,7 @@ public:
                     break;
                 }
                 default:
-                    logger().Err("unsupported field type:{}", field->name());
+                    logger().LOG_ERROR("unsupported field type:{}", field->name());
                 }
             }
         }
@@ -422,7 +422,7 @@ public:
         for (int i = 0; i < desc.field_count(); ++i) {
             const auto* field = desc.field(i);
             if (!field) {
-                logger().Err("desc.field failed: {}.{}.", table_name, i);
+                logger().LOG_ERROR("desc.field failed: {}.{}.", table_name, i);
                 continue;
             }
             
@@ -634,7 +634,7 @@ private:
             }
 
             if (field->is_repeated()) {
-                logger().Err("db repeated fields are not supported: {}.{}", table_name, field->name());
+                logger().LOG_ERROR("db repeated fields are not supported: {}.{}", table_name, field->name());
             }
             else {
                 switch (field->type()) {
@@ -697,7 +697,7 @@ private:
                     break;
                 }
                 default:
-                    logger().Err("unsupported field type:{}", field->name());
+                    logger().LOG_ERROR("unsupported field type:{}", field->name());
                 }
             }
         }

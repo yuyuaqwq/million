@@ -29,14 +29,14 @@ public:
         
         auto handle = imillion().GetServiceByName(db::kDBServiceName);
         if (!handle) {
-            logger().Err("Unable to find DbService.");
+            logger().LOG_ERROR("Unable to find DbService.");
             return false;
         }
         db_service_ = *handle;
 
         handle = imillion().GetServiceByName(db::kSqlServiceName);
         if (!handle) {
-            logger().Err("Unable to find SqlService.");
+            logger().LOG_ERROR("Unable to find SqlService.");
             return false;
         }
         sql_service_ = *handle;
@@ -59,7 +59,7 @@ public:
         auto res2 = co_await Call<db::DBRowLoadReq, db::DBRowLoadResp>(db_service_
             , *million::db::example::User::GetDescriptor(), million::db::example::User::kIdFieldNumber, 103);
         if (!res2->db_row) {
-            logger().Info("DbRowGetMsg failed.");
+            logger().LOG_INFO("DbRowGetMsg failed.");
         }
 
         res2->db_row->MarkDirty();

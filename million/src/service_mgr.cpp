@@ -49,10 +49,10 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
         success = service_shared->iservice().OnInit();
     }
     catch (const std::exception& e) {
-        million_->logger().Err("Service OnInit exception occurred: {}", e.what());
+        million_->logger().LOG_ERROR("Service OnInit exception occurred: {}", e.what());
     }
     catch (...) {
-        million_->logger().Err("Service OnInit exception occurred: {}", "unknown exception");
+        million_->logger().LOG_ERROR("Service OnInit exception occurred: {}", "unknown exception");
     }
     if (!success) {
         {

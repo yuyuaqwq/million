@@ -26,7 +26,7 @@ public:
     virtual bool OnInit() override {
         auto handle = imillion().GetServiceByName(config::kConfigServiceName);
         if (!handle) {
-            logger().Err("Unable to find ConfigService.");
+            logger().LOG_ERROR("Unable to find ConfigService.");
             return false;
         }
         config_service_ = *handle;
@@ -63,11 +63,11 @@ public:
             return row.serverip() == "8.8.8.8";
         });
 
-        logger().Info("ExampleKV:\n{}", config_lock->DebugString());
+        logger().LOG_INFO("ExampleKV:\n{}", config_lock->DebugString());
 
         auto example_data_config = co_await config::QueryConfig<config::example::ExampleData>(this, config_service_);
         auto config_lock2 = co_await example_data_config.Lock(this, config_service_);
-        logger().Info("ExampleData:\n{}", config_lock2->DebugString());
+        logger().LOG_INFO("ExampleData:\n{}", config_lock2->DebugString());
 
         co_return nullptr;
     }

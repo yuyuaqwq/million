@@ -9,7 +9,7 @@ TcpServer::TcpServer(IMillion* imillion)
 TcpServer::~TcpServer() = default;
 
 void TcpServer::Start(uint16_t port) {
-    // ªÒ»°“ª∏ˆio_context£¨∞Û∂®acceptor
+    // Ëé∑Âèñ‰∏Ä‰∏™io_contextÔºåÁªëÂÆöacceptor
     auto& io_context = imillion_->NextIoContext();
     asio::co_spawn(io_context, Listen(port), asio::detached);
 }
@@ -29,7 +29,7 @@ void TcpServer::RemoveConnection(std::list<TcpConnectionShared>::iterator iter) 
 }
 
 asio::awaitable<std::optional<TcpConnectionShared>> TcpServer::ConnectTo(std::string_view host, std::string_view port) {
-    // ªÒ»°io_context£¨–¬¡¨Ω”∞Û∂®µΩ∏√io_context÷–
+    // Ëé∑Âèñio_contextÔºåÊñ∞ËøûÊé•ÁªëÂÆöÂà∞ËØ•io_context‰∏≠
     try {
         auto executor = co_await asio::this_coro::executor;
         auto resolver = asio::ip::tcp::resolver(executor);
@@ -42,7 +42,7 @@ asio::awaitable<std::optional<TcpConnectionShared>> TcpServer::ConnectTo(std::st
         co_return handle;
     }
     catch (const std::exception& e) {
-        imillion().logger().Err("Tcp server ConnectTo exception: {}", e.what());
+        imillion().logger().LOG_ERROR("Tcp server ConnectTo exception: {}", e.what());
     }
     co_return std::nullopt;
 }
@@ -70,13 +70,13 @@ asio::awaitable<void> TcpServer::Listen(uint16_t port) {
     while (true) {
         try {
             asio::ip::tcp::socket socket = co_await acceptor.async_accept(asio::use_awaitable);
-            // ªÒ»°io_context£¨–¬¡¨Ω”∞Û∂®µΩ∏√io_context÷–
+            // Ëé∑Âèñio_contextÔºåÊñ∞ËøûÊé•ÁªëÂÆöÂà∞ËØ•io_context‰∏≠
             auto& io_context = imillion_->NextIoContext();
             auto handle = AddConnection(std::move(socket), io_context.get_executor());
             handle->Process(true);
         }
         catch (const std::exception& e) {
-            imillion().logger().Err("Tcp server Listen exception: {}", e.what());
+            imillion().logger().LOG_ERROR("Tcp server Listen exception: {}", e.what());
         }
     }
     co_return;

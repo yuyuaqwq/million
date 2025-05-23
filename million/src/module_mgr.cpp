@@ -24,7 +24,7 @@ bool ModuleMgr::Load(const std::string& module_dir, const std::string& module_na
         module = std::make_unique<Module>(million_, path);
     }
     catch (std::system_error ec) {
-        million_->logger().Err("load module '{}' err: {}.", path.string(), ec.what());
+        million_->logger().LOG_ERROR("load module '{}' err: {}.", path.string(), ec.what());
     }
     if (!module || !module->Loaded()) {
         return false;
@@ -36,7 +36,7 @@ bool ModuleMgr::Load(const std::string& module_dir, const std::string& module_na
 bool ModuleMgr::Init() {
     for (auto& module : modules_) {
         if (!module.second->Init()) {
-            million_->logger().Err("module init '{}' failed.", module.first);
+            million_->logger().LOG_ERROR("module init '{}' failed.", module.first);
             return false;
         }
     }

@@ -31,14 +31,14 @@ public:
     }
 
     MILLION_MESSAGE_HANDLE(ss::test::LoginReq, req) {
-        logger().Info("ss::test::LoginReq, value:{}", req->value());
+        logger().LOG_INFO("ss::test::LoginReq, value:{}", req->value());
 
         // 回一个LoginRes
         co_return million::make_proto_message<ss::test::LoginRes>("LoginRes res");
     }
 
     MILLION_MESSAGE_HANDLE(ss::test::LoginRes, res) {
-        logger().Info("ss::test::LoginRes, value:{}", res->value());
+        logger().LOG_INFO("ss::test::LoginRes, value:{}", res->value());
         co_return nullptr;
     }
 

@@ -31,27 +31,27 @@ public:
         const auto& settings = imillion().YamlSettings();
         const auto& config_settings = settings["config"];
         if (!config_settings) {
-            logger().Err("cannot find 'config'.");
+            logger().LOG_ERROR("cannot find 'config'.");
             return false;
         }
 
         const auto& pbb_dir_path_settings = config_settings["pbb_dir_path"];
         if (!pbb_dir_path_settings) {
-            logger().Err("cannot find 'config.pbb_dir_path'.");
+            logger().LOG_ERROR("cannot find 'config.pbb_dir_path'.");
             return false;
         }
         pbb_dir_path_ = pbb_dir_path_settings.as<std::string>();
 
         const auto& namespace_settings = config_settings["namespace"];
         if (!namespace_settings) {
-            logger().Err("cannot find 'config.namespace'.");
+            logger().LOG_ERROR("cannot find 'config.namespace'.");
             return false;
         }
         auto namespace_ = namespace_settings.as<std::string>();
 
         const auto& modules_settings = config_settings["modules"];
         if (!modules_settings) {
-            logger().Err("cannot find 'config.modules'.");
+            logger().LOG_ERROR("cannot find 'config.modules'.");
             return false;
         }
         for (auto module_settings : modules_settings) {
@@ -59,19 +59,19 @@ public:
             auto table_msg_name = namespace_ + ".config." + module_name + ".Table";
             auto table_desc = imillion().proto_mgr().FindMessageTypeByName(table_msg_name);
             if (!table_desc) {
-                logger().Err("Unable to find message desc: top_msg_name -> {}.", table_msg_name);
+                logger().LOG_ERROR("Unable to find message desc: top_msg_name -> {}.", table_msg_name);
                 return false;
             }
 
             for (int i = 0; i < table_desc->field_count(); ++i) {
                 auto field_desc = table_desc->field(i);
                 if (!field_desc) {
-                    logger().Err("table_desc->field failed: {}.{}: Unable to retrieve field description.", table_msg_name, i);
+                    logger().LOG_ERROR("table_desc->field failed: {}.{}: Unable to retrieve field description.", table_msg_name, i);
                     continue;
                 }
 
                 if (!field_desc->is_repeated()) {
-                    logger().Err("table_desc->field: Field at index {} in message '{}' is not repeated. Expected a repeated field.", i, table_msg_name);
+                    logger().LOG_ERROR("table_desc->field: Field at index {} in message '{}' is not repeated. Expected a repeated field.", i, table_msg_name);
                     continue;
                 }
 
@@ -81,7 +81,7 @@ public:
 
                 const auto* config_desc = field_desc->message_type();
                 if (!config_desc) {
-                    logger().Err("field_desc->message_type() is nullptr: Field at index {} in message '{}'.", i, table_msg_name);
+                    logger().LOG_ERROR("field_desc->message_type() is nullptr: Field at index {} in message '{}'.", i, table_msg_name);
                     continue;
                 }
                 LoadConfig(module_name, *table_desc, *config_desc);
@@ -105,7 +105,7 @@ public:
     MILLION_MESSAGE_HANDLE(const ConfigUpdateReq, msg) {
         //const auto& name = msg->config_desc.name();
         //if (!LoadConfig(name, )) {
-        //    logger().Err("LoadConfig failed: {}.", name);
+        //    logger().LOG_ERROR("LoadConfig failed: {}.", name);
         //}
         co_return make_message<ConfigUpdateResp>();
     }
@@ -137,21 +137,21 @@ private:
         pbb_path /= config_desc.name() + ".pbb";
         auto data = ReadPbb(pbb_path);
         if (!data) {
-            logger().Err("ReadPbb failed: {}.", config_desc.full_name());
+            logger().LOG_ERROR("ReadPbb failed: {}.", config_desc.full_name());
             return false;
         }
 
         auto config_msg = imillion().proto_mgr().NewMessage(table_desc);
         if (!config_msg) {
-            logger().Err("NewMessage failed: {}.", table_desc.full_name());
+            logger().LOG_ERROR("NewMessage failed: {}.", table_desc.full_name());
             return false;
         }
 
         if (!config_msg->ParseFromArray(data->data(), data->size())) {
-            logger().Err("ParseFromString failed: {}.", table_desc.full_name());
+            logger().LOG_ERROR("ParseFromString failed: {}.", table_desc.full_name());
             return false;
         }
-        // logger().Debug("Config '{}.{}' debug string:\n {}", config_desc.full_name(), config_desc.full_name(), config_msg->DebugString());
+        // logger().LOG_DEBUG("Config '{}.{}' debug string:\n {}", config_desc.full_name(), config_desc.full_name(), config_msg->DebugString());
 
         config_map_[&config_desc] = std::make_shared<ConfigTableBase>(std::move(config_msg), &config_desc);
 

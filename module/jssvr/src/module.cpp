@@ -36,7 +36,7 @@ extern "C" MILLION_JSSVR_API bool MillionModuleInit(IMillion* imillion) {
     auto settings = imillion->YamlSettings();
     const auto& jssvr_settings = settings["jssvr"];
     if (!jssvr_settings) {
-        imillion->logger().Err("cannot find 'jssvr'.");
+        imillion->logger().LOG_ERROR("cannot find 'jssvr'.");
         return false;
     }
 

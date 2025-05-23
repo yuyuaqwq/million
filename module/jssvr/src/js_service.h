@@ -109,11 +109,11 @@ private:
 
         const auto& jssvr_settings = settings["jssvr"];
         if (!jssvr_settings) {
-            logger().Err("cannot find 'jssvr'.");
+            logger().LOG_ERROR("cannot find 'jssvr'.");
             return false;
         }
         if (!jssvr_settings["dirs"]) {
-            logger().Err("cannot find 'jssvr.dirs'.");
+            logger().LOG_ERROR("cannot find 'jssvr.dirs'.");
             return false;
         }
         jssvr_dirs_ = jssvr_settings["dirs"].as<std::vector<std::string>>();
@@ -127,8 +127,6 @@ private:
     Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         db_handle_ = *imillion().GetServiceByName(db::kDBServiceName);
         config_handle_ = *imillion().GetServiceByName(config::kConfigServiceName);
-
-
         co_return nullptr;
     }
 
@@ -678,32 +676,32 @@ private:
                 }
 
                 if (!result.IsArrayObject()) {
-                    logger().Err("Need to return undefined or array.");
+                    logger().LOG_ERROR("Need to return undefined or array.");
                     co_return nullptr;
                 }
 
                 // 解析返回值数组
                 auto msg_name = result.array()[0];
                 if (!msg_name.IsString()) {
-                    logger().Err("message name must be a string.");
+                    logger().LOG_ERROR("message name must be a string.");
                     co_return nullptr;
                 }
 
                 auto desc = imillion().proto_mgr().FindMessageTypeByName(msg_name.string_view());
                 if (!desc) {
-                    logger().Err("Invalid message type.");
+                    logger().LOG_ERROR("Invalid message type.");
                     co_return nullptr;
                 }
 
                 auto ret_proto_msg = imillion().proto_mgr().NewMessage(*desc);
                 if (!ret_proto_msg) {
-                    logger().Err("New message failed.");
+                    logger().LOG_ERROR("New message failed.");
                     co_return nullptr;
                 }
 
                 auto msg_obj = result.array()[1];
                 if (!msg_obj.IsObject()) {
-                    logger().Err("message must be an object.");
+                    logger().LOG_ERROR("message must be an object.");
                     co_return nullptr;
                 }
 
@@ -713,32 +711,32 @@ private:
             else if (promise.IsRejected()) {
                 // Promise被拒绝，获取错误
                 auto& error = promise.reason();
-                logger().Err("JS Promise rejected: {}.", error.ToString(&js_context_).string_view());
+                logger().LOG_ERROR("JS Promise rejected: {}.", error.ToString(&js_context_).string_view());
             }
         }
         else if (result.IsArrayObject()) {
             // 直接返回数组形式的返回值
             auto msg_name = result.array()[0];
             if (!msg_name.IsString()) {
-                logger().Err("message name must be a string.");
+                logger().LOG_ERROR("message name must be a string.");
                 co_return nullptr;
             }
 
             auto desc = imillion().proto_mgr().FindMessageTypeByName(msg_name.string_view());
             if (!desc) {
-                logger().Err("Invalid message type.");
+                logger().LOG_ERROR("Invalid message type.");
                 co_return nullptr;
             }
 
             auto ret_proto_msg = imillion().proto_mgr().NewMessage(*desc);
             if (!ret_proto_msg) {
-                logger().Err("New message failed.");
+                logger().LOG_ERROR("New message failed.");
                 co_return nullptr;
             }
 
             auto msg_obj = result.array()[1];
             if (!msg_obj.IsObject()) {
-                logger().Err("message must be an object.");
+                logger().LOG_ERROR("message must be an object.");
                 co_return nullptr;
             }
 
@@ -757,7 +755,7 @@ private:
     // 添加模块
     //bool AddModule(const std::string& module_name, mjs::ModuleObject* module) {
     //    if (modules_.find(module_name) != modules_.end()) {
-    //        logger().Err("Module already exists: {}.", module_name);
+    //        logger().LOG_ERROR("Module already exists: {}.", module_name);
     //        return false;
     //    }
     //    modules_[module_name] = mjs::Value(module);
@@ -767,7 +765,7 @@ private:
     // 检查JS异常
     bool JSCheckExceptionAndLog(const mjs::Value& value) {
         if (value.IsException()) {
-            logger().Err("JS Exception: {}.", value.ToString(&js_context_).string_view());
+            logger().LOG_ERROR("JS Exception: {}.", value.ToString(&js_context_).string_view());
             return false;
         }
         return true;

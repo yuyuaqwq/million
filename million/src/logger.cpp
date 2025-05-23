@@ -20,24 +20,25 @@ bool Logger::Init() {
 
 void Logger::Log(const ServiceHandle& sender, const std::source_location& source, LogLevel level, const std::string& msg) {
     if (!is_bind_) {
+        std::string short_func = ExtractFunctionName(source.function_name());
         switch (level) {
             case LogLevel::kTrace:
-                std::cout << "[million] [init] [trace] " << "[" << source.function_name() << "] " << msg << std::endl;
+                std::cout << "[million] [init] [trace] " << "[" << short_func << ":" << source.line() << "] " << msg << std::endl;
                 break;
             case LogLevel::kDebug:
-                std::cout << "[million] [init] [debug] " << "[" << source.function_name() << "] " << msg << std::endl;
+                std::cout << "[million] [init] [debug] " << "[" << short_func << ":" << source.line() << "] " << msg << std::endl;
                 break;
             case LogLevel::kInfo:
-                std::cout << "[million] [init] [info] " << "[" << source.function_name() << "] " << msg << std::endl;
+                std::cout << "[million] [init] [info] " << "[" << short_func << ":" << source.line() << "] " << msg << std::endl;
                 break;
             case LogLevel::kWarn:
-                std::cerr << "[million] [init] [warn] " << "[" << source.function_name() << "] " << msg << std::endl;
+                std::cerr << "[million] [init] [warn] " << "[" << short_func << ":" << source.line() << "] " << msg << std::endl;
                 break;
-            case LogLevel::kErr:
-                std::cerr << "[million] [init] [err] " << "[" << source.function_name() << "] " << msg << std::endl;
+            case LogLevel::kError:
+                std::cerr << "[million] [init] [error] " << "[" << short_func << ":" << source.line() << "] " << msg << std::endl;
                 break;
             case LogLevel::kCritical:
-                std::cerr << "[million] [init] [critical] " << "[" << source.function_name() << "] " << msg << std::endl;
+                std::cerr << "[million] [init] [critical] " << "[" << short_func << ":" << source.line() << "] " << msg << std::endl;
                 break;
         }
     }

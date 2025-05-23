@@ -22,7 +22,7 @@ static_assert(static_cast<uint32_t>(Logger::LogLevel::kTrace) == spdlog::level::
 static_assert(static_cast<uint32_t>(Logger::LogLevel::kDebug) == spdlog::level::level_enum::debug);
 static_assert(static_cast<uint32_t>(Logger::LogLevel::kInfo) == spdlog::level::level_enum::info);
 static_assert(static_cast<uint32_t>(Logger::LogLevel::kWarn) == spdlog::level::level_enum::warn);
-static_assert(static_cast<uint32_t>(Logger::LogLevel::kErr) == spdlog::level::level_enum::err);
+static_assert(static_cast<uint32_t>(Logger::LogLevel::kError) == spdlog::level::level_enum::err);
 static_assert(static_cast<uint32_t>(Logger::LogLevel::kCritical) == spdlog::level::level_enum::critical);
 static_assert(static_cast<uint32_t>(Logger::LogLevel::kOff) == spdlog::level::level_enum::off);
 
@@ -36,21 +36,21 @@ public:
     virtual bool OnInit() override {
         auto& settings = imillion().YamlSettings();
 
-        logger().Info("load 'logger' settings.");
+        logger().LOG_INFO("load 'logger' settings.");
 
         auto logger_settings = settings["logger"];
         if (!logger_settings) {
-            logger().Err("cannot find 'logger'.");
+            logger().LOG_ERROR("cannot find 'logger'.");
             return false;
         }
         if (!logger_settings["log_file"]) {
-            logger().Err("cannot find 'logger.log_file'.");
+            logger().LOG_ERROR("cannot find 'logger.log_file'.");
             return false;
         }
         auto log_file = logger_settings["log_file"].as<std::string>();
 
         if (!logger_settings["level"]) {
-            logger().Err("cannot find 'logger.level'.");
+            logger().LOG_ERROR("cannot find 'logger.level'.");
             return false;
         }
         auto level_str = logger_settings["level"].as<std::string>();
@@ -100,7 +100,8 @@ public:
 
     MILLION_MESSAGE_HANDLE(LoggerLog, msg) {
         auto level = static_cast<spdlog::level::level_enum>(msg->level);
-        logger_->log(spdlog::source_loc(msg->source.file_name(), msg->source.line(), msg->source.function_name()), level, msg->msg);
+        std::string short_func = logger().ExtractFunctionName(msg->source.function_name());
+        logger_->log(spdlog::source_loc(msg->source.file_name(), msg->source.line(), short_func.c_str()), level, msg->msg);
         co_return nullptr;
     }
 

@@ -30,7 +30,7 @@ std::variant<MessagePointer, TaskElement, TaskElement*> TaskExecutor::TrySchedul
     if (msg_opt) {
         // find找到的task，却未处理，异常情况
         auto& million = service_->service_mgr()->million();
-        million.logger().Critical("Try schedule exception: {}.", session_id);
+        million.logger().LOG_CRITICAL("Try schedule exception: {}.", session_id);
     }
     if (!iter->second.task.coroutine.done()) {
         // 协程仍未完成，即内部再次调用了Recv等待了一个新的会话，需要重新放入等待调度队列
@@ -52,10 +52,10 @@ std::optional<TaskElement> TaskExecutor::AddTask(TaskElement&& ele) {
             ele.task.rethrow_if_exception();
         }
         catch (const std::exception& e) {
-            million.logger().Err("Session exception: {}", e.what());
+            million.logger().LOG_ERROR("Session exception: {}", e.what());
         }
         catch (...) {
-            million.logger().Err("Session exception: {}", "unknown exception.");
+            million.logger().LOG_ERROR("Session exception: {}", "unknown exception.");
         }
     }
     if (!ele.task.coroutine.done()) {
@@ -109,14 +109,14 @@ std::optional<MessagePointer> TaskExecutor::TrySchedule(TaskElement& ele, Sessio
         }
 #ifdef MILLION_STACK_TRACE
         catch (const TaskAbortException& e) {
-            million.logger().Err("Session {} exception: {}\n[Stack trace]\n{}", session_id, e.what(), e.stacktrace());
+            million.logger().LOG_ERROR("Session {} exception: {}\n[Stack trace]\n{}", session_id, e.what(), e.stacktrace());
         }
 #endif
         catch (const std::exception& e) {
-            million.logger().Err("Session {} exception: {}", session_id, e.what());
+            million.logger().LOG_ERROR("Session {} exception: {}", session_id, e.what());
         }
         catch (...) {
-            million.logger().Err("Session {} exception: {}", session_id, "unknown exception.");
+            million.logger().LOG_ERROR("Session {} exception: {}", session_id, "unknown exception.");
         }
     }
     return std::nullopt;
@@ -126,7 +126,7 @@ TaskElement* TaskExecutor::Push(SessionId id, TaskElement&& ele) {
     assert(!SessionIsReplyId(id));
     auto& million = service_->service_mgr()->million();
     if (id == kSessionIdInvalid) {
-        million.logger().Err("Waiting for an invalid session.");
+        million.logger().LOG_ERROR("Waiting for an invalid session.");
         return nullptr;
     }
     auto timeout_s = ele.task.coroutine.promise().session_awaiter()->timeout_s();
@@ -136,7 +136,7 @@ TaskElement* TaskExecutor::Push(SessionId id, TaskElement&& ele) {
     auto res = tasks_.emplace(id, std::move(ele));
     if (!res.second) {
         // throw std::runtime_error("Duplicate session id.");
-        million.logger().Err("Found duplicate session id: {}.", id);
+        million.logger().LOG_ERROR("Found duplicate session id: {}.", id);
         return nullptr;
     }
     return &res.first->second;

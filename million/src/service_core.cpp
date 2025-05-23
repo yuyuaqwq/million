@@ -56,12 +56,12 @@ void ServiceCore::ProcessMsg(MsgElement ele) {
         }
         stage_ = ServiceStage::kStarting;
         if (!SessionIsSendId(session_id)) {
-            service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
+            service_mgr_->million().logger().LOG_ERROR("Should not receive send type messages: {}.", session_id);
             return;
         }
         auto start_msg = msg.GetMutableMessage<ServiceStartMsg>();
         if (!start_msg) {
-            service_mgr_->million().logger().Err("Get service start msg err.");
+            service_mgr_->million().logger().LOG_ERROR("Get service start msg err.");
             return;
         }
         auto task = iservice_->OnStart(ServiceHandle(sender), session_id, std::move(start_msg->with_msg));
@@ -80,12 +80,12 @@ void ServiceCore::ProcessMsg(MsgElement ele) {
         }
         stage_ = ServiceStage::kStopping;
         if (!SessionIsSendId(session_id)) {
-            service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
+            service_mgr_->million().logger().LOG_ERROR("Should not receive send type messages: {}.", session_id);
             return;
         }
         auto stop_msg = msg.GetMutableMessage<ServiceStopMsg>();
         if (!stop_msg) {
-            service_mgr_->million().logger().Err("Get service stop msg err.");
+            service_mgr_->million().logger().LOG_ERROR("Get service stop msg err.");
             return;
         }
         auto task = iservice_->OnStop(ServiceHandle(sender), session_id, std::move(stop_msg->with_msg));
@@ -105,16 +105,16 @@ void ServiceCore::ProcessMsg(MsgElement ele) {
         stage_ = ServiceStage::kExited;
         try {
             if (!SessionIsSendId(session_id)) {
-                service_mgr_->million().logger().Err("Should not receive send type messages: {}.", session_id);
+                service_mgr_->million().logger().LOG_ERROR("Should not receive send type messages: {}.", session_id);
                 return;
             }
             iservice_->OnExit();
         }
         catch (const std::exception& e) {
-            service_mgr_->million().logger().Err("Service OnExit exception occurred: {}", e.what());
+            service_mgr_->million().logger().LOG_ERROR("Service OnExit exception occurred: {}", e.what());
         }
         catch (...) {
-            service_mgr_->million().logger().Err("Service OnExit exception occurred: {}", "unknown exception.");
+            service_mgr_->million().logger().LOG_ERROR("Service OnExit exception occurred: {}", "unknown exception.");
         }
         return;
     }
@@ -262,7 +262,7 @@ void ServiceCore::ReplyMsg(TaskElement* ele) {
     }
 
     if (!ele->task.coroutine.promise().result_value) {
-        service_mgr_->million().logger().Err("Task Session {} has no return value.", ele->session_id);
+        service_mgr_->million().logger().LOG_ERROR("Task Session {} has no return value.", ele->session_id);
         return;
     }
     auto reply_msg = std::move(*ele->task.coroutine.promise().result_value);

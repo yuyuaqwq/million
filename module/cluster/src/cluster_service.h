@@ -46,20 +46,20 @@ public:
         const auto& settings = imillion().YamlSettings();
         const auto& cluster_settings = settings["cluster"];
         if (!cluster_settings) {
-            logger().Err("cannot find 'cluster'.");
+            logger().LOG_ERROR("cannot find 'cluster'.");
             return false;
         }
 
         const auto& name_settings = cluster_settings["name"];
         if (!name_settings) {
-            logger().Err("cannot find 'cluster.name'.");
+            logger().LOG_ERROR("cannot find 'cluster.name'.");
             return false;
         }
         node_name_ = name_settings.as<std::string>();
 
         const auto& port_settings = cluster_settings["port"];
         if (!port_settings) {
-            logger().Err("cannot find 'cluster.port'.");
+            logger().LOG_ERROR("cannot find 'cluster.port'.");
             return false;
         }
         server_.Start(port_settings.as<uint16_t>());
@@ -74,7 +74,7 @@ public:
             // 这里未来可以修改超时时间，来自动回收协程
             auto recv_msg = co_await RecvWithTimeout(session_id, ::million::kSessionNeverTimeout);
             if (recv_msg.IsProtoMessage()) {
-                logger().Trace("Cluster Recv ProtoMessage: {}.", session_id);
+                logger().LOG_TRACE("Cluster Recv ProtoMessage: {}.", session_id);
 
                 auto proto_msg = std::move(recv_msg.GetProtoMessage());
                 PacketForward(&node_session, ServiceName(src_service)
@@ -94,14 +94,14 @@ public:
         auto ip = ep.address().to_string();
         auto port = std::to_string(ep.port());
         if (node_session.Connected()) {
-            logger().Debug("Connection establishment: ip: {}, port: {}", ip, port);
+            logger().LOG_DEBUG("Connection establishment: ip: {}, port: {}", ip, port);
 
             // 开启持久会话
             // auto node_session_id = Send<ClusterNodeServiceSessionMsg>(service_handle());
             // node_session.set_node_session_id(node_session_id);
         }
         else {
-            logger().Debug("Disconnection: ip: {}, port: {}, cur_node: {}, target_node : {}", ip, port, node_name_, msg->node_session->node_name());
+            logger().LOG_DEBUG("Disconnection: ip: {}, port: {}, cur_node: {}, target_node : {}", ip, port, node_name_, msg->node_session->node_name());
             DeleteNodeSession(std::move(msg->node_session));
         }
 
@@ -120,7 +120,7 @@ public:
 
         uint32_t header_size = 0;
         if (msg->packet.size() < sizeof(header_size)) {
-            logger().Warn("Invalid header size: ip: {}, port: {}", ip, port);
+            logger().LOG_WARN("Invalid header size: ip: {}, port: {}", ip, port);
             node_session.Close();
             co_return nullptr;
         }
@@ -129,7 +129,7 @@ public:
 
         ss::cluster::MsgBody msg_body;
         if (!msg_body.ParseFromArray(msg->packet.data() + sizeof(header_size), header_size)) {
-            logger().Warn("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
+            logger().LOG_WARN("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
             node_session.Close();
             co_return nullptr;
         }
@@ -144,7 +144,7 @@ public:
             auto old_node_session = GetNodeSession(req.src_node());
             if (old_node_session) {
                 old_node_session->Close();
-                logger().Info("old connection, ip: {}, port: {}, cur_node: {}, req_src_node: {}", ip, port, node_name_, req.src_node());
+                logger().LOG_INFO("old connection, ip: {}, port: {}, cur_node: {}, req_src_node: {}", ip, port, node_name_, req.src_node());
             }
 
             // 能否匹配都回包
@@ -157,7 +157,7 @@ public:
             msg->node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
 
             if (node_name_ != req.target_node()) {
-                logger().Err("Src node name mismatch, ip: {}, port: {}, cur_node: {}, req_target_node: {}", ip, port, node_name_, req.target_node());
+                logger().LOG_ERROR("Src node name mismatch, ip: {}, port: {}, cur_node: {}, req_target_node: {}", ip, port, node_name_, req.target_node());
                 msg->node_session->Close();
                 break;
             }
@@ -170,7 +170,7 @@ public:
             // 收到握手响应，当前是主动连接方
             auto& res = msg_body.handshake_res();
             if (node_session.node_name() != res.target_node()) {
-                logger().Err("Target node name mismatch, ip: {}, port: {}, target_node: {}, res_target_node: {}",
+                logger().LOG_ERROR("Target node name mismatch, ip: {}, port: {}, target_node: {}, res_target_node: {}",
                     ip, port, node_session.node_name(), res.target_node());
                 node_session.Close();
                 break;
@@ -202,7 +202,7 @@ public:
             auto& target_service = header.target_service();
             auto target_service_handle = imillion().GetServiceByName(target_service);
             if (!target_service_handle) {
-                logger().Warn("The target service does not exist, src:{}.{} target: {}.{}",
+                logger().LOG_WARN("The target service does not exist, src:{}.{} target: {}.{}",
                     ip, port, node_session.node_name(), node_session.node_name(), src_service, node_name_, target_service);
                 break;
             }
@@ -242,7 +242,7 @@ public:
 
         auto ep = FindNodeSettings(msg->target_node);
         if (!ep) {
-            logger().Err("Node cannot be found: {}.", msg->target_node);
+            logger().LOG_ERROR("Node cannot be found: {}.", msg->target_node);
             co_return nullptr;
         }
 
@@ -255,7 +255,7 @@ public:
             {
                 auto connection = co_await server_.ConnectTo(ep.ip, ep.port);
                 if (!connection) {
-                    logger().Err("server_.ConnectTo failed, ip: {}, port: {}.", ep.ip, ep.port);
+                    logger().LOG_ERROR("server_.ConnectTo failed, ip: {}, port: {}.", ep.ip, ep.port);
                     co_return;
                 }
 
@@ -286,7 +286,7 @@ private:
         auto& target_node_name = session->node_name();
         auto res = nodes_.emplace(target_node_name, session);
         if (res.second) {
-            logger().Info("CreateNode: {}", target_node_name);
+            logger().LOG_INFO("CreateNode: {}", target_node_name);
         }
         else {
             // 已存在，比较两边节点名的字典序，选择断开某一条连接
@@ -304,12 +304,12 @@ private:
                 // 断开旧连接，关联新连接
                 res.first->second->Close();
                 res.first->second = std::move(session);
-                logger().Info("Duplicate connection, disconnect old connection: {}", target_node_name);
+                logger().LOG_INFO("Duplicate connection, disconnect old connection: {}", target_node_name);
             }
             else {
                 // 断开新连接
                 session->Close();
-                logger().Info("Duplicate connection, disconnect new connection: {}", target_node_name);
+                logger().LOG_INFO("Duplicate connection, disconnect new connection: {}", target_node_name);
             }
         }
         return *res.first->second;
@@ -336,13 +336,13 @@ private:
         const auto& settings = imillion().YamlSettings();
         const auto& cluster_settings = settings["cluster"];
         if (!cluster_settings) {
-            logger().Err("cannot find 'cluster'.");
+            logger().LOG_ERROR("cannot find 'cluster'.");
             return std::nullopt;
         }
 
         const auto& nodes = cluster_settings["nodes"];
         if (!nodes) {
-            logger().Err("cannot find 'cluster.nodes'.");
+            logger().LOG_ERROR("cannot find 'cluster.nodes'.");
             return std::nullopt;
         }
 

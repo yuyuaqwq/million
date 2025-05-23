@@ -58,20 +58,20 @@ public:
         : Base(imillion) {}
 
     virtual bool OnInit() override {
-        logger().Info("DBService Init");
+        logger().LOG_INFO("DBService Init");
 
         imillion().SetServiceName(service_handle(), kDBServiceName);
 
         auto handle = imillion().GetServiceByName(kSqlServiceName);
         if (!handle) {
-            logger().Err("Unable to find SqlService.");
+            logger().LOG_ERROR("Unable to find SqlService.");
             return false;
         }
         sql_service_ = *handle;
 
         handle = imillion().GetServiceByName(kCacheServiceName);
         if (!handle) {
-            logger().Err("Unable to find SqlService.");
+            logger().LOG_ERROR("Unable to find SqlService.");
             return false;
         }
         cache_service_ = *handle;
@@ -88,7 +88,7 @@ public:
             auto res = co_await CallOrNull<SqlUpdateReq, SqlUpdateResp>(sql_service_, std::move(db_row), msg->cache->sql_db_version);
             if (!res) {
                 // 超时，可能只是sql暂时不能提供服务，可以重试
-                logger().Err("SqlUpdate Timeout.");
+                logger().LOG_ERROR("SqlUpdate Timeout.");
             }
             else if (!res->success) {
                 // todo: 这里未来考虑优化，比如发一个消息让原始服务得知指定行的db需要重新拉取版本

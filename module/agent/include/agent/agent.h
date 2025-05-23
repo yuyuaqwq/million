@@ -37,7 +37,7 @@ public:
         logic_init_queue_.emplace_back([this, proto_file_name = std::move(proto_file_name), msg_ext_id, sub_msg_ext_id] {
             if (!imillion_->proto_mgr().codec().RegisterFile(proto_file_name, msg_ext_id, sub_msg_ext_id)) {
                 // 注册协议失败
-                imillion_->logger().Err("RegisterProto failed: {}.", proto_file_name);
+                imillion_->logger().LOG_ERROR("RegisterProto failed: {}.", proto_file_name);
             }
         });
     }
@@ -47,7 +47,7 @@ public:
             auto res = logic_handle_map_.emplace(msg_type_key, handle);
             if (!res.second) {
                 // 重复注册消息处理函数
-                imillion_->logger().Err("Duplicate registration processing handle: {}.", msg_type_key);
+                imillion_->logger().LOG_ERROR("Duplicate registration processing handle: {}.", msg_type_key);
             }
         });
     }
@@ -87,7 +87,7 @@ private:
         }
         auto func = AgentLogicHandler::Instance().GetLogicHandle(msg.GetTypeKey());
         if (!func) {
-            logger().Err("Agent logic handle not found.");
+            logger().LOG_ERROR("Agent logic handle not found.");
             co_return nullptr;
         }
         co_return co_await(*func)(this, std::move(msg));
