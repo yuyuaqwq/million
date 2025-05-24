@@ -902,21 +902,22 @@ mjs::Value JSModuleManager::LoadJSModule(JSService* js_service, std::string_view
         }
 
         if (module.IsUndefined()) {
-            return mjs::Value(std::format("LoadModule failed: {}.", module_name));
+            return mjs::Value(mjs::String::Format("LoadModule failed: {}.", module_name)).SetException();
         }
     }
 
     if (module.IsModuleDef()) {
-        js_service->js_context().CallModule(&module);
+        auto result = js_service->js_context().CallModule(&module);
+        if (result.IsException()) {
+            return result;
+        }
         js_service->js_module_cache().emplace(path, module);
-    }
+    }0
     return module;
 }
 
 mjs::Value JSModuleManager::FindJSModule(JSService* js_service, std::filesystem::path path) {
     assert(path.is_absolute());
-
-    // 再找下Cpp模块
 
     try {
         path = fs::canonical(path);
