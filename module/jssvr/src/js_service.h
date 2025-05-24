@@ -813,7 +813,7 @@ private:
     // 检查JS异常
     bool JSCheckExceptionAndLog(const mjs::Value& value) {
         if (value.IsException()) {
-            logger().LOG_ERROR("JS Exception: {}.", value.ToString(&js_context_).string_view());
+            logger().LOG_ERROR("JS Exception: {}", value.ToString(&js_context_).string_view());
             return false;
         }
         return true;
