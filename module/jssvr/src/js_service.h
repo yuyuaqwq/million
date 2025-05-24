@@ -912,7 +912,7 @@ mjs::Value JSModuleManager::LoadJSModule(JSService* js_service, std::string_view
             return result;
         }
         js_service->js_module_cache().emplace(path, module);
-    }0
+    }
     return module;
 }
 
