@@ -1,3 +1,5 @@
+#pragma once
+
 #include <variant>
 #include <unordered_map>
 #include <initializer_list>

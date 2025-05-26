@@ -5,6 +5,9 @@
 
 #include <million/imillion.h>
 
+namespace million {
+namespace jssvr {
+
 class JSUtil {
 public:
     // ªÒ»°JS÷µ
@@ -409,3 +412,6 @@ public:
         }
     }
 };
+
+} // namespace jssvr
+} // namespace million

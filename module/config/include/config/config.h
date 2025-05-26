@@ -1,3 +1,5 @@
+#pragma once
+
 #include <million/imillion.h>
 
 #include <config/api.h>
@@ -42,23 +44,6 @@ MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CONFIG_API, ConfigQueryResp, (const g
 MILLION_MESSAGE_DEFINE(MILLION_CONFIG_API, ConfigUpdateReq, (const google::protobuf::Descriptor&) config_desc)
 MILLION_MESSAGE_DEFINE_EMPTY(MILLION_CONFIG_API, ConfigUpdateResp)
 
-Task<ConfigTableShared> ConfigTableWeakBase::Lock(IService* this_service, const ServiceHandle& config_service, const google::protobuf::Descriptor* descriptor) {
-    TaskAssert(descriptor, "descriptor is nullptr.");
-
-    auto config_lock = weak_.lock();
-    while (!config_lock) {
-        // 提升失败，说明配置有更新，重新拉取
-        auto resp = co_await this_service->Call<ConfigQueryReq, ConfigQueryResp>(config_service, *descriptor);
-        if (!resp->config) {
-            TaskAbort("Query config failed: {}.", descriptor->full_name());
-        }
-        // 更新本地weak
-        weak_ = resp->config->weak_;
-        config_lock = weak_.lock();
-    }
-    co_return config_lock;
-}
-
 template <typename ConfigMsgT>
 class ConfigTableWeak : public ConfigTableWeakBase {
 public:
@@ -82,7 +67,7 @@ public:
 };
 
 template <typename ConfigMsgT>
-static Task<ConfigTableWeak<ConfigMsgT>> QueryConfig(IService* this_service, const ServiceHandle& config_service) {
+inline Task<ConfigTableWeak<ConfigMsgT>> QueryConfig(IService* this_service, const ServiceHandle& config_service) {
     auto descriptor = ConfigMsgT::GetDescriptor();
     if (!descriptor) {
         TaskAbort("Unable to obtain descriptor: {}.", typeid(ConfigMsgT).name());
@@ -94,7 +79,6 @@ static Task<ConfigTableWeak<ConfigMsgT>> QueryConfig(IService* this_service, con
     }
     co_return std::move(*msg->config);
 }
-
 
 } // namespace config
 } // namespace million
