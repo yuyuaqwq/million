@@ -206,6 +206,12 @@ private:
 
                     func_ctx_.waiting_session_id.reset();
                 }
+                else {
+                    if (js_context_.microtask_queue().empty()) {
+                        logger().LOG_ERROR("There are no executable micro tasks available: [{}] {}", js_module_.ToModuleDef().name(), func.ToFunctionDef().name());
+                        co_return nullptr;
+                    }
+                }
 
                 // 执行微任务
                 js_context_.ExecuteMicrotasks();
@@ -219,7 +225,7 @@ private:
             else if (promise.IsRejected()) {
                 // Promise被拒绝，获取错误
                 auto& reason = promise.reason();
-                logger().LOG_ERROR("JS Promise rejected: [{}] {}", GetModuleDef().name(), reason.ToString(&js_context_).string_view());
+                logger().LOG_ERROR("JS Promise rejected: [{}] {}", js_module_.ToModuleDef().name(), reason.ToString(&js_context_).string_view());
                 co_return nullptr;
             }
         }
@@ -287,7 +293,7 @@ private:
     // 检查JS异常
     bool JSCheckExceptionAndLog(const mjs::Value& value) {
         if (value.IsException()) {
-            logger().LOG_ERROR("JS Exception: [{}] {}", GetModuleDef().name(), value.ToString(&js_context_).string_view());
+            logger().LOG_ERROR("JS Exception: [{}] {}", js_module_.ToModuleDef().name(), value.ToString(&js_context_).string_view());
             return false;
         }
         return true;
@@ -302,18 +308,6 @@ public:
     auto& js_context() { return js_context_; }
     auto& js_module() { return js_module_; }
     auto& js_module_cache() { return js_module_cache_; }
-
-    const mjs::ModuleDef& GetModuleDef() const {
-        if (js_module_.IsModuleDef()) {
-            return js_module_.module_def();
-        }
-        else if (js_module_.IsModuleObject()) {
-            return js_module_.module().module_def();
-        }
-        else {
-            throw std::runtime_error("Incorrect JS module");
-        }
-    }
 
 private:
     friend class JSModuleManager;

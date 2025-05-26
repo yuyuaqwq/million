@@ -42,9 +42,11 @@ std::optional<std::string> JSModuleManager::ReadModuleScript(const std::filesyst
 mjs::Value JSModuleManager::LoadJSModule(JSService* js_service, std::string_view module_name) {
     std::filesystem::path path;
     mjs::Value module;
+    
     auto& js_module = js_service->js_module();
     if (!js_module.IsUndefined()) {
-        fs::path cur_module_path = js_module.module_def().name();
+        auto& js_module_def = js_service->js_module().ToModuleDef();
+        fs::path cur_module_path = js_module_def.name();
 
         path = cur_module_path.parent_path();
         assert(path.is_absolute());
