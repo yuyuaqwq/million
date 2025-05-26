@@ -213,51 +213,23 @@ private:
 
             if (promise.IsFulfilled()) {
                 // 获取返回值
-                auto& result = promise.result();
-                if (result.IsUndefined()) {
-                    co_return nullptr;
-                }
-
-                if (!result.IsArrayObject()) {
-                    logger().LOG_ERROR("Need to return undefined or array.");
-                    co_return nullptr;
-                }
-
-                // 解析返回值数组
-                auto msg_name = result.array()[0];
-                if (!msg_name.IsString()) {
-                    logger().LOG_ERROR("message name must be a string.");
-                    co_return nullptr;
-                }
-
-                auto desc = imillion().proto_mgr().FindMessageTypeByName(msg_name.string_view());
-                if (!desc) {
-                    logger().LOG_ERROR("Invalid message type.");
-                    co_return nullptr;
-                }
-
-                auto ret_proto_msg = imillion().proto_mgr().NewMessage(*desc);
-                if (!ret_proto_msg) {
-                    logger().LOG_ERROR("New message failed.");
-                    co_return nullptr;
-                }
-
-                auto msg_obj = result.array()[1];
-                if (!msg_obj.IsObject()) {
-                    logger().LOG_ERROR("message must be an object.");
-                    co_return nullptr;
-                }
-
-                JSUtil::JSObjectToProtoMessage(&js_context_, ret_proto_msg.get(), msg_obj);
-                ret_msg = std::move(ret_proto_msg);
+                auto tmp = promise.result();
+                result = tmp;
             }
             else if (promise.IsRejected()) {
                 // Promise被拒绝，获取错误
-                auto& error = promise.reason();
-                logger().LOG_ERROR("JS Promise rejected: {}.", error.ToString(&js_context_).string_view());
+                auto& reason = promise.reason();
+                logger().LOG_ERROR("JS Promise rejected: [{}] {}", GetModuleDef().name(), reason.ToString(&js_context_).string_view());
+                co_return nullptr;
             }
         }
-        else if (result.IsArrayObject()) {
+
+        if (result.IsArrayObject()) {
+            if (result.array().length() < 2) {
+                logger().LOG_ERROR("The length of the array must be 2.");
+                co_return nullptr;
+            }
+
             // 直接返回数组形式的返回值
             auto msg_name = result.array()[0];
             if (!msg_name.IsString()) {
@@ -286,6 +258,13 @@ private:
             JSUtil::JSObjectToProtoMessage(&js_context_, ret_proto_msg.get(), msg_obj);
             ret_msg = std::move(ret_proto_msg);
         }
+        else if (result.IsUndefined()) {
+            co_return nullptr;
+        }
+        else {
+            logger().LOG_ERROR("Need to return undefined or array.");
+            co_return nullptr;
+        }
 
         co_return std::move(ret_msg);
     }
@@ -308,7 +287,7 @@ private:
     // 检查JS异常
     bool JSCheckExceptionAndLog(const mjs::Value& value) {
         if (value.IsException()) {
-            logger().LOG_ERROR("JS Exception: {}", value.ToString(&js_context_).string_view());
+            logger().LOG_ERROR("JS Exception: [{}] {}", GetModuleDef().name(), value.ToString(&js_context_).string_view());
             return false;
         }
         return true;
@@ -323,6 +302,18 @@ public:
     auto& js_context() { return js_context_; }
     auto& js_module() { return js_module_; }
     auto& js_module_cache() { return js_module_cache_; }
+
+    const mjs::ModuleDef& GetModuleDef() const {
+        if (js_module_.IsModuleDef()) {
+            return js_module_.module_def();
+        }
+        else if (js_module_.IsModuleObject()) {
+            return js_module_.module().module_def();
+        }
+        else {
+            throw std::runtime_error("Incorrect JS module");
+        }
+    }
 
 private:
     friend class JSModuleManager;
@@ -357,14 +348,16 @@ public:
     MillionModuleObject(mjs::Runtime* rt)
         : CppModuleObject(rt)
     {
-        AddExportMethod(rt, "newservice", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-            auto& service = GetJSRuntineService(&context->runtime());
-            if (par_count < 1) {
-                return mjs::Value("Creating a service requires 1 parameter.").SetException();
-            }
-            NewJSService(&service.imillion(), stack.get(0).ToString(context).string_view());
-            return mjs::Value();
-        });
+        AddExportMethod(rt, "newservice", NewService);
+    }
+
+    static mjs::Value NewService(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+        auto& service = GetJSRuntineService(&context->runtime());
+        if (par_count < 1) {
+            return mjs::Value("Creating a service requires 1 parameter.").SetException();
+        }
+        NewJSService(&service.imillion(), stack.get(0).ToString(context).string_view());
+        return mjs::Value();
     }
 };
 
@@ -413,32 +406,37 @@ public:
     LoggerModuleObject(mjs::Runtime* rt)
         : CppModuleObject(rt)
     {
-        AddExportMethod(rt, "debug", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-            auto& service = GetJSRuntineService(&context->runtime());
-            auto source_location = GetSourceLocation(stack);
-            for (uint32_t i = 0; i < par_count; ++i) {
-                service.logger().Log(source_location, ::million::Logger::LogLevel::kDebug, stack.get(i).ToString(context).string_view());
-            }
-            return mjs::Value();
-        });
-        AddExportMethod(rt, "info", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-            auto& service = GetJSRuntineService(&context->runtime());
-            auto source_location = GetSourceLocation(stack);
-            for (uint32_t i = 0; i < par_count; ++i) {
-                service.logger().Log(source_location, ::million::Logger::LogLevel::kInfo, stack.get(i).ToString(context).string_view());
-            }
-            return mjs::Value();
-        });
-        AddExportMethod(rt, "error", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-            auto& service = GetJSRuntineService(&context->runtime());
-            auto source_location = GetSourceLocation(stack);
-            for (uint32_t i = 0; i < par_count; ++i) {
-                service.logger().Log(source_location, ::million::Logger::LogLevel::kError, stack.get(i).ToString(context).string_view());
-            }
-            return mjs::Value();
-        });
+        AddExportMethod(rt, "debug", Debug);
+        AddExportMethod(rt, "info", Info);
+        AddExportMethod(rt, "error", Error);
     }
 
+    static mjs::Value Debug(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+        auto& service = GetJSRuntineService(&context->runtime());
+        auto source_location = GetSourceLocation(stack);
+        for (uint32_t i = 0; i < par_count; ++i) {
+            service.logger().Log(source_location, ::million::Logger::LogLevel::kDebug, stack.get(i).ToString(context).string_view());
+        }
+        return mjs::Value();
+    }
+
+    static mjs::Value Info(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+        auto& service = GetJSRuntineService(&context->runtime());
+        auto source_location = GetSourceLocation(stack);
+        for (uint32_t i = 0; i < par_count; ++i) {
+            service.logger().Log(source_location, ::million::Logger::LogLevel::kInfo, stack.get(i).ToString(context).string_view());
+        }
+        return mjs::Value();
+    }
+
+    static mjs::Value Error(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+        auto& service = GetJSRuntineService(&context->runtime());
+        auto source_location = GetSourceLocation(stack);
+        for (uint32_t i = 0; i < par_count; ++i) {
+            service.logger().Log(source_location, ::million::Logger::LogLevel::kError, stack.get(i).ToString(context).string_view());
+        }
+        return mjs::Value();
+    }
 private:
     static million::SourceLocation GetSourceLocation(const mjs::StackFrame& stack) {
         const mjs::StackFrame* js_stack = &stack;
