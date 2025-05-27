@@ -170,7 +170,11 @@ private:
             args.push_back(mjs::Value());
         }
 
+        ServiceFuncContext func_ctx_;
+
         // 调用函数
+        // 这里看回调怎么拿到func_ctx_，要考虑多协程，不过Call js函数是同步执行完的，可以在每次Call之前设置一下成员变量指针
+        // 多协程共用成员变量指针就行
         auto result = js_context_.CallFunction(&func, mjs::Value(), args.begin(), args.end());
         
         // 处理返回值
@@ -324,9 +328,6 @@ private:
     // 模块相关
     mjs::Value js_module_;
     std::unordered_map<fs::path, mjs::Value> js_module_cache_;
-    
-
-    ServiceFuncContext func_ctx_;
 };
 
 
