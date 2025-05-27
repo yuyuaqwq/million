@@ -289,7 +289,7 @@ public:
             if (!js_value.IsInt64()) {
                 TaskAbort("Field {}.{} is not a bigint.", desc.name(), field_desc.name());
             }
-            reflection.SetInt64(msg, &field_desc, js_value.i64());
+            reflection.SetInt64(msg, &field_desc, js_value.ToInt64().i64());
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_UINT64:
@@ -306,7 +306,7 @@ public:
             if (!js_value.IsNumber()) {
                 TaskAbort("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
-            reflection.SetInt32(msg, &field_desc, js_value.i64());
+            reflection.SetInt32(msg, &field_desc, js_value.ToInt64().i64());
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_UINT32:
@@ -314,7 +314,7 @@ public:
             if (!js_value.IsNumber()) {
                 TaskAbort("Field {}.{} is not a number.", desc.name(), field_desc.name());
             }
-            reflection.SetUInt32(msg, &field_desc, js_value.u64());
+            reflection.SetUInt32(msg, &field_desc, js_value.ToUInt64().u64());
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_BOOL: {

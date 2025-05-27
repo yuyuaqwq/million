@@ -10,15 +10,34 @@ MillionModuleObject::MillionModuleObject(mjs::Runtime* rt)
     : CppModuleObject(rt)
 {
     AddExportMethod(rt, "newservice", NewService);
+    AddExportMethod(rt, "makemsg", MakeMsg);
 }
 
 mjs::Value MillionModuleObject::NewService(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
     auto& service = GetJSRuntineService(&context->runtime());
     if (par_count < 1) {
-        return mjs::Value("Creating a service requires 1 parameter.").SetException();
+        return mjs::Error::Throw(context, "Creating a service requires 1 parameter.");
     }
     NewJSService(&service.imillion(), stack.get(0).ToString(context).string_view());
     return mjs::Value();
+}
+
+mjs::Value MillionModuleObject::MakeMsg(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+    if (par_count < 2) {
+        return mjs::Error::Throw(context, "MakeMsg requires 2 parameter.");
+    }
+    if (!stack.get(0).IsString()) {
+        return mjs::Error::Throw(context, "Message parameter 1 must be a string for creation.");
+    }
+    if (!stack.get(1).IsObject()) {
+        return mjs::Error::Throw(context, "Message parameter 2 must be a object for creation.");
+    }
+
+    auto array = mjs::ArrayObject::New(context, 2);
+    array->operator[](0) = std::move(stack.get(0));
+    array->operator[](1) = std::move(stack.get(1));
+
+    return mjs::Value(array);
 }
 
 ServiceModuleObject::ServiceModuleObject(mjs::Runtime* rt)
@@ -27,17 +46,17 @@ ServiceModuleObject::ServiceModuleObject(mjs::Runtime* rt)
     AddExportMethod(rt, "send", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
         auto& service = GetJSService(context);
         if (par_count < 3) {
-            return mjs::Value("Send requires 2 parameter.").SetException();
+            return mjs::Error::Throw(context, "Send requires 2 parameter.");
         }
 
         if (!stack.get(0).IsString()) {
-            return mjs::Value("The service name is not a string.").SetException();
+            return mjs::Error::Throw(context, "The service name is not a string.");
         }
         if (!stack.get(1).IsString()) {
-            return mjs::Value("The message name is not a string.").SetException();
+            return mjs::Error::Throw(context, "The message name is not a string.");
         }
         if (!stack.get(2).IsObject()) {
-            return mjs::Value("The message is not an object.").SetException();
+            return mjs::Error::Throw(context, "The message is not an object.");
         }
 
         auto target = service.imillion().GetServiceByName(stack.get(0).string_view());

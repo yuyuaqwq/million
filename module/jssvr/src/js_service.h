@@ -79,9 +79,9 @@ private:
         }
         jssvr_dirs_ = jssvr_settings["dirs"].as<std::vector<std::string>>();
 
-        js_runtime_.module_manager().AddCppModule("million", new MillionModuleObject(&js_runtime_));
-        js_runtime_.module_manager().AddCppModule("service", new ServiceModuleObject(&js_runtime_));
-        js_runtime_.module_manager().AddCppModule("logger", new LoggerModuleObject(&js_runtime_));
+        js_runtime_.module_manager().AddCppModule("million", MillionModuleObject::New(&js_runtime_));
+        js_runtime_.module_manager().AddCppModule("service", ServiceModuleObject::New(&js_runtime_));
+        js_runtime_.module_manager().AddCppModule("logger", LoggerModuleObject::New(&js_runtime_));
 
         return true;
     }
