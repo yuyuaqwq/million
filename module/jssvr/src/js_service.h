@@ -214,7 +214,12 @@ private:
                 }
 
                 // 执行微任务
-                js_context_.ExecuteMicrotasks();
+                while (!js_context_.microtask_queue().empty()) {
+                    auto& task = js_context_.microtask_queue().front();
+                    auto result = js_context_.CallFunction(&task.func(), task.this_val(), task.argv().begin(), task.argv().end());
+                    JSCheckExceptionAndLog(result);
+                    js_context_.microtask_queue().pop_front();
+                }
             }
 
             if (promise.IsFulfilled()) {
