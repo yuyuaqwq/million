@@ -128,11 +128,11 @@ public:
                 auto js_value = GetJSValueByProtoMessgaeRepeatedField(context, msg, *refl, field_desc, j);
                 js_array->operator[](j) = js_value;
             }
-            obj->SetComputedProperty(context, mjs::Value(field_desc.name()), mjs::Value(js_array));
+            obj->SetComputedProperty(context, mjs::Value(field_desc.name().data()), mjs::Value(js_array));
         }
         else {
             auto js_value = GetJSValueByProtoMessageField(context, msg, *refl, field_desc);
-            obj->SetComputedProperty(context, mjs::Value(field_desc.name()), std::move(js_value));
+            obj->SetComputedProperty(context, mjs::Value(field_desc.name().data()), std::move(js_value));
         }
     }
 
