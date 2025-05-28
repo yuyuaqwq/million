@@ -38,7 +38,7 @@ JSService& GetJSService(mjs::Context* context);
 
 // 服务函数上下文，用于处理异步调用
 struct FunctionCallContext {
-    //mjs::Value promise_cap;
+    mjs::Value promise;
     //mjs::Value resolving_funcs[2];
     ServiceHandle sender;
     std::optional<SessionId> waiting_session_id;
@@ -60,9 +60,12 @@ public:
         return js_runtime_;
     }
 
-    auto& jssvr_dirs() {
+    const auto& jssvr_dirs() const {
         return jssvr_dirs_;
     }
+
+    const auto& db_service_handle() const { return db_service_handle_; }
+    const auto& config_service_handle() const { return config_service_handle_; }
 
 private:
     virtual bool OnInit() override {
@@ -87,8 +90,8 @@ private:
     }
 
     Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
-        db_handle_ = *imillion().GetServiceByName(db::kDBServiceName);
-        config_handle_ = *imillion().GetServiceByName(config::kConfigServiceName);
+        db_service_handle_ = *imillion().GetServiceByName(db::kDBServiceName);
+        config_service_handle_ = *imillion().GetServiceByName(config::kConfigServiceName);
         co_return nullptr;
     }
 
@@ -97,8 +100,8 @@ private:
     friend JSRuntimeService& GetJSRuntineService(mjs::Runtime* runtime);
     mjs::Runtime js_runtime_;
     std::vector<std::string> jssvr_dirs_;
-    ServiceHandle db_handle_;
-    ServiceHandle config_handle_;
+    ServiceHandle db_service_handle_;
+    ServiceHandle config_service_handle_;
 };
 
 
@@ -197,16 +200,11 @@ private:
                     if (res_msg.IsProtoMessage()) {
                         auto proto_res_msg = res_msg.GetProtoMessage();
                         auto msg_obj = JSUtil::ProtoMessageToJSObject(&js_context_, *proto_res_msg);
-
-                        promise.Resolve(&js_context_, msg_obj);
-
-                        // js_context_.CallFunction(&func_ctx_.resolving_funcs[0], mjs::Value(), &msg_obj, &msg_obj + 1);
+                        function_call_context.promise.promise().Resolve(&js_context_, msg_obj);
                     }
                     else if (res_msg.IsType<JSValueMsg>()) {
                         auto msg_obj = res_msg.GetMessage<JSValueMsg>()->value;
-
-                        promise.Resolve(&js_context_, msg_obj);
-                        // js_context_.CallFunction(&func_ctx_.resolving_funcs[0], mjs::Value(), &msg_obj, &msg_obj + 1);
+                        function_call_context.promise.promise().Resolve(&js_context_, msg_obj);
                     }
 
                     function_call_context.waiting_session_id.reset();

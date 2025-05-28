@@ -53,5 +53,17 @@ private:
     static million::SourceLocation GetSourceLocation(const mjs::StackFrame& stack);
 };
 
+class DBModuleObject : public mjs::CppModuleObject {
+private:
+    DBModuleObject(mjs::Runtime* rt);
+
+public:
+    static mjs::Value Load(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack);
+
+    static DBModuleObject* New(mjs::Runtime* runtime) {
+        return new DBModuleObject(runtime);
+    }
+};
+
 } // namespace jssvr
 } // namespace million

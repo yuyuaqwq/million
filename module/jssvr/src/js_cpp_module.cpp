@@ -84,7 +84,8 @@ mjs::Value ServiceModuleObject::Call(mjs::Context* context, uint32_t par_count, 
     JSUtil::JSObjectToProtoMessage(context, msg.get(), stack.get(2));
 
     service.function_call_context().waiting_session_id = service.Send(*target, MessagePointer(std::move(msg)));
-    return mjs::Value();
+    service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
+    return service.function_call_context().promise;
 }
 
 
@@ -151,6 +152,60 @@ million::SourceLocation LoggerModuleObject::GetSourceLocation(const mjs::StackFr
         return source_location;
     }
 
+}
+
+
+DBModuleObject::DBModuleObject(mjs::Runtime* rt) :
+    CppModuleObject(rt)
+{
+    AddExportMethod(rt, "load", Load);
+}
+
+mjs::Value DBModuleObject::Load(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+    auto& service = GetJSService(context);
+
+    if (par_count < 1) {
+        return mjs::Error::Throw(context, "DB Load requires 1 parameter.");
+    }
+
+    if (!stack.get(0).IsString()) {
+        return mjs::Error::Throw(context, "DB Load parameter 1 must be a string for message type.");
+    }
+    if (!stack.get(1).IsString()) {
+        return mjs::Error::Throw(context, "DB Load parameter 2 must be a string for key field name.");
+    }
+
+    auto msg_name = stack.get(0).string_view();
+
+    const auto* desc = service.imillion().proto_mgr().FindMessageTypeByName(msg_name);
+    if (!desc) {
+        return mjs::Error::Throw(context, "DB Load parameter 1 invalid message type.");
+    }
+
+    auto key_field_name = stack.get(1).string_view();
+    const auto* field = desc->FindFieldByName(key_field_name);
+    if (!field) {
+        return mjs::Error::Throw(context, "DB Load parameter 2 invalid field name.");
+    }
+
+    if (!stack.get(0).IsString()) {
+        return mjs::Error::Throw(context, "DB Load parameter must be a string for file name.");
+    }
+
+    auto key = stack.get(2).ToString(context);
+    if (key.IsException()) {
+        return mjs::Error::Throw(context, "DB Load parameter 3 must be a string for key value.");
+    }
+    
+    // 这里让OnMsg等待，发现是C++消息再做分发
+
+    service.function_call_context().sender = service.js_runtime_service().db_service_handle();
+
+    service.function_call_context().waiting_session_id = service.Send<db::DBRowLoadReq>(service.function_call_context().sender, *desc
+        , field->number(), std::string(key.string_view()));
+
+    service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
+    return service.function_call_context().promise;
 }
 
 } // namespace jssvr
