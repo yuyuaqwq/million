@@ -208,6 +208,7 @@ private:
                     }
 
                     function_call_context.waiting_session_id.reset();
+                    function_call_context.promise = mjs::Value();
                 }
                 else {
                     if (js_context_.microtask_queue().empty()) {
@@ -331,7 +332,7 @@ private:
     mjs::Value js_module_;
     std::unordered_map<fs::path, mjs::Value> js_module_cache_;
 
-    FunctionCallContext* function_call_context_;
+    FunctionCallContext* function_call_context_ = nullptr;
 };
 
 
