@@ -43,39 +43,50 @@ mjs::Value MillionModuleObject::MakeMsg(mjs::Context* context, uint32_t par_coun
 ServiceModuleObject::ServiceModuleObject(mjs::Runtime* rt)
     : CppModuleObject(rt)
 {
-    AddExportMethod(rt, "send", [](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-        auto& service = GetJSService(context);
-        if (par_count < 3) {
-            return mjs::Error::Throw(context, "Send requires 2 parameter.");
-        }
-
-        if (!stack.get(0).IsString()) {
-            return mjs::Error::Throw(context, "The service name is not a string.");
-        }
-        if (!stack.get(1).IsString()) {
-            return mjs::Error::Throw(context, "The message name is not a string.");
-        }
-        if (!stack.get(2).IsObject()) {
-            return mjs::Error::Throw(context, "The message is not an object.");
-        }
-
-        auto target = service.imillion().GetServiceByName(stack.get(0).string_view());
-        if (!target) {
-            return mjs::Value();
-        }
-
-        auto desc = service.imillion().proto_mgr().FindMessageTypeByName(stack.get(1).string_view());
-        if (!desc) {
-            return mjs::Value();
-        }
-        auto msg = service.imillion().proto_mgr().NewMessage(*desc);
-
-        JSUtil::JSObjectToProtoMessage(context, msg.get(), stack.get(2));
-
-        service.Send(*target, MessagePointer(std::move(msg)));
-        return mjs::Value();
-    });
+    AddExportMethod(rt, "send", Send);
+    AddExportMethod(rt, "call", Call);
 }
+
+mjs::Value ServiceModuleObject::Send(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+    auto result = Call(context, par_count, stack);
+    auto& service = GetJSService(context);
+    service.function_call_context().waiting_session_id.reset();
+    return result;
+}
+
+mjs::Value ServiceModuleObject::Call(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+    auto& service = GetJSService(context);
+    if (par_count < 3) {
+        return mjs::Error::Throw(context, "Send requires 2 parameter.");
+    }
+
+    if (!stack.get(0).IsString()) {
+        return mjs::Error::Throw(context, "The service name is not a string.");
+    }
+    if (!stack.get(1).IsString()) {
+        return mjs::Error::Throw(context, "The message name is not a string.");
+    }
+    if (!stack.get(2).IsObject()) {
+        return mjs::Error::Throw(context, "The message is not an object.");
+    }
+
+    auto target = service.imillion().GetServiceByName(stack.get(0).string_view());
+    if (!target) {
+        return mjs::Value();
+    }
+
+    auto desc = service.imillion().proto_mgr().FindMessageTypeByName(stack.get(1).string_view());
+    if (!desc) {
+        return mjs::Value();
+    }
+    auto msg = service.imillion().proto_mgr().NewMessage(*desc);
+
+    JSUtil::JSObjectToProtoMessage(context, msg.get(), stack.get(2));
+
+    service.function_call_context().waiting_session_id = service.Send(*target, MessagePointer(std::move(msg)));
+    return mjs::Value();
+}
+
 
 LoggerModuleObject::LoggerModuleObject(mjs::Runtime* rt)
     : CppModuleObject(rt)
