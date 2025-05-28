@@ -37,7 +37,7 @@ class JSService;
 JSService& GetJSService(mjs::Context* context);
 
 // 服务函数上下文，用于处理异步调用
-struct ServiceFuncContext {
+struct FunctionCallContext {
     //mjs::Value promise_cap;
     //mjs::Value resolving_funcs[2];
     ServiceHandle sender;
@@ -170,11 +170,12 @@ private:
             args.push_back(mjs::Value());
         }
 
-        ServiceFuncContext func_ctx_;
+        FunctionCallContext function_call_context;
 
         // 调用函数
         // 这里看回调怎么拿到func_ctx_，要考虑多协程，不过Call js函数是同步执行完的，可以在每次Call之前设置一下成员变量指针
         // 多协程共用成员变量指针就行
+        function_call_context_ = &function_call_context;
         auto result = js_context_.CallFunction(&func, mjs::Value(), args.begin(), args.end());
         
         // 处理返回值
@@ -187,10 +188,10 @@ private:
                 }
 
                 // 如果有等待的session，处理响应
-                if (func_ctx_.waiting_session_id) {
-                    auto res_msg = co_await Recv(*func_ctx_.waiting_session_id);
+                if (function_call_context.waiting_session_id) {
+                    auto res_msg = co_await Recv(*function_call_context.waiting_session_id);
                     if (res_msg.IsCppMessage()) {
-                        res_msg = co_await MessageDispatch(func_ctx_.sender, *func_ctx_.waiting_session_id, std::move(res_msg));
+                        res_msg = co_await MessageDispatch(function_call_context.sender, *function_call_context.waiting_session_id, std::move(res_msg));
                     }
 
                     if (res_msg.IsProtoMessage()) {
@@ -208,7 +209,7 @@ private:
                         // js_context_.CallFunction(&func_ctx_.resolving_funcs[0], mjs::Value(), &msg_obj, &msg_obj + 1);
                     }
 
-                    func_ctx_.waiting_session_id.reset();
+                    function_call_context.waiting_session_id.reset();
                 }
                 else {
                     if (js_context_.microtask_queue().empty()) {
@@ -217,6 +218,7 @@ private:
                     }
                 }
 
+                function_call_context_ = &function_call_context;
                 // 执行微任务
                 //while (!js_context_.microtask_queue().empty()) {
                 //    auto& task = js_context_.microtask_queue().front();
@@ -319,6 +321,8 @@ public:
     auto& js_module() { return js_module_; }
     auto& js_module_cache() { return js_module_cache_; }
 
+    auto& function_call_context() { return *function_call_context_; }
+
 private:
     friend class JSModuleManager;
 
@@ -328,6 +332,8 @@ private:
     // 模块相关
     mjs::Value js_module_;
     std::unordered_map<fs::path, mjs::Value> js_module_cache_;
+
+    FunctionCallContext* function_call_context_;
 };
 
 

@@ -126,7 +126,7 @@ public:
             auto js_array = mjs::ArrayObject::New(context, {});
             for (size_t j = 0; j < refl->FieldSize(msg, &field_desc); ++j) {
                 auto js_value = GetJSValueByProtoMessgaeRepeatedField(context, msg, *refl, field_desc, j);
-                js_array->operator[](j) = js_value;
+                js_array->Push(context, std::move(js_value));
             }
             obj->SetComputedProperty(context, mjs::Value(field_desc.name().data()), mjs::Value(js_array));
         }
