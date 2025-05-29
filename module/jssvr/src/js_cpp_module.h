@@ -83,5 +83,33 @@ private:
     db::DBRow db_row_;
 };
 
+class ConfigModuleObject : public mjs::CppModuleObject {
+private:
+    ConfigModuleObject(mjs::Runtime* rt);
+
+public:
+    static mjs::Value Load(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack);
+
+    static ConfigModuleObject* New(mjs::Runtime* runtime) {
+        return new ConfigModuleObject(runtime);
+    }
+};
+
+class ConfigTableObject : public mjs::Object {
+private:
+    ConfigTableObject(mjs::Context* context, config::ConfigTableShared config_table);
+
+public:
+    static ConfigTableObject* New(mjs::Context* context, config::ConfigTableShared config_table) {
+        return new ConfigTableObject(context, std::move(config_table));
+    }
+
+    void SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) override;
+    bool GetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value* value) override;
+
+private:
+    config::ConfigTableShared config_table_;
+};
+
 } // namespace jssvr
 } // namespace million
