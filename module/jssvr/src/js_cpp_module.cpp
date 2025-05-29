@@ -197,7 +197,7 @@ mjs::Value DBModuleObject::Load(mjs::Context* context, uint32_t par_count, const
         return mjs::Error::Throw(context, "DB Load parameter 3 must be a string for key value.");
     }
     
-    // 这里让OnMsg等待，发现是C++消息再做分发
+    // 杩欓噷璁㎡nMsg绛夊緟锛屽彂鐜版槸C++娑堟伅鍐嶅仛鍒嗗彂
 
     service.function_call_context().sender = service.js_runtime_service().db_service_handle();
 
