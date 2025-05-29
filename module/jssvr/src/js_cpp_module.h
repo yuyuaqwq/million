@@ -4,6 +4,8 @@
 #include <mjs/context.h>
 #include <mjs/object_impl/cpp_module_object.h>
 
+#include <db/db_row.h>
+
 #include <million/imillion.h>
 
 namespace million {
@@ -63,6 +65,22 @@ public:
     static DBModuleObject* New(mjs::Runtime* runtime) {
         return new DBModuleObject(runtime);
     }
+};
+
+class DBRowObject : public mjs::Object {
+private:
+    DBRowObject(mjs::Context* context, ProtoMessageUnique message);
+
+public:
+    static DBRowObject* New(mjs::Context* context, ProtoMessageUnique message) {
+        return new DBRowObject(context, std::move(message));
+    }
+
+    void SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) override;
+    bool GetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value* value) override;
+
+private:
+    db::DBRow db_row_;
 };
 
 } // namespace jssvr

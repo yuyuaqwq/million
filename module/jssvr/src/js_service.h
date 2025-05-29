@@ -179,6 +179,7 @@ private:
         // 这里看回调怎么拿到func_ctx_，要考虑多协程，不过Call js函数是同步执行完的，可以在每次Call之前设置一下成员变量指针
         // 多协程共用成员变量指针就行
         function_call_context_ = &function_call_context;
+        js_context_.runtime().stack().clear();
         auto result = js_context_.CallFunction(&func, mjs::Value(), args.begin(), args.end());
         
         // 处理返回值
@@ -218,6 +219,7 @@ private:
                 }
 
                 function_call_context_ = &function_call_context;
+                js_context_.runtime().stack().clear();
                 // 执行微任务
                 //while (!js_context_.microtask_queue().empty()) {
                 //    auto& task = js_context_.microtask_queue().front();

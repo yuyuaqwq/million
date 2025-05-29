@@ -208,5 +208,13 @@ mjs::Value DBModuleObject::Load(mjs::Context* context, uint32_t par_count, const
     return service.function_call_context().promise;
 }
 
+void DBRowObject::SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) {
+
+}
+
+bool DBRowObject::GetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value* value) {
+    
+}
+
 } // namespace jssvr
 } // namespace million
