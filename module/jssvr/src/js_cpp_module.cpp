@@ -4,8 +4,6 @@
 #include "js_service.h"
 #include "js_util.h"
 
-#include <config/config.h>
-
 namespace million {
 namespace jssvr {
 
@@ -212,7 +210,7 @@ mjs::Value DBModuleObject::Load(mjs::Context* context, uint32_t par_count, const
 }
 
 void DBRowObject::SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) {
-    auto key_str = context->runtime().const_table().at(key).string_view();
+    auto key_str = context->GetConstValue(key).string_view();
     
     // Special method handling
     if (key_str == "commit") {
@@ -237,7 +235,7 @@ void DBRowObject::SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::V
 }
 
 bool DBRowObject::GetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value* value) {
-    auto key_str = context->runtime().const_table().at(key).string_view();
+    auto key_str = context->GetConstValue(key).string_view();
     
     // Special method handling
     if (key_str == "commit") {

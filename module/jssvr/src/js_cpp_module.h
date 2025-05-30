@@ -5,6 +5,7 @@
 #include <mjs/object_impl/cpp_module_object.h>
 
 #include <db/db_row.h>
+#include <config/config.h>
 
 #include <million/imillion.h>
 
@@ -65,6 +66,12 @@ public:
     static DBModuleObject* New(mjs::Runtime* runtime) {
         return new DBModuleObject(runtime);
     }
+
+    mjs::ConstIndex commit_const_index() const { return commit_const_index_; }
+
+private:
+    mjs::ConstIndex commit_const_index_;
+
 };
 
 class DBRowObject : public mjs::Object {
