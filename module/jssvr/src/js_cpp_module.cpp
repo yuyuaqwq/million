@@ -209,13 +209,38 @@ mjs::Value DBModuleObject::Load(mjs::Context* context, uint32_t par_count, const
     return service.function_call_context().promise;
 }
 
+
+
+DBRowClassDef::DBRowClassDef(mjs::Runtime* runtime) 
+    : ClassDef(runtime, static_cast<mjs::ClassId>(CustomClassId::kDBRowObject), "DBRow") {
+
+    auto const_index = runtime->const_pool().insert(mjs::Value("commit"));
+
+    prototype_.object().SetProperty(nullptr, const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const  mjs::StackFrame& stack) -> Value {
+        auto& service = GetJSService(context);
+
+        service.function_call_context().sender = service.js_runtime_service().db_service_handle();
+
+        auto& db_row_object = stack.this_val().object<DBRowObject>();
+
+        auto task = db_row_object.db_row().Commit(&service, service.function_call_context().sender);
+        service.function_call_context().waiting_session_id = task.coroutine.promise().session_awaiter()->waiting_session_id();
+
+        // Start async commit operation
+        service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
+
+        return service.function_call_context().promise;
+    }));
+}
+
+
+DBRowObject::DBRowObject(mjs::Context* context, ProtoMessageUnique message) 
+    : Object(context, static_cast<mjs::ClassId>(CustomClassId::kDBRowObject))
+    , db_row_(std::move(message)) {}
+
+
 void DBRowObject::SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) {
     auto key_str = context->GetConstValue(key).string_view();
-    
-    // Special method handling
-    if (key_str == "commit") {
-        return; // commit is a method, not a property to set
-    }
     
     const auto& desc = db_row_.GetDescriptor();
     const auto& reflection = db_row_.GetReflection();
@@ -237,42 +262,13 @@ void DBRowObject::SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::V
 bool DBRowObject::GetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value* value) {
     auto key_str = context->GetConstValue(key).string_view();
     
-    // Special method handling
-    if (key_str == "commit") {
-        // Return a function that calls DBRow::Commit
-        auto commit_func = mjs::CppFunction::New(context, [this](mjs::Context* ctx, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-            auto& service = GetJSService(ctx);
-            
-            // Start async commit operation
-            service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(ctx, mjs::Value()));
-            
-            // Schedule commit task
-            auto commit_task = [&service, this]() -> Task<> {
-                auto db_service = service.js_runtime_service().db_service_handle();
-                co_await db_row_.Commit(&service, db_service);
-                
-                // Resolve promise
-                if (service.function_call_context().promise.IsPromiseObject()) {
-                    service.function_call_context().promise.promise().Resolve(ctx, mjs::Value());
-                }
-            };
-            
-            service.imillion().StartTask(commit_task());
-            
-            return service.function_call_context().promise;
-        });
-        
-        *value = mjs::Value(commit_func);
-        return true;
-    }
-    
     const auto& desc = db_row_.GetDescriptor();
     const auto& reflection = db_row_.GetReflection();
     
     // Find the field by name
     const auto* field = desc.FindFieldByName(key_str);
     if (!field) {
-        return false; // Field not found
+        return Object::GetProperty(context, key, value); // Field not found
     }
     
     // Convert protobuf field to JavaScript value
@@ -316,45 +312,60 @@ mjs::Value ConfigModuleObject::Load(mjs::Context* context, uint32_t par_count, c
     // Start async config load operation
     service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
     
+
+    // 这里让OnMsg等待，发现是C++消息再做分发
+
+    service.function_call_context().sender = service.js_runtime_service().config_service_handle();
+
+    service.function_call_context().waiting_session_id = service.Send<config::ConfigQueryReq>(service.function_call_context().sender, *desc);
+    return service.function_call_context().promise;
+
     // Schedule config query task
-    auto config_task = [&service, config_service, desc, context]() -> Task<> {
-        try {
-            auto resp = co_await service.Call<config::ConfigQueryReq, config::ConfigQueryResp>(config_service, *desc);
-            if (!resp->config) {
-                // Reject promise
-                if (service.function_call_context().promise.IsPromiseObject()) {
-                    service.function_call_context().promise.promise().Reject(context, mjs::Value("Config not found"));
-                }
-                co_return;
-            }
-            
-            // Lock the config table
-            auto config_table = co_await resp->config->Lock(&service, config_service, desc);
-            
-            // Create ConfigTableObject wrapper
-            auto config_table_obj = ConfigTableObject::New(context, std::move(config_table));
-            
-            // Resolve promise with config table object
-            if (service.function_call_context().promise.IsPromiseObject()) {
-                service.function_call_context().promise.promise().Resolve(context, mjs::Value(config_table_obj));
-            }
-        } catch (const std::exception& e) {
-            // Reject promise on error
-            if (service.function_call_context().promise.IsPromiseObject()) {
-                service.function_call_context().promise.promise().Reject(context, mjs::Value(e.what()));
-            }
-        }
-    };
-    
-    service.imillion().StartTask(config_task());
-    
+    //auto config_task = [&service, config_service, desc, context]() -> Task<> {
+    //    try {
+    //        auto resp = co_await service.Call<config::ConfigQueryReq, config::ConfigQueryResp>(config_service, *desc);
+    //        if (!resp->config) {
+    //            // Reject promise
+    //            if (service.function_call_context().promise.IsPromiseObject()) {
+    //                service.function_call_context().promise.promise().Reject(context, mjs::Value("Config not found"));
+    //            }
+    //            co_return;
+    //        }
+    //        
+    //        // Lock the config table
+    //        auto config_table = co_await resp->config->Lock(&service, config_service, desc);
+    //        
+    //        // Create ConfigTableObject wrapper
+    //        auto config_table_obj = ConfigTableObject::New(context, std::move(config_table));
+    //        
+    //        // Resolve promise with config table object
+    //        if (service.function_call_context().promise.IsPromiseObject()) {
+    //            service.function_call_context().promise.promise().Resolve(context, mjs::Value(config_table_obj));
+    //        }
+    //    } catch (const std::exception& e) {
+    //        // Reject promise on error
+    //        if (service.function_call_context().promise.IsPromiseObject()) {
+    //            service.function_call_context().promise.promise().Reject(context, mjs::Value(e.what()));
+    //        }
+    //    }
+    //};
+    //
+    //service.imillion().StartTask(config_task());
+
     return service.function_call_context().promise;
 }
 
+
+
+
 // ConfigTableObject implementation
 ConfigTableObject::ConfigTableObject(mjs::Context* context, config::ConfigTableShared config_table)
-    : Object(context), config_table_(std::move(config_table))
+    : Object(context, static_cast<mjs::ClassId>(CustomClassId::kConfigTableObject))
+    , config_table_(std::move(config_table)) 
 {
+    //Object::SetProperty(&context->runtime(), "lock", mjs::Value([](mjs::Context* context, uint32_t, const mjs::StackFrame&)->mjs::Value));
+    //Object::SetProperty(context, "getRowByIndex", );
+    //Object::SetProperty(context, "findRow", );
 }
 
 void ConfigTableObject::SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) {
@@ -362,64 +373,67 @@ void ConfigTableObject::SetProperty(mjs::Context* context, mjs::ConstIndex key, 
 }
 
 bool ConfigTableObject::GetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value* value) {
-    auto key_str = context->runtime().const_table().at(key).string_view();
-    
-    if (key_str == "getRowByIndex") {
-        auto getRowByIndex_func = mjs::CppFunction::New(context, [this](mjs::Context* ctx, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-            if (par_count < 1 || !stack.get(0).IsNumber()) {
-                return mjs::Error::Throw(ctx, "getRowByIndex requires a number parameter");
-            }
-            
-            auto index = static_cast<size_t>(stack.get(0).ToInt64().i64());
-            if (index >= config_table_->GetRowCount()) {
-                return mjs::Value(); // Return undefined for out of bounds
-            }
-            
-            const auto* row = config_table_->GetRowByIndex(index);
-            if (!row) {
-                return mjs::Value(); // Return undefined if not found
-            }
-            
-            return JSUtil::ProtoMessageToJSObject(ctx, *row);
-        });
-        
-        *value = mjs::Value(getRowByIndex_func);
-        return true;
-    }
-    
-    if (key_str == "findRow") {
-        auto findRow_func = mjs::CppFunction::New(context, [this](mjs::Context* ctx, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-            if (par_count < 1 || !stack.get(0).IsFunction()) {
-                return mjs::Error::Throw(ctx, "findRow requires a function parameter");
-            }
-            
-            auto predicate_func = stack.get(0);
-            
-            // Iterate through all rows
-            for (size_t i = 0; i < config_table_->GetRowCount(); ++i) {
-                const auto* row = config_table_->GetRowByIndex(i);
-                if (!row) continue;
-                
-                // Convert row to JS object
-                auto row_js = JSUtil::ProtoMessageToJSObject(ctx, *row);
-                
-                // Call predicate function with row
-                std::vector<mjs::Value> args = { std::move(row_js) };
-                auto result = ctx->CallFunction(&predicate_func, mjs::Value(), args.begin(), args.end());
-                
-                // Check if predicate returned true
-                if (result.IsBoolean() && result.boolean()) {
-                    return JSUtil::ProtoMessageToJSObject(ctx, *row);
-                }
-            }
-            
-            return mjs::Value(); // Return undefined if not found
-        });
-        
-        *value = mjs::Value(findRow_func);
-        return true;
-    }
-    
+    auto key_str = context->GetConstValue(key).string_view();
+
+    //if (key_str == "commit") {
+
+    //}
+    //else if (key_str == "getRowByIndex") {
+    //    auto getRowByIndex_func = mjs::CppFunction::New(context, [this](mjs::Context* ctx, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+    //        if (par_count < 1 || !stack.get(0).IsNumber()) {
+    //            return mjs::Error::Throw(ctx, "getRowByIndex requires a number parameter");
+    //        }
+    //        
+    //        auto index = static_cast<size_t>(stack.get(0).ToInt64().i64());
+    //        if (index >= config_table_->GetRowCount()) {
+    //            return mjs::Value(); // Return undefined for out of bounds
+    //        }
+    //        
+    //        const auto* row = config_table_->GetRowByIndex(index);
+    //        if (!row) {
+    //            return mjs::Value(); // Return undefined if not found
+    //        }
+    //        
+    //        return JSUtil::ProtoMessageToJSObject(ctx, *row);
+    //    });
+    //    
+    //    *value = mjs::Value(getRowByIndex_func);
+    //    return true;
+    //}
+    //
+    //if (key_str == "findRow") {
+    //    auto findRow_func = mjs::CppFunction::New(context, [this](mjs::Context* ctx, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+    //        if (par_count < 1 || !stack.get(0).IsFunction()) {
+    //            return mjs::Error::Throw(ctx, "findRow requires a function parameter");
+    //        }
+    //        
+    //        auto predicate_func = stack.get(0);
+    //        
+    //        // Iterate through all rows
+    //        for (size_t i = 0; i < config_table_->GetRowCount(); ++i) {
+    //            const auto* row = config_table_->GetRowByIndex(i);
+    //            if (!row) continue;
+    //            
+    //            // Convert row to JS object
+    //            auto row_js = JSUtil::ProtoMessageToJSObject(ctx, *row);
+    //            
+    //            // Call predicate function with row
+    //            std::vector<mjs::Value> args = { std::move(row_js) };
+    //            auto result = ctx->CallFunction(&predicate_func, mjs::Value(), args.begin(), args.end());
+    //            
+    //            // Check if predicate returned true
+    //            if (result.IsBoolean() && result.boolean()) {
+    //                return JSUtil::ProtoMessageToJSObject(ctx, *row);
+    //            }
+    //        }
+    //        
+    //        return mjs::Value(); // Return undefined if not found
+    //    });
+    //    
+    //    *value = mjs::Value(findRow_func);
+    //    return true;
+    //}
+    //
     return false; // Property not found
 }
 

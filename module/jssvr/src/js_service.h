@@ -82,6 +82,8 @@ private:
         }
         jssvr_dirs_ = jssvr_settings["dirs"].as<std::vector<std::string>>();
 
+        js_runtime_.class_def_table().Register(std::make_unique<DBRowClassDef>(&js_runtime_));
+
         js_runtime_.module_manager().AddCppModule("million", MillionModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("service", ServiceModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("logger", LoggerModuleObject::New(&js_runtime_));

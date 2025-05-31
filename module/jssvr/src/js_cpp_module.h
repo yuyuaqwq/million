@@ -12,6 +12,11 @@
 namespace million {
 namespace jssvr {
 
+enum class CustomClassId {
+    kDBRowObject = mjs::ClassId::kCustom,
+    kConfigTableObject,
+};
+
 
 class MillionModuleObject : public mjs::CppModuleObject {
 private:
@@ -66,12 +71,11 @@ public:
     static DBModuleObject* New(mjs::Runtime* runtime) {
         return new DBModuleObject(runtime);
     }
+};
 
-    mjs::ConstIndex commit_const_index() const { return commit_const_index_; }
-
-private:
-    mjs::ConstIndex commit_const_index_;
-
+class DBRowClassDef : public mjs::ClassDef {
+public:
+    DBRowClassDef(mjs::Runtime* runtime);
 };
 
 class DBRowObject : public mjs::Object {
@@ -85,6 +89,9 @@ public:
 
     void SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) override;
     bool GetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value* value) override;
+
+    const db::DBRow& db_row() const { return db_row_;}
+    db::DBRow& db_row() { return db_row_; }
 
 private:
     db::DBRow db_row_;
@@ -100,6 +107,13 @@ public:
     static ConfigModuleObject* New(mjs::Runtime* runtime) {
         return new ConfigModuleObject(runtime);
     }
+};
+
+
+class ConfigTableClassDef : public mjs::ClassDef {
+public:
+    ConfigTableClassDef(mjs::Runtime* runtime);
+
 };
 
 class ConfigTableObject : public mjs::Object {
