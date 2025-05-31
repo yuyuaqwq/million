@@ -15,6 +15,7 @@ namespace jssvr {
 enum class CustomClassId {
     kDBRowObject = mjs::ClassId::kCustom,
     kConfigTableObject,
+    kConfigTableWeakObject,
 };
 
 
@@ -125,11 +126,34 @@ public:
         return new ConfigTableObject(context, std::move(config_table));
     }
 
-    void SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) override;
-    bool GetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value* value) override;
+    const config::ConfigTableShared& config_table() const { return config_table_; }
+    config::ConfigTableShared& config_table() { return config_table_; }
 
 private:
     config::ConfigTableShared config_table_;
+};
+
+class ConfigTableWeakClassDef : public mjs::ClassDef {
+public:
+    ConfigTableWeakClassDef(mjs::Runtime* runtime);
+};
+
+class ConfigTableWeakObject : public mjs::Object {
+private:
+    ConfigTableWeakObject(mjs::Context* context, config::ConfigTableWeakBase config_table_weak, const google::protobuf::Descriptor* descriptor);
+
+public:
+    static ConfigTableWeakObject* New(mjs::Context* context, config::ConfigTableWeakBase config_table_weak, const google::protobuf::Descriptor* descriptor) {
+        return new ConfigTableWeakObject(context, std::move(config_table_weak), descriptor);
+    }
+
+    const config::ConfigTableWeakBase& config_table_weak() const { return config_table_weak_; }
+    config::ConfigTableWeakBase& config_table_weak() { return config_table_weak_; }
+    const google::protobuf::Descriptor* descriptor() const { return descriptor_; }
+
+private:
+    config::ConfigTableWeakBase config_table_weak_;
+    const google::protobuf::Descriptor* descriptor_;
 };
 
 } // namespace jssvr

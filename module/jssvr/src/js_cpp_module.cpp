@@ -216,7 +216,7 @@ DBRowClassDef::DBRowClassDef(mjs::Runtime* runtime)
 
     auto const_index = runtime->const_pool().insert(mjs::Value("commit"));
 
-    prototype_.object().SetProperty(nullptr, const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const  mjs::StackFrame& stack) -> Value {
+    prototype_.object().SetProperty(nullptr, const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const  mjs::StackFrame& stack) -> mjs::Value {
         auto& service = GetJSService(context);
 
         service.function_call_context().sender = service.js_runtime_service().db_service_handle();
@@ -319,123 +319,103 @@ mjs::Value ConfigModuleObject::Load(mjs::Context* context, uint32_t par_count, c
 
     service.function_call_context().waiting_session_id = service.Send<config::ConfigQueryReq>(service.function_call_context().sender, *desc);
     return service.function_call_context().promise;
-
-    // Schedule config query task
-    //auto config_task = [&service, config_service, desc, context]() -> Task<> {
-    //    try {
-    //        auto resp = co_await service.Call<config::ConfigQueryReq, config::ConfigQueryResp>(config_service, *desc);
-    //        if (!resp->config) {
-    //            // Reject promise
-    //            if (service.function_call_context().promise.IsPromiseObject()) {
-    //                service.function_call_context().promise.promise().Reject(context, mjs::Value("Config not found"));
-    //            }
-    //            co_return;
-    //        }
-    //        
-    //        // Lock the config table
-    //        auto config_table = co_await resp->config->Lock(&service, config_service, desc);
-    //        
-    //        // Create ConfigTableObject wrapper
-    //        auto config_table_obj = ConfigTableObject::New(context, std::move(config_table));
-    //        
-    //        // Resolve promise with config table object
-    //        if (service.function_call_context().promise.IsPromiseObject()) {
-    //            service.function_call_context().promise.promise().Resolve(context, mjs::Value(config_table_obj));
-    //        }
-    //    } catch (const std::exception& e) {
-    //        // Reject promise on error
-    //        if (service.function_call_context().promise.IsPromiseObject()) {
-    //            service.function_call_context().promise.promise().Reject(context, mjs::Value(e.what()));
-    //        }
-    //    }
-    //};
-    //
-    //service.imillion().StartTask(config_task());
-
-    return service.function_call_context().promise;
 }
 
+
+
+// ConfigTableClassDef implementation
+ConfigTableClassDef::ConfigTableClassDef(mjs::Runtime* runtime) 
+    : ClassDef(runtime, static_cast<mjs::ClassId>(CustomClassId::kConfigTableObject), "ConfigTable") {
+
+    auto getRowByIndex_const_index = runtime->const_pool().insert(mjs::Value("getRowByIndex"));
+    auto findRow_const_index = runtime->const_pool().insert(mjs::Value("findRow"));
+
+    prototype_.object().SetProperty(nullptr, getRowByIndex_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+        if (par_count < 1 || !stack.get(0).IsNumber()) {
+            return mjs::Error::Throw(context, "getRowByIndex requires a number parameter");
+        }
+        
+        auto& config_table_object = stack.this_val().object<ConfigTableObject>();
+        auto index = static_cast<size_t>(stack.get(0).ToInt64().i64());
+        
+        if (index >= config_table_object.config_table()->GetRowCount()) {
+            return mjs::Value(); // Return undefined for out of bounds
+        }
+        
+        const auto* row = config_table_object.config_table()->GetRowByIndex(index);
+        if (!row) {
+            return mjs::Value(); // Return undefined if not found
+        }
+        
+        return JSUtil::ProtoMessageToJSObject(context, *row);
+    }));
+
+    prototype_.object().SetProperty(nullptr, findRow_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+        if (par_count < 1 || !stack.get(0).IsFunctionObject() && !stack.get(0).IsFunctionDef()) {
+            return mjs::Error::Throw(context, "findRow requires a function parameter");
+        }
+        
+        auto& config_table_object = stack.this_val().object<ConfigTableObject>();
+        auto predicate_func = stack.get(0);
+        
+        // Iterate through all rows
+        for (size_t i = 0; i < config_table_object.config_table()->GetRowCount(); ++i) {
+            const auto* row = config_table_object.config_table()->GetRowByIndex(i);
+            if (!row) continue;
+            
+            // Convert row to JS object
+            auto row_js = JSUtil::ProtoMessageToJSObject(context, *row);
+            
+            // Call predicate function with row
+            std::vector<mjs::Value> args = { std::move(row_js) };
+            auto result = context->CallFunction(&predicate_func, mjs::Value(), args.begin(), args.end());
+            
+            // Check if predicate returned true
+            if (result.IsBoolean() && result.boolean()) {
+                return JSUtil::ProtoMessageToJSObject(context, *row);
+            }
+        }
+        
+        return mjs::Value(); // Return undefined if not found
+    }));
+}
 
 
 
 // ConfigTableObject implementation
 ConfigTableObject::ConfigTableObject(mjs::Context* context, config::ConfigTableShared config_table)
     : Object(context, static_cast<mjs::ClassId>(CustomClassId::kConfigTableObject))
-    , config_table_(std::move(config_table)) 
-{
-    //Object::SetProperty(&context->runtime(), "lock", mjs::Value([](mjs::Context* context, uint32_t, const mjs::StackFrame&)->mjs::Value));
-    //Object::SetProperty(context, "getRowByIndex", );
-    //Object::SetProperty(context, "findRow", );
+    , config_table_(std::move(config_table)) {}
+
+
+// ConfigTableWeakClassDef implementation
+ConfigTableWeakClassDef::ConfigTableWeakClassDef(mjs::Runtime* runtime) 
+    : ClassDef(runtime, static_cast<mjs::ClassId>(CustomClassId::kConfigTableWeakObject), "ConfigTableWeak") {
+
+    auto lock_const_index = runtime->const_pool().insert(mjs::Value("lock"));
+
+    prototype_.object().SetProperty(nullptr, lock_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+        auto& service = GetJSService(context);
+        auto& config_table_weak_object = stack.this_val().object<ConfigTableWeakObject>();
+
+        // Get config service handle
+        auto config_service_handle = service.js_runtime_service().config_service_handle();
+
+        // Start async lock operation
+        service.function_call_context().sender = config_service_handle;
+        service.function_call_context().waiting_session_id = service.Send<config::ConfigQueryReq>(config_service_handle, 
+            *config_table_weak_object.descriptor());
+
+        service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
+        return service.function_call_context().promise;
+    }));
 }
 
-void ConfigTableObject::SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) {
-    // Config tables are read-only, ignore set operations
-}
-
-bool ConfigTableObject::GetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value* value) {
-    auto key_str = context->GetConstValue(key).string_view();
-
-    //if (key_str == "commit") {
-
-    //}
-    //else if (key_str == "getRowByIndex") {
-    //    auto getRowByIndex_func = mjs::CppFunction::New(context, [this](mjs::Context* ctx, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-    //        if (par_count < 1 || !stack.get(0).IsNumber()) {
-    //            return mjs::Error::Throw(ctx, "getRowByIndex requires a number parameter");
-    //        }
-    //        
-    //        auto index = static_cast<size_t>(stack.get(0).ToInt64().i64());
-    //        if (index >= config_table_->GetRowCount()) {
-    //            return mjs::Value(); // Return undefined for out of bounds
-    //        }
-    //        
-    //        const auto* row = config_table_->GetRowByIndex(index);
-    //        if (!row) {
-    //            return mjs::Value(); // Return undefined if not found
-    //        }
-    //        
-    //        return JSUtil::ProtoMessageToJSObject(ctx, *row);
-    //    });
-    //    
-    //    *value = mjs::Value(getRowByIndex_func);
-    //    return true;
-    //}
-    //
-    //if (key_str == "findRow") {
-    //    auto findRow_func = mjs::CppFunction::New(context, [this](mjs::Context* ctx, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-    //        if (par_count < 1 || !stack.get(0).IsFunction()) {
-    //            return mjs::Error::Throw(ctx, "findRow requires a function parameter");
-    //        }
-    //        
-    //        auto predicate_func = stack.get(0);
-    //        
-    //        // Iterate through all rows
-    //        for (size_t i = 0; i < config_table_->GetRowCount(); ++i) {
-    //            const auto* row = config_table_->GetRowByIndex(i);
-    //            if (!row) continue;
-    //            
-    //            // Convert row to JS object
-    //            auto row_js = JSUtil::ProtoMessageToJSObject(ctx, *row);
-    //            
-    //            // Call predicate function with row
-    //            std::vector<mjs::Value> args = { std::move(row_js) };
-    //            auto result = ctx->CallFunction(&predicate_func, mjs::Value(), args.begin(), args.end());
-    //            
-    //            // Check if predicate returned true
-    //            if (result.IsBoolean() && result.boolean()) {
-    //                return JSUtil::ProtoMessageToJSObject(ctx, *row);
-    //            }
-    //        }
-    //        
-    //        return mjs::Value(); // Return undefined if not found
-    //    });
-    //    
-    //    *value = mjs::Value(findRow_func);
-    //    return true;
-    //}
-    //
-    return false; // Property not found
-}
+// ConfigTableWeakObject implementation
+ConfigTableWeakObject::ConfigTableWeakObject(mjs::Context* context, config::ConfigTableWeakBase config_table_weak, const google::protobuf::Descriptor* descriptor)
+    : Object(context, static_cast<mjs::ClassId>(CustomClassId::kConfigTableWeakObject))
+    , config_table_weak_(std::move(config_table_weak))
+    , descriptor_(descriptor) {}
 
 } // namespace jssvr
 } // namespace million
