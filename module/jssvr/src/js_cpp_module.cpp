@@ -234,9 +234,9 @@ DBRowClassDef::DBRowClassDef(mjs::Runtime* runtime)
 }
 
 
-DBRowObject::DBRowObject(mjs::Context* context, ProtoMessageUnique message) 
+DBRowObject::DBRowObject(mjs::Context* context, db::DBRow&& db_row)
     : Object(context, static_cast<mjs::ClassId>(CustomClassId::kDBRowObject))
-    , db_row_(std::move(message)) {}
+    , db_row_(std::move(db_row)) {}
 
 
 void DBRowObject::SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) {

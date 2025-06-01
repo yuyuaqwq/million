@@ -81,11 +81,11 @@ public:
 
 class DBRowObject : public mjs::Object {
 private:
-    DBRowObject(mjs::Context* context, ProtoMessageUnique message);
+    DBRowObject(mjs::Context* context, db::DBRow&& db_row);
 
 public:
-    static DBRowObject* New(mjs::Context* context, ProtoMessageUnique message) {
-        return new DBRowObject(context, std::move(message));
+    static DBRowObject* New(mjs::Context* context, db::DBRow&& db_row) {
+        return new DBRowObject(context, std::move(db_row));
     }
 
     void SetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::Value&& value) override;

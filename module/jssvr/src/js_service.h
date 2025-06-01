@@ -88,6 +88,9 @@ private:
         js_runtime_.module_manager().AddCppModule("service", ServiceModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("logger", LoggerModuleObject::New(&js_runtime_));
 
+        js_runtime_.module_manager().AddCppModule("db", DBModuleObject::New(&js_runtime_));
+        js_runtime_.module_manager().AddCppModule("config", ConfigModuleObject::New(&js_runtime_));
+
         return true;
     }
 
@@ -291,7 +294,15 @@ private:
     }
 
 
-
+public:
+    MILLION_MESSAGE_HANDLE(db::DBRowLoadResp, resp) {
+        if (!resp->db_row) {
+            logger().LOG_ERROR("DBRowLoadResp db_row is null.");
+            co_return nullptr;
+        }
+        auto object = DBRowObject::New(&js_context_, std::move(*resp->db_row));
+        co_return make_message<JSValueMsg>(mjs::Value(object));
+    }
 
 
 
