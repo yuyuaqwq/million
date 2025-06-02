@@ -16,6 +16,7 @@ enum class CustomClassId {
     kDBRowObject = mjs::ClassId::kCustom,
     kConfigTableObject,
     kConfigTableWeakObject,
+    kJSConfigTableObject,
 };
 
 
@@ -155,6 +156,96 @@ private:
     config::ConfigTableWeakBase config_table_weak_;
     const google::protobuf::Descriptor* descriptor_;
 };
+
+// JSConfigService - 预转换缓存配置服务
+class JSConfigService : public IService {
+    MILLION_SERVICE_DEFINE(JSConfigService);
+
+public:
+    using Base = IService;
+    JSConfigService(IMillion* imillion, JSRuntimeService* js_runtime_service);
+    ~JSConfigService();
+
+private:
+    virtual bool OnInit() override;
+    virtual Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override;
+
+    MILLION_MESSAGE_HANDLE(config::ConfigUpdateReq, msg) {
+        co_await UpdateConfigCache(&msg->config_desc);
+        co_return make_message<config::ConfigUpdateResp>();
+    }
+
+    MILLION_MESSAGE_HANDLE(JSConfigQueryReq, msg) {
+        // 创建临时上下文用于获取配置
+        auto cached_table = co_await GetCachedConfigTable(&msg->config_desc);
+        co_return make_message<JSConfigQueryResp>(std::move(cached_table));
+    }
+
+    // 预加载所有配置
+    Task<bool> PreloadAllConfigs();
+
+    // 获取缓存的配置表JS对象
+    Task<mjs::Value> GetCachedConfigTable(const google::protobuf::Descriptor* descriptor);
+
+    // 更新特定配置的缓存
+    Task<void> UpdateConfigCache(const google::protobuf::Descriptor* descriptor);
+
+    // 后续通过注册配置更新回调
+
+private:
+    JSRuntimeService* js_runtime_service_;
+    ServiceHandle config_service_handle_;
+    
+    // 缓存的JS配置表对象 - 使用descriptor作为key
+    std::unordered_map<const google::protobuf::Descriptor*, mjs::Value> cached_config_tables_;
+    
+    // 配置名称到descriptor的映射
+    std::unordered_map<std::string, const google::protobuf::Descriptor*> config_name_to_descriptor_;
+};
+
+// JSConfigModuleObject - 新的JS配置模块，使用JSConfigService
+class JSConfigModuleObject : public mjs::CppModuleObject {
+private:
+    JSConfigModuleObject(mjs::Runtime* rt);
+
+public:
+    static mjs::Value Load(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack);
+
+    static JSConfigModuleObject* New(mjs::Runtime* runtime) {
+        return new JSConfigModuleObject(runtime);
+    }
+};
+
+// JSConfigTableObject - 缓存的配置表对象
+class JSConfigTableObject : public mjs::Object {
+private:
+    JSConfigTableObject(mjs::Context* context, const google::protobuf::Descriptor* descriptor, std::vector<mjs::Value>&& cached_rows);
+
+public:
+    static JSConfigTableObject* New(mjs::Context* context, const google::protobuf::Descriptor* descriptor, std::vector<mjs::Value>&& cached_rows) {
+        return new JSConfigTableObject(context, descriptor, std::move(cached_rows));
+    }
+
+    const google::protobuf::Descriptor* descriptor() const { return descriptor_; }
+    const std::vector<mjs::Value>& cached_rows() const { return cached_rows_; }
+
+private:
+    const google::protobuf::Descriptor* descriptor_;
+    std::vector<mjs::Value> cached_rows_;  // 预转换的JS行对象
+};
+
+// JSConfigTableClassDef - 缓存配置表的类定义
+class JSConfigTableClassDef : public mjs::ClassDef {
+public:
+    JSConfigTableClassDef(mjs::Runtime* runtime);
+};
+
+// 全局访问JSConfigService实例的函数
+JSConfigService* GetJSConfigServiceInstance(ServiceHandle handle);
+
+// JS配置查询消息
+MILLION_MESSAGE_DEFINE(, JSConfigQueryReq, (const google::protobuf::Descriptor&) config_desc)
+MILLION_MESSAGE_DEFINE(, JSConfigQueryResp, (mjs::Value) cached_table)
 
 } // namespace jssvr
 } // namespace million

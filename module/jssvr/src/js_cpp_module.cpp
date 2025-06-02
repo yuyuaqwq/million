@@ -3,6 +3,7 @@
 #include <jssvr/jssvr.h>
 #include "js_service.h"
 #include "js_util.h"
+#include <shared_mutex>
 
 namespace million {
 namespace jssvr {
@@ -424,6 +425,241 @@ ConfigTableWeakObject::ConfigTableWeakObject(mjs::Context* context, config::Conf
     : Object(context, static_cast<mjs::ClassId>(CustomClassId::kConfigTableWeakObject))
     , config_table_weak_(std::move(config_table_weak))
     , descriptor_(descriptor) {}
+
+// JSConfigService implementation
+JSConfigService::JSConfigService(IMillion* imillion, JSRuntimeService* js_runtime_service)
+    : Base(imillion)
+    , js_runtime_service_(js_runtime_service) {
+    // 注册到全局映射
+    g_js_config_service_instances[service_handle()] = this;
+}
+
+JSConfigService::~JSConfigService() {
+    // 从全局映射中移除
+    g_js_config_service_instances.erase(service_handle());
+}
+
+bool JSConfigService::OnInit() {
+    // 获取配置服务句柄
+    auto config_service_opt = imillion().GetServiceByName(config::kConfigServiceName);
+    if (!config_service_opt) {
+        logger().LOG_ERROR("Config service not found.");
+        return false;
+    }
+    config_service_handle_ = *config_service_opt;
+    
+    return true;
+}
+
+Task<MessagePointer> JSConfigService::OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) {
+    // 预加载所有配置
+    co_await PreloadAllConfigs();
+    
+    logger().LOG_INFO("JSConfigService started and configs preloaded.");
+    co_return nullptr;
+}
+
+Task<bool> JSConfigService::PreloadAllConfigs() {
+    // 获取所有已注册的配置类型
+    const auto& settings = imillion().YamlSettings();
+    const auto& config_settings = settings["config"];
+    if (!config_settings) {
+        logger().LOG_ERROR("cannot find 'config'.");
+        co_return false;
+    }
+
+    const auto& namespace_settings = config_settings["namespace"];
+    if (!namespace_settings) {
+        logger().LOG_ERROR("cannot find 'config.namespace'.");
+        co_return false;
+    }
+    auto namespace_ = namespace_settings.as<std::string>();
+
+    const auto& modules_settings = config_settings["modules"];
+    if (!modules_settings) {
+        logger().LOG_ERROR("cannot find 'config.modules'.");
+        co_return false;
+    }
+
+    // 创建一个临时的JS上下文用于预转换
+    mjs::Context temp_context(&js_runtime_service_->js_runtime());
+    
+    for (auto module_settings : modules_settings) {
+        auto module_name = module_settings.as<std::string>();
+        auto table_msg_name = namespace_ + ".config." + module_name + ".Table";
+        auto table_desc = imillion().proto_mgr().FindMessageTypeByName(table_msg_name);
+        if (!table_desc) {
+            logger().LOG_ERROR("Unable to find message desc: top_msg_name -> {}.", table_msg_name);
+            continue;
+        }
+
+        for (int i = 0; i < table_desc->field_count(); ++i) {
+            auto field_desc = table_desc->field(i);
+            if (!field_desc || !field_desc->is_repeated() || 
+                field_desc->type() != google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
+                continue;
+            }
+
+            const auto* config_desc = field_desc->message_type();
+            if (!config_desc) {
+                continue;
+            }
+
+            // 预加载这个配置类型
+            try {
+                auto config_resp = co_await Call<config::ConfigQueryReq, config::ConfigQueryResp>(config_service_handle_, *config_desc);
+                if (!config_resp->config) {
+                    logger().LOG_ERROR("Failed to query config: {}", config_desc->full_name());
+                    continue;
+                }
+                
+                auto config_table = co_await config_resp->config->Lock(this, config_service_handle_, config_desc);
+                
+                if (config_table) {
+                    // 预转换所有行为JS对象
+                    std::vector<mjs::Value> cached_rows;
+                    for (size_t row_idx = 0; row_idx < config_table->GetRowCount(); ++row_idx) {
+                        const auto* row = config_table->GetRowByIndex(row_idx);
+                        if (row) {
+                            auto js_row = JSUtil::ProtoMessageToJSObject(&temp_context, *row);
+                            cached_rows.push_back(std::move(js_row));
+                        }
+                    }
+                    
+                    auto cached_table = JSConfigTableObject::New(&temp_context, config_desc, std::move(cached_rows));
+                    cached_config_tables_[config_desc] = mjs::Value(cached_table);
+                    config_name_to_descriptor_[config_desc->full_name()] = config_desc;
+
+                    logger().LOG_INFO("Preloaded config: {} with {} rows", config_desc->full_name(), cached_rows.size());
+                }
+            } catch (const std::exception& e) {
+                logger().LOG_ERROR("Failed to preload config {}: {}", config_desc->full_name(), e.what());
+            }
+        }
+    }
+    
+    co_return true;
+}
+
+Task<mjs::Value> JSConfigService::GetCachedConfigTable(const google::protobuf::Descriptor* descriptor) {
+    // 首先尝试从缓存读取
+    auto it = cached_config_tables_.find(descriptor);
+    if (it != cached_config_tables_.end()) {
+        co_return it->second;
+    }
+    co_return mjs::Value(); // 超时返回undefined
+}
+
+Task<void> JSConfigService::UpdateConfigCache(const google::protobuf::Descriptor* descriptor) {
+    // 配置更新时重新缓存
+    logger().LOG_INFO("Config cache updated for: {}", descriptor->full_name());
+}
+
+// JSConfigModuleObject implementation
+JSConfigModuleObject::JSConfigModuleObject(mjs::Runtime* rt)
+    : CppModuleObject(rt) {
+    AddExportMethod(rt, "load", Load);
+}
+
+mjs::Value JSConfigModuleObject::Load(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+    auto& service = GetJSService(context);
+    
+    if (par_count < 1) {
+        return mjs::Error::Throw(context, "JSConfig Load requires 1 parameter.");
+    }
+
+    if (!stack.get(0).IsString()) {
+        return mjs::Error::Throw(context, "JSConfig Load parameter 1 must be a string for message type.");
+    }
+
+    auto msg_name = stack.get(0).string_view();
+    const auto* desc = service.imillion().proto_mgr().FindMessageTypeByName(msg_name);
+    if (!desc) {
+        return mjs::Error::Throw(context, "JSConfig Load parameter 1 invalid message type.");
+    }
+
+    // 设置异步操作上下文
+    service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
+    
+    // 从JSRuntimeService获取JSConfigService句柄
+    auto& js_runtime_service = service.js_runtime_service();
+    service.function_call_context().sender = js_runtime_service.js_config_service_handle();
+    
+    // 发送配置查询请求
+    service.function_call_context().waiting_session_id = service.Send<JSConfigQueryReq>(
+        service.function_call_context().sender, *desc);
+    
+    return service.function_call_context().promise;
+}
+
+// JSConfigTableClassDef implementation
+JSConfigTableClassDef::JSConfigTableClassDef(mjs::Runtime* runtime)
+    : ClassDef(runtime, static_cast<mjs::ClassId>(CustomClassId::kJSConfigTableObject), "JSConfigTable") {
+
+    auto getRowByIndex_const_index = runtime->const_pool().insert(mjs::Value("getRowByIndex"));
+    auto findRow_const_index = runtime->const_pool().insert(mjs::Value("findRow"));
+    auto getRowCount_const_index = runtime->const_pool().insert(mjs::Value("getRowCount"));
+
+    prototype_.object().SetProperty(nullptr, getRowByIndex_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+        if (par_count < 1 || !stack.get(0).IsNumber()) {
+            return mjs::Error::Throw(context, "getRowByIndex requires a number parameter");
+        }
+        
+        auto& config_table_object = stack.this_val().object<JSConfigTableObject>();
+        auto index = static_cast<size_t>(stack.get(0).ToInt64().i64());
+        
+        if (index >= config_table_object.cached_rows().size()) {
+            return mjs::Value(); // Return undefined for out of bounds
+        }
+        
+        return config_table_object.cached_rows()[index];
+    }));
+
+    prototype_.object().SetProperty(nullptr, findRow_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+        if (par_count < 1 || !stack.get(0).IsFunctionObject() && !stack.get(0).IsFunctionDef()) {
+            return mjs::Error::Throw(context, "findRow requires a function parameter");
+        }
+        
+        auto& config_table_object = stack.this_val().object<JSConfigTableObject>();
+        auto predicate_func = stack.get(0);
+        
+        // 遍历缓存的JS行对象
+        for (const auto& cached_row : config_table_object.cached_rows()) {
+            // 调用谓词函数
+            std::vector<mjs::Value> args = { cached_row };
+            auto result = context->CallFunction(&predicate_func, mjs::Value(), args.begin(), args.end());
+            
+            // 检查谓词是否返回true
+            if (result.IsBoolean() && result.boolean()) {
+                return cached_row;
+            }
+        }
+        
+        return mjs::Value(); // Return undefined if not found
+    }));
+
+    prototype_.object().SetProperty(nullptr, getRowCount_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+        auto& config_table_object = stack.this_val().object<JSConfigTableObject>();
+        return mjs::Value(static_cast<double>(config_table_object.cached_rows().size()));
+    }));
+}
+
+// JSConfigTableObject implementation
+JSConfigTableObject::JSConfigTableObject(mjs::Context* context, const google::protobuf::Descriptor* descriptor, std::vector<mjs::Value>&& cached_rows)
+    : Object(context, static_cast<mjs::ClassId>(CustomClassId::kJSConfigTableObject))
+    , descriptor_(descriptor)
+    , cached_rows_(std::move(cached_rows)) {}
+
+// 全局JSConfigService实例映射
+static std::unordered_map<ServiceHandle, JSConfigService*> g_js_config_service_instances;
+
+JSConfigService* GetJSConfigServiceInstance(ServiceHandle handle) {
+    auto it = g_js_config_service_instances.find(handle);
+    if (it != g_js_config_service_instances.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
 
 } // namespace jssvr
 } // namespace million

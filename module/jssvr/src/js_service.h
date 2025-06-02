@@ -66,6 +66,7 @@ public:
 
     const auto& db_service_handle() const { return db_service_handle_; }
     const auto& config_service_handle() const { return config_service_handle_; }
+    const auto& js_config_service_handle() const { return js_config_service_handle_; }
 
 private:
     virtual bool OnInit() override {
@@ -85,6 +86,7 @@ private:
         js_runtime_.class_def_table().Register(std::make_unique<DBRowClassDef>(&js_runtime_));
         js_runtime_.class_def_table().Register(std::make_unique<ConfigTableClassDef>(&js_runtime_));
         js_runtime_.class_def_table().Register(std::make_unique<ConfigTableWeakClassDef>(&js_runtime_));
+        js_runtime_.class_def_table().Register(std::make_unique<JSConfigTableClassDef>(&js_runtime_));
 
         js_runtime_.module_manager().AddCppModule("million", MillionModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("service", ServiceModuleObject::New(&js_runtime_));
@@ -92,6 +94,7 @@ private:
 
         js_runtime_.module_manager().AddCppModule("db", DBModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("config", ConfigModuleObject::New(&js_runtime_));
+        js_runtime_.module_manager().AddCppModule("jsconfig", JSConfigModuleObject::New(&js_runtime_));
 
         return true;
     }
@@ -99,6 +102,15 @@ private:
     Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
         db_service_handle_ = *imillion().GetServiceByName(db::kDBServiceName);
         config_service_handle_ = *imillion().GetServiceByName(config::kConfigServiceName);
+        
+        // 创建JSConfigService
+        auto js_config_service_opt = imillion().NewService<JSConfigService>(this);
+        if (!js_config_service_opt) {
+            logger().LOG_ERROR("Failed to create JSConfigService.");
+            co_return nullptr;
+        }
+        js_config_service_handle_ = *js_config_service_opt;
+        
         co_return nullptr;
     }
 
@@ -109,6 +121,7 @@ private:
     std::vector<std::string> jssvr_dirs_;
     ServiceHandle db_service_handle_;
     ServiceHandle config_service_handle_;
+    ServiceHandle js_config_service_handle_;
 };
 
 
@@ -315,6 +328,10 @@ public:
         co_return make_message<JSValueMsg>(mjs::Value(object));
     }
 
+    MILLION_MESSAGE_HANDLE(JSConfigQueryResp, resp) {
+        // 直接返回缓存的JS配置表对象
+        co_return make_message<JSValueMsg>(std::move(resp->cached_table));
+    }
 
     // 添加模块
     //bool AddModule(const std::string& module_name, mjs::ModuleObject* module) {
