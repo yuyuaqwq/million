@@ -39,7 +39,7 @@ public:
         case google::protobuf::FieldDescriptor::TYPE_STRING: {
             std::string string;
             auto string_ref = reflection.GetStringReference(msg, &field_desc, &string);
-            return mjs::Value(string_ref.c_str());
+            return mjs::Value(mjs::String::New(string_ref));
         }
         case google::protobuf::FieldDescriptor::TYPE_BYTES: {
             std::string bytes;
@@ -93,7 +93,7 @@ public:
         case google::protobuf::FieldDescriptor::TYPE_STRING: {
             std::string string;
             auto string_ref = reflection.GetRepeatedStringReference(msg, &field_desc, j, &string);
-            return mjs::Value(string_ref.c_str());
+            return mjs::Value(mjs::String::New(string_ref));
         }
         case google::protobuf::FieldDescriptor::TYPE_BYTES: {
             std::string bytes;
