@@ -401,13 +401,21 @@ ConfigTableWeakClassDef::ConfigTableWeakClassDef(mjs::Runtime* runtime)
         // Get config service handle
         auto config_service_handle = service.js_runtime_service().config_service_handle();
 
-        // Start async lock operation
-        service.function_call_context().sender = config_service_handle;
-        service.function_call_context().waiting_session_id = service.Send<config::ConfigQueryReq>(config_service_handle, 
-            *config_table_weak_object.descriptor());
+        auto& weak_obj = stack.this_val().object<ConfigTableWeakObject>();
+        
+        // 这里未来需要修改C++消息类型，区分初次加载和加锁重载
+        auto task = weak_obj.config_table_weak().Lock(&service, config_service_handle, weak_obj.descriptor());
+        if (!task.coroutine.done()) {
+            // Start async lock operation
+            service.function_call_context().sender = config_service_handle;
+            service.function_call_context().waiting_session_id = task.coroutine.promise().session_awaiter()->waiting_session_id();
 
-        service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
-        return service.function_call_context().promise;
+            service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
+            return service.function_call_context().promise;
+        }
+        else {
+            return mjs::Value(ConfigTableObject::New(context, *task.coroutine.promise().result_value));
+        }
     }));
 }
 

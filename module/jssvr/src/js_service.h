@@ -83,6 +83,8 @@ private:
         jssvr_dirs_ = jssvr_settings["dirs"].as<std::vector<std::string>>();
 
         js_runtime_.class_def_table().Register(std::make_unique<DBRowClassDef>(&js_runtime_));
+        js_runtime_.class_def_table().Register(std::make_unique<ConfigTableClassDef>(&js_runtime_));
+        js_runtime_.class_def_table().Register(std::make_unique<ConfigTableWeakClassDef>(&js_runtime_));
 
         js_runtime_.module_manager().AddCppModule("million", MillionModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("service", ServiceModuleObject::New(&js_runtime_));
@@ -304,6 +306,14 @@ public:
         co_return make_message<JSValueMsg>(mjs::Value(object));
     }
 
+    MILLION_MESSAGE_HANDLE(config::ConfigQueryResp, resp) {
+        if (!resp->config) {
+            logger().LOG_ERROR("ConfigQueryResp config is null.");
+            co_return nullptr;
+        }
+        auto object = ConfigTableWeakObject::New(&js_context_, std::move(*resp->config), &resp->config_desc);
+        co_return make_message<JSValueMsg>(mjs::Value(object));
+    }
 
 
     // 添加模块
