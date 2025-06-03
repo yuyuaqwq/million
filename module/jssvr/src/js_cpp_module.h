@@ -63,6 +63,7 @@ private:
     static million::SourceLocation GetSourceLocation(const mjs::StackFrame& stack);
 };
 
+
 class DBModuleObject : public mjs::CppModuleObject {
 private:
     DBModuleObject(mjs::Runtime* rt);
@@ -99,6 +100,7 @@ private:
     db::DBRow db_row_;
 };
 
+
 class ConfigModuleObject : public mjs::CppModuleObject {
 private:
     ConfigModuleObject(mjs::Runtime* rt);
@@ -111,27 +113,47 @@ public:
     }
 };
 
-
 class ConfigTableClassDef : public mjs::ClassDef {
 public:
     ConfigTableClassDef(mjs::Runtime* runtime);
 
 };
 
-class ConfigTableObject : public mjs::Object {
+//class ConfigTableObject : public mjs::Object {
+//private:
+//    ConfigTableObject(mjs::Context* context, config::ConfigTableShared config_table);
+//
+//public:
+//    static ConfigTableObject* New(mjs::Context* context, config::ConfigTableShared config_table) {
+//        return new ConfigTableObject(context, std::move(config_table));
+//    }
+//
+//    //const config::ConfigTableShared& config_table() const { return config_table_; }
+//    //config::ConfigTableShared& config_table() { return config_table_; }
+//
+//private:
+//    // config::ConfigTableShared config_table_;
+//};
+
+// JSConfigTableObject - 缓存的配置表对象
+class JSConfigTableObject : public mjs::Object {
 private:
-    ConfigTableObject(mjs::Context* context, config::ConfigTableShared config_table);
+    JSConfigTableObject(mjs::Context* context, const google::protobuf::Descriptor* descriptor, std::vector<mjs::Value>&& cached_rows);
 
 public:
-    static ConfigTableObject* New(mjs::Context* context, config::ConfigTableShared config_table) {
-        return new ConfigTableObject(context, std::move(config_table));
+    static JSConfigTableObject* New(mjs::Context* context, const google::protobuf::Descriptor* descriptor, std::vector<mjs::Value>&& cached_rows) {
+        return new JSConfigTableObject(context, descriptor, std::move(cached_rows));
     }
 
-    const config::ConfigTableShared& config_table() const { return config_table_; }
-    config::ConfigTableShared& config_table() { return config_table_; }
+    const google::protobuf::Descriptor* descriptor() const { return descriptor_; }
+    const std::vector<mjs::Value>& cached_rows() const { return cached_rows_; }
+
+    bool is_expired() const { return is_expired_; }
 
 private:
-    config::ConfigTableShared config_table_;
+    std::atomic<bool> is_expired_;
+    const google::protobuf::Descriptor* descriptor_;
+    std::vector<mjs::Value> cached_rows_;  // 预转换的JS行对象
 };
 
 class ConfigTableWeakClassDef : public mjs::ClassDef {
@@ -141,19 +163,22 @@ public:
 
 class ConfigTableWeakObject : public mjs::Object {
 private:
-    ConfigTableWeakObject(mjs::Context* context, config::ConfigTableWeakBase config_table_weak, const google::protobuf::Descriptor* descriptor);
+    ConfigTableWeakObject(mjs::Context* context, const mjs::Value& table_object, const google::protobuf::Descriptor* descriptor);
 
 public:
-    static ConfigTableWeakObject* New(mjs::Context* context, config::ConfigTableWeakBase config_table_weak, const google::protobuf::Descriptor* descriptor) {
-        return new ConfigTableWeakObject(context, std::move(config_table_weak), descriptor);
+    static ConfigTableWeakObject* New(mjs::Context* context, const mjs::Value& table_object, const google::protobuf::Descriptor* descriptor) {
+        return new ConfigTableWeakObject(context, table_object, descriptor);
     }
 
-    const config::ConfigTableWeakBase& config_table_weak() const { return config_table_weak_; }
-    config::ConfigTableWeakBase& config_table_weak() { return config_table_weak_; }
+    mjs::Value Lock(mjs::Context* context);
+
+    //const config::ConfigTableWeakBase& config_table_weak() const { return config_table_weak_; }
+    //config::ConfigTableWeakBase& config_table_weak() { return config_table_weak_; }
     const google::protobuf::Descriptor* descriptor() const { return descriptor_; }
 
 private:
-    config::ConfigTableWeakBase config_table_weak_;
+    mjs::Value table_object_;
+    //config::ConfigTableWeakBase config_table_weak_;
     const google::protobuf::Descriptor* descriptor_;
 };
 
@@ -216,32 +241,13 @@ public:
     }
 };
 
-// JSConfigTableObject - 缓存的配置表对象
-class JSConfigTableObject : public mjs::Object {
-private:
-    JSConfigTableObject(mjs::Context* context, const google::protobuf::Descriptor* descriptor, std::vector<mjs::Value>&& cached_rows);
 
-public:
-    static JSConfigTableObject* New(mjs::Context* context, const google::protobuf::Descriptor* descriptor, std::vector<mjs::Value>&& cached_rows) {
-        return new JSConfigTableObject(context, descriptor, std::move(cached_rows));
-    }
-
-    const google::protobuf::Descriptor* descriptor() const { return descriptor_; }
-    const std::vector<mjs::Value>& cached_rows() const { return cached_rows_; }
-
-private:
-    const google::protobuf::Descriptor* descriptor_;
-    std::vector<mjs::Value> cached_rows_;  // 预转换的JS行对象
-};
 
 // JSConfigTableClassDef - 缓存配置表的类定义
 class JSConfigTableClassDef : public mjs::ClassDef {
 public:
     JSConfigTableClassDef(mjs::Runtime* runtime);
 };
-
-// 全局访问JSConfigService实例的函数
-JSConfigService* GetJSConfigServiceInstance(ServiceHandle handle);
 
 // JS配置查询消息
 MILLION_MESSAGE_DEFINE(, JSConfigQueryReq, (const google::protobuf::Descriptor&) config_desc)

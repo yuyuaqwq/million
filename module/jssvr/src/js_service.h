@@ -83,6 +83,8 @@ private:
         }
         jssvr_dirs_ = jssvr_settings["dirs"].as<std::vector<std::string>>();
 
+
+
         js_runtime_.class_def_table().Register(std::make_unique<DBRowClassDef>(&js_runtime_));
         js_runtime_.class_def_table().Register(std::make_unique<ConfigTableClassDef>(&js_runtime_));
         js_runtime_.class_def_table().Register(std::make_unique<ConfigTableWeakClassDef>(&js_runtime_));

@@ -318,7 +318,9 @@ mjs::Value ConfigModuleObject::Load(mjs::Context* context, uint32_t par_count, c
 
     service.function_call_context().sender = service.js_runtime_service().config_service_handle();
 
-    service.function_call_context().waiting_session_id = service.Send<config::ConfigQueryReq>(service.function_call_context().sender, *desc);
+    service.function_call_context().waiting_session_id = service.Send<JSConfigQueryReq>(
+        service.function_call_context().sender, *desc);
+
     return service.function_call_context().promise;
 }
 
@@ -421,23 +423,27 @@ ConfigTableWeakClassDef::ConfigTableWeakClassDef(mjs::Runtime* runtime)
 }
 
 // ConfigTableWeakObject implementation
-ConfigTableWeakObject::ConfigTableWeakObject(mjs::Context* context, config::ConfigTableWeakBase config_table_weak, const google::protobuf::Descriptor* descriptor)
+ConfigTableWeakObject::ConfigTableWeakObject(mjs::Context* context
+    , const mjs::Value& table_object, const google::protobuf::Descriptor* descriptor)
     : Object(context, static_cast<mjs::ClassId>(CustomClassId::kConfigTableWeakObject))
-    , config_table_weak_(std::move(config_table_weak))
+    , table_object_(table_object)
     , descriptor_(descriptor) {}
+
+mjs::Value ConfigTableWeakObject::Lock(mjs::Context* context) {
+    if (!table_object_.object<ConfigTableObject>().is_expired()) {
+        return table_object_;
+    }
+    // 重新加载
+
+}
+
 
 // JSConfigService implementation
 JSConfigService::JSConfigService(IMillion* imillion, JSRuntimeService* js_runtime_service)
     : Base(imillion)
-    , js_runtime_service_(js_runtime_service) {
-    // 注册到全局映射
-    g_js_config_service_instances[service_handle()] = this;
-}
+    , js_runtime_service_(js_runtime_service) {}
 
-JSConfigService::~JSConfigService() {
-    // 从全局映射中移除
-    g_js_config_service_instances.erase(service_handle());
-}
+JSConfigService::~JSConfigService() = default;
 
 bool JSConfigService::OnInit() {
     // 获取配置服务句柄
@@ -626,7 +632,7 @@ JSConfigTableClassDef::JSConfigTableClassDef(mjs::Runtime* runtime)
         // 遍历缓存的JS行对象
         for (const auto& cached_row : config_table_object.cached_rows()) {
             // 调用谓词函数
-            std::vector<mjs::Value> args = { cached_row };
+            std::initializer_list<mjs::Value> args = { cached_row };
             auto result = context->CallFunction(&predicate_func, mjs::Value(), args.begin(), args.end());
             
             // 检查谓词是否返回true
@@ -649,17 +655,6 @@ JSConfigTableObject::JSConfigTableObject(mjs::Context* context, const google::pr
     : Object(context, static_cast<mjs::ClassId>(CustomClassId::kJSConfigTableObject))
     , descriptor_(descriptor)
     , cached_rows_(std::move(cached_rows)) {}
-
-// 全局JSConfigService实例映射
-static std::unordered_map<ServiceHandle, JSConfigService*> g_js_config_service_instances;
-
-JSConfigService* GetJSConfigServiceInstance(ServiceHandle handle) {
-    auto it = g_js_config_service_instances.find(handle);
-    if (it != g_js_config_service_instances.end()) {
-        return it->second;
-    }
-    return nullptr;
-}
 
 } // namespace jssvr
 } // namespace million
