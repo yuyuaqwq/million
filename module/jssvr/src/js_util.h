@@ -11,7 +11,8 @@ namespace jssvr {
 class JSUtil {
 public:
     // 获取JS值
-    static mjs::Value GetJSValueByProtoMessageField(mjs::Context* context, const million::ProtoMessage& msg
+    template <typename JSContext>
+    static mjs::Value GetJSValueByProtoMessageField(JSContext* context, const million::ProtoMessage& msg
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc)
     {
@@ -64,7 +65,8 @@ public:
     }
 
     // 获取重复字段的JS值
-    static mjs::Value GetJSValueByProtoMessgaeRepeatedField(mjs::Context* context, const million::ProtoMessage& msg
+    template <typename JSContext>
+    static mjs::Value GetJSValueByProtoMessgaeRepeatedField(JSContext* context, const million::ProtoMessage& msg
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
         , size_t j)
@@ -136,8 +138,28 @@ public:
         }
     }
 
+    static void ProtoMessageToJSObjectOne(mjs::Runtime* runtime, const million::ProtoMessage& msg, mjs::Object* obj, const google::protobuf::FieldDescriptor& field_desc) {
+        const auto desc = msg.GetDescriptor();
+        const auto refl = msg.GetReflection();
+
+        if (field_desc.is_repeated()) {
+            auto js_array = mjs::ArrayObject::New(runtime, {});
+            for (size_t j = 0; j < refl->FieldSize(msg, &field_desc); ++j) {
+                auto js_value = GetJSValueByProtoMessgaeRepeatedField(runtime, msg, *refl, field_desc, j);
+                js_array->Push(runtime, std::move(js_value));
+            }
+            obj->SetProperty(runtime, field_desc.name().data(), mjs::Value(js_array));
+        }
+        else {
+            auto js_value = GetJSValueByProtoMessageField(runtime, msg, *refl, field_desc);
+            obj->SetProperty(runtime, field_desc.name().data(), std::move(js_value));
+        }
+    }
+
+
     // Protobuf消息转JS对象
-    static mjs::Value ProtoMessageToJSObject(mjs::Context* context, const million::ProtoMessage& msg) {
+    template <typename JSContext>
+    static mjs::Value ProtoMessageToJSObject(JSContext* context, const million::ProtoMessage& msg) {
         auto obj = mjs::Object::New(context);
 
         const auto desc = msg.GetDescriptor();
@@ -152,7 +174,8 @@ public:
     }
 
     // 设置重复字段
-    static void SetProtoMessageRepeatedFieldFromJSValue(mjs::Context* context, million::ProtoMessage* msg
+    template <typename JSContext>
+    static void SetProtoMessageRepeatedFieldFromJSValue(JSContext* context, million::ProtoMessage* msg
         , const google::protobuf::Descriptor& desc
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
@@ -262,7 +285,8 @@ public:
     }
 
     // 设置字段
-    static void SetProtoMessageFieldFromJSValue(mjs::Context* context, million::ProtoMessage* msg
+    template <typename JSContext>
+    static void SetProtoMessageFieldFromJSValue(JSContext* context, million::ProtoMessage* msg
         , const google::protobuf::Descriptor& desc
         , const google::protobuf::Reflection& reflection
         , const google::protobuf::FieldDescriptor& field_desc
@@ -371,7 +395,8 @@ public:
     }
 
     // 转换单个字段
-    static void JSObjectToProtoMessageOne(mjs::Context* context, million::ProtoMessage* msg, const mjs::Value& field_value, const google::protobuf::FieldDescriptor& field_desc) {
+    template <typename JSContext>
+    static void JSObjectToProtoMessageOne(JSContext* context, million::ProtoMessage* msg, const mjs::Value& field_value, const google::protobuf::FieldDescriptor& field_desc) {
         const auto desc = msg->GetDescriptor();
         const auto refl = msg->GetReflection();
 
@@ -408,6 +433,21 @@ public:
             mjs::Value field_value;
             if (obj.GetComputedProperty(context, mjs::Value(field_desc->name().c_str()), &field_value)) {
                 JSObjectToProtoMessageOne(context, msg, field_value, *field_desc);
+            }
+        }
+    }
+
+    static void JSObjectToProtoMessage(mjs::Runtime* runtime, million::ProtoMessage* msg, const mjs::Value& obj_val) {
+        const auto desc = msg->GetDescriptor();
+        const auto refl = msg->GetReflection();
+
+        auto& obj = obj_val.object();
+
+        for (size_t i = 0; i < desc->field_count(); ++i) {
+            const auto field_desc = desc->field(i);
+            mjs::Value field_value;
+            if (obj.GetProperty(runtime, field_desc->name().c_str(), &field_value)) {
+                JSObjectToProtoMessageOne(runtime, msg, field_value, *field_desc);
             }
         }
     }

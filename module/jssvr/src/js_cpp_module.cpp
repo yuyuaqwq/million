@@ -278,170 +278,14 @@ bool DBRowObject::GetProperty(mjs::Context* context, mjs::ConstIndex key, mjs::V
     return true;
 }
 
-// ConfigModuleObject implementation
-ConfigModuleObject::ConfigModuleObject(mjs::Runtime* rt) :
-    CppModuleObject(rt)
-{
-    AddExportMethod(rt, "load", Load);
-}
 
-mjs::Value ConfigModuleObject::Load(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
-    auto& service = GetJSService(context);
-
-    if (par_count < 1) {
-        return mjs::Error::Throw(context, "Config Load requires 1 parameter.");
-    }
-
-    if (!stack.get(0).IsString()) {
-        return mjs::Error::Throw(context, "Config Load parameter 1 must be a string for message type.");
-    }
-
-    auto msg_name = stack.get(0).string_view();
-
-    const auto* desc = service.imillion().proto_mgr().FindMessageTypeByName(msg_name);
-    if (!desc) {
-        return mjs::Error::Throw(context, "Config Load parameter 1 invalid message type.");
-    }
-
-    // Get config service handle
-    auto config_service_opt = service.imillion().GetServiceByName(config::kConfigServiceName);
-    if (!config_service_opt) {
-        return mjs::Error::Throw(context, "Config service not found.");
-    }
-    auto config_service = *config_service_opt;
-    
-    // Start async config load operation
-    service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
-    
-
-    // 这里让OnMsg等待，发现是C++消息再做分发
-
-    service.function_call_context().sender = service.js_runtime_service().config_service_handle();
-
-    service.function_call_context().waiting_session_id = service.Send<JSConfigQueryReq>(
-        service.function_call_context().sender, *desc);
-
-    return service.function_call_context().promise;
-}
-
-
-
-// ConfigTableClassDef implementation
-ConfigTableClassDef::ConfigTableClassDef(mjs::Runtime* runtime) 
-    : ClassDef(runtime, static_cast<mjs::ClassId>(CustomClassId::kConfigTableObject), "ConfigTable") {
-
-    auto getRowByIndex_const_index = runtime->const_pool().insert(mjs::Value("getRowByIndex"));
-    auto findRow_const_index = runtime->const_pool().insert(mjs::Value("findRow"));
-
-    prototype_.object().SetProperty(nullptr, getRowByIndex_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-        if (par_count < 1 || !stack.get(0).IsNumber()) {
-            return mjs::Error::Throw(context, "getRowByIndex requires a number parameter");
-        }
-        
-        auto& config_table_object = stack.this_val().object<ConfigTableObject>();
-        auto index = static_cast<size_t>(stack.get(0).ToInt64().i64());
-        
-        if (index >= config_table_object.config_table()->GetRowCount()) {
-            return mjs::Value(); // Return undefined for out of bounds
-        }
-        
-        const auto* row = config_table_object.config_table()->GetRowByIndex(index);
-        if (!row) {
-            return mjs::Value(); // Return undefined if not found
-        }
-        
-        return JSUtil::ProtoMessageToJSObject(context, *row);
-    }));
-
-    prototype_.object().SetProperty(nullptr, findRow_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-        if (par_count < 1 || !stack.get(0).IsFunctionObject() && !stack.get(0).IsFunctionDef()) {
-            return mjs::Error::Throw(context, "findRow requires a function parameter");
-        }
-        
-        auto& config_table_object = stack.this_val().object<ConfigTableObject>();
-        auto predicate_func = stack.get(0);
-        
-        // Iterate through all rows
-        for (size_t i = 0; i < config_table_object.config_table()->GetRowCount(); ++i) {
-            const auto* row = config_table_object.config_table()->GetRowByIndex(i);
-            if (!row) continue;
-            
-            // Convert row to JS object
-            auto row_js = JSUtil::ProtoMessageToJSObject(context, *row);
-            
-            // Call predicate function with row
-            std::vector<mjs::Value> args = { std::move(row_js) };
-            auto result = context->CallFunction(&predicate_func, mjs::Value(), args.begin(), args.end());
-            
-            // Check if predicate returned true
-            if (result.IsBoolean() && result.boolean()) {
-                return JSUtil::ProtoMessageToJSObject(context, *row);
-            }
-        }
-        
-        return mjs::Value(); // Return undefined if not found
-    }));
-}
-
-
-
-// ConfigTableObject implementation
-ConfigTableObject::ConfigTableObject(mjs::Context* context, config::ConfigTableShared config_table)
-    : Object(context, static_cast<mjs::ClassId>(CustomClassId::kConfigTableObject))
-    , config_table_(std::move(config_table)) {}
-
-
-// ConfigTableWeakClassDef implementation
-ConfigTableWeakClassDef::ConfigTableWeakClassDef(mjs::Runtime* runtime) 
-    : ClassDef(runtime, static_cast<mjs::ClassId>(CustomClassId::kConfigTableWeakObject), "ConfigTableWeak") {
-
-    auto lock_const_index = runtime->const_pool().insert(mjs::Value("lock"));
-
-    prototype_.object().SetProperty(nullptr, lock_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-        auto& service = GetJSService(context);
-        auto& config_table_weak_object = stack.this_val().object<ConfigTableWeakObject>();
-
-        // Get config service handle
-        auto config_service_handle = service.js_runtime_service().config_service_handle();
-
-        auto& weak_obj = stack.this_val().object<ConfigTableWeakObject>();
-        
-        // 这里未来需要修改C++消息类型，区分初次加载和加锁重载
-        auto task = weak_obj.config_table_weak().Lock(&service, config_service_handle, weak_obj.descriptor());
-        if (!task.coroutine.done()) {
-            // Start async lock operation
-            service.function_call_context().sender = config_service_handle;
-            service.function_call_context().waiting_session_id = task.coroutine.promise().session_awaiter()->waiting_session_id();
-
-            service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
-            return service.function_call_context().promise;
-        }
-        else {
-            return mjs::Value(ConfigTableObject::New(context, *task.coroutine.promise().result_value));
-        }
-    }));
-}
-
-// ConfigTableWeakObject implementation
-ConfigTableWeakObject::ConfigTableWeakObject(mjs::Context* context
-    , const mjs::Value& table_object, const google::protobuf::Descriptor* descriptor)
-    : Object(context, static_cast<mjs::ClassId>(CustomClassId::kConfigTableWeakObject))
-    , table_object_(table_object)
-    , descriptor_(descriptor) {}
-
-mjs::Value ConfigTableWeakObject::Lock(mjs::Context* context) {
-    if (!table_object_.object<ConfigTableObject>().is_expired()) {
-        return table_object_;
-    }
-    // 重新加载
-
-}
 
 
 // JSConfigService implementation
 JSConfigService::JSConfigService(IMillion* imillion, JSRuntimeService* js_runtime_service)
     : Base(imillion)
-    , js_runtime_service_(js_runtime_service) {}
+    , js_runtime_service_(js_runtime_service) {
+}
 
 JSConfigService::~JSConfigService() = default;
 
@@ -453,14 +297,14 @@ bool JSConfigService::OnInit() {
         return false;
     }
     config_service_handle_ = *config_service_opt;
-    
+
     return true;
 }
 
 Task<MessagePointer> JSConfigService::OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) {
     // 预加载所有配置
     co_await PreloadAllConfigs();
-    
+
     logger().LOG_INFO("JSConfigService started and configs preloaded.");
     co_return nullptr;
 }
@@ -487,9 +331,6 @@ Task<bool> JSConfigService::PreloadAllConfigs() {
         co_return false;
     }
 
-    // 创建一个临时的JS上下文用于预转换
-    mjs::Context temp_context(&js_runtime_service_->js_runtime());
-    
     for (auto module_settings : modules_settings) {
         auto module_name = module_settings.as<std::string>();
         auto table_msg_name = namespace_ + ".config." + module_name + ".Table";
@@ -501,7 +342,7 @@ Task<bool> JSConfigService::PreloadAllConfigs() {
 
         for (int i = 0; i < table_desc->field_count(); ++i) {
             auto field_desc = table_desc->field(i);
-            if (!field_desc || !field_desc->is_repeated() || 
+            if (!field_desc || !field_desc->is_repeated() ||
                 field_desc->type() != google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
                 continue;
             }
@@ -518,58 +359,67 @@ Task<bool> JSConfigService::PreloadAllConfigs() {
                     logger().LOG_ERROR("Failed to query config: {}", config_desc->full_name());
                     continue;
                 }
-                
+
                 auto config_table = co_await config_resp->config->Lock(this, config_service_handle_, config_desc);
-                
+
                 if (config_table) {
                     // 预转换所有行为JS对象
                     std::vector<mjs::Value> cached_rows;
                     for (size_t row_idx = 0; row_idx < config_table->GetRowCount(); ++row_idx) {
                         const auto* row = config_table->GetRowByIndex(row_idx);
                         if (row) {
-                            auto js_row = JSUtil::ProtoMessageToJSObject(&temp_context, *row);
+                            auto js_row = JSUtil::ProtoMessageToJSObject(&js_runtime_service_->js_runtime(), *row);
                             cached_rows.push_back(std::move(js_row));
                         }
                     }
-                    
-                    auto cached_table = JSConfigTableObject::New(&temp_context, config_desc, std::move(cached_rows));
-                    cached_config_tables_[config_desc] = mjs::Value(cached_table);
-                    config_name_to_descriptor_[config_desc->full_name()] = config_desc;
 
                     logger().LOG_INFO("Preloaded config: {} with {} rows", config_desc->full_name(), cached_rows.size());
+
+                    auto cached_table = ConfigTableObject::New(&js_runtime_service_->js_runtime(), config_desc, std::move(cached_rows));
+                    cached_config_tables_[config_desc] = mjs::Value(cached_table);
+                    config_name_to_descriptor_[config_desc->full_name()] = config_desc;
                 }
-            } catch (const std::exception& e) {
+            }
+            catch (const std::exception& e) {
                 logger().LOG_ERROR("Failed to preload config {}: {}", config_desc->full_name(), e.what());
             }
         }
     }
-    
+
     co_return true;
 }
 
 Task<mjs::Value> JSConfigService::GetCachedConfigTable(const google::protobuf::Descriptor* descriptor) {
-    // 首先尝试从缓存读取
+    // 尝试从缓存读取
     auto it = cached_config_tables_.find(descriptor);
     if (it != cached_config_tables_.end()) {
         co_return it->second;
     }
-    co_return mjs::Value(); // 超时返回undefined
+    co_return mjs::Value(); // 不存在返回undefined
 }
 
 Task<void> JSConfigService::UpdateConfigCache(const google::protobuf::Descriptor* descriptor) {
     // 配置更新时重新缓存
     logger().LOG_INFO("Config cache updated for: {}", descriptor->full_name());
+
+    co_return;
 }
 
-// JSConfigModuleObject implementation
-JSConfigModuleObject::JSConfigModuleObject(mjs::Runtime* rt)
-    : CppModuleObject(rt) {
+
+
+
+
+
+// ConfigModuleObject implementation
+ConfigModuleObject::ConfigModuleObject(mjs::Runtime* rt) :
+    CppModuleObject(rt)
+{
     AddExportMethod(rt, "load", Load);
 }
 
-mjs::Value JSConfigModuleObject::Load(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+mjs::Value ConfigModuleObject::Load(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
     auto& service = GetJSService(context);
-    
+
     if (par_count < 1) {
         return mjs::Error::Throw(context, "JSConfig Load requires 1 parameter.");
     }
@@ -586,21 +436,22 @@ mjs::Value JSConfigModuleObject::Load(mjs::Context* context, uint32_t par_count,
 
     // 设置异步操作上下文
     service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
-    
+
     // 从JSRuntimeService获取JSConfigService句柄
     auto& js_runtime_service = service.js_runtime_service();
     service.function_call_context().sender = js_runtime_service.js_config_service_handle();
-    
+
     // 发送配置查询请求
     service.function_call_context().waiting_session_id = service.Send<JSConfigQueryReq>(
         service.function_call_context().sender, *desc);
-    
+
     return service.function_call_context().promise;
 }
 
+
 // JSConfigTableClassDef implementation
-JSConfigTableClassDef::JSConfigTableClassDef(mjs::Runtime* runtime)
-    : ClassDef(runtime, static_cast<mjs::ClassId>(CustomClassId::kJSConfigTableObject), "JSConfigTable") {
+ConfigTableClassDef::ConfigTableClassDef(mjs::Runtime* runtime)
+    : ClassDef(runtime, static_cast<mjs::ClassId>(CustomClassId::kConfigTableObject), "ConfigTable") {
 
     auto getRowByIndex_const_index = runtime->const_pool().insert(mjs::Value("getRowByIndex"));
     auto findRow_const_index = runtime->const_pool().insert(mjs::Value("findRow"));
@@ -610,14 +461,14 @@ JSConfigTableClassDef::JSConfigTableClassDef(mjs::Runtime* runtime)
         if (par_count < 1 || !stack.get(0).IsNumber()) {
             return mjs::Error::Throw(context, "getRowByIndex requires a number parameter");
         }
-        
-        auto& config_table_object = stack.this_val().object<JSConfigTableObject>();
+
+        auto& config_table_object = stack.this_val().object<ConfigTableObject>();
         auto index = static_cast<size_t>(stack.get(0).ToInt64().i64());
-        
+
         if (index >= config_table_object.cached_rows().size()) {
             return mjs::Value(); // Return undefined for out of bounds
         }
-        
+
         return config_table_object.cached_rows()[index];
     }));
 
@@ -625,36 +476,85 @@ JSConfigTableClassDef::JSConfigTableClassDef(mjs::Runtime* runtime)
         if (par_count < 1 || !stack.get(0).IsFunctionObject() && !stack.get(0).IsFunctionDef()) {
             return mjs::Error::Throw(context, "findRow requires a function parameter");
         }
-        
-        auto& config_table_object = stack.this_val().object<JSConfigTableObject>();
+
+        auto& config_table_object = stack.this_val().object<ConfigTableObject>();
         auto predicate_func = stack.get(0);
-        
+
         // 遍历缓存的JS行对象
         for (const auto& cached_row : config_table_object.cached_rows()) {
             // 调用谓词函数
             std::initializer_list<mjs::Value> args = { cached_row };
             auto result = context->CallFunction(&predicate_func, mjs::Value(), args.begin(), args.end());
-            
+
             // 检查谓词是否返回true
             if (result.IsBoolean() && result.boolean()) {
                 return cached_row;
             }
         }
-        
+
         return mjs::Value(); // Return undefined if not found
     }));
 
     prototype_.object().SetProperty(nullptr, getRowCount_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
-        auto& config_table_object = stack.this_val().object<JSConfigTableObject>();
-        return mjs::Value(static_cast<double>(config_table_object.cached_rows().size()));
+        auto& config_table_object = stack.this_val().object<ConfigTableObject>();
+        return mjs::Value(config_table_object.cached_rows().size());
     }));
 }
 
+
 // JSConfigTableObject implementation
-JSConfigTableObject::JSConfigTableObject(mjs::Context* context, const google::protobuf::Descriptor* descriptor, std::vector<mjs::Value>&& cached_rows)
-    : Object(context, static_cast<mjs::ClassId>(CustomClassId::kJSConfigTableObject))
+ConfigTableObject::ConfigTableObject(mjs::Runtime* runtime, const google::protobuf::Descriptor* descriptor, std::vector<mjs::Value>&& cached_rows)
+    : Object(runtime, static_cast<mjs::ClassId>(CustomClassId::kConfigTableObject))
     , descriptor_(descriptor)
-    , cached_rows_(std::move(cached_rows)) {}
+    , cached_rows_(std::move(cached_rows)) {
+}
+
+
+
+// ConfigTableWeakClassDef implementation
+ConfigTableWeakClassDef::ConfigTableWeakClassDef(mjs::Runtime* runtime) 
+    : ClassDef(runtime, static_cast<mjs::ClassId>(CustomClassId::kConfigTableWeakObject), "ConfigTableWeak") {
+
+    auto lock_const_index = runtime->const_pool().insert(mjs::Value("lock"));
+
+    prototype_.object().SetProperty(nullptr, lock_const_index, mjs::Value([](mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) -> mjs::Value {
+        auto& service = GetJSService(context);
+        auto& config_table_weak_object = stack.this_val().object<ConfigTableWeakObject>();
+
+        // Get config service handle
+        auto config_service_handle = service.js_runtime_service().config_service_handle();
+
+        auto& weak_obj = stack.this_val().object<ConfigTableWeakObject>();
+        
+        // 这里未来需要修改C++消息类型，区分初次加载和加锁重载
+        auto obj = weak_obj.Lock(context);
+        return obj;
+    }));
+}
+
+// ConfigTableWeakObject implementation
+ConfigTableWeakObject::ConfigTableWeakObject(mjs::Context* context, mjs::Value&& table_object)
+    : Object(context, static_cast<mjs::ClassId>(CustomClassId::kConfigTableWeakObject))
+    , table_object_(std::move(table_object)) {}
+
+mjs::Value ConfigTableWeakObject::Lock(mjs::Context* context) {
+    auto& obj = table_object_.object<ConfigTableObject>();
+    if (!obj.is_expired()) {
+        return table_object_;
+    }
+    auto& service = GetJSService(context);
+
+    // 重新加载
+    service.function_call_context().sender = service.js_runtime_service().js_config_service_handle();
+
+    service.function_call_context().waiting_session_id = service.Send<JSConfigQueryReq>(
+        service.function_call_context().sender, *obj.descriptor());
+
+    service.function_call_context().promise = mjs::Value(mjs::PromiseObject::New(context, mjs::Value()));
+    return service.function_call_context().promise;
+}
+
+
 
 } // namespace jssvr
 } // namespace million

@@ -44,7 +44,6 @@ struct FunctionCallContext {
     std::optional<SessionId> waiting_session_id;
 };
 
-
 // JS运行时服务
 class JSRuntimeService : public IService {
     MILLION_SERVICE_DEFINE(JSRuntimeService);
@@ -88,7 +87,6 @@ private:
         js_runtime_.class_def_table().Register(std::make_unique<DBRowClassDef>(&js_runtime_));
         js_runtime_.class_def_table().Register(std::make_unique<ConfigTableClassDef>(&js_runtime_));
         js_runtime_.class_def_table().Register(std::make_unique<ConfigTableWeakClassDef>(&js_runtime_));
-        js_runtime_.class_def_table().Register(std::make_unique<JSConfigTableClassDef>(&js_runtime_));
 
         js_runtime_.module_manager().AddCppModule("million", MillionModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("service", ServiceModuleObject::New(&js_runtime_));
@@ -96,7 +94,6 @@ private:
 
         js_runtime_.module_manager().AddCppModule("db", DBModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("config", ConfigModuleObject::New(&js_runtime_));
-        js_runtime_.module_manager().AddCppModule("jsconfig", JSConfigModuleObject::New(&js_runtime_));
 
         return true;
     }
@@ -321,18 +318,12 @@ public:
         co_return make_message<JSValueMsg>(mjs::Value(object));
     }
 
-    MILLION_MESSAGE_HANDLE(config::ConfigQueryResp, resp) {
-        if (!resp->config) {
-            logger().LOG_ERROR("ConfigQueryResp config is null.");
-            co_return nullptr;
-        }
-        auto object = ConfigTableWeakObject::New(&js_context_, std::move(*resp->config), &resp->config_desc);
-        co_return make_message<JSValueMsg>(mjs::Value(object));
-    }
 
     MILLION_MESSAGE_HANDLE(JSConfigQueryResp, resp) {
         // 直接返回缓存的JS配置表对象
-        co_return make_message<JSValueMsg>(std::move(resp->cached_table));
+        auto table_object = std::move(resp->cached_table);
+        auto weak_table_object = ConfigTableWeakObject::New(&js_context_, std::move(table_object));
+        co_return make_message<JSValueMsg>(mjs::Value(weak_table_object));
     }
 
     // 添加模块
