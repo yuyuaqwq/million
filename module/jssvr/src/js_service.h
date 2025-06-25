@@ -339,7 +339,7 @@ public:
     // 检查JS异常
     bool JSCheckExceptionAndLog(const mjs::Value& value) {
         if (value.IsException()) {
-            logger().LOG_ERROR("JS Exception: [{}] {}", js_module_.ToModuleDef().name(), value.ToString(&js_context_).string_view());
+            logger().LOG_ERROR("JS Exception: [{}] {}", js_module_.ToString(&js_context_).string_view(), value.ToString(&js_context_).string_view());
             return false;
         }
         return true;
