@@ -153,7 +153,6 @@ million::SourceLocation LoggerModuleObject::GetSourceLocation(const mjs::StackFr
         };
         return source_location;
     }
-
 }
 
 
