@@ -94,7 +94,8 @@ target_include_directories(${SOCI_LIB} INTERFACE ${MYSQL_HEADER_DIR})
 # target_include_directories(${SOCI_LIB} INTERFACE ${SOCI_HEADER_DIR})
 
 # etcd-cpp-apiv3
+set(BUILD_ETCD_CORE_ONLY ON CACHE BOOL "Build only core etcd-cpp-apiv3")
 set(ETCD_CPP_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/etcd-cpp-apiv3 CACHE STRING "etcd-cpp-apiv3 header dir")
 set(ETCD_CPP_LIB etcd-cpp-apiv3 CACHE STRING "etcd-cpp-apiv3 lib")
 add_subdirectory(etcd-cpp-apiv3)
-target_include_directories(${ETCD_CPP_LIB} INTERFACE ${ETCD_CPP_HEADER_DIR})
+# target_include_directories(${ETCD_CPP_LIB} INTERFACE ${ETCD_CPP_HEADER_DIR})
