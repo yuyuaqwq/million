@@ -48,7 +48,8 @@ MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdDelResp, (bool) success);
 
 // Etcd 获取带前缀的所有键值对请求
 MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdGetAllReq, (std::string) prefix);
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdGetAllResp, (std::map<std::string, std::string>) kvs);
+using StringMap = std::map<std::string, std::string>;
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdGetAllResp, (StringMap) kvs);
 
 // Etcd 监听键变化请求
 MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdWatchReq, (std::string) key);

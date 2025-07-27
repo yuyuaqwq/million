@@ -1,11 +1,18 @@
 # protobuf
 set(PROTOBUF_LIB protobuf_million CACHE STRING "protobuf lib")
+set(Protobuf_USE_STATIC_LIBS ON CACHE BOOL "Build only core protobuf")
 add_library(${PROTOBUF_LIB} INTERFACE)
 cmake_policy(SET CMP0074 NEW)
-find_package(Protobuf  REQUIRED)
+find_package(Protobuf REQUIRED CONFIG)
+# vcpkg安装的默认是动态版本
 target_compile_definitions(${PROTOBUF_LIB} INTERFACE PROTOBUF_USE_DLLS)
 target_include_directories(${PROTOBUF_LIB} INTERFACE ${Protobuf_INCLUDE_DIRS})
-target_link_libraries(${PROTOBUF_LIB} INTERFACE ${Protobuf_LIBRARIES})
+
+target_link_libraries(${PROTOBUF_LIB} INTERFACE 
+    protobuf::libprotobuf
+)
+
+#target_link_libraries(${PROTOBUF_LIB} INTERFACE ${Protobuf_LIBRARIES})
 
 find_package(absl QUIET)
 #find_package(absl REQUIRED)
@@ -82,20 +89,21 @@ add_subdirectory(redis-plus-plus)
 # target_include_directories(${REDIS_PLUS_PLUS_LIB} PUBLIC ${REDIS_PLUS_PLUS_HEADER_DIR})
 
 # soci
+find_package(libmysql REQUIRED CONFIG)
 set(SOCI_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/soci/include CACHE STRING "soci header dir")
 set(SOCI_LIB soci_million CACHE STRING "soci lib")
-set(MYSQL_INCLUDE_DIR "${MYSQL_HEADER_DIR}")
-set(MYSQL_LIBRARIES "${MYSQL_LIB}")
 add_subdirectory(soci)
 add_library(${SOCI_LIB} INTERFACE)
 target_link_libraries(${SOCI_LIB} INTERFACE soci_core_static)
 target_link_libraries(${SOCI_LIB} INTERFACE soci_mysql_static)
-target_include_directories(${SOCI_LIB} INTERFACE ${MYSQL_HEADER_DIR})
+target_include_directories(${SOCI_LIB} INTERFACE ${MYSQL_INCLUDE_DIR})
 # target_include_directories(${SOCI_LIB} INTERFACE ${SOCI_HEADER_DIR})
 
 # etcd-cpp-apiv3
 set(BUILD_ETCD_CORE_ONLY ON CACHE BOOL "Build only core etcd-cpp-apiv3")
 set(ETCD_CPP_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/etcd-cpp-apiv3 CACHE STRING "etcd-cpp-apiv3 header dir")
 set(ETCD_CPP_LIB etcd-cpp-apiv3 CACHE STRING "etcd-cpp-apiv3 lib")
+add_library(${ETCD_CPP_LIB} INTERFACE)
 add_subdirectory(etcd-cpp-apiv3)
-# target_include_directories(${ETCD_CPP_LIB} INTERFACE ${ETCD_CPP_HEADER_DIR})
+target_link_libraries(${ETCD_CPP_LIB} INTERFACE etcd-cpp-apiv3)
+target_include_directories(${ETCD_CPP_LIB} INTERFACE ${ETCD_CPP_HEADER_DIR})

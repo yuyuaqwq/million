@@ -1,4 +1,4 @@
-#include <million/module.h>
+#include <million/imillion.h>
 #include "etcd_service.h"
 
 MILLION_MODULE_INIT();
