@@ -1,9 +1,6 @@
 set(ETCD_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE STRING "etcd header dir")
 set(ETCD_LIB etcd CACHE STRING "etcd lib")
 
-# 定义编译宏
-add_compile_definitions(BUILDING_ETCD_MODULE)
-
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 
         ./src/*.h
@@ -31,10 +28,8 @@ target_include_directories(${ETCD_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(${ETCD_LIB} PUBLIC ${MILLION_LIB})
 target_link_libraries(${ETCD_LIB} PUBLIC ${PROTOGEN_LIB})
 
-# Link with etcd-cpp-apiv3 if available
-if(TARGET ${ETCD_CPP_LIB})
-    target_link_libraries(${ETCD_LIB} PUBLIC ${ETCD_CPP_LIB})
-    target_include_directories(${ETCD_LIB} PUBLIC ${ETCD_CPP_HEADER_DIR})
-else()
-    message(WARNING "etcd-cpp-apiv3 library not found")
-endif()
+# Link etcd-cpp-apiv3 library
+target_link_libraries(${ETCD_LIB} PRIVATE ${ETCD_CPP_LIB})
+
+# Include yaml-cpp for configuration
+target_link_libraries(${ETCD_LIB} PRIVATE ${YAML_CPP_LIB}) 

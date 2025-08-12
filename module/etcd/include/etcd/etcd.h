@@ -1,76 +1,55 @@
 #pragma once
 
 #include <string>
-#include <optional>
 #include <vector>
-#include <map>
+#include <optional>
 
 #include <million/imillion.h>
 
-// 定义API导出宏
-#ifdef _WIN32
-    #ifdef BUILDING_ETCD_MODULE
-        #define MILLION_ETCD_API __declspec(dllexport)
-    #else
-        #define MILLION_ETCD_API __declspec(dllimport)
-    #endif
-#else
-    #define MILLION_ETCD_API
-#endif
-
-// 前向声明，避免直接包含etcd/api.h造成循环依赖
-namespace million {
-namespace etcd {
-    class EtcdApi;
-}
-}
+#include <etcd/api.h>
 
 namespace million {
 namespace etcd {
 
 constexpr const char* kEtcdServiceName = "EtcdService";
+#define MILLION_ETCD_SERVICE_NAME "EtcdService"
 
-// Etcd 键值对存在性检查请求
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdKeyExistReq, (std::string) key);
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdKeyExistResp, (bool) exist);
-
-// Etcd 设置键值对请求
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdSetReq, (std::string) key, (std::string) value);
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdSetResp, (bool) success);
-
-// Etcd 获取键值请求
+// ETCD 基础操作请求和响应
 MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdGetReq, (std::string) key);
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdGetResp, (std::optional<std::string>) value);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdGetResp, (bool) success, (std::optional<std::string>) value, (std::string) error_message);
 
-// Etcd 删除键请求
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdDelReq, (std::string) key);
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdDelResp, (bool) success);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdPutReq, (std::string) key, (std::string) value, (int64_t) lease_id);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdPutResp, (bool) success, (std::string) error_message);
 
-// Etcd 获取带前缀的所有键值对请求
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdGetAllReq, (std::string) prefix);
-using StringMap = std::map<std::string, std::string>;
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdGetAllResp, (StringMap) kvs);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdDeleteReq, (std::string) key);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdDeleteResp, (bool) success, (std::string) error_message);
 
-// Etcd 监听键变化请求
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdWatchReq, (std::string) key);
-MILLION_MESSAGE_DEFINE_EMPTY(MILLION_ETCD_API, EtcdWatchResp);
+// ETCD 监听操作
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdWatchReq, (std::string) key, (ServiceHandle) callback_service);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdWatchResp, (bool) success, (uint64_t) watch_id, (std::string) error_message);
 
-// 配置相关消息
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdConfigLoadReq, (std::string) config_key);
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdConfigLoadResp, (std::optional<std::string>) config_value);
+// ETCD 监听事件回调
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdWatchEvent, (std::string) key, (std::string) value, (std::string) event_type, (uint64_t) watch_id);
 
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdConfigWatchReq, (std::string) config_key);
-MILLION_MESSAGE_DEFINE_EMPTY(MILLION_ETCD_API, EtcdConfigWatchResp);
+// ETCD 取消监听
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdUnwatchReq, (uint64_t) watch_id);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdUnwatchResp, (bool) success, (std::string) error_message);
 
-// 服务注册与发现相关消息
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdServiceRegisterReq, (std::string) service_name, (std::string) service_address, (int) ttl);
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdServiceRegisterResp, (bool) success);
+// ETCD 批量操作
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdBatchGetReq, (std::vector<std::string>) keys);
+using EtcdBatchGetRespKeyValues = std::vector<std::pair<std::string, std::string>>;
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdBatchGetResp, (bool) success, (EtcdBatchGetRespKeyValues) key_values, (std::string) error_message);
 
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdServiceUnregisterReq, (std::string) service_name, (std::string) service_address);
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdServiceUnregisterResp, (bool) success);
+// ETCD 租约操作
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdLeaseGrantReq, (int64_t) ttl);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdLeaseGrantResp, (bool) success, (int64_t) lease_id, (std::string) error_message);
 
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdServiceDiscoverReq, (std::string) service_name);
-MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdServiceDiscoverResp, (std::vector<std::string>) service_addresses);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdLeaseRevokeReq, (int64_t) lease_id);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdLeaseRevokeResp, (bool) success, (std::string) error_message);
+
+// ETCD 目录遍历
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdListKeysReq, (std::string) prefix);
+MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdListKeysResp, (bool) success, (std::vector<std::string>) keys, (std::string) error_message);
 
 } // namespace etcd
-} // namespace million
+} // namespace million 

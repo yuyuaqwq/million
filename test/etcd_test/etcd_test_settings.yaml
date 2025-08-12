@@ -1,0 +1,47 @@
+node:
+    id: 0
+    
+# 0表示按cpu核数创建工作器
+worker_mgr:
+    num: 0
+
+io_context_mgr:
+    num: 1
+
+module_mgr:
+    - 
+        dir: ../../build/lib/Debug
+        loads:
+            - etcd
+
+timer:
+    ms_per_tick: 10
+    
+session_monitor:
+    timeout_tick: 10
+    s_per_tick: 1
+
+logger:
+    log_file: .\logs\etcd_test_log.txt
+    level: debug
+    console_level: debug
+
+# ETCD 配置
+etcd:
+    # ETCD 服务器端点列表
+    endpoints:
+        - "http://127.0.0.1:2379"
+    # 连接超时（毫秒）
+    connect_timeout: 5000
+    # 请求超时（毫秒）  
+    request_timeout: 3000
+    # 认证配置（可选）
+    auth:
+        username: ""
+        password: ""
+    # TLS配置（可选）
+    tls:
+        ca_file: ""
+        cert_file: ""
+        key_file: ""
+        insecure: true

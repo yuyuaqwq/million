@@ -270,4 +270,7 @@ private:
     static inline auto MILLION_CAT(MILLION_CAT(on_handle_, __LINE__), _) = ::million::AutoRegisterMsgHandler<MSG_TYPE_, SELF_CLASS_>(); \
     ::million::Task<::million::MessagePointer> OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MessagePointer msg_, MSG_TYPE_* MSG_NAME_)
 
+#define MILLION_MESSAGE_HANDLE_IMPL(CLASS_NAME_, MSG_TYPE_, MSG_NAME_) \
+    ::million::Task<::million::MessagePointer> CLASS_NAME_::OnHandle(const ::million::ServiceHandle& sender, ::million::SessionId session_id, ::million::MessagePointer msg_, MSG_TYPE_* MSG_NAME_)
+
 } // namespace million
