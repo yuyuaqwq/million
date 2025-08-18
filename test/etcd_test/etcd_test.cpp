@@ -119,7 +119,7 @@ private:
 
         // 开始监听
         auto watch_resp = co_await Call<etcd::EtcdWatchReq, etcd::EtcdWatchResp>(
-            etcd_service_, "/test/watch_key", service_handle_);
+            etcd_service_, "/test/watch_key", service_handle());
         if (watch_resp->success) {
             logger().LOG_INFO("监听启动成功: watch_id = {}", watch_resp->watch_id);
             current_watch_id_ = watch_resp->watch_id;

@@ -45,11 +45,6 @@ public:
     MILLION_MESSAGE_HANDLE(ServiceUnregisterReq, msg);
     MILLION_MESSAGE_HANDLE(ServiceHeartbeatReq, msg);
 
-private:
-    std::string BuildConfigPath(const std::string& config_path);
-    std::string BuildServicePath(const std::string& service_name, const std::string& instance_id);
-    std::string BuildServiceInstanceKey(const std::string& service_name, const std::string& address, int32_t port);
-    
     // 处理EtcdService的回调
     MILLION_MESSAGE_HANDLE(EtcdGetResp, msg);
     MILLION_MESSAGE_HANDLE(EtcdPutResp, msg);
@@ -57,6 +52,11 @@ private:
     MILLION_MESSAGE_HANDLE(EtcdLeaseGrantResp, msg);
     MILLION_MESSAGE_HANDLE(EtcdLeaseRevokeResp, msg);
     MILLION_MESSAGE_HANDLE(EtcdListKeysResp, msg);
+
+private:
+    std::string BuildConfigPath(const std::string& config_path);
+    std::string BuildServicePath(const std::string& service_name, const std::string& instance_id);
+    std::string BuildServiceInstanceKey(const std::string& service_name, const std::string& address, int32_t port);
 };
 
 } // namespace etcd

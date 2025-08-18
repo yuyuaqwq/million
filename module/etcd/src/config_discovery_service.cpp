@@ -54,14 +54,14 @@ std::string ConfigDiscoveryService::BuildServiceInstanceKey(const std::string& s
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ConfigGetReq, msg) {
-    auto etcd_req = std::make_unique<EtcdGetReq>();
+    auto etcd_req = make_cpp_message<EtcdGetReq>();
     etcd_req->key = BuildConfigPath(msg->config_path);
     
     Send(etcd_service_, std::move(etcd_req));
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ConfigSetReq, msg) {
-    auto etcd_req = std::make_unique<EtcdPutReq>();
+    auto etcd_req = make_cpp_message<EtcdPutReq>();
     etcd_req->key = BuildConfigPath(msg->config_path);
     etcd_req->value = msg->config_value;
     etcd_req->lease_id = 0; // 配置通常不需要过期
@@ -74,14 +74,14 @@ MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ConfigWatchReq, msg) {
     config_watch_callbacks_[watch_id] = msg->callback_service;
     config_watch_paths_[watch_id] = msg->config_path;
     
-    auto etcd_req = std::make_unique<EtcdWatchReq>();
+    auto etcd_req = make_cpp_message<EtcdWatchReq>();
     etcd_req->key = BuildConfigPath(msg->config_path);
     etcd_req->callback_service = service_handle(); // 设置为当前服务处理回调
     
     Send(etcd_service_, std::move(etcd_req));
     
     // 直接返回成功（实际的watch结果会在EtcdWatchResp中处理）
-    auto reply = std::make_unique<ConfigWatchResp>();
+    auto reply = make_cpp_message<ConfigWatchResp>();
     reply->success = true;
     reply->watch_id = watch_id;
     reply->error_message = "";
@@ -111,13 +111,13 @@ MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ServiceRegisterReq, msg) {
     
     // 如果需要TTL，先申请租约
     if (msg->ttl > 0) {
-        auto lease_req = std::make_unique<EtcdLeaseGrantReq>();
+        auto lease_req = make_cpp_message<EtcdLeaseGrantReq>();
         lease_req->ttl = msg->ttl;
         Send(etcd_service_, std::move(lease_req));
         // 租约申请的结果会在EtcdLeaseGrantResp中处理
     } else {
         // 不需要TTL，直接注册
-        auto etcd_req = std::make_unique<EtcdPutReq>();
+        auto etcd_req = make_cpp_message<EtcdPutReq>();
         etcd_req->key = service_key;
         etcd_req->value = service_info.str();
         etcd_req->lease_id = 0;
@@ -127,46 +127,46 @@ MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ServiceRegisterReq, msg) {
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ServiceDiscoverReq, msg) {
-    auto etcd_req = std::make_unique<EtcdListKeysReq>();
+    auto etcd_req = make_cpp_message<EtcdListKeysReq>();
     etcd_req->prefix = BuildServicePath(msg->service_name, "");
     
-    session().Call(etcd_service_, std::move(etcd_req));
+    Send(etcd_service_, std::move(etcd_req));
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ServiceUnregisterReq, msg) {
-    auto etcd_req = std::make_unique<EtcdLeaseRevokeReq>();
+    auto etcd_req = make_cpp_message<EtcdLeaseRevokeReq>();
     etcd_req->lease_id = msg->lease_id;
     
-    session().Call(etcd_service_, std::move(etcd_req));
+    Send(etcd_service_, std::move(etcd_req));
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ServiceHeartbeatReq, msg) {
     // 这里可以实现租约续期功能
     // etcd-cpp-apiv3库中可能需要使用leasekeepalive功能
-    auto reply = std::make_unique<ServiceHeartbeatResp>();
+    auto reply = make_cpp_message<ServiceHeartbeatResp>();
     reply->success = true;
     reply->error_message = "";
     
     logger().LOG_DEBUG("ServiceHeartbeat lease_id={}", msg->lease_id);
-    session().Send(std::move(reply));
+    Reply(sender, session_id, std::move(reply));
 }
 
 // 处理EtcdService的回调
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdGetResp, msg) {
-    auto reply = std::make_unique<ConfigGetResp>();
+    auto reply = make_cpp_message<ConfigGetResp>();
     reply->success = msg->success;
     reply->config_value = msg->value;
     reply->error_message = msg->error_message;
     
-    session().Send(std::move(reply));
+    Reply(sender, session_id, std::move(reply));
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdPutResp, msg) {
-    auto reply = std::make_unique<ConfigSetResp>();
+    auto reply = make_cpp_message<ConfigSetResp>();
     reply->success = msg->success;
     reply->error_message = msg->error_message;
     
-    session().Send(std::move(reply));
+    Reply(sender, session_id, std::move(reply));
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdDeleteResp, msg) {
@@ -176,32 +176,32 @@ MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdDeleteResp, msg) {
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdLeaseGrantResp, msg) {
     if (msg->success) {
-        auto reply = std::make_unique<ServiceRegisterResp>();
+        auto reply = make_cpp_message<ServiceRegisterResp>();
         reply->success = true;
         reply->lease_id = msg->lease_id;
         reply->error_message = "";
         
-        session().Send(std::move(reply));
+        Reply(sender, session_id, std::move(reply));
     } else {
-        auto reply = std::make_unique<ServiceRegisterResp>();
+        auto reply = make_cpp_message<ServiceRegisterResp>();
         reply->success = false;
         reply->lease_id = 0;
         reply->error_message = msg->error_message;
         
-        session().Send(std::move(reply));
+        Reply(sender, session_id, std::move(reply));
     }
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdLeaseRevokeResp, msg) {
-    auto reply = std::make_unique<ServiceUnregisterResp>();
+    auto reply = make_cpp_message<ServiceUnregisterResp>();
     reply->success = msg->success;
     reply->error_message = msg->error_message;
     
-    session().Send(std::move(reply));
+    Reply(sender, session_id, std::move(reply));
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdListKeysResp, msg) {
-    auto reply = std::make_unique<ServiceDiscoverResp>();
+    auto reply = make_cpp_message<ServiceDiscoverResp>();
     reply->success = msg->success;
     reply->error_message = msg->error_message;
     
@@ -219,7 +219,7 @@ MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdListKeysResp, msg) {
     }
     
     logger().LOG_DEBUG("ServiceDiscover found {} endpoints", reply->service_endpoints.size());
-    session().Send(std::move(reply));
+    Reply(sender, session_id, std::move(reply));
 }
 
 } // namespace etcd
