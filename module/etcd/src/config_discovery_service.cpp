@@ -54,19 +54,14 @@ std::string ConfigDiscoveryService::BuildServiceInstanceKey(const std::string& s
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ConfigGetReq, msg) {
-    auto etcd_req = make_cpp_message<EtcdGetReq>();
-    etcd_req->key = BuildConfigPath(msg->config_path);
-    
-    Send(etcd_service_, std::move(etcd_req));
+    Send<EtcdGetReq>(etcd_service_, BuildConfigPath(msg->config_path));
+    co_return nullptr;
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ConfigSetReq, msg) {
-    auto etcd_req = make_cpp_message<EtcdPutReq>();
-    etcd_req->key = BuildConfigPath(msg->config_path);
-    etcd_req->value = msg->config_value;
-    etcd_req->lease_id = 0; // 配置通常不需要过期
-    
-    Send(etcd_service_, std::move(etcd_req));
+    // 配置通常不需要过期
+    Send<EtcdPutReq>(etcd_service_, BuildConfigPath(msg->config_path), std::move(msg->config_value), 0);
+    co_return nullptr;
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ConfigWatchReq, msg) {
@@ -74,20 +69,12 @@ MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ConfigWatchReq, msg) {
     config_watch_callbacks_[watch_id] = msg->callback_service;
     config_watch_paths_[watch_id] = msg->config_path;
     
-    auto etcd_req = make_cpp_message<EtcdWatchReq>();
-    etcd_req->key = BuildConfigPath(msg->config_path);
-    etcd_req->callback_service = service_handle(); // 设置为当前服务处理回调
-    
-    Send(etcd_service_, std::move(etcd_req));
+    // 设置为当前服务处理回调
+    Send<EtcdWatchReq>(etcd_service_, BuildConfigPath(msg->config_path), service_handle());
     
     // 直接返回成功（实际的watch结果会在EtcdWatchResp中处理）
-    auto reply = make_cpp_message<ConfigWatchResp>();
-    reply->success = true;
-    reply->watch_id = watch_id;
-    reply->error_message = "";
-    
     logger().LOG_DEBUG("ConfigWatch config_path={}, watch_id={}", msg->config_path, watch_id);
-    Reply(sender, session_id, std::move(reply));
+    co_return make_message<ConfigWatchResp>(true, watch_id, "");
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ServiceRegisterReq, msg) {
@@ -111,100 +98,61 @@ MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ServiceRegisterReq, msg) {
     
     // 如果需要TTL，先申请租约
     if (msg->ttl > 0) {
-        auto lease_req = make_cpp_message<EtcdLeaseGrantReq>();
-        lease_req->ttl = msg->ttl;
-        Send(etcd_service_, std::move(lease_req));
+        Send<EtcdLeaseGrantReq>(etcd_service_, msg->ttl);
         // 租约申请的结果会在EtcdLeaseGrantResp中处理
     } else {
         // 不需要TTL，直接注册
-        auto etcd_req = make_cpp_message<EtcdPutReq>();
-        etcd_req->key = service_key;
-        etcd_req->value = service_info.str();
-        etcd_req->lease_id = 0;
-        
-        Send(etcd_service_, std::move(etcd_req));
+        Send<EtcdPutReq>(etcd_service_, service_key, service_info.str(), 0);
     }
+    co_return nullptr;
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ServiceDiscoverReq, msg) {
-    auto etcd_req = make_cpp_message<EtcdListKeysReq>();
-    etcd_req->prefix = BuildServicePath(msg->service_name, "");
-    
-    Send(etcd_service_, std::move(etcd_req));
+    Send<EtcdListKeysReq>(etcd_service_, BuildServicePath(msg->service_name, ""));
+    co_return nullptr;
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ServiceUnregisterReq, msg) {
-    auto etcd_req = make_cpp_message<EtcdLeaseRevokeReq>();
-    etcd_req->lease_id = msg->lease_id;
-    
-    Send(etcd_service_, std::move(etcd_req));
+    Send<EtcdLeaseRevokeReq>(etcd_service_, msg->lease_id);
+    co_return nullptr;
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, ServiceHeartbeatReq, msg) {
     // 这里可以实现租约续期功能
     // etcd-cpp-apiv3库中可能需要使用leasekeepalive功能
-    auto reply = make_cpp_message<ServiceHeartbeatResp>();
-    reply->success = true;
-    reply->error_message = "";
-    
     logger().LOG_DEBUG("ServiceHeartbeat lease_id={}", msg->lease_id);
-    Reply(sender, session_id, std::move(reply));
+    co_return make_message<ServiceHeartbeatResp>(true, "");
 }
 
 // 处理EtcdService的回调
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdGetResp, msg) {
-    auto reply = make_cpp_message<ConfigGetResp>();
-    reply->success = msg->success;
-    reply->config_value = msg->value;
-    reply->error_message = msg->error_message;
-    
-    Reply(sender, session_id, std::move(reply));
+    co_return make_message<ConfigGetResp>(msg->success, std::move(msg->value), std::move(msg->error_message));
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdPutResp, msg) {
-    auto reply = make_cpp_message<ConfigSetResp>();
-    reply->success = msg->success;
-    reply->error_message = msg->error_message;
-    
-    Reply(sender, session_id, std::move(reply));
+    co_return make_message<ConfigSetResp>(msg->success, std::move(msg->error_message));
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdDeleteResp, msg) {
     // 可以用于处理服务注销等操作的响应
     logger().LOG_DEBUG("EtcdDeleteResp: success={}, error={}", msg->success, msg->error_message);
+    co_return nullptr;
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdLeaseGrantResp, msg) {
     if (msg->success) {
-        auto reply = make_cpp_message<ServiceRegisterResp>();
-        reply->success = true;
-        reply->lease_id = msg->lease_id;
-        reply->error_message = "";
-        
-        Reply(sender, session_id, std::move(reply));
+        co_return make_message<ServiceRegisterResp>(true, std::move(msg->lease_id), "");
     } else {
-        auto reply = make_cpp_message<ServiceRegisterResp>();
-        reply->success = false;
-        reply->lease_id = 0;
-        reply->error_message = msg->error_message;
-        
-        Reply(sender, session_id, std::move(reply));
+        co_return make_message<ServiceRegisterResp>(false, 0, std::move(msg->error_message));
     }
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdLeaseRevokeResp, msg) {
-    auto reply = make_cpp_message<ServiceUnregisterResp>();
-    reply->success = msg->success;
-    reply->error_message = msg->error_message;
-    
-    Reply(sender, session_id, std::move(reply));
+    co_return make_message<ServiceUnregisterResp>(msg->success, std::move(msg->error_message));
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdListKeysResp, msg) {
-    auto reply = make_cpp_message<ServiceDiscoverResp>();
-    reply->success = msg->success;
-    reply->error_message = msg->error_message;
-    
+    std::vector<std::string> service_endpoints;
     if (msg->success) {
         // 解析服务端点信息
         for (const auto& key : msg->keys) {
@@ -213,13 +161,13 @@ MILLION_MESSAGE_HANDLE_IMPL(ConfigDiscoveryService, EtcdListKeysResp, msg) {
             size_t last_slash = key.find_last_of('/');
             if (last_slash != std::string::npos) {
                 std::string endpoint = key.substr(last_slash + 1);
-                reply->service_endpoints.push_back(endpoint);
+                service_endpoints.push_back(endpoint);
             }
         }
     }
     
-    logger().LOG_DEBUG("ServiceDiscover found {} endpoints", reply->service_endpoints.size());
-    Reply(sender, session_id, std::move(reply));
+    logger().LOG_DEBUG("ServiceDiscover found {} endpoints", service_endpoints.size());
+    co_return make_message<ServiceDiscoverResp>(msg->success, std::move(service_endpoints), std::move(msg->error_message));
 }
 
 } // namespace etcd

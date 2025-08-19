@@ -68,24 +68,16 @@ std::string EtcdService::ConvertEtcdError(const ::etcd::Response& response) {
 MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdGetReq, msg) {
     try {
         auto response = sync_client_->get(msg->key);
-        
-        auto reply = std::make_unique<EtcdGetResp>();
-        reply->success = response.is_ok();
-        reply->error_message = ConvertEtcdError(response);
-        
+        auto reply = std::make_unique<EtcdGetResp>(response.is_ok(), std::nullopt, ConvertEtcdError(response));
         if (response.is_ok() && response.value().as_string() != "") {
             reply->value = response.value().as_string();
         }
-        
         logger().LOG_DEBUG("EtcdGet key={}, success={}", msg->key, reply->success);
-        Reply(sender, session_id, std::move(reply));
+        co_return std::move(reply);
         
     } catch (const std::exception& ex) {
-        auto reply = std::make_unique<EtcdGetResp>();
-        reply->success = false;
-        reply->error_message = ex.what();
-        Reply(sender, session_id, std::move(reply));
         logger().LOG_ERROR("Exception in EtcdGet: {}", ex.what());
+        co_return make_message<EtcdGetResp>(false, std::nullopt, ex.what());
     }
 }
 
@@ -98,20 +90,13 @@ MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdPutReq, msg) {
             response = sync_client_->put(msg->key, msg->value);
         }
         
-        auto reply = std::make_unique<EtcdPutResp>();
-        reply->success = response.is_ok();
-        reply->error_message = ConvertEtcdError(response);
-        
         logger().LOG_DEBUG("EtcdPut key={}, value={}, success={}", 
-                          msg->key, msg->value, reply->success);
-        Reply(sender, session_id, std::move(reply));
+                          msg->key, msg->value, response.is_ok());
+        co_return make_message<EtcdPutResp>(response.is_ok(), ConvertEtcdError(response));
         
     } catch (const std::exception& ex) {
-        auto reply = std::make_unique<EtcdPutResp>();
-        reply->success = false;
-        reply->error_message = ex.what();
-        Reply(sender, session_id, std::move(reply));
         logger().LOG_ERROR("Exception in EtcdPut: {}", ex.what());
+        co_return make_message<EtcdPutResp>(false, ex.what());
     }
 }
 
@@ -119,19 +104,11 @@ MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdDeleteReq, msg) {
     try {
         auto response = sync_client_->rm(msg->key);
         
-        auto reply = std::make_unique<EtcdDeleteResp>();
-        reply->success = response.is_ok();
-        reply->error_message = ConvertEtcdError(response);
-        
-        logger().LOG_DEBUG("EtcdDelete key={}, success={}", msg->key, reply->success);
-        Reply(sender, session_id, std::move(reply));
-        
+        logger().LOG_DEBUG("EtcdDelete key={}, success={}", msg->key, response.is_ok());
+        co_return make_message<EtcdDeleteResp>(response.is_ok(), ConvertEtcdError(response));
     } catch (const std::exception& ex) {
-        auto reply = std::make_unique<EtcdDeleteResp>();
-        reply->success = false;
-        reply->error_message = ex.what();
-        Reply(sender, session_id, std::move(reply));
         logger().LOG_ERROR("Exception in EtcdDelete: {}", ex.what());
+        co_return make_message<EtcdDeleteResp>(false, ex.what());
     }
 }
 
@@ -141,6 +118,7 @@ MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdWatchReq, msg) {
         watch_callbacks_[watch_id] = msg->callback_service;
         
         // 创建watch回调函数
+        // 这里的生命周期/线程安全需要分析下是否存在问题
         auto watch_callback = [this, watch_id, key = msg->key](::etcd::Response response) {
             try {
                 if (response.error_code()) {
@@ -151,9 +129,7 @@ MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdWatchReq, msg) {
                 // 查找对应的回调服务
                 auto it = watch_callbacks_.find(watch_id);
                 if (it != watch_callbacks_.end()) {
-                    auto event = std::make_unique<EtcdWatchEvent>();
-                    event->key = key;
-                    event->watch_id = watch_id;
+                    auto event = std::make_unique<EtcdWatchEvent>(key, "", "", watch_id);
                     
                     // 根据响应类型设置事件信息
                     if (response.action() == "set" || response.action() == "update") {
@@ -181,21 +157,12 @@ MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdWatchReq, msg) {
         auto watcher = std::make_unique<::etcd::Watcher>(*sync_client_, msg->key, watch_callback, false);
         watchers_[watch_id] = std::move(watcher);
         
-        auto reply = std::make_unique<EtcdWatchResp>();
-        reply->success = true;
-        reply->watch_id = watch_id;
-        reply->error_message = "";
-        
         logger().LOG_DEBUG("EtcdWatch key={}, watch_id={}", msg->key, watch_id);
-        Reply(sender, session_id, std::move(reply));
+        co_return make_message<EtcdWatchResp>(true, watch_id, "");
         
     } catch (const std::exception& ex) {
-        auto reply = std::make_unique<EtcdWatchResp>();
-        reply->success = false;
-        reply->watch_id = 0;
-        reply->error_message = ex.what();
-        Reply(sender, session_id, std::move(reply));
         logger().LOG_ERROR("Exception in EtcdWatch: {}", ex.what());
+        co_return make_message<EtcdWatchResp>(false, 0, ex.what());
     }
 }
 
@@ -214,64 +181,46 @@ MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdUnwatchReq, msg) {
         watchers_.erase(watcher_it);
     }
     
-    auto reply = std::make_unique<EtcdUnwatchResp>();
-    reply->success = found;
-    reply->error_message = found ? "" : "Watch ID not found";
-    
-    logger().LOG_DEBUG("EtcdUnwatch watch_id={}, success={}", msg->watch_id, reply->success);
-    Reply(sender, session_id, std::move(reply));
+    logger().LOG_DEBUG("EtcdUnwatch watch_id={}, success={}", msg->watch_id, found);
+    co_return make_message<EtcdUnwatchResp>(found, found ? "" : "Watch ID not found");
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdBatchGetReq, msg) {
-    auto reply = std::make_unique<EtcdBatchGetResp>();
-    reply->success = true;
-    reply->error_message = "";
-    
     try {
+        EtcdBatchGetRespKeyValues key_values;
         for (const auto& key : msg->keys) {
             auto response = sync_client_->get(key);
             if (response.is_ok() && response.value().as_string() != "") {
-                reply->key_values.emplace_back(key, response.value().as_string());
+                key_values.emplace_back(key, response.value().as_string());
             }
         }
         
         logger().LOG_DEBUG("EtcdBatchGet {} keys, found {} values", 
-                          msg->keys.size(), reply->key_values.size());
-        Reply(sender, session_id, std::move(reply));
+                          msg->keys.size(), key_values.size());
+        co_return make_message<EtcdBatchGetResp>(true, std::move(key_values), "");
         
     } catch (const std::exception& ex) {
-        reply->success = false;
-        reply->error_message = ex.what();
-        Reply(sender, session_id, std::move(reply));
         logger().LOG_ERROR("Exception in EtcdBatchGet: {}", ex.what());
+        co_return make_message<EtcdBatchGetResp>(false, EtcdBatchGetRespKeyValues(), ex.what());
     }
 }
 
 MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdLeaseGrantReq, msg) {
     try {
         auto response = sync_client_->leasegrant(msg->ttl);
-        
-        auto reply = std::make_unique<EtcdLeaseGrantResp>();
-        reply->success = response.is_ok();
-        reply->error_message = ConvertEtcdError(response);
-        
+
+        int64_t lease_id = 0;
         if (response.is_ok()) {
-            reply->lease_id = response.value().lease();
-        } else {
-            reply->lease_id = 0;
+            lease_id = response.value().lease();
         }
         
         logger().LOG_DEBUG("EtcdLeaseGrant ttl={}, lease_id={}, success={}", 
-                          msg->ttl, reply->lease_id, reply->success);
-        Reply(sender, session_id, std::move(reply));
+                          msg->ttl, lease_id, response.is_ok());
+        co_return make_message<EtcdLeaseGrantResp>(response.is_ok(), lease_id, ConvertEtcdError(response));
         
     } catch (const std::exception& ex) {
-        auto reply = std::make_unique<EtcdLeaseGrantResp>();
-        reply->success = false;
-        reply->lease_id = 0;
-        reply->error_message = ex.what();
-        Reply(sender, session_id, std::move(reply));
         logger().LOG_ERROR("Exception in EtcdLeaseGrant: {}", ex.what());
+        co_return make_message<EtcdLeaseGrantResp>(false, 0, ex.what());
     }
 }
 
@@ -279,20 +228,13 @@ MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdLeaseRevokeReq, msg) {
     try {
         auto response = sync_client_->leaserevoke(msg->lease_id);
         
-        auto reply = std::make_unique<EtcdLeaseRevokeResp>();
-        reply->success = response.is_ok();
-        reply->error_message = ConvertEtcdError(response);
-        
         logger().LOG_DEBUG("EtcdLeaseRevoke lease_id={}, success={}", 
-                          msg->lease_id, reply->success);
-        Reply(sender, session_id, std::move(reply));
+                          msg->lease_id, response.is_ok());
+        co_return make_message<EtcdLeaseRevokeResp>(response.is_ok(), ConvertEtcdError(response));
         
     } catch (const std::exception& ex) {
-        auto reply = std::make_unique<EtcdLeaseRevokeResp>();
-        reply->success = false;
-        reply->error_message = ex.what();
-        Reply(sender, session_id, std::move(reply));
         logger().LOG_ERROR("Exception in EtcdLeaseRevoke: {}", ex.what());
+        co_return make_message<EtcdLeaseRevokeResp>(false, ex.what());
     }
 }
 
@@ -301,26 +243,21 @@ MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdListKeysReq, msg) {
         // etcd-cpp-apiv3使用ls方法列出键
         auto response = sync_client_->ls(msg->prefix);
         
-        auto reply = std::make_unique<EtcdListKeysResp>();
-        reply->success = response.is_ok();
-        reply->error_message = ConvertEtcdError(response);
-        
+        std::vector<std::string> keys;
+
         if (response.is_ok()) {
             for (const auto& key : response.keys()) {
-                reply->keys.push_back(key);
+                keys.push_back(key);
             }
         }
         
         logger().LOG_DEBUG("EtcdListKeys prefix={}, found {} keys, success={}", 
-                          msg->prefix, reply->keys.size(), reply->success);
-        Reply(sender, session_id, std::move(reply));
+                          msg->prefix, keys.size(), response.is_ok());
+        co_return make_message<EtcdListKeysResp>( response.is_ok(), std::move(keys), ConvertEtcdError(response));
         
     } catch (const std::exception& ex) {
-        auto reply = std::make_unique<EtcdListKeysResp>();
-        reply->success = false;
-        reply->error_message = ex.what();
-        Reply(sender, session_id, std::move(reply));
         logger().LOG_ERROR("Exception in EtcdListKeys: {}", ex.what());
+        co_return make_message<EtcdListKeysResp>(false, std::vector<std::string>(), ex.what());
     }
 }
 
