@@ -110,5 +110,5 @@ set(ETCD_CPP_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/etcd-cpp-apiv3 CACHE STRING 
 set(ETCD_CPP_LIB etcd-cpp-apiv3 CACHE STRING "etcd-cpp-apiv3 lib")
 add_library(${ETCD_CPP_LIB} INTERFACE)
 add_subdirectory(etcd-cpp-apiv3)
-target_link_libraries(${ETCD_CPP_LIB} INTERFACE etcd-cpp-apiv3)
+target_link_libraries(${ETCD_CPP_LIB} INTERFACE etcd-cpp-api)
 target_include_directories(${ETCD_CPP_LIB} INTERFACE ${ETCD_CPP_HEADER_DIR})
