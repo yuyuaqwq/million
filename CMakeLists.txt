@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 project(million)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -14,6 +14,8 @@ set(EXECUTABLE_OUTPUT_PATH ${MILLION_BUILD_DIR}/bin)
 # add
 add_subdirectory(third_party)
 add_subdirectory(million)
+add_subdirectory(proto)
+# 确保proto生成完成后再处理protogen
 add_subdirectory(protogen)
 add_subdirectory(module)
 add_subdirectory(test)

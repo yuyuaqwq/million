@@ -1,3 +1,5 @@
+mkdir build
+cd build
 cmake .. ^
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
 ::    -DMYSQL_INCLUDE_DIR="[mysql-root]/include" ^

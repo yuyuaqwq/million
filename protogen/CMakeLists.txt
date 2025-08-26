@@ -8,26 +8,12 @@ set(PROTOGEN_HEADER_DIR
     CACHE STRING "protobuf header dir")
 set(PROTOGEN_LIB protogen CACHE STRING "protobuf lib")
 
-if(WIN32)
-    file(GLOB_RECURSE PRIVATE_HEADERS 
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.hpp)
-    source_group("Private Header Files" FILES ${PUBLIC_HEADERS})
-    file(GLOB_RECURSE PUBLIC_HEADERS 
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/**/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/**/*.hpp)
-    source_group("Public Header Files" FILES ${PUBLIC_HEADERS})
-endif()
-file(GLOB SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cc)
-add_library(${PROTOGEN_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
+add_library(${PROTOGEN_LIB} SHARED)
+
+target_sources(${PROTOGEN_LIB} PRIVATE 
+    ${PROTOBUF_GENERATED_SOURCES} 
+    ${PROTOBUF_GENERATED_HEADERS}
+)
 
 target_compile_definitions(${PROTOGEN_LIB} PUBLIC ${PROTOGEN_COMPILE_DEFINITIONS})
 target_include_directories(${PROTOGEN_LIB} PUBLIC ${PROTOGEN_HEADER_DIR})
@@ -37,6 +23,13 @@ if (WIN32)
     target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_API=__declspec\(dllexport\))
 elseif(UNIX)
     target_compile_definitions(${PROTOGEN_LIB} PRIVATE PROTOGEN_API=__attribute__\(\(visibility\(\"default\"\)\)\))
- endif()
+endif()
+
+# 添加对proto生成目标的依赖
+add_dependencies(${PROTOGEN_LIB} million_proto_generates)
+
+# 添加生成文件所在的include目录
+target_include_directories(${PROTOGEN_LIB} PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../protogen/include)
 
 target_link_libraries(${PROTOGEN_LIB} PUBLIC ${PROTOBUF_LIB})
