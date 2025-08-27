@@ -1,5 +1,5 @@
-set(CLUSTER_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE STRING "cluster header dir")
-set(CLUSTER_LIB cluster CACHE STRING "cluster lib")
+set(MILLION_CLUSTER_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(MILLION_CLUSTER_LIB_TARGET million_cluster)
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 
@@ -19,10 +19,11 @@ endif()
 file(GLOB SRC
     ./src/*.cpp
     ./src/**/*.cpp)
-add_library(${CLUSTER_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
+add_library(${MILLION_CLUSTER_LIB_TARGET} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
-target_include_directories(${CLUSTER_LIB} PUBLIC ${CLUSTER_HEADER_DIR})
-target_include_directories(${CLUSTER_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${MILLION_CLUSTER_LIB_TARGET} PUBLIC ${MILLION_CLUSTER_INCLUDE_DIR})
+target_include_directories(${MILLION_CLUSTER_LIB_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${CLUSTER_LIB} PUBLIC ${MILLION_LIB})
-target_link_libraries(${CLUSTER_LIB} PUBLIC ${PROTOGEN_LIB})
+target_link_libraries(${MILLION_CLUSTER_LIB_TARGET} PUBLIC million::core million::protogen)
+
+add_library(million::cluster ALIAS ${MILLION_CLUSTER_LIB_TARGET})

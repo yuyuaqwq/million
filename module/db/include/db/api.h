@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef db_EXPORTS
+#ifdef million_db_EXPORTS
     #ifdef __linux__
         #define MILLION_DB_API __attribute__((visibility("default")))
     #elif defined(_WIN32) || defined(__WIN32__)

@@ -1,9 +1,5 @@
-set(JSSVR_TEST jssvr_test)
+set(MILLION_JSSVR_TEST_TARGET million_jssvr_test)
 
-link_directories(${LIB_PATH})
+add_executable(${MILLION_JSSVR_TEST_TARGET} jssvr_test.cpp)
 
-add_executable(${JSSVR_TEST} jssvr_test.cpp)
-
-target_link_libraries(${JSSVR_TEST} PRIVATE ${MILLION_LIB})
-
-target_link_libraries(${JSSVR_TEST} PRIVATE ${JSSVR_LIB})
+target_link_libraries(${MILLION_JSSVR_TEST_TARGET} PRIVATE million::core million::jssvr)

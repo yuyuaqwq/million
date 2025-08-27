@@ -102,7 +102,7 @@ int main() {
     //    test_app->Timeout(1, service_handle, std::move(msg2));
     //}
 
-    std::this_thread::sleep_for(std::chrono::seconds(10000));
+    //std::this_thread::sleep_for(std::chrono::seconds(10000));
 
     return 0;
 }

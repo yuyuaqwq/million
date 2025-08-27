@@ -1,15 +1,17 @@
-cmake_minimum_required(VERSION 3.10)
-project(million)
+cmake_minimum_required(VERSION 3.15)
+project(million
+        VERSION 0.0.1
+        DESCRIPTION "million"
+        LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # 设置 MSVC 编译器的 UTF-8 选项
 if(MSVC)
     add_compile_options(/utf-8)
 endif()
-
-# 设置 OpenSSL 目录（如果已安装）
-# set(OPENSSL_ROOT_DIR "path/to/openssl")
 
 set(MILLION_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build)
 

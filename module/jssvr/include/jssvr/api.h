@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef jssvr_EXPORTS
+#ifdef million_jssvr_EXPORTS
     #ifdef __linux__
         #define MILLION_JSSVR_API __attribute__((visibility("default")))
     #elif defined(_WIN32) || defined(__WIN32__)

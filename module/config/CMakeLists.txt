@@ -1,5 +1,5 @@
-set(CONFIG_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE STRING "config header dir")
-set(CONFIG_LIB config CACHE STRING "config lib")
+set(MILLION_CONFIG_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(MILLION_CONFIG_LIB_TARGET million_config)
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 
@@ -19,10 +19,11 @@ endif()
 file(GLOB SRC
     ./src/*.cpp
     ./src/**/*.cpp)
-add_library(${CONFIG_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
+add_library(${MILLION_CONFIG_LIB_TARGET} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
-target_include_directories(${CONFIG_LIB} PUBLIC ${CONFIG_HEADER_DIR})
-target_include_directories(${CONFIG_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${MILLION_CONFIG_LIB_TARGET} PUBLIC ${MILLION_CONFIG_INCLUDE_DIR})
+target_include_directories(${MILLION_CONFIG_LIB_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${CONFIG_LIB} PUBLIC ${MILLION_LIB})
-target_link_libraries(${CONFIG_LIB} PUBLIC ${PROTOGEN_LIB})
+target_link_libraries(${MILLION_CONFIG_LIB_TARGET} PUBLIC million::core million::protogen)
+
+add_library(million::config ALIAS ${MILLION_CONFIG_LIB_TARGET})

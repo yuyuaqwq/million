@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef logger_EXPORTS
+#ifdef million_logger_EXPORTS
     #ifdef __linux__
         #define MILLION_LOGGER_API __attribute__((visibility("default")))
     #elif defined(_WIN32) || defined(__WIN32__)

@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef agent_EXPORTS
+#ifdef million_agent_EXPORTS
     #ifdef __linux__
         #define MILLION_AGENT_API __attribute__((visibility("default")))
     #elif defined(_WIN32) || defined(__WIN32__)

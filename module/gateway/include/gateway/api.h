@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef gateway_EXPORTS
+#ifdef million_gateway_EXPORTS
     #ifdef __linux__
         #define MILLION_GATEWAY_API __attribute__((visibility("default")))
     #elif defined(_WIN32) || defined(__WIN32__)

@@ -1,9 +1,5 @@
-set(CONFIG_TEST config_test)
+set(MILLION_CONFIG_TEST_TARGET million_config_test)
 
-link_directories(${LIB_PATH})
+add_executable(${MILLION_CONFIG_TEST_TARGET} config_test.cpp)
 
-add_executable(${CONFIG_TEST} config_test.cpp)
-
-target_link_libraries(${CONFIG_TEST} PRIVATE ${MILLION_LIB})
-
-target_link_libraries(${CONFIG_TEST} PRIVATE ${CONFIG_LIB})
+target_link_libraries(${MILLION_CONFIG_TEST_TARGET} PRIVATE million::core million::config)

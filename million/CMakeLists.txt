@@ -1,5 +1,5 @@
-set(MILLION_HEADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include" CACHE STRING "million header dir")
-set(MILLION_LIB million CACHE STRING "million lib")
+set(MILLION_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(MILLION_LIB_TARGET million)
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 
@@ -20,15 +20,17 @@ file(GLOB SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp)
 
-add_library(${MILLION_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
+add_library(${MILLION_LIB_TARGET} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
-target_include_directories(${MILLION_LIB} PUBLIC ${MILLION_HEADER_DIR})
-target_include_directories(${MILLION_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${MILLION_LIB_TARGET} PUBLIC ${MILLION_INCLUDE_DIR})
+target_include_directories(${MILLION_LIB_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${MILLION_LIB} PUBLIC ${META_LIB})
-target_link_libraries(${MILLION_LIB} PUBLIC ${ASIO_LIB})
-target_link_libraries(${MILLION_LIB} PUBLIC ${YAML_CPP_LIB})
-target_link_libraries(${MILLION_LIB} PUBLIC ${PROTOBUF_LIB})
+target_link_libraries(${MILLION_LIB_TARGET} PUBLIC million::third_party::meta)
+target_link_libraries(${MILLION_LIB_TARGET} PUBLIC million::third_party::asio)
+target_link_libraries(${MILLION_LIB_TARGET} PUBLIC million::third_party::yaml-cpp)
+target_link_libraries(${MILLION_LIB_TARGET} PUBLIC million::third_party::protobuf)
 
 find_package(Threads)
-target_link_libraries(${MILLION_LIB} PRIVATE Threads::Threads)
+target_link_libraries(${MILLION_LIB_TARGET} PRIVATE Threads::Threads)
+
+add_library(million::core ALIAS ${MILLION_LIB_TARGET})

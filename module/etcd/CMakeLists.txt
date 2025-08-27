@@ -1,5 +1,5 @@
-set(ETCD_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE STRING "etcd header dir")
-set(ETCD_LIB etcd CACHE STRING "etcd lib")
+set(MILLION_ETCD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(MILLION_ETCD_LIB_TARGET million_etcd)
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 
@@ -20,16 +20,14 @@ endif()
 file(GLOB SRC
     ./src/*.cpp
     ./src/**/*.cpp)
-add_library(${ETCD_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
+add_library(${MILLION_ETCD_LIB_TARGET} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
-target_include_directories(${ETCD_LIB} PUBLIC ${ETCD_HEADER_DIR})
-target_include_directories(${ETCD_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${MILLION_ETCD_LIB_TARGET} PUBLIC ${MILLION_ETCD_INCLUDE_DIR})
+target_include_directories(${MILLION_ETCD_LIB_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${ETCD_LIB} PUBLIC ${MILLION_LIB})
-target_link_libraries(${ETCD_LIB} PUBLIC ${PROTOGEN_LIB})
+target_link_libraries(${MILLION_ETCD_LIB_TARGET} PUBLIC million::core million::protogen)
 
-# Link etcd-cpp-apiv3 library
-target_link_libraries(${ETCD_LIB} PRIVATE ${ETCD_CPP_LIB})
+target_link_libraries(${MILLION_ETCD_LIB_TARGET} PRIVATE million::third_party::etcd-cpp-apiv3)
+target_link_libraries(${MILLION_ETCD_LIB_TARGET} PRIVATE million::third_party::yaml-cpp) 
 
-# Include yaml-cpp for configuration
-target_link_libraries(${ETCD_LIB} PRIVATE ${YAML_CPP_LIB}) 
+add_library(million::etcd ALIAS ${MILLION_ETCD_LIB_TARGET})

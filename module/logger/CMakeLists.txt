@@ -1,5 +1,5 @@
-set(LOGGER_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE STRING "logger header dir")
-set(LOGGER_LIB logger CACHE STRING "logger lib")
+set(MILLION_LOGGER_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(MILLION_LOGGER_LIB_GARGET million_logger)
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 
@@ -19,11 +19,14 @@ endif()
 file(GLOB SRC
     ./src/*.cpp
     ./src/**/*.cpp)
-add_library(${LOGGER_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
+add_library(${MILLION_LOGGER_LIB_GARGET} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
-target_include_directories(${LOGGER_LIB} PUBLIC ${LOGGER_HEADER_DIR})
-target_include_directories(${LOGGER_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${MILLION_LOGGER_LIB_GARGET} PUBLIC ${MILLION_LOGGER_INCLUDE_DIR})
+target_include_directories(${MILLION_LOGGER_LIB_GARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${LOGGER_LIB} PRIVATE ${SPDLOG_LIB})
+target_link_libraries(${MILLION_LOGGER_LIB_GARGET} PUBLIC million::core)
 
-target_link_libraries(${LOGGER_LIB} PUBLIC ${MILLION_LIB})
+target_link_libraries(${MILLION_LOGGER_LIB_GARGET} PRIVATE million::third_party::spdlog)
+
+
+add_library(million::logger ALIAS ${MILLION_LOGGER_LIB_GARGET})

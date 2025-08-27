@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef config_EXPORTS
+#ifdef million_config_EXPORTS
     #ifdef __linux__
         #define MILLION_CONFIG_API __attribute__((visibility("default")))
     #elif defined(_WIN32) || defined(__WIN32__)

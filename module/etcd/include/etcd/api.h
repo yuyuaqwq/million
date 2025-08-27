@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef etcd_EXPORTS
+#ifdef million_etcd_EXPORTS
     #ifdef __linux__
         #define MILLION_ETCD_API __attribute__((visibility("default")))
     #elif defined(_WIN32) || defined(__WIN32__)

@@ -1,7 +1,7 @@
 #pragma once
 
 
-#ifdef cluster_EXPORTS
+#ifdef million_cluster_EXPORTS
     #ifdef __linux__
         #define MILLION_CLUSTER_API __attribute__((visibility("default")))
     #elif defined(_WIN32) || defined(__WIN32__)

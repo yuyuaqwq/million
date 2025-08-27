@@ -1,9 +1,5 @@
-set(CLUSTER_TEST cluster_test)
+set(MILLION_CLUSTER_TEST_TARGET million_cluster_test)
 
-link_directories(${LIB_PATH})
+add_executable(${MILLION_CLUSTER_TEST_TARGET} cluster_test.cpp)
 
-add_executable(${CLUSTER_TEST} cluster_test.cpp)
-
-target_link_libraries(${CLUSTER_TEST} PRIVATE ${MILLION_LIB})
-
-target_link_libraries(${CLUSTER_TEST} PRIVATE ${CLUSTER_LIB})
+target_link_libraries(${MILLION_CLUSTER_TEST_TARGET} PRIVATE million::core million::cluster)

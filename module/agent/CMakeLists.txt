@@ -1,5 +1,5 @@
-set(AGENT_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE STRING "agent header dir")
-set(AGENT_LIB agent CACHE STRING "agent lib")
+set(MILLION_AGENT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(MILLION_AGENT_LIB_TARGET million_agent)
 
 if(WIN32)
     file(GLOB_RECURSE PRIVATE_HEADERS 
@@ -19,10 +19,11 @@ endif()
 file(GLOB SRC
     ./src/*.cpp
     ./src/**/*.cpp)
-add_library(${AGENT_LIB} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
+add_library(${MILLION_AGENT_LIB_TARGET} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
 
-target_include_directories(${AGENT_LIB} PUBLIC ${AGENT_HEADER_DIR})
-target_include_directories(${AGENT_LIB} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${MILLION_AGENT_LIB_TARGET} PUBLIC ${MILLION_AGENT_INCLUDE_DIR})
+target_include_directories(${MILLION_AGENT_LIB_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${AGENT_LIB} PUBLIC ${MILLION_LIB})
-target_link_libraries(${AGENT_LIB} PUBLIC ${GATEWAY_LIB})
+target_link_libraries(${MILLION_AGENT_LIB_TARGET} PUBLIC million::core million::agent million::gateway)
+
+add_library(million::agent ALIAS ${MILLION_AGENT_LIB_TARGET})

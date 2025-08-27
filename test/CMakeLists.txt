@@ -1,4 +1,4 @@
-add_subdirectory(task_test)
+add_subdirectory(million_test)
 add_subdirectory(db_test)
 add_subdirectory(config_test)
 add_subdirectory(jssvr_test)
