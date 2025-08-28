@@ -1,3 +1,4 @@
 build
 build.bat
 vcpkg_installed
+/.claude
