@@ -4,26 +4,23 @@
   "dependencies": [
     {
       "name": "protobuf",
-      "version>=": "5.26.1"
+      "version>=": "3.21.12#4"
     },
     {
       "name": "grpc",
-      "version>=": "1.50.1"
-      },
-      {
+      "version>=": "1.71.0#2"
+    },
+    {
       "name": "openssl",
       "version>=": "3.0.2"
-      },
-      {
+    },
+    {
       "name": "libmysql",
       "version>=": "8.0.40"
-      }
-  ],
-  "overrides": [
-    {
-      "name": "protobuf",
-      "version": "5.26.1"
     }
   ],
-  "builtin-baseline": "545b5dc234f4015a6fb32bf6cba863bb6b41cb9c"
+  "overrides": [
+
+  ],
+  "builtin-baseline": "120deac3062162151622ca4860575a33844ba10b"
 }

@@ -1,4 +1,5 @@
 build
 build.bat
 vcpkg_installed
-/.claude
+.claude
+.vscode

@@ -1,10 +1,9 @@
 # 环境
 
 ```
-vcpkg install
 mkdir build
 cd build
-cmake ..
+cmake .. -DCMAKE_TOOLCHAIN_FILE="[vcpkg-root]/scripts/buildsystems/vcpkg.cmake"
 ```
 
 ## Protobuf

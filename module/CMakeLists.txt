@@ -6,3 +6,6 @@ add_subdirectory(gateway)
 add_subdirectory(agent)
 add_subdirectory(jssvr)
 add_subdirectory(etcd)
+
+add_executable(sbtest test.cpp)
+target_link_libraries(sbtest PRIVATE million::third_party::etcd-cpp-apiv3)
