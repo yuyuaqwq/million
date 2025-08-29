@@ -2,7 +2,7 @@
 set(Protobuf_USE_STATIC_LIBS ON CACHE BOOL "Build only core protobuf")
 cmake_policy(SET CMP0074 NEW)
 find_package(Protobuf REQUIRED CONFIG)
-# vcpkgå®‰è£…çš„é»˜è®¤æ˜¯åŠ¨æ€ç‰ˆæœ¬
+# vcpkg°²×°µÄÄ¬ÈÏÊÇ¶¯Ì¬°æ±¾
 set(MILLION_PROTOBUF_LIB_TARGET million_protobuf)
 add_library(${MILLION_PROTOBUF_LIB_TARGET} INTERFACE)
 target_compile_definitions(${MILLION_PROTOBUF_LIB_TARGET} INTERFACE PROTOBUF_USE_DLLS)
@@ -61,7 +61,7 @@ target_include_directories(${MILLION_SPDLOG_LIB_TARGET} INTERFACE ${MILLION_SPDL
 add_library(million::third_party::spdlog ALIAS ${MILLION_SPDLOG_LIB_TARGET})
 
 # quickjs
-# cmakeä¸å…è®¸å¼•ç”¨é¡¹ç›®å¤–éƒ¨è·¯å¾„ä½œä¸ºincludeçš„è·¯å¾„ï¼Œå› æ­¤ä½¿ç”¨INTERFACEå°è£…ä¸€å±‚
+# cmake²»ÔÊĞíÒıÓÃÏîÄ¿Íâ²¿Â·¾¶×÷ÎªincludeµÄÂ·¾¶£¬Òò´ËÊ¹ÓÃINTERFACE·â×°Ò»²ã
 add_subdirectory(quickjs/quickjs)
 set(MILLION_QUICK_JS_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/quickjs)
 set(MILLION_QUICK_JS_LIB_TARGET million_quickjs)

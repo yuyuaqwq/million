@@ -4,11 +4,11 @@
   "dependencies": [
     {
       "name": "protobuf",
-      "version>=": "3.21.12#4"
+      "version>=": "5.29.5"
     },
     {
       "name": "grpc",
-      "version>=": "1.71.0#2"
+      "version>=": "1.71.0"
     },
     {
       "name": "openssl",
@@ -19,8 +19,6 @@
       "version>=": "8.0.40"
     }
   ],
-  "overrides": [
-
-  ],
-  "builtin-baseline": "120deac3062162151622ca4860575a33844ba10b"
+  "overrides": [],
+  "builtin-baseline": "5300a2a461a53b76405db4fcbe6aeb0eea43935d"
 }

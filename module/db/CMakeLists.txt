@@ -27,6 +27,8 @@ target_include_directories(${MILLION_DB_LIB_TARGET} PRIVATE ${CMAKE_CURRENT_SOUR
 target_link_libraries(${MILLION_DB_LIB_TARGET} PUBLIC million::core million::protogen)
 
 target_link_libraries(${MILLION_DB_LIB_TARGET} PRIVATE million::third_party::redis++)
-target_link_libraries(${MILLION_DB_LIB_TARGET} PRIVATE million::third_party::soci)
+if(TARGET million::third_party::soci)
+    target_link_libraries(${MILLION_DB_LIB_TARGET} PRIVATE million::third_party::soci)
+endif()
 
 add_library(million::db ALIAS ${MILLION_DB_LIB_TARGET})
