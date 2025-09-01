@@ -25,7 +25,19 @@ bool EtcdService::OnInit() {
         return false;
     }
 
-    etcd_endpoints_ = endpoints.as<std::string>();
+    if (endpoints.IsSequence()) {
+        // 多个endpoint的情况
+        std::vector<std::string> endpoint_list = endpoints.as<std::vector<std::string>>();
+        for (size_t i = 0; i < endpoint_list.size(); ++i) {
+            if (i > 0) {
+                etcd_endpoints_ += ",";
+            }
+            etcd_endpoints_ += endpoint_list[i];
+        }
+    } else {
+        // 单个endpoint的情况（向后兼容）
+        etcd_endpoints_ = endpoints.as<std::string>();
+    }
     logger().LOG_INFO("Using etcd endpoints: {}", etcd_endpoints_);
 
     // 初始化etcd客户端
@@ -144,9 +156,9 @@ MILLION_MESSAGE_HANDLE_IMPL(EtcdService, EtcdWatchReq, msg) {
                     }
                     
                     // 发送事件到回调服务
+                    logger().LOG_DEBUG("Sent watch event for key={}, type={}, watch_id={}",
+                        key, event->event_type, watch_id);
                     Send(it->second, std::move(event));
-                    logger().LOG_DEBUG("Sent watch event for key={}, type={}, watch_id={}", 
-                                      key, event->event_type, watch_id);
                 }
             } catch (const std::exception& ex) {
                 logger().LOG_ERROR("Exception in watch callback: {}", ex.what());

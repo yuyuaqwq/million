@@ -12,7 +12,7 @@ module_mgr:
     - 
         dir: ../../build/lib/Debug
         loads:
-            - etcd
+            - million_etcd
 
 timer:
     ms_per_tick: 10
@@ -28,9 +28,11 @@ logger:
 
 # ETCD 配置
 etcd:
-    # ETCD 服务器端点列表
+    # ETCD 服务器端点列表（支持单个或多个）
     endpoints:
         - "http://127.0.0.1:2379"
+        - "http://127.0.0.1:2380"  # 集群中的其他节点
+        # - "http://127.0.0.1:2381"
     # 连接超时（毫秒）
     connect_timeout: 5000
     # 请求超时（毫秒）  

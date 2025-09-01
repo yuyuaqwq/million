@@ -53,160 +53,164 @@ bool Million::Init(std::string_view settings_path) {
         throw std::runtime_error("Repeat initialization.");
     }
 
-    settings_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(settings_path)));
-    const auto& settings = *settings_;
-
-    do {
-        logger_ = std::make_unique<Logger>(this);
-        if (!logger().Init()) {
-            std::cerr << "[million] logger init failed." << std::endl;
-            break;
-        }
-
-        logger().LOG_INFO("init start.");
-
-        const auto& node_settings = settings["node"];
-        if (!node_settings) {
-            logger().LOG_ERROR("cannot find 'node'.");
-            return false;
-        }
-        if (!node_settings["id"]) {
-            logger().LOG_ERROR("cannot find 'node.id'.");
-            return false;
-        }
-        auto node_id = node_settings["id"].as<size_t>();
-        seata_snowflake_ = std::make_unique<SeataSnowflake>(node_id);
-
-        service_mgr_ = std::make_unique<ServiceMgr>(this);
-        session_mgr_ = std::make_unique<SessionMgr>(this);
-
-        logger().LOG_INFO("load 'worker_mgr' settings.");
-
-        const auto& worker_mgr_settings = settings["worker_mgr"];
-        if (!worker_mgr_settings) {
-            logger().LOG_ERROR("cannot find 'worker_mgr'.");
-            return false;
-        }
-        if (!worker_mgr_settings["num"]) {
-            logger().LOG_ERROR("cannot find 'worker_mgr.num'.");
-            return false;
-        }
-        auto worker_num = worker_mgr_settings["num"].as<size_t>();
-        worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
-
-
-        logger().LOG_INFO("load 'io_context_mgr' settings.");
-
-        const auto& io_context_mgr_settings = settings["io_context_mgr"];
-        if (!io_context_mgr_settings) {
-            logger().LOG_ERROR("cannot find 'io_context_mgr'.");
-            break;
-        }
-        if (!io_context_mgr_settings["num"]) {
-            logger().LOG_ERROR("cannot find 'io_context_mgr.num'.");
-            break;
-        }
-        auto io_context_num = io_context_mgr_settings["num"].as<size_t>();
-        io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
-
-
-        logger().LOG_INFO("load 'session_monitor' settings.");
-
-        const auto& session_monitor_settings = settings["session_monitor"];
-        if (!session_monitor_settings) {
-            logger().LOG_ERROR("cannot find 'session_monitor_settings'.");
-            break;
-        }
-        if (!session_monitor_settings["s_per_tick"]) {
-            logger().LOG_ERROR("cannot find 'session_monitor_settings.s_per_tick'.");
-            break;
-        }
-        auto tick_s = session_monitor_settings["s_per_tick"].as<uint32_t>();
-        if (!session_monitor_settings["timeout_tick"]) {
-            logger().LOG_ERROR("cannot find 'session_monitor_settings.timeout_tick'.");
-            break;
-        }
-        auto timeout_s = session_monitor_settings["timeout_tick"].as<uint32_t>();
-        session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
-
-
-        logger().LOG_INFO("load 'proto_mgr' settings.");
-
-        proto_mgr_ = std::make_unique<ProtoMgr>();
-        proto_mgr_->Init();
-
-
-        logger().LOG_INFO("load 'timer' settings.");
-
-        const auto& timer_settings = settings["timer"];
-        if (!timer_settings) {
-            logger().LOG_ERROR("cannot find 'timer'.");
-            break;
-        }
-        if (!timer_settings["ms_per_tick"]) {
-            logger().LOG_ERROR("cannot find 'timer.ms_per_tick'.");
-            break;
-        }
-        auto ms_per_tick = timer_settings["ms_per_tick"].as<uint32_t>();
-        timer_ = std::make_unique<Timer>(this, ms_per_tick);
-
-        logger().LOG_INFO("load 'module_mgr' settings.");
-
-        const auto& module_mgr_settings = settings["module_mgr"];
-        if (!module_mgr_settings) {
-            logger().LOG_ERROR("cannot find 'module_mgr'.");
-            break;
-        }
-
-        module_mgr_ = std::make_unique<ModuleMgr>(this);
-
-        bool success = true;
-        for (const auto& module_settings : module_mgr_settings) {
-            if (!module_settings["dir"]) {
-                logger().LOG_ERROR("cannot find 'dir' in module settings.");
-                continue; // 跳过
+    try {
+        do {
+            logger_ = std::make_unique<Logger>(this);
+            if (!logger().Init()) {
+                std::cerr << "[million] logger init failed." << std::endl;
+                break;
             }
 
-            std::string module_dir = module_settings["dir"].as<std::string>();
+            logger().LOG_INFO("init start.");
 
-            const auto& loads = module_settings["loads"];
-            if (!loads) {
-                continue;
+            settings_ = std::make_unique<YAML::Node>(YAML::LoadFile(std::string(settings_path)));
+            const auto& settings = *settings_;
+
+            const auto& node_settings = settings["node"];
+            if (!node_settings) {
+                logger().LOG_ERROR("cannot find 'node'.");
+                return false;
             }
-            for (const auto& name_settings : loads) {
-                auto name = name_settings.as<std::string>();
-                if (!module_mgr_->Load(module_dir, name)) {
-                    logger().LOG_ERROR("load module '{} -> {}' failed.", module_dir, name);
-                    success = false;
-                    break;
+            if (!node_settings["id"]) {
+                logger().LOG_ERROR("cannot find 'node.id'.");
+                return false;
+            }
+            auto node_id = node_settings["id"].as<size_t>();
+            seata_snowflake_ = std::make_unique<SeataSnowflake>(node_id);
+
+            service_mgr_ = std::make_unique<ServiceMgr>(this);
+            session_mgr_ = std::make_unique<SessionMgr>(this);
+
+            logger().LOG_INFO("load 'worker_mgr' settings.");
+
+            const auto& worker_mgr_settings = settings["worker_mgr"];
+            if (!worker_mgr_settings) {
+                logger().LOG_ERROR("cannot find 'worker_mgr'.");
+                return false;
+            }
+            if (!worker_mgr_settings["num"]) {
+                logger().LOG_ERROR("cannot find 'worker_mgr.num'.");
+                return false;
+            }
+            auto worker_num = worker_mgr_settings["num"].as<size_t>();
+            worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
+
+
+            logger().LOG_INFO("load 'io_context_mgr' settings.");
+
+            const auto& io_context_mgr_settings = settings["io_context_mgr"];
+            if (!io_context_mgr_settings) {
+                logger().LOG_ERROR("cannot find 'io_context_mgr'.");
+                break;
+            }
+            if (!io_context_mgr_settings["num"]) {
+                logger().LOG_ERROR("cannot find 'io_context_mgr.num'.");
+                break;
+            }
+            auto io_context_num = io_context_mgr_settings["num"].as<size_t>();
+            io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
+
+
+            logger().LOG_INFO("load 'session_monitor' settings.");
+
+            const auto& session_monitor_settings = settings["session_monitor"];
+            if (!session_monitor_settings) {
+                logger().LOG_ERROR("cannot find 'session_monitor_settings'.");
+                break;
+            }
+            if (!session_monitor_settings["s_per_tick"]) {
+                logger().LOG_ERROR("cannot find 'session_monitor_settings.s_per_tick'.");
+                break;
+            }
+            auto tick_s = session_monitor_settings["s_per_tick"].as<uint32_t>();
+            if (!session_monitor_settings["timeout_tick"]) {
+                logger().LOG_ERROR("cannot find 'session_monitor_settings.timeout_tick'.");
+                break;
+            }
+            auto timeout_s = session_monitor_settings["timeout_tick"].as<uint32_t>();
+            session_monitor_ = std::make_unique<SessionMonitor>(this, tick_s, timeout_s);
+
+
+            logger().LOG_INFO("load 'proto_mgr' settings.");
+
+            proto_mgr_ = std::make_unique<ProtoMgr>();
+            proto_mgr_->Init();
+
+
+            logger().LOG_INFO("load 'timer' settings.");
+
+            const auto& timer_settings = settings["timer"];
+            if (!timer_settings) {
+                logger().LOG_ERROR("cannot find 'timer'.");
+                break;
+            }
+            if (!timer_settings["ms_per_tick"]) {
+                logger().LOG_ERROR("cannot find 'timer.ms_per_tick'.");
+                break;
+            }
+            auto ms_per_tick = timer_settings["ms_per_tick"].as<uint32_t>();
+            timer_ = std::make_unique<Timer>(this, ms_per_tick);
+
+            logger().LOG_INFO("load 'module_mgr' settings.");
+
+            const auto& module_mgr_settings = settings["module_mgr"];
+            if (!module_mgr_settings) {
+                logger().LOG_ERROR("cannot find 'module_mgr'.");
+                break;
+            }
+
+            module_mgr_ = std::make_unique<ModuleMgr>(this);
+
+            bool success = true;
+            for (const auto& module_settings : module_mgr_settings) {
+                if (!module_settings["dir"]) {
+                    logger().LOG_ERROR("cannot find 'dir' in module settings.");
+                    continue; // 跳过
                 }
-                else {
-                    logger().LOG_INFO("load module '{} -> {}' success.", module_dir, name);
+
+                std::string module_dir = module_settings["dir"].as<std::string>();
+
+                const auto& loads = module_settings["loads"];
+                if (!loads) {
+                    continue;
+                }
+                for (const auto& name_settings : loads) {
+                    auto name = name_settings.as<std::string>();
+                    if (!module_mgr_->Load(module_dir, name)) {
+                        logger().LOG_ERROR("load module '{} -> {}' failed.", module_dir, name);
+                        success = false;
+                        break;
+                    }
+                    else {
+                        logger().LOG_INFO("load module '{} -> {}' success.", module_dir, name);
+                    }
+                }
+                if (!success) {
+                    break;
                 }
             }
             if (!success) {
                 break;
             }
-        }
-        if (!success) {
-            break;
-        }
-        if (!module_mgr_->Init()) {
-            logger().LOG_ERROR("module mgr init failed.");
-            break;
-        }
+            if (!module_mgr_->Init()) {
+                logger().LOG_ERROR("module mgr init failed.");
+                break;
+            }
 
-        stage_ = kReady;
+            stage_ = kReady;
 
-        if (!imillion_->OnInit()) {
-            logger().LOG_ERROR("imillion OnInit failed.");
-        }
+            if (!imillion_->OnInit()) {
+                logger().LOG_ERROR("imillion OnInit failed.");
+            }
 
-        logger().LOG_INFO("init success.");
-        return true;
+            logger().LOG_INFO("init success.");
+            return true;
 
-    } while (false);
-
+        } while (false);
+    }
+    catch (const std::exception& e) {
+        logger().LOG_ERROR("An exception occurred during initialization: {}", e.what());
+    }
     logger().LOG_ERROR("init failed.");
     return false;
 }
