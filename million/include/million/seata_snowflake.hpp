@@ -5,14 +5,15 @@
 #include <stdexcept>
 
 #include <million/noncopyable.h>
+#include <million/node_def.h>
 
 namespace million {
 
-// ²Î¿¼×Ô£º
+// å‚è€ƒè‡ªï¼š
 // https://www.cnblogs.com/thisiswhy/p/17611163.html
 // https://seata.apache.org/zh-cn/blog/seata-analysis-UUID-generator/
+using WorkerId = NodeId;
 using SnowId = uint64_t;
-using WorkerId = uint64_t;
 constexpr SnowId kSnowIdInvalid = 0;
 
 class SeataSnowflake : public noncopyable {

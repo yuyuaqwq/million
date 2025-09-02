@@ -1,3 +1,6 @@
+node:
+    id: 0
+
 # 0表示按cpu核数创建工作器
 worker_mgr:
     num: 0
@@ -25,13 +28,10 @@ logger:
 
 
 cluster:
-    name: node1
-    ip: 0.0.0.0
-    port: 8101
-    nodes:
-        node2:
-            ip: 127.0.0.1
-            port: 8102
-        node3:
-            ip: 127.0.0.1
-            port: 8103
+    services:
+        - TestAService:
+            endpoints:
+                - 127.0.0.1:8001
+        - TestBService:
+            endpoints:
+                - 127.0.0.1:8002

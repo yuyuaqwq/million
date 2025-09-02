@@ -17,7 +17,7 @@ public:
     ProtoCodec(const ProtoMgr& proto_mgr)
         : proto_mgr_(proto_mgr) {}
 
-    // ×¢²áĞ­Òé
+    // æ³¨å†Œåè®®
     template <typename MsgExtIdT, typename SubMsgExtIdT>
     bool RegisterFile(const std::string& proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id);
 

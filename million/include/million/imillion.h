@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include <million/api.h>
+#include <million/node_def.h>
 #include <million/exception.h>
 #include <million/noncopyable.h>
 #include <million/message.h>
@@ -59,6 +60,7 @@ public:
     }
 
     std::optional<SessionId> StopService(const ServiceHandle& service, MessagePointer with_msg);
+
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> StopService(const ServiceHandle& service, Args&&... args) {
         return StopService(service, make_msg<MsgT>(std::forward<Args>(args)...));
@@ -69,24 +71,29 @@ public:
         auto session_id = StartService<SendMsgT>(service, std::forward<Args>(args)...);
         return Recv<RecvMsgT>(session_id.value());
     }
+
     template <typename RecvMsgT, typename SendMsgT, typename ...Args>
     SessionAwaiter<RecvMsgT> StopServiceSync(const ServiceHandle& service, Args&&... args) {
         auto session_id = StopService<SendMsgT>(service, std::forward<Args>(args)...);
         return Recv<RecvMsgT>(session_id.value());
     }
 
+    std::optional<ServiceHandle> FindServiceById(ServiceId id);
+
     bool SetServiceName(const ServiceHandle& service, const ServiceName& name);
-    std::optional<ServiceHandle> GetServiceByName(const ServiceName& name);
+    std::optional<ServiceHandle> FindServiceByName(const ServiceName& name);
 
     SessionId NewSession();
 
     std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, MessagePointer msg);
+    
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, Args&&... args) {
         return Send(sender, target, make_message<MsgT>(std::forward<Args>(args)...));
     }
 
     bool SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MessagePointer msg);
+    
     template <typename MsgT, typename ...Args>
     bool SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, Args&&... args) {
         return SendTo(sender, target, session_id, make_message<MsgT>(std::forward<Args>(args)...));
@@ -115,6 +122,7 @@ public:
     }
 
     bool Timeout(uint32_t tick, const ServiceHandle& service, MessagePointer msg);
+    
     template <typename MsgT, typename ...Args>
     std::optional<SessionId> Timeout(uint32_t tick, const ServiceHandle& service, Args&&... args) {
         return Timeout(tick, service, make_message<MsgT>(std::forward<Args>(args)...));
@@ -125,6 +133,7 @@ public:
     const YAML::Node& YamlSettings() const;
     asio::io_context& NextIoContext();
     
+    NodeId node_id();
     Logger& logger();
     ProtoMgr& proto_mgr();
     Million& impl() { return *impl_; }

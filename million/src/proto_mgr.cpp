@@ -6,9 +6,9 @@ ProtoMgr::ProtoMgr()
     : codec_(*this) {}
 
 void ProtoMgr::Init() {
-    // Ŀǰ�����壬�����ã�protogen dll�����ӳټ��أ���������û�ж���������������
-    // ��֤����ʹ��protobuf��ģ�飬��ͨ��dll����ͬһ��protobuf
-    // ����ȷ��google::protobuf::DescriptorPool::generated_pool()�Ƚӿڻ�ȡ�Ķ���ͬһ������
+    // 目前无意义，调试用，protogen dll可能延迟加载，所以这里没有定义属于正常现象
+    // 保证所有使用protobuf的模块，都通过dll加载同一个protobuf
+    // 即可确保google::protobuf::DescriptorPool::generated_pool()等接口获取的都是同一个对象
     std::vector<std::string> file_names;
     desc_db().FindAllFileNames(&file_names);
     for (const std::string& file_name : file_names) {

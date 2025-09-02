@@ -25,17 +25,14 @@ void ServiceMgr::Stop() {
 }
 
 ServiceId ServiceMgr::AllocServiceId() {
-    auto id = ++service_id_;
-    if (id == std::numeric_limits<uint64_t>::max()) {
-        throw std::overflow_error("Service ID overflow: no more IDs available.");
-    }
-    return id;
+    return million_->seata_snowflake().NextId();
 }
 
 std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
     decltype(services_)::iterator iter;
     auto service_shared = std::make_shared<ServiceCore>(this, std::move(iservice));
     auto handle = ServiceHandle(service_shared);
+    SetServiceId(service_shared, AllocServiceId());
     service_shared->iservice().set_service_handle(handle);
     auto service_ptr = service_shared.get();
     bool success = false;
@@ -119,31 +116,31 @@ ServiceCore* ServiceMgr::PopService() {
     return service;
 }
 
-bool ServiceMgr::SetServiceName(const ServiceShared& service, const ServiceName& name) {
-    auto lock = std::lock_guard(name_map_mutex_);
-    auto res = name_map_.emplace(name, service->iter());
-    return res.second;
-}
-
-std::optional<ServiceShared> ServiceMgr::GetServiceByName(const ServiceName& name) {
-    auto lock = std::lock_guard(name_map_mutex_);
-    auto iter = name_map_.find(name);
-    if (iter == name_map_.end()) {
-        return std::nullopt;
-    }
-    return *iter->second;
-}
-
 bool ServiceMgr::SetServiceId(const ServiceShared& service, ServiceId id) {
     auto lock = std::lock_guard(id_map_mutex_);
     auto res = id_map_.emplace(id, service->iter());
     return res.second;
 }
 
-std::optional<ServiceShared> ServiceMgr::GetServiceById(ServiceId id) {
+std::optional<ServiceShared> ServiceMgr::FindServiceById(ServiceId id) {
     auto lock = std::lock_guard(id_map_mutex_);
     auto iter = id_map_.find(id);
     if (iter == id_map_.end()) {
+        return std::nullopt;
+    }
+    return *iter->second;
+}
+
+bool ServiceMgr::SetServiceName(const ServiceShared& service, const ServiceName& name) {
+    auto lock = std::lock_guard(name_map_mutex_);
+    auto res = name_map_.emplace(name, service->iter());
+    return res.second;
+}
+
+std::optional<ServiceShared> ServiceMgr::FindServiceByName(const ServiceName& name) {
+    auto lock = std::lock_guard(name_map_mutex_);
+    auto iter = name_map_.find(name);
+    if (iter == name_map_.end()) {
         return std::nullopt;
     }
     return *iter->second;

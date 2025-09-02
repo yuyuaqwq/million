@@ -32,8 +32,10 @@ public:
     std::optional<SessionId> StartService(const ServiceShared& service, MessagePointer with_msg);
     std::optional<SessionId> StopService(const ServiceShared& service, MessagePointer with_msg);
 
+    std::optional<ServiceShared> FindServiceById(ServiceId id);
+
     bool SetServiceName(const ServiceShared& service, const ServiceName& name);
-    std::optional<ServiceShared> GetServiceByName(const ServiceName& name);
+    std::optional<ServiceShared> FindServiceByName(const ServiceName& name);
 
     SessionId NewSession();
 
@@ -46,6 +48,7 @@ public:
     void EnableSeparateWorker(const ServiceShared& service);
 
     auto& imillion() { assert(imillion_); return *imillion_; }
+    auto& node_id() { return node_id_; }
     auto& seata_snowflake() { assert(seata_snowflake_); return *seata_snowflake_; }
     auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
     auto& session_mgr() { assert(session_mgr_); return *session_mgr_; }
@@ -66,6 +69,8 @@ private:
         kRunning,
     };
     Stage stage_ = kUninitialized;
+
+    NodeId node_id_;
 
     std::unique_ptr<YAML::Node> settings_;
 

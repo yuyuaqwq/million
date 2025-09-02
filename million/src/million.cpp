@@ -75,8 +75,8 @@ bool Million::Init(std::string_view settings_path) {
                 logger().LOG_ERROR("cannot find 'node.id'.");
                 return false;
             }
-            auto node_id = node_settings["id"].as<size_t>();
-            seata_snowflake_ = std::make_unique<SeataSnowflake>(node_id);
+            node_id_ = node_settings["id"].as<uint64_t>();
+            seata_snowflake_ = std::make_unique<SeataSnowflake>(node_id_);
 
             service_mgr_ = std::make_unique<ServiceMgr>(this);
             session_mgr_ = std::make_unique<SessionMgr>(this);
@@ -249,13 +249,16 @@ std::optional<SessionId> Million::StopService(const ServiceShared& service, Mess
     return service_mgr_->StopService(service, std::move(with_msg));
 }
 
+std::optional<ServiceShared> Million::FindServiceById(ServiceId id) {
+    return service_mgr_->FindServiceById(id);
+}
 
 bool Million::SetServiceName(const ServiceShared& service, const ServiceName& name) {
     return service_mgr_->SetServiceName(service, name);
 }
 
-std::optional<ServiceShared> Million::GetServiceByName(const ServiceName& name) {
-    return service_mgr_->GetServiceByName(name);
+std::optional<ServiceShared> Million::FindServiceByName(const ServiceName& name) {
+    return service_mgr_->FindServiceByName(name);
 }
 
 

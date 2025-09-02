@@ -21,7 +21,6 @@ void IMillion::Start() {
     impl_->Start();
 }
 
-
 std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iservice) {
     auto shared = impl_->AddService(std::move(iservice));
     if (!shared) {
@@ -29,7 +28,6 @@ std::optional<ServiceHandle> IMillion::AddService(std::unique_ptr<IService> iser
     }
     return ServiceHandle(*shared);
 }
-
 
 std::optional<SessionId> IMillion::StartService(const ServiceHandle& service, MessagePointer with_msg) {
     auto lock = service.lock();
@@ -47,6 +45,13 @@ std::optional<SessionId> IMillion::StopService(const ServiceHandle& service, Mes
     return impl_->StopService(lock, std::move(with_msg));
 }
 
+std::optional<ServiceHandle> IMillion::FindServiceById(ServiceId service_id) {
+    auto shared = impl_->FindServiceById(service_id);
+    if (!shared) {
+        return std::nullopt;
+    }
+    return ServiceHandle(*shared);
+}
 
 bool IMillion::SetServiceName(const ServiceHandle& service, const ServiceName& name) {
     auto lock = service.lock();
@@ -56,19 +61,17 @@ bool IMillion::SetServiceName(const ServiceHandle& service, const ServiceName& n
     return impl_->SetServiceName(lock, name);
 }
 
-std::optional<ServiceHandle> IMillion::GetServiceByName(const ServiceName& name) {
-    auto shared = impl_->GetServiceByName(name);
+std::optional<ServiceHandle> IMillion::FindServiceByName(const ServiceName& name) {
+    auto shared = impl_->FindServiceByName(name);
     if (!shared) {
         return std::nullopt;
     }
     return ServiceHandle(*shared);
 }
 
-
 SessionId IMillion::NewSession() {
     return impl_->NewSession();
 }
-
 
 std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MessagePointer msg) {
     auto sender_lock = sender.lock();
@@ -94,7 +97,6 @@ bool IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, 
     return impl_->SendTo(sender_lock, target_lock, session_id, std::move(msg));
 }
 
-
 const YAML::Node& IMillion::YamlSettings() const {
     return impl_->YamlSettings();
 }
@@ -110,6 +112,10 @@ bool IMillion::Timeout(uint32_t tick, const ServiceHandle& service, MessagePoint
 
 asio::io_context& IMillion::NextIoContext() {
     return impl_->NextIoContext();
+}
+
+NodeId IMillion::node_id() {
+    return impl_->node_id();
 }
 
 Logger& IMillion::logger() {

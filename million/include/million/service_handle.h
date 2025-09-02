@@ -10,7 +10,7 @@
 
 namespace million {
 
-using ServiceId = uint64_t;
+using ServiceId = SnowId;
 using ServiceName = std::string;
 
 class IService;

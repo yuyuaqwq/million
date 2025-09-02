@@ -23,8 +23,6 @@ public:
 
     void Stop();
 
-    ServiceId AllocServiceId();
-
     std::optional<ServiceShared> AddService(std::unique_ptr<IService> service);
     void DeleteService(ServiceCore* service);
 
@@ -35,20 +33,21 @@ public:
     void PushService(ServiceCore* service);
     ServiceCore* PopService();
 
-    bool SetServiceName(const ServiceShared& handle, const ServiceName& name);
-    std::optional<ServiceShared> GetServiceByName(const ServiceName& name);
+    std::optional<ServiceShared> FindServiceById(ServiceId id);
 
-    bool SetServiceId(const ServiceShared& handle, ServiceId id);
-    std::optional<ServiceShared> GetServiceById(ServiceId id);
+    bool SetServiceName(const ServiceShared& handle, const ServiceName& name);
+    std::optional<ServiceShared> FindServiceByName(const ServiceName& name);
 
     bool Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MessagePointer msg);
     
     Million& million() const { return *million_; }
 
 private:
-    Million* million_;
+    ServiceId AllocServiceId();
+    bool SetServiceId(const ServiceShared& handle, ServiceId id);
 
-    std::atomic<ServiceId> service_id_ = 0;
+private:
+    Million* million_;
 
     std::mutex services_mutex_;
     std::list<ServiceShared> services_;
