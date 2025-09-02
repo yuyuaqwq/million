@@ -263,20 +263,19 @@ public:
             co_return nullptr;
         }
 
-        // 为服务创建一个虚拟节点名（使用端点信息）
-        std::string virtual_node_name = endpoint_opt->ip + ":" + endpoint_opt->port;
-
-        if (wait_nodes_.find(virtual_node_name) == wait_nodes_.end()) {
+        if (wait_nodes_.find(&*endpoint_opt) == wait_nodes_.end()) {
             // 与目标服务的连接未开始
-            wait_nodes_.emplace(virtual_node_name);
+            wait_nodes_.emplace(&*endpoint_opt);
             auto& io_context = imillion().NextIoContext();
+            // ！！这里有个问题要注意，Cluster的endpoint如果析构了，生命周期的处理
+            // 也就是保证Cluster在后面析构
             asio::co_spawn(io_context.get_executor(), [this, target_service = msg->target_service_name,
-                virtual_node_name = virtual_node_name, ep = std::move(*endpoint_opt)]() mutable -> asio::awaitable<void>
+                ep = &*endpoint_opt]() mutable -> asio::awaitable<void>
             {
-                auto connection = co_await server_.ConnectTo(ep.ip, ep.port);
+                auto connection = co_await server_.ConnectTo(ep->ip, ep->port);
                 if (!connection) {
-                    logger().LOG_ERROR("server_.ConnectTo failed for service {} at {}:{}.", target_service, ep.ip, ep.port);
-                    wait_nodes_.erase(virtual_node_name);
+                    logger().LOG_ERROR("server_.ConnectTo failed for service {} at {}:{}.", target_service, ep->ip, ep->port);
+                    wait_nodes_.erase(ep);
                     co_return;
                 }
 
@@ -475,7 +474,7 @@ private:
 
     std::unordered_map<NodeId, NodeSessionShared> nodes_;
 
-    std::set<std::string> wait_nodes_;
+    std::set<EndPoint*> wait_nodes_;
 
     struct MsgElement {
         EndPoint* endpoint;
