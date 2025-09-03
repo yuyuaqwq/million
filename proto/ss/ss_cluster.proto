@@ -28,7 +28,8 @@ message QueryServiceIdRes {
 }
 
 message ForwardHeader {
-    uint64 src_service_id = 1;
-    uint64 target_service_id = 2;
+    // uint64 src_service_id = 1;
+    // uint64 target_service_id = 2;
+    string target_service_name = 2;
     uint64 session_id = 3;
 }
