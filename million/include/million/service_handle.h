@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <million/api.h>
+#include <million/seata_snowflake.hpp>
 
 namespace million {
 

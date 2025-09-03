@@ -25,7 +25,7 @@ public:
 
     virtual bool OnInit() override {
         // 获取 EtcdService
-        auto etcd_handle = imillion().GetServiceByName(etcd::kEtcdServiceName);
+        auto etcd_handle = imillion().FindServiceByName(etcd::kEtcdServiceName);
         if (!etcd_handle) {
             logger().LOG_ERROR("无法找到 EtcdService.");
             return false;
@@ -33,7 +33,7 @@ public:
         etcd_service_ = *etcd_handle;
 
         // 获取 ConfigDiscoveryService
-        auto config_handle = imillion().GetServiceByName(etcd::kConfigDiscoveryServiceName);
+        auto config_handle = imillion().FindServiceByName(etcd::kConfigDiscoveryServiceName);
         if (!config_handle) {
             logger().LOG_ERROR("无法找到 ConfigDiscoveryService.");
             return false;

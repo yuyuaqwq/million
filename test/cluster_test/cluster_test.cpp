@@ -28,7 +28,7 @@ public:
     virtual bool OnInit() override {
         imillion().SetServiceName(service_handle(), "TestService");
 
-        auto handle = imillion().GetServiceByName(million::cluster::kClusterServiceName);
+        auto handle = imillion().FindServiceByName(million::cluster::kClusterServiceName);
         if (!handle) {
             return false;
         }

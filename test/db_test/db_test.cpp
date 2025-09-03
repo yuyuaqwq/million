@@ -27,14 +27,14 @@ public:
 
     virtual bool OnInit() override {
         
-        auto handle = imillion().GetServiceByName(db::kDBServiceName);
+        auto handle = imillion().FindServiceByName(db::kDBServiceName);
         if (!handle) {
             logger().LOG_ERROR("Unable to find DbService.");
             return false;
         }
         db_service_ = *handle;
 
-        handle = imillion().GetServiceByName(db::kSqlServiceName);
+        handle = imillion().FindServiceByName(db::kSqlServiceName);
         if (!handle) {
             logger().LOG_ERROR("Unable to find SqlService.");
             return false;

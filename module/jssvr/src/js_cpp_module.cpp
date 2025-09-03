@@ -72,7 +72,7 @@ mjs::Value ServiceModuleObject::Call(mjs::Context* context, uint32_t par_count, 
         return mjs::Error::Throw(context, "The message is not an object.");
     }
 
-    auto target = service.imillion().GetServiceByName(stack.get(0).string_view());
+    auto target = service.imillion().FindServiceByName(stack.get(0).string_view());
     if (!target) {
         return mjs::Value();
     }
@@ -290,7 +290,7 @@ JSConfigService::~JSConfigService() = default;
 
 bool JSConfigService::OnInit() {
     // 获取配置服务句柄
-    auto config_service_opt = imillion().GetServiceByName(config::kConfigServiceName);
+    auto config_service_opt = imillion().FindServiceByName(config::kConfigServiceName);
     if (!config_service_opt) {
         logger().LOG_ERROR("Config service not found.");
         return false;

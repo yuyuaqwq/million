@@ -24,7 +24,7 @@ public:
         : Base(imillion) {}
 
     virtual bool OnInit() override {
-        auto handle = imillion().GetServiceByName(config::kConfigServiceName);
+        auto handle = imillion().FindServiceByName(config::kConfigServiceName);
         if (!handle) {
             logger().LOG_ERROR("Unable to find ConfigService.");
             return false;

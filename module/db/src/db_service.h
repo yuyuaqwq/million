@@ -62,14 +62,14 @@ public:
 
         imillion().SetServiceName(service_handle(), kDBServiceName);
 
-        auto handle = imillion().GetServiceByName(kSqlServiceName);
+        auto handle = imillion().FindServiceByName(kSqlServiceName);
         if (!handle) {
             logger().LOG_ERROR("Unable to find SqlService.");
             return false;
         }
         sql_service_ = *handle;
 
-        handle = imillion().GetServiceByName(kCacheServiceName);
+        handle = imillion().FindServiceByName(kCacheServiceName);
         if (!handle) {
             logger().LOG_ERROR("Unable to find SqlService.");
             return false;

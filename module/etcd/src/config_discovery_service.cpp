@@ -13,7 +13,7 @@ bool ConfigDiscoveryService::OnInit() {
     imillion().SetServiceName(service_handle(), kConfigDiscoveryServiceName);
 
     // 获取EtcdService
-    auto etcd_service_opt = imillion().GetServiceByName(kEtcdServiceName);
+    auto etcd_service_opt = imillion().FindServiceByName(kEtcdServiceName);
     if (!etcd_service_opt) {
         logger().LOG_ERROR("Unable to find EtcdService.");
         return false;

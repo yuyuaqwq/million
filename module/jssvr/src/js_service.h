@@ -99,8 +99,8 @@ private:
     }
 
     Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
-        db_service_handle_ = *imillion().GetServiceByName(db::kDBServiceName);
-        config_service_handle_ = *imillion().GetServiceByName(config::kConfigServiceName);
+        db_service_handle_ = *imillion().FindServiceByName(db::kDBServiceName);
+        config_service_handle_ = *imillion().FindServiceByName(config::kConfigServiceName);
         
         // 创建JSConfigService
         auto js_config_service_opt = imillion().NewService<JSConfigService>(this);
