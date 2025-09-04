@@ -18,6 +18,50 @@ namespace million {
 
 using ServiceTypeKey = std::type_index;
 
+class MessageElementWithWeakSender : public noncopyable {
+public:
+    MessageElementWithWeakSender(ServiceHandle sender, SessionId session_id, MessagePointer message) :
+        sender_(std::move(sender)),
+        session_id_(session_id),
+        message_(std::move(message)) {}
+    ~MessageElementWithWeakSender() = default;
+
+    MessageElementWithWeakSender(MessageElementWithWeakSender&&) noexcept = default;
+    MessageElementWithWeakSender& operator=(MessageElementWithWeakSender&&) noexcept = default;
+
+    const ServiceHandle& sender() const { return sender_; }
+    SessionId session_id() const { return session_id_; }
+    const MessagePointer& message() const { return message_; }
+    MessagePointer& message() { return message_; }
+
+private:
+    ServiceHandle sender_;
+    SessionId session_id_;
+    MessagePointer message_;
+};
+
+class MessageElementWithStrongSender : public noncopyable {
+public:
+    MessageElementWithStrongSender(ServiceShared sender, SessionId session_id, MessagePointer message) :
+        sender_(std::move(sender)),
+        session_id_(session_id),
+        message_(std::move(message)) {}
+    ~MessageElementWithStrongSender() = default;
+
+    MessageElementWithStrongSender(MessageElementWithStrongSender&&) noexcept = default;
+    MessageElementWithStrongSender& operator=(MessageElementWithStrongSender&&) noexcept = default;
+
+    const ServiceShared& sender() const { return sender_; }
+    SessionId session_id() const { return session_id_; }
+    const MessagePointer& message() const { return message_; }
+    MessagePointer& message() { return message_; }
+
+private:
+    ServiceShared sender_;
+    SessionId session_id_;
+    MessagePointer message_;
+};
+
 template <typename MessageT, typename ServiceT>
 class AutoRegisterMsgHandler {
 public:

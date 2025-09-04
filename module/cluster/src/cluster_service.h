@@ -22,27 +22,6 @@ MILLION_MESSAGE_DEFINE(, ClusterPersistentNodeServiceVirtualSessionMsg, (NodeSes
 
 using NodeServiceSessionId = uint64_t;
 
-class MessageElement : public noncopyable {
-public:
-    MessageElement(ServiceHandle sender, SessionId session_id, MessagePointer message) :
-        sender_(std::move(sender)),
-        session_id_(session_id),
-        message_(std::move(message)) {}
-    ~MessageElement() = default;
-
-    MessageElement(MessageElement&&) noexcept = default;
-    MessageElement& operator=(MessageElement&&) noexcept = default;
-
-    const ServiceHandle& sender() const { return sender_; }
-    SessionId session_id() const { return session_id_; }
-    MessagePointer& message() { return message_; }
-
-private:
-    ServiceHandle sender_;
-    SessionId session_id_;
-    MessagePointer message_;
-};
-
 class NodeSessionMessageQueue : public noncopyable {
 public:
     NodeSessionMessageQueue() {}
@@ -59,21 +38,21 @@ public:
         node_session_ = node_session;
     }
 
-    const std::vector<MessageElement>& send_queue() const {
+    const std::vector<MessageElementWithWeakSender>& send_queue() const {
         return send_queue_;
     }
 
-    std::vector<MessageElement>& send_queue() {
+    std::vector<MessageElementWithWeakSender>& send_queue() {
         return send_queue_;
     }
 
-    void AddMessage(ServiceHandle sender, SessionId session_id, MessagePointer message) {
+    void EnqueueMessage(ServiceHandle sender, SessionId session_id, MessagePointer message) {
         send_queue_.emplace_back(std::move(sender), session_id,std::move(message));
     }
 
 private:
     NodeSession* node_session_ = nullptr;
-    std::vector<MessageElement> send_queue_;
+    std::vector<MessageElementWithWeakSender> send_queue_;
 };
 
 
@@ -342,7 +321,7 @@ public:
             }, asio::detached);
         }
         // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
-        res.first->second.AddMessage(std::move(sender), session_id, std::move(msg_));
+        res.first->second.EnqueueMessage(std::move(sender), session_id, std::move(msg_));
 
         co_return nullptr;
     }

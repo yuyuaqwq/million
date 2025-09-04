@@ -25,7 +25,7 @@ bool ServiceCore::PushMsg(const ServiceShared& sender, SessionId session_id, Mes
         if (!IsReady() && !IsStarting() && !IsRunning() && !msg.IsType<ServiceExitMsg>()) {
             return false;
         }
-        auto ele = ServiceCore::MsgElement{ .sender = sender, .session_id = session_id, .msg = std::move(msg) };
+        auto ele = MessageElementWithStrongSender(sender, session_id, std::move(msg));
         msgs_.emplace(std::move(ele));
     }
     if (HasSeparateWorker()) {
@@ -34,7 +34,7 @@ bool ServiceCore::PushMsg(const ServiceShared& sender, SessionId session_id, Mes
     return true;
 }
 
-std::optional<ServiceCore::MsgElement> ServiceCore::PopMsg() {
+std::optional<MessageElementWithStrongSender> ServiceCore::PopMsg() {
     auto lock = std::lock_guard(msgs_mutex_);
     return PopMsgWithLock();
 }
@@ -44,10 +44,10 @@ bool ServiceCore::MsgQueueIsEmpty() {
     return msgs_.empty();
 }
 
-void ServiceCore::ProcessMsg(MsgElement ele) {
-    auto& sender = ele.sender;
-    auto session_id = ele.session_id;
-    auto& msg = ele.msg;
+void ServiceCore::ProcessMsg(MessageElementWithStrongSender ele) {
+    auto& sender = ele.sender();
+    auto session_id = ele.session_id();
+    auto& msg = ele.message();
 
     if (msg.IsType<ServiceStartMsg>()) {
         if (!IsReady() && !IsStopped()) {
@@ -221,7 +221,7 @@ bool ServiceCore::HasSeparateWorker() const {
 
 void ServiceCore::SeparateThreadHandle() {
     while (true) {
-        std::optional<ServiceCore::MsgElement> msg;
+        std::optional<MessageElementWithStrongSender> msg;
         {
             auto lock = std::unique_lock(msgs_mutex_);
             while (msgs_.empty()) {
@@ -240,7 +240,7 @@ void ServiceCore::SeparateThreadHandle() {
     }
 }
 
-std::optional<ServiceCore::MsgElement> ServiceCore::PopMsgWithLock() {
+std::optional<MessageElementWithStrongSender> ServiceCore::PopMsgWithLock() {
     if (msgs_.empty()) {
         return std::nullopt;
     }
@@ -252,7 +252,7 @@ std::optional<ServiceCore::MsgElement> ServiceCore::PopMsgWithLock() {
     //}
 
     msgs_.pop();
-    assert(msg.msg);
+    assert(msg.message());
     return msg;
 }
 

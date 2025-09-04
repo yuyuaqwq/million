@@ -23,17 +23,7 @@ class ServiceMgr;
      * 负责服务的启动、停止、消息队列管理和任务执行，
      * 维护服务在不同生命周期阶段的状态转换。
      */
-class ServiceCore : noncopyable {
-public:
-    /** \struct MsgElement
-     * \brief 消息元素结构体，封装服务间通信的消息数据
-     */
-struct MsgElement{
-        ServiceShared sender;    ///< 发送方服务共享指针
-        SessionId session_id;    ///< 会话ID，用于标识消息来源
-        MessagePointer msg;       ///< 消息指针，指向具体消息内容
-    };
-
+class ServiceCore : public noncopyable {
 public:
     /** \brief 构造函数
      * \param service_mgr 服务管理器指针
@@ -55,7 +45,7 @@ bool PushMsg(const ServiceShared& sender, SessionId session_id, MessagePointer m
     /** \brief 从消息队列弹出一条消息
      * \return 包含消息元素的optional，如果队列为空则返回nullopt
      */
-std::optional<MsgElement> PopMsg();
+std::optional<MessageElementWithStrongSender> PopMsg();
     /** \brief 检查消息队列是否为空
      * \return 队列为空返回true，否则返回false
      */
@@ -64,7 +54,7 @@ bool MsgQueueIsEmpty();
     /** \brief 处理单条消息
      * \param msg 要处理的消息元素
      */
-void ProcessMsg(MsgElement msg);
+void ProcessMsg(MessageElementWithStrongSender msg);
     /** \brief 处理多条消息
      * \param count 最多处理的消息数量
      */
@@ -151,7 +141,7 @@ private:
     /** \brief 带锁弹出消息
      * \return 包含消息元素的optional，队列为空时返回nullopt
      */
-    std::optional<ServiceCore::MsgElement> PopMsgWithLock();
+    std::optional<MessageElementWithStrongSender> PopMsgWithLock();
 
     /** \brief 回复消息给发送方
      * \param ele 任务元素指针，包含回复相关信息
@@ -176,7 +166,7 @@ private:
     bool in_queue_ = false; ///< 标记服务是否在消息处理队列中
 
     std::mutex msgs_mutex_;  ///< 消息队列互斥锁，保护msgs_的线程安全访问
-    std::queue<MsgElement> msgs_; ///< 消息队列，存储待处理的消息元素
+    std::queue<MessageElementWithStrongSender> msgs_; ///< 消息队列，存储待处理的消息元素
 
     // 允许指定某个任务执行完成之前，其他任务不允许并发执行
     // SessionId lock_task_ = kSessionIdInvalid;
