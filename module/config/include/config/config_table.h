@@ -19,8 +19,6 @@ using CompositeIndex = std::unordered_map<CompositeProtoFieldAny
 
 class MILLION_CONFIG_API ConfigTableBase : public noncopyable {
 public:
-    
-public:
     ConfigTableBase(ProtoMessageUnique table, const google::protobuf::Descriptor* config_descriptor)
         : table_(std::move(table))
         , table_field_(nullptr)
@@ -47,14 +45,8 @@ public:
     }
     ~ConfigTableBase() = default;
 
-    ConfigTableBase(ConfigTableBase&& other) noexcept
-        : table_(std::move(other.table_))
-        , table_field_(std::move(other.table_field_)) {}
-
-    void operator=(ConfigTableBase&& other) noexcept {
-        table_ = std::move(other.table_);
-        table_field_ = std::move(other.table_field_);
-    }
+    ConfigTableBase(ConfigTableBase&& other) noexcept = default;
+    ConfigTableBase& operator=(ConfigTableBase&& other) noexcept = default;
 
 public:
     const ProtoMessage* FindRow(const std::function<bool(const ProtoMessage& row)>& predicate) {
@@ -88,7 +80,6 @@ public:
         return table_->DebugString();
     }
 
-    // ����
     void BuildIndex(int32_t field_number) {
         const auto* row_descriptor = table_field_->message_type();
         const auto* field_desc = row_descriptor->FindFieldByNumber(field_number);
@@ -127,14 +118,12 @@ public:
         return GetRowByIndex(entry->second);
     }
 
-    // �������
     void BuildCompositeIndex(std::initializer_list<int32_t> field_numbers) {
         CompositeIndex index;
         auto reflection = table_->GetReflection();
         size_t row_count = GetRowCount();
         const auto* row_descriptor = table_field_->message_type();
 
-        // ��֤�����ֶζ�����
         std::vector<const google::protobuf::FieldDescriptor*> field_descriptors;
         for (auto field_number : field_numbers) {
             const auto* field_desc = row_descriptor->FindFieldByNumber(field_number);
@@ -142,7 +131,6 @@ public:
             field_descriptors.push_back(field_desc);
         }
 
-        // ��������
         for (size_t i = 0; i < row_count; ++i) {
             const auto& row = reflection->GetRepeatedMessage(*table_, table_field_, i);
             CompositeProtoFieldAny composite_key;
@@ -156,7 +144,6 @@ public:
             TaskAssert(inserted, "Duplicate composite key found when building index");
         }
 
-        // �洢������ʹ���ֶκŵ������Ϊkey
         auto field_numbers_vec = std::vector<int32_t>(field_numbers);
         composite_indices_.emplace(std::move(field_numbers_vec), std::move(index));
     }
@@ -183,16 +170,11 @@ public:
     }
 
 private:
-
-
-private:
     ProtoMessageUnique table_;
     const google::protobuf::FieldDescriptor* table_field_;
 
-    // �ֶ�����
     std::unordered_map<int32_t, Index> field_index_;
 
-    // �������
     struct VectorIntHash {
         size_t operator()(const std::vector<int32_t>& vec) const {
             size_t seed = vec.size();

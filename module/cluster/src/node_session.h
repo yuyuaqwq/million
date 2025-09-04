@@ -32,6 +32,19 @@ public:
         return iter->second;
     }
 
+    void AddTargetServiceId(ServiceName target_service_name, ServiceId target_service_id) {
+        auto res = target_service_name_map_.emplace(std::move(target_service_name), target_service_id);
+        assert(res.second);
+    }
+
+    std::optional<ServiceId> FindTargetServiceIdByName(const ServiceName& target_service_name) {
+        auto iter = target_service_name_map_.find(target_service_name);
+        if (iter == target_service_name_map_.end()) {
+            return std::nullopt;
+        }
+        return iter->second;
+    }
+
 private:
     // 定义键类型
     struct ServiceIdPair {
@@ -58,7 +71,9 @@ private:
 
     NodeId node_id_ = kNodeIdInvalid;
     std::unordered_map<ServiceIdPair, SessionId, ServiceIdPairHash> service_virtual_session_map_;
-    std::unordered_map<ServiceName, SessionId> service_name_map_;
+    std::unordered_map<ServiceName, SessionId> target_service_name_map_;
+
+    // std::queue<>;
 };
 
 } // namespace cluster

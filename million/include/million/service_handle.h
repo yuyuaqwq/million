@@ -12,6 +12,7 @@
 namespace million {
 
 using ServiceId = SnowId;
+constexpr ServiceId kServiceInvalidId = kSnowIdInvalid;
 using ServiceName = std::string;
 
 class IService;

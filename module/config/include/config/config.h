@@ -17,12 +17,8 @@ public:
         : weak_(std::move(weak)) {}
     ~ConfigTableWeakBase() = default;
 
-    ConfigTableWeakBase(ConfigTableWeakBase&& other) noexcept
-        : weak_(std::move(other.weak_)) {}
-
-    void operator=(ConfigTableWeakBase&& other) noexcept {
-        weak_ = std::move(other.weak_);
-    }
+    ConfigTableWeakBase(ConfigTableWeakBase&& other) noexcept = default;
+    ConfigTableWeakBase& operator=(ConfigTableWeakBase&& other) noexcept = default;
 
     std::optional<ConfigTableShared> TryLock(const google::protobuf::Descriptor* descriptor) {
         auto config_lock = weak_.lock();
