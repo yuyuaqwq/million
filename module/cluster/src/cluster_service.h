@@ -321,7 +321,7 @@ public:
             }, asio::detached);
         }
         // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
-        res.first->second.EnqueueMessage(std::move(sender), session_id, std::move(msg_));
+        res.first->second.EnqueueMessage(sender, session_id, std::move(msg_));
 
         co_return nullptr;
     }
