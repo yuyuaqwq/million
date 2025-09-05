@@ -14,9 +14,8 @@ namespace cluster {
 
 constexpr const char* kClusterServiceName = "ClusterService";
 
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterSend, (ServiceName) target_service_name, (ProtoMessageUnique) msg);
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterCall, (ServiceName) target_service_name, (ProtoMessageUnique) msg);
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterReply, (ServiceName) target_service_name, (ProtoMessageUnique) msg);
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterSendMessage, (ServiceName) target_service_name, (ProtoMessageUnique) proto_msg);
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterCallMessage, (ServiceName) target_service_name, (ProtoMessageUnique) proto_msg);
 
 // Cluster.Call返回一个Task<ProtoMsgUnique>，通过co_return 将proto_msg返回回来
 // Cluster.Call内部：

@@ -137,31 +137,31 @@ public:
 
         switch (msg_body.body_case()) {
         case ss::cluster::MsgBody::BodyCase::kHandshakeReq: {
-            co_await HandleHandshakeReq(std::move(msg->node_session), msg_body.handshake_req());
+            co_await HandleRecvHandshakeReq(std::move(msg->node_session), msg_body.handshake_req());
             break;
         }
         case ss::cluster::MsgBody::BodyCase::kHandshakeRes: {
-            co_await HandleHandshakeRes(std::move(msg->node_session), msg_body.handshake_res());
+            co_await HandleRecvHandshakeRes(std::move(msg->node_session), msg_body.handshake_res());
             break;
         }
         case ss::cluster::MsgBody::BodyCase::kServiceQueryReq: {
-            co_await HandleServiceQueryReq(std::move(msg->node_session), msg_body.service_query_req());
+            co_await HandleRecvServiceQueryReq(std::move(msg->node_session), msg_body.service_query_req());
             break;
         }
         case ss::cluster::MsgBody::BodyCase::kServiceQueryRes: {
-            co_await HandleServiceQueryRes(std::move(msg->node_session), msg_body.service_query_res());
+            co_await HandleRecvServiceQueryRes(std::move(msg->node_session), msg_body.service_query_res());
             break;
         }
         case ss::cluster::MsgBody::BodyCase::kClusterSend: {
-            co_await HandleClusterSend(std::move(msg->node_session), msg_body.cluster_send(), header_size, std::move(msg->packet));
+            co_await HandleRecvClusterSend(std::move(msg->node_session), msg_body.cluster_send(), header_size, std::move(msg->packet));
             break;
         }
         case ss::cluster::MsgBody::BodyCase::kClusterCall: {
-            co_await HandleClusterCall(std::move(msg->node_session), msg_body.cluster_call(), header_size, std::move(msg->packet));
+            co_await HandleRecvClusterCall(std::move(msg->node_session), msg_body.cluster_call(), header_size, std::move(msg->packet));
             break;
         }
         case ss::cluster::MsgBody::BodyCase::kClusterReply: {
-            co_await HandleClusterReply(std::move(msg->node_session), msg_body.cluster_reply(), header_size, std::move(msg->packet));
+            co_await HandleRecvClusterReply(std::move(msg->node_session), msg_body.cluster_reply(), header_size, std::move(msg->packet));
             break;
         }
         default: {
@@ -172,91 +172,22 @@ public:
         co_return nullptr;
     }
 
-    MILLION_MESSAGE_HANDLE(ClusterSend, msg) {
-        auto sender_lock = sender.lock();
-        if (!sender_lock) {
-            co_return nullptr;
-        }
-        auto sender_ptr = sender.get_ptr(sender_lock);
-        
-        // 首先尝试通过服务名找到对应的节点会话
-        auto node_session_iter = service_name_to_node_session_.find(msg->target_service_name);
-        if (node_session_iter != service_name_to_node_session_.end()) {
-            auto node_session = node_session_iter->second;
-            auto& target_service_name_map = node_session->target_service_name_map();
-            auto service_id_iter = target_service_name_map.find(msg->target_service_name);
+    MILLION_MESSAGE_HANDLE(ClusterSendMessage, msg) {
+        const auto& target_service_name = msg->target_service_name;
+        const auto& proto_msg = msg->proto_msg;
+        HandleClusterCallOrSendMessage(sender, session_id, std::move(msg_), target_service_name, proto_msg);
+        co_return nullptr;
+    }
 
-            // 需要向目标查询service id
-            if (service_id_iter == target_service_name_map.end()) {
-                // 缓存这条消息
-                node_session->message_queue().emplace_back(sender, session_id, std::move(msg_));
-
-                // 发送查询请求
-                ss::cluster::MsgBody msg_body;
-                auto* req = msg_body.mutable_service_query_req();
-                req->set_target_service_name(msg->target_service_name);
-
-                auto packet = ProtoMsgToPacket(msg_body);
-                PacketHeaderInit(node_session, packet, net::Packet());
-                node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
-                co_return nullptr;
-            }
-
-            SendClusterMessage(node_session, sender_ptr->service_id(), service_id_iter->second, session_id, *msg->msg);
-            co_return nullptr;
-        }
-
-        // 如果没有找到已连接的会话，查找服务端点配置
-        auto endpoint_opt = FindServiceEndpoint(msg->target_service_name);
-        if (!endpoint_opt) {
-            logger().LOG_ERROR("Service cannot be found: {}.", msg->target_service_name);
-            co_return nullptr;
-        }
-
-        auto endpoint_str = std::format("{}:{}", endpoint_opt->ip, endpoint_opt->port);
-        auto wait_node_session_map_lock = std::lock_guard(node_session_message_queue_map_mutex_);
-        auto res = node_session_message_queue_map_.emplace(endpoint_str, NodeSessionMessageQueue());
-        if (res.second) {
-            auto& io_context = imillion().NextIoContext();
-            asio::co_spawn(io_context.get_executor(), [this, target_service = msg->target_service_name,
-                node_msg_iter = res.first, &endpoint = *endpoint_opt]() mutable -> asio::awaitable<void>
-            {
-                auto connection = co_await server_.ConnectTo(endpoint.ip, endpoint.port);
-                if (!connection) {
-                    logger().LOG_ERROR("server_.ConnectTo failed for service {} at {}:{}.", target_service, endpoint.ip, endpoint.port);
-                    
-                    {
-                        auto lock = std::lock_guard(node_session_message_queue_map_mutex_);
-                        node_session_message_queue_map_.erase(node_msg_iter);
-                    }
-                    co_return;
-                }
-
-                // 发起握手请求
-                auto node_session = std::move(std::static_pointer_cast<NodeSession>(*connection));
-
-                auto res = service_name_to_node_session_.emplace(target_service, node_session.get());
-                assert(res.second);
-                node_msg_iter->second.set_node_session(node_session.get());
-
-                // 与目标服务的连接未开始
-                ss::cluster::MsgBody msg_body;
-                auto* req = msg_body.mutable_handshake_req();
-                req->set_src_node_id(imillion().node_id());
-
-                auto packet = ProtoMsgToPacket(msg_body);
-                PacketHeaderInit(node_session.get(), packet, net::Packet());
-                node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
-            }, asio::detached);
-        }
-
-        // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
-        res.first->second.vector().emplace_back(sender, session_id, std::move(msg_));
+    MILLION_MESSAGE_HANDLE(ClusterCallMessage, msg) {
+        const auto& target_service_name = msg->target_service_name;
+        const auto& proto_msg = msg->proto_msg;
+        HandleClusterCallOrSendMessage(sender, session_id, std::move(msg_), target_service_name, proto_msg);
         co_return nullptr;
     }
 
 private:
-    Task<void> HandleHandshakeReq(NodeSessionShared&& node_session, const ss::cluster::HandshakeReq& req) {
+    Task<void> HandleRecvHandshakeReq(NodeSessionShared&& node_session, const ss::cluster::HandshakeReq& req) {
         // 收到握手请求，当前是被动连接方
         node_session->set_node_id(req.src_node_id());
 
@@ -284,7 +215,7 @@ private:
         co_return;
     }
 
-    Task<void> HandleHandshakeRes(NodeSessionShared&& node_session, const ss::cluster::HandshakeRes& res) {
+    Task<void> HandleRecvHandshakeRes(NodeSessionShared&& node_session, const ss::cluster::HandshakeRes& res) {
         // 收到握手响应，当前是主动连接方
 
         // 创建节点
@@ -308,14 +239,14 @@ private:
 
         auto& queue_vector = queue.vector();
         for (auto iter = queue_vector.begin(); iter != queue_vector.end(); ++iter) {
-            auto msg = iter->message().GetMutableMessage<ClusterSend>();
+            auto msg = iter->message().GetMutableMessage<ClusterSendMessage>();
             co_await OnHandle(iter->sender(), iter->session_id(), std::move(iter->message()), msg);
         }
 
         co_return;
     }
 
-    Task<void> HandleServiceQueryReq(NodeSessionShared&& node_session, const ss::cluster::ServiceQueryReq& req) {
+    Task<void> HandleRecvServiceQueryReq(NodeSessionShared&& node_session, const ss::cluster::ServiceQueryReq& req) {
         auto& target_service_name = req.target_service_name();
         auto target_service_handle = imillion().FindServiceByName(target_service_name);
         if (!target_service_handle) {
@@ -344,7 +275,7 @@ private:
         co_return;
     }
 
-    Task<void> HandleServiceQueryRes(NodeSessionShared&& node_session, const ss::cluster::ServiceQueryRes& res) {
+    Task<void> HandleRecvServiceQueryRes(NodeSessionShared&& node_session, const ss::cluster::ServiceQueryRes& res) {
         auto& target_service_name_map = node_session->target_service_name_map();
         target_service_name_map[res.target_service_name()] = res.target_service_id();
         auto& ep = node_session->remote_endpoint();
@@ -354,7 +285,7 @@ private:
         // 发送缓存队列的包
         auto& queue = node_session->message_queue();
         for (auto iter = queue.begin(); iter != queue.end(); ) {
-            auto msg = iter->message().GetMutableMessage<ClusterSend>();
+            auto msg = iter->message().GetMutableMessage<ClusterSendMessage>();
             if (msg->target_service_name == res.target_service_name()) {
                 co_await OnHandle(iter->sender(), iter->session_id(), std::move(iter->message()), msg);
                 queue.erase(++iter);
@@ -367,7 +298,7 @@ private:
         co_return;
     }
 
-    Task<void> HandleClusterSend(NodeSessionShared&& node_session, const ss::cluster::ClusterSend& notify, uint32_t header_size, net::Packet&& packet) {
+    Task<void> HandleRecvClusterSend(NodeSessionShared&& node_session, const ss::cluster::ClusterSend& notify, uint32_t header_size, net::Packet&& packet) {
         // 还需要判断下，连接没有完成握手，则不允许转发包
         auto src_service_id = notify.src_service_id();
         auto target_service_id = notify.target_service_id();
@@ -397,7 +328,7 @@ private:
         co_return;
     }
     
-    Task<void> HandleClusterCall(NodeSessionShared&& node_session, const ss::cluster::ClusterCall& notify, uint32_t header_size, net::Packet&& packet) {
+    Task<void> HandleRecvClusterCall(NodeSessionShared&& node_session, const ss::cluster::ClusterCall& notify, uint32_t header_size, net::Packet&& packet) {
         // 还需要判断下，连接没有完成握手，则不允许转发包
         auto src_service_id = notify.src_service_id();
         auto target_service_id = notify.target_service_id();
@@ -430,12 +361,12 @@ private:
         logger().LOG_TRACE("Cluster Recv ProtoMessage: {}.", session_id);
 
         auto proto_msg = std::move(recv_msg.GetProtoMessage());
-        ReplyClusterMessage(node_session.get(), target_service_id
+        SendClusterReplyNotify(node_session.get(), target_service_id
             , src_service_id, session_id, *proto_msg);
         co_return;
     }
 
-    Task<void> HandleClusterReply(NodeSessionShared&& node_session, const ss::cluster::ClusterReply& notify, uint32_t header_size, net::Packet&& packet) {
+    Task<void> HandleRecvClusterReply(NodeSessionShared&& node_session, const ss::cluster::ClusterReply& notify, uint32_t header_size, net::Packet&& packet) {
         // 还需要判断下，连接没有完成握手，则不允许转发包
         auto src_service_id = notify.src_service_id();
         auto target_service_id = notify.target_service_id();
@@ -465,6 +396,90 @@ private:
         co_return;
     }
 
+    // send_notify_function传入成员函数指针，选择性调用SendClusterSendNotify或者SendClusterCallNotify
+    Task<void> HandleClusterCallOrSendMessage(const ServiceHandle& sender, SessionId session_id, MessagePointer&& msg_,
+        const ServiceName& target_service_name, const ProtoMessageUnique& proto_msg,  send_notify_function) {
+        auto sender_lock = sender.lock();
+        if (!sender_lock) {
+            co_return;
+        }
+        auto sender_ptr = sender.get_ptr(sender_lock);
+
+        // 首先尝试通过服务名找到对应的节点会话
+        auto node_session_iter = service_name_to_node_session_.find(target_service_name);
+        if (node_session_iter != service_name_to_node_session_.end()) {
+            auto node_session = node_session_iter->second;
+            auto& target_service_name_map = node_session->target_service_name_map();
+            auto service_id_iter = target_service_name_map.find(target_service_name);
+
+            // 需要向目标查询service id
+            if (service_id_iter == target_service_name_map.end()) {
+                // 缓存这条消息
+                node_session->message_queue().emplace_back(sender, session_id, std::move(msg_));
+
+                // 发送查询请求
+                ss::cluster::MsgBody msg_body;
+                auto* req = msg_body.mutable_service_query_req();
+                req->set_target_service_name(target_service_name);
+
+                auto packet = ProtoMsgToPacket(msg_body);
+                PacketHeaderInit(node_session, packet, net::Packet());
+                node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
+                co_return;
+            }
+
+            SendClusterSendNotify(node_session, sender_ptr->service_id(), service_id_iter->second, session_id, *proto_msg);
+            co_return;
+        }
+
+        // 如果没有找到已连接的会话，查找服务端点配置
+        auto endpoint_opt = FindServiceEndpoint(target_service_name);
+        if (!endpoint_opt) {
+            logger().LOG_ERROR("Service cannot be found: {}.", target_service_name);
+            co_return;
+        }
+
+        auto endpoint_str = std::format("{}:{}", endpoint_opt->ip, endpoint_opt->port);
+        auto wait_node_session_map_lock = std::lock_guard(node_session_message_queue_map_mutex_);
+        auto res = node_session_message_queue_map_.emplace(endpoint_str, NodeSessionMessageQueue());
+        if (res.second) {
+            auto& io_context = imillion().NextIoContext();
+            asio::co_spawn(io_context.get_executor(), [this, target_service = target_service_name,
+                node_msg_iter = res.first, &endpoint = *endpoint_opt]() mutable -> asio::awaitable<void>
+                {
+                    auto connection = co_await server_.ConnectTo(endpoint.ip, endpoint.port);
+                    if (!connection) {
+                        logger().LOG_ERROR("server_.ConnectTo failed for service {} at {}:{}.", target_service, endpoint.ip, endpoint.port);
+
+                        {
+                            auto lock = std::lock_guard(node_session_message_queue_map_mutex_);
+                            node_session_message_queue_map_.erase(node_msg_iter);
+                        }
+                        co_return;
+                    }
+
+                    // 发起握手请求
+                    auto node_session = std::move(std::static_pointer_cast<NodeSession>(*connection));
+
+                    auto res = service_name_to_node_session_.emplace(target_service, node_session.get());
+                    assert(res.second);
+                    node_msg_iter->second.set_node_session(node_session.get());
+
+                    // 与目标服务的连接未开始
+                    ss::cluster::MsgBody msg_body;
+                    auto* req = msg_body.mutable_handshake_req();
+                    req->set_src_node_id(imillion().node_id());
+
+                    auto packet = ProtoMsgToPacket(msg_body);
+                    PacketHeaderInit(node_session.get(), packet, net::Packet());
+                    node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
+                }, asio::detached);
+        }
+
+        // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
+        res.first->second.vector().emplace_back(sender, session_id, std::move(msg_));
+        co_return;
+    }
 
 private:
     struct EndPoint {
@@ -572,7 +587,9 @@ private:
         node_session->Send(std::move(size_packet), size_span, total_size);
     }
 
-    void SendClusterMessage(NodeSession* node_session, ServiceId src_service_id, ServiceId target_service_id, SessionId session_id, const ProtoMessage& msg) {
+
+
+    void SendClusterSendNotify(NodeSession* node_session, ServiceId src_service_id, ServiceId target_service_id, SessionId session_id, const ProtoMessage& msg) {
         auto packet_opt = imillion().proto_mgr().codec().EncodeMessage(msg);
         if (!packet_opt) {
             return;
@@ -596,7 +613,31 @@ private:
         node_session->Send(std::move(packet), span, 0);
     }
     
-    void ReplyClusterMessage(NodeSession* node_session, ServiceId src_service_id, ServiceId target_service_id, SessionId session_id, const ProtoMessage& msg) {
+    void SendClusterCallNotify(NodeSession* node_session, ServiceId src_service_id, ServiceId target_service_id, SessionId session_id, const ProtoMessage& msg) {
+        auto packet_opt = imillion().proto_mgr().codec().EncodeMessage(msg);
+        if (!packet_opt) {
+            return;
+        }
+        auto packet = std::move(*packet_opt);
+
+        // 追加集群头部
+        ss::cluster::MsgBody msg_body;
+        auto* header = msg_body.mutable_cluster_call();
+        header->set_src_service_id(src_service_id);
+        header->set_target_service_id(target_service_id);
+        header->set_session_id(session_id);
+        auto header_packet = ProtoMsgToPacket(msg_body);
+
+        PacketHeaderInit(node_session, header_packet, packet);
+
+        auto header_span = net::PacketSpan(header_packet);
+        node_session->Send(std::move(header_packet), header_span, 0);
+
+        auto span = net::PacketSpan(packet);
+        node_session->Send(std::move(packet), span, 0);
+    }
+
+    void SendClusterReplyNotify(NodeSession* node_session, ServiceId src_service_id, ServiceId target_service_id, SessionId session_id, const ProtoMessage& msg) {
         auto packet_opt = imillion().proto_mgr().codec().EncodeMessage(msg);
         if (!packet_opt) {
             return;
