@@ -175,14 +175,14 @@ public:
     MILLION_MESSAGE_HANDLE(ClusterSendMessage, msg) {
         const auto& target_service_name = msg->target_service_name;
         const auto& proto_msg = msg->proto_msg;
-        HandleClusterCallOrSendMessage(sender, session_id, std::move(msg_), target_service_name, proto_msg);
+        HandleClusterCallOrSendMessage(sender, session_id, std::move(msg_), target_service_name, proto_msg, &ClusterService::SendClusterSendNotify);
         co_return nullptr;
     }
 
     MILLION_MESSAGE_HANDLE(ClusterCallMessage, msg) {
         const auto& target_service_name = msg->target_service_name;
         const auto& proto_msg = msg->proto_msg;
-        HandleClusterCallOrSendMessage(sender, session_id, std::move(msg_), target_service_name, proto_msg);
+        HandleClusterCallOrSendMessage(sender, session_id, std::move(msg_), target_service_name, proto_msg, &ClusterService::SendClusterCallNotify);
         co_return nullptr;
     }
 
@@ -396,9 +396,11 @@ private:
         co_return;
     }
 
+    using SendNotifyFunction = void (ClusterService::*)(NodeSession*, ServiceId, ServiceId, SessionId, const ProtoMessage&);
+    
     // send_notify_function传入成员函数指针，选择性调用SendClusterSendNotify或者SendClusterCallNotify
     Task<void> HandleClusterCallOrSendMessage(const ServiceHandle& sender, SessionId session_id, MessagePointer&& msg_,
-        const ServiceName& target_service_name, const ProtoMessageUnique& proto_msg,  send_notify_function) {
+        const ServiceName& target_service_name, const ProtoMessageUnique& proto_msg, SendNotifyFunction send_notify_function) {
         auto sender_lock = sender.lock();
         if (!sender_lock) {
             co_return;
@@ -428,7 +430,7 @@ private:
                 co_return;
             }
 
-            SendClusterSendNotify(node_session, sender_ptr->service_id(), service_id_iter->second, session_id, *proto_msg);
+            (this->*send_notify_function)(node_session, sender_ptr->service_id(), service_id_iter->second, session_id, *proto_msg);
             co_return;
         }
 
