@@ -34,7 +34,7 @@ public:
 
 private:
     Token token_ = kInvaildToken;
-    million::SessionId agent_id_ = kSessionIdInvalid;    // agent_id
+    million::SessionId agent_id_ = kSessionInvalidId;    // agent_id
     ServiceHandle agent_handle_;
 };
 

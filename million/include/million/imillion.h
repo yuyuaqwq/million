@@ -155,11 +155,11 @@ inline std::optional<SessionId> IService::Send(const ServiceHandle& target, Mess
 }
 
 inline bool IService::SendTo(const ServiceHandle& target, SessionId session_id, MessagePointer msg) {
-    return imillion_->SendTo(service_handle_, target, session_id, std::move(msg)) != kSessionIdInvalid;
+    return imillion_->SendTo(service_handle_, target, session_id, std::move(msg)) != kSessionInvalidId;
 }
 
 inline bool IService::Reply(const ServiceHandle& target, SessionId session_id, MessagePointer msg) {
-    return imillion_->SendTo(service_handle_, target, SessionSendToReplyId(session_id), std::move(msg)) != kSessionIdInvalid;
+    return imillion_->SendTo(service_handle_, target, SessionSendToReplyId(session_id), std::move(msg)) != kSessionInvalidId;
 }
 
 inline void IService::Timeout(uint32_t tick, MessagePointer msg) {

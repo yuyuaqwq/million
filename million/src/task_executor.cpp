@@ -125,7 +125,7 @@ std::optional<MessagePointer> TaskExecutor::TrySchedule(TaskElement& ele, Sessio
 TaskElement* TaskExecutor::Push(SessionId id, TaskElement&& ele) {
     assert(!SessionIsReplyId(id));
     auto& million = service_->service_mgr()->million();
-    if (id == kSessionIdInvalid) {
+    if (id == kSessionInvalidId) {
         million.logger().LOG_ERROR("Waiting for an invalid session.");
         return nullptr;
     }

@@ -14,7 +14,7 @@ namespace million {
 // https://seata.apache.org/zh-cn/blog/seata-analysis-UUID-generator/
 using WorkerId = NodeId;
 using SnowId = uint64_t;
-constexpr SnowId kSnowIdInvalid = 0;
+constexpr SnowId kSnowInvalidId = 0;
 
 class SeataSnowflake : public noncopyable {
 public:

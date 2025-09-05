@@ -8,7 +8,9 @@ message MsgBody {
         HandshakeRes handshake_res = 2;
         ServiceQueryReq service_query_req = 3;
         ServiceQueryRes service_query_res = 4;
-        ClusterMessageNotify cluster_message_notify = 5;
+        ClusterSend cluster_send = 5;
+        ClusterCall cluster_call = 6;
+        ClusterReply cluster_reply = 7;
     }
 }
 
@@ -29,7 +31,19 @@ message ServiceQueryRes {
     uint64 target_service_id = 2;
 }
 
-message ClusterMessageNotify {
+message ClusterSend {
+    uint64 src_service_id = 1;
+    uint64 target_service_id = 2;
+    uint64 session_id = 3;
+}
+
+message ClusterCall {
+    uint64 src_service_id = 1;
+    uint64 target_service_id = 2;
+    uint64 session_id = 3;
+}
+
+message ClusterReply {
     uint64 src_service_id = 1;
     uint64 target_service_id = 2;
     uint64 session_id = 3;
