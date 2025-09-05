@@ -56,7 +56,7 @@ private:
 inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {
     auto packet = net::Packet(msg.ByteSize());
     if (!msg.SerializeToArray(packet.data(), packet.size())) {
-        throw TaskAbortException("Failed to serialize protobuf message to packet.");
+        TaskAbort("Failed to serialize protobuf message to packet.");
     }
     return packet;
 }

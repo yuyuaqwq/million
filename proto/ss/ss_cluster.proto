@@ -6,7 +6,9 @@ message MsgBody {
     oneof body {
         HandshakeReq handshake_req = 1;
         HandshakeRes handshake_res = 2;
-        ClusterMessageNotify cluster_message_notify = 3;
+        ServiceQueryReq service_query_req = 3;
+        ServiceQueryRes service_query_res = 4;
+        ClusterMessageNotify cluster_message_notify = 5;
     }
 }
 
@@ -18,11 +20,11 @@ message HandshakeRes {
     uint64 target_node_id = 1;
 }
 
-message ServiceIdQueryReq {
+message ServiceQueryReq {
     string target_service_name = 1;
 }
 
-message ServiceIdQueryRes {
+message ServiceQueryRes {
     string target_service_name = 1;
     uint64 target_service_id = 2;
 }

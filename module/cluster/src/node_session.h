@@ -19,6 +19,9 @@ public:
     NodeId node_id() const { return node_id_; }
     void set_node_id(NodeId node_id) { node_id_ = node_id; }
 
+    const std::queue<MessageElementWithWeakSender>& message_queue() const { return message_queue_; }
+    std::queue<MessageElementWithWeakSender>& message_queue() { return message_queue_; }
+
     bool CreateServiceVirutalSession(ServiceId src_service_id, ServiceId target_service_id, SessionId service_virtual_session_id) {
         auto res = service_virtual_session_map_.emplace(ServiceIdPair{ src_service_id, target_service_id }, service_virtual_session_id);
         return res.second;
@@ -73,7 +76,7 @@ private:
     std::unordered_map<ServiceIdPair, SessionId, ServiceIdPairHash> service_virtual_session_map_;
     std::unordered_map<ServiceName, SessionId> target_service_name_map_;
 
-    // std::queue<>;
+    std::queue<MessageElementWithWeakSender> message_queue_;
 };
 
 } // namespace cluster

@@ -11,7 +11,7 @@
 namespace ss = million::ss;
 namespace protobuf = google::protobuf;
 
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(, TestMsg, (million::cluster::NodeId) target_node_id, (million::ProtoMessageUnique) req);
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(, TestMsg, (million::NodeId) target_node_id, (million::ProtoMessageUnique) req);
 
 class TestService : public million::IService {
     MILLION_SERVICE_DEFINE(TestService);

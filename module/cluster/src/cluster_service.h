@@ -38,21 +38,17 @@ public:
         node_session_ = node_session;
     }
 
-    const std::vector<MessageElementWithWeakSender>& send_queue() const {
-        return send_queue_;
+    const std::vector<MessageElementWithWeakSender>& message_queue() const {
+        return message_queue_;
     }
 
-    std::vector<MessageElementWithWeakSender>& send_queue() {
-        return send_queue_;
-    }
-
-    void EnqueueMessage(ServiceHandle sender, SessionId session_id, MessagePointer message) {
-        send_queue_.emplace_back(std::move(sender), session_id,std::move(message));
+    std::vector<MessageElementWithWeakSender>& message_queue() {
+        return message_queue_;
     }
 
 private:
     NodeSession* node_session_ = nullptr;
-    std::vector<MessageElementWithWeakSender> send_queue_;
+    std::vector<MessageElementWithWeakSender> message_queue_;
 };
 
 
@@ -168,89 +164,23 @@ public:
 
         switch (msg_body.body_case()) {
         case ss::cluster::MsgBody::BodyCase::kHandshakeReq: {
-            // 收到握手请求，当前是被动连接方
-            auto& req = msg_body.handshake_req();
-            node_session.set_node_id(req.src_node_id());
-
-            // 还需要检查是否与目标节点存在连接，如果已存在，说明该连接已经失效，需要断开
-            auto old_node_session = FindNodeSession(req.src_node_id());
-            if (old_node_session) {
-                old_node_session->Close();
-                logger().LOG_INFO("old connection, ip: {}, port: {}, cur_node: {}, req_src_node: {}", ip, port, imillion().node_id(), req.src_node_id());
-            }
-
-            // 能否匹配都回包
-            ss::cluster::MsgBody msg_body;
-            auto* res = msg_body.mutable_handshake_res();
-            res->set_target_node_id(imillion().node_id());
-
-            auto packet = ProtoMsgToPacket(msg_body);
-            PacketHeaderInit(&node_session, packet, net::Packet());
-            msg->node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
-
-            // 创建节点
-            CreateNodeSession(std::move(msg->node_session), false);
+            co_await HandleHandshakeReq(std::move(msg->node_session), msg_body.handshake_req());
             break;
         }
         case ss::cluster::MsgBody::BodyCase::kHandshakeRes: {
-            // 收到握手响应，当前是主动连接方
-            auto& res = msg_body.handshake_res();
+            co_await HandleHandshakeRes(std::move(msg->node_session), msg_body.handshake_res());
+            break;
+        }
+        case ss::cluster::MsgBody::BodyCase::kServiceQueryReq: {
 
-            // 创建节点
-            msg->node_session->set_node_id(res.target_node_id());
-            auto& node_session = CreateNodeSession(std::move(msg->node_session), true);
-
-            // 完成连接，发送相关队列包
-            decltype(node_session_message_queue_map_)::iterator msg_queue_iter;
-            {
-                auto lock = std::lock_guard(node_session_message_queue_map_mutex_);
-                for (msg_queue_iter = node_session_message_queue_map_.begin(); msg_queue_iter != node_session_message_queue_map_.end(); ) {
-                    if (msg_queue_iter->second.node_session() == &node_session) {
-                        break;
-                    }
-                }
-                assert(msg_queue_iter == node_session_message_queue_map_.end());
-            }
-
-            auto& send_queue = msg_queue_iter->second.send_queue();
-            for (auto iter = send_queue.begin(); iter != send_queue.end(); ++iter) {
-                auto msg = iter->message().GetMutableMessage<ClusterSend>();
-                co_await OnHandle(iter->sender(), iter->session_id(), std::move(iter->message()), msg);
-            }
-            
             break;
         }
         case ss::cluster::MsgBody::BodyCase::kClusterMessageNotify: {
-            // 还需要判断下，连接没有完成握手，则不允许转发包
-
-            auto& header = msg_body.cluster_message_notify();
-            auto src_service_id = header.src_service_id();
-            auto target_service_id = header.target_service_id();
-            auto target_service_handle = imillion().FindServiceById(header.target_service_id());
-            if (!target_service_handle) {
-                logger().LOG_WARN("The target service does not exist, ep:{}:{}, src_service_id:{}, target_service_id:{}",
-                    ip, port, src_service_id, target_service_id);
-                break;
-            }
-
-            auto span = net::PacketSpan(
-                msg->packet.begin() + sizeof(header_size) + header_size,
-                msg->packet.end());
-
-            // 基于持久会话，建立两端的虚拟服务会话
-            auto service_session_id = node_session.FindServiceVirutalSession(src_service_id, target_service_id);
-            if (!service_session_id) {
-                service_session_id = Send<ClusterPersistentNodeServiceVirtualSessionMsg>(service_handle()
-                    , msg->node_session, src_service_id, target_service_id);
-                node_session.CreateServiceVirutalSession(src_service_id, target_service_id, service_session_id.value());
-            }
-            // 将消息转发给本机节点的其他服务
-            auto res = imillion().proto_mgr().codec().DecodeMessage(span);
-            if (!res) {
-                break;
-            }
-            imillion().SendTo(service_handle(), *target_service_handle,
-                *service_session_id, std::move(res->msg));
+            co_await HandleClusterMessageNotify(std::move(msg->node_session), msg_body.cluster_message_notify(), header_size, std::move(msg->packet));
+            break;
+        }
+        default: {
+            logger().LOG_WARN("Unknown message type: {}", static_cast<uint32_t>(msg_body.body_case()));
             break;
         }
         }
@@ -270,7 +200,18 @@ public:
             auto service_id_opt = node_session->FindTargetServiceIdByName(msg->target_service_name);
             // 需要向目标查询service id
             if (!service_id_opt) {
+                // 缓存这条消息
+                node_session->message_queue().emplace(sender, session_id, std::move(msg_));
 
+                // 发送查询请求
+                ss::cluster::MsgBody msg_body;
+                auto* req = msg_body.mutable_service_query_req();
+                req->set_target_service_name(msg->target_service_name);
+
+                auto packet = ProtoMsgToPacket(msg_body);
+                PacketHeaderInit(node_session, packet, net::Packet());
+                node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
+                co_return nullptr;
             }
 
             SendClusterMessage(node_session, sender_ptr->service_id(), *service_id_opt, session_id, *msg->msg);
@@ -321,9 +262,107 @@ public:
             }, asio::detached);
         }
         // 把正处于握手状态的需要send的所有包放到队列里，在握手完成时统一发包
-        res.first->second.EnqueueMessage(sender, session_id, std::move(msg_));
+        res.first->second.message_queue().emplace_back(sender, session_id, std::move(msg_));
 
         co_return nullptr;
+    }
+
+private:
+    Task<void> HandleHandshakeReq(NodeSessionShared&& node_session, const ss::cluster::HandshakeReq& req) {
+        // 收到握手请求，当前是被动连接方
+        node_session->set_node_id(req.src_node_id());
+
+        // 还需要检查是否与目标节点存在连接，如果已存在，说明该连接已经失效，需要断开
+        auto old_node_session = FindNodeSession(req.src_node_id());
+        if (old_node_session) {
+            old_node_session->Close();
+            auto& ep = node_session->remote_endpoint();
+            logger().LOG_INFO("old connection, ip: {}, port: {}, cur_node: {}, req_src_node: {}", 
+                ep.address().to_string(), ep.port(), imillion().node_id(), req.src_node_id());
+        }
+
+        // 能否匹配都回包
+        ss::cluster::MsgBody msg_body;
+        auto* res = msg_body.mutable_handshake_res();
+        res->set_target_node_id(imillion().node_id());
+
+        auto packet = ProtoMsgToPacket(msg_body);
+        PacketHeaderInit(node_session.get(), packet, net::Packet());
+        node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
+
+        // 创建节点
+        CreateNodeSession(std::move(node_session), false);
+
+        co_return;
+    }
+
+    Task<void> HandleHandshakeRes(NodeSessionShared&& node_session, const ss::cluster::HandshakeRes& res) {
+        // 收到握手响应，当前是主动连接方
+
+        // 创建节点
+        node_session->set_node_id(res.target_node_id());
+        auto& new_node_session = CreateNodeSession(std::move(node_session), true);
+
+        // 完成连接，发送相关队列包
+        decltype(node_session_message_queue_map_)::iterator msg_queue_iter;
+        {
+            auto lock = std::lock_guard(node_session_message_queue_map_mutex_);
+            for (msg_queue_iter = node_session_message_queue_map_.begin(); msg_queue_iter != node_session_message_queue_map_.end(); ) {
+                if (msg_queue_iter->second.node_session() == &new_node_session) {
+                    break;
+                }
+            }
+            assert(msg_queue_iter == node_session_message_queue_map_.end());
+        }
+
+        auto& send_queue = msg_queue_iter->second.message_queue();
+        for (auto iter = send_queue.begin(); iter != send_queue.end(); ++iter) {
+            auto msg = iter->message().GetMutableMessage<ClusterSend>();
+            co_await OnHandle(iter->sender(), iter->session_id(), std::move(iter->message()), msg);
+        }
+
+        co_return;
+    }
+
+    Task<void> HandleServiceQueryReq(NodeSessionShared&& node_session, const ss::cluster::ServiceQueryReq& req) {
+
+
+
+        co_return;
+    }
+
+    Task<void> HandleClusterMessageNotify(NodeSessionShared&& node_session, const ss::cluster::ClusterMessageNotify& notify, uint32_t header_size, net::Packet&& packet) {
+        // 还需要判断下，连接没有完成握手，则不允许转发包
+        auto src_service_id = notify.src_service_id();
+        auto target_service_id = notify.target_service_id();
+        auto target_service_handle = imillion().FindServiceById(notify.target_service_id());
+        if (!target_service_handle) {
+            auto& ep = node_session->remote_endpoint();
+            logger().LOG_WARN("The target service does not exist, ep:{}:{}, src_service_id:{}, target_service_id:{}",
+                ep.address().to_string(), ep.port(), src_service_id, target_service_id);
+            co_return;
+        }
+
+        auto span = net::PacketSpan(
+           packet.begin() + sizeof(header_size) + header_size,
+            packet.end());
+
+        // 基于持久会话，建立两端的虚拟服务会话
+        auto service_session_id = node_session->FindServiceVirutalSession(src_service_id, target_service_id);
+        if (!service_session_id) {
+            service_session_id = Send<ClusterPersistentNodeServiceVirtualSessionMsg>(service_handle()
+                , node_session, src_service_id, target_service_id);
+            node_session->CreateServiceVirutalSession(src_service_id, target_service_id, service_session_id.value());
+        }
+        // 将消息转发给本机节点的其他服务
+        auto res = imillion().proto_mgr().codec().DecodeMessage(span);
+        if (!res) {
+            co_return;
+        }
+
+        imillion().SendTo(service_handle(), *target_service_handle,
+            *service_session_id, std::move(res->msg));
+        co_return;
     }
 
 private:
