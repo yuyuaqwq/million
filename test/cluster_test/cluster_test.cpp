@@ -6,9 +6,12 @@
 
 #include <cluster/cluster.h>
 
-#include <ss/ss_test.pb.h>
+#include <test/ss_test.pb.h>
+#include <cluster/ss_cluster.pb.h>
 
-namespace ss = million::ss;
+namespace test = million::test;
+namespace module = million::module;
+namespace cluster = million::cluster;
 namespace protobuf = google::protobuf;
 
 MILLION_MESSAGE_DEFINE_NONCOPYABLE(, TestMsg, (million::NodeId) target_node_id, (million::ProtoMessageUnique) req);
@@ -26,28 +29,28 @@ public:
     //    , Base(imillion) {}
 
     virtual bool OnInit() override {
-        imillion().SetServiceName(service_handle(), "TestService");
+        imillion().SetServiceNameId(service_handle(), module::MODULE_ID_TEST, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_A);
 
-        auto handle = imillion().FindServiceByName(million::cluster::kClusterServiceName);
+        auto handle = imillion().FindServiceByNameId(module::MODULE_ID_CLUSTER, cluster::ss::ServiceNameId_descriptor(), cluster::ss::SERVICE_NAME_ID_CLUSTER);
         if (!handle) {
             return false;
         }
         cluster_ = *handle;
 
-        imillion().proto_mgr().codec().RegisterFile("ss/ss_test.proto", ss::msg_id, ss::test::sub_msg_id);
+        imillion().proto_mgr().codec().RegisterFile("ss/ss_test.proto", module::MODULE_ID_TEST, test::ss::ss_msg_id);
 
         return true;
     }
 
-    MILLION_MESSAGE_HANDLE(ss::test::LoginReq, req) {
-        logger().LOG_INFO("ss::test::LoginReq, value:{}", req->value());
+    MILLION_MESSAGE_HANDLE(test::ss::LoginReq, req) {
+        logger().LOG_INFO("test::ss::LoginReq, value:{}", req->value());
 
         // 回复LoginRes
-        co_return million::make_proto_message<ss::test::LoginRes>("LoginRes res");
+        co_return million::make_proto_message<test::ss::LoginRes>("LoginRes res");
     }
 
-    MILLION_MESSAGE_HANDLE(ss::test::LoginRes, res) {
-        logger().LOG_INFO("ss::test::LoginRes, value:{}", res->value());
+    MILLION_MESSAGE_HANDLE(test::ss::LoginRes, res) {
+        logger().LOG_INFO("test::ss::LoginRes, value:{}", res->value());
         co_return nullptr;
     }
 
@@ -76,7 +79,7 @@ int main() {
 
 
 
-    test_app->proto_mgr().codec().RegisterFile("ss/ss_test.proto", million::ss::msg_id, million::ss::test::sub_msg_id);
+    test_app->proto_mgr().codec().RegisterFile("ss/ss_test.proto", module::MODULE_ID_TEST, test::ss::ss_msg_id);
 
     auto service_opt = test_app->NewService<TestService>();
     if (!service_opt) {
@@ -86,7 +89,7 @@ int main() {
 
     getchar();
 
-    auto req = million::make_proto_message<ss::test::LoginReq>("LoginReq req");
+    auto req = million::make_proto_message<test::ss::LoginReq>("LoginReq req");
 
     const auto& settings = test_app->YamlSettings();
     if (settings["cluster"]["name"].as<std::string>() == "node1") {

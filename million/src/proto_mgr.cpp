@@ -45,6 +45,10 @@ const google::protobuf::Descriptor* ProtoMgr::FindMessageTypeByName(const std::s
     return desc_pool().FindMessageTypeByName(name);
 }
 
+const google::protobuf::EnumDescriptor* ProtoMgr::FindEnumTypeByName(const std::string& name) const {
+    return desc_pool().FindEnumTypeByName(name);
+}
+
 const google::protobuf::Message* ProtoMgr::GetPrototype(const google::protobuf::Descriptor& desc) const {
     return msg_factory().GetPrototype(&desc);
 }

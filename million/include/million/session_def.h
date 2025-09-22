@@ -7,7 +7,7 @@
 namespace million {
 
 using SessionId = SnowId;
-constexpr SessionId kSessionInvalidId = kSnowInvalidId;
+constexpr SessionId kSessionIdInvalid = kSnowIdInvalid;
 
 constexpr uint32_t kSessionNeverTimeout = 0xffffffff;
 

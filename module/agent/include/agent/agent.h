@@ -7,9 +7,6 @@
 namespace million {
 namespace agent {
 
-constexpr const char* kAgentServiceName = "AgentService";
-constexpr const char* kAgentMgrServiceName = "AgentMgrService";
-
 MILLION_MESSAGE_DEFINE(MILLION_AGENT_API, NewAgentReq, (SessionId) user_session_id);
 MILLION_MESSAGE_DEFINE(MILLION_AGENT_API, NewAgentResp, (std::optional<ServiceHandle>) agent_handle);
 

@@ -8,12 +8,15 @@
 
 #include <million/api.h>
 #include <million/seata_snowflake.hpp>
+#include <million/module_def.h>
 
 namespace million {
 
 using ServiceId = SnowId;
-constexpr ServiceId kServiceInvalidId = kSnowInvalidId;
-using ServiceName = std::string;
+constexpr ServiceId kServiceIdInvalid = kSnowIdInvalid;
+
+using ServiceNameId = ModuleSubCode;
+constexpr ServiceNameId kServiceNameIdInvalid = kModuleSubCodeInvalid;
 
 class IService;
 class ServiceCore;

@@ -15,6 +15,8 @@
 
 #include <db/cache.h>
 
+#include <db/ss_db.pb.h>
+
 namespace million {
 namespace db {
 
@@ -31,7 +33,7 @@ public:
 
     virtual bool OnInit() override {
         // Set service name and enable separate worker
-        imillion().SetServiceName(service_handle(), kCacheServiceName);
+        imillion().SetServiceNameId(service_handle(), module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_CACHE);
         imillion().EnableSeparateWorker(service_handle());
 
         // Read configuration

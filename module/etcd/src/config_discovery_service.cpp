@@ -1,7 +1,10 @@
 #include "config_discovery_service.h"
+
 #include <yaml-cpp/yaml.h>
 #include <algorithm>
 #include <sstream>
+
+#include <etcd/ss_etcd.pb.h>
 
 namespace million {
 namespace etcd {
@@ -10,10 +13,10 @@ bool ConfigDiscoveryService::OnInit() {
     logger().LOG_INFO("ConfigDiscoveryService Init");
 
     // 设置服务名
-    imillion().SetServiceName(service_handle(), kConfigDiscoveryServiceName);
+    imillion().SetServiceNameId(service_handle(), module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_CONFIG_DISCOVERY);
 
     // 获取EtcdService
-    auto etcd_service_opt = imillion().FindServiceByName(kEtcdServiceName);
+    auto etcd_service_opt = imillion().FindServiceByNameId(module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_ETCD);
     if (!etcd_service_opt) {
         logger().LOG_ERROR("Unable to find EtcdService.");
         return false;

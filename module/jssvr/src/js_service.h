@@ -21,7 +21,10 @@
 
 #include <million/imillion.h>
 
+#include <db/ss_db.pb.h>
+
 #include <jssvr/api.h>
+
 #include "js_util.h"
 #include "js_module_manager.h"
 #include "js_cpp_module.h"
@@ -99,10 +102,10 @@ private:
     }
 
     Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
-        db_service_handle_ = *imillion().FindServiceByName(db::kDBServiceName);
-        config_service_handle_ = *imillion().FindServiceByName(config::kConfigServiceName);
+        db_service_handle_ = *imillion().FindServiceByNameId(module::module_id, db::ss::ServiceNameId_descriptor(), db::ss::SERVICE_NAME_ID_DB);
+        config_service_handle_ = *imillion().FindServiceByNameId(module::module_id, db::ss::ServiceNameId_descriptor(), db::ss::SERVICE_NAME_ID_CACHE);
         
-        // 创建JSConfigService
+        // 创建JSConfigServicelkl
         auto js_config_service_opt = imillion().NewService<JSConfigService>(this);
         if (!js_config_service_opt) {
             logger().LOG_ERROR("Failed to create JSConfigService.");

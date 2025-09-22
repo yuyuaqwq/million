@@ -13,8 +13,6 @@
 namespace million {
 namespace db {
 
-constexpr const char* kDBServiceName = "DBService";
-
 using BatchId = uint64_t;
 constexpr BatchId kBatchIdNull = 0;
 

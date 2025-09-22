@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package million.test.ss;
+
+import "google/protobuf/descriptor.proto";
+import "module/module_id.proto";
+
+enum ServiceNameId {
+    option (module.module_id) = MODULE_ID_TEST;
+
+    SERVICE_NAME_ID_INVALID = 0;
+    SERVICE_NAME_ID_TEST_A = 1;
+    SERVICE_NAME_ID_TEST_B = 2;
+}
+
+enum SSMsgId {
+    option (module.module_id) = MODULE_ID_TEST;
+    
+    SS_MSG_ID_INVALID = 0;
+    SS_MSG_ID_LOGIN_REQ = 1;
+    SS_MSG_ID_LOGIN_RES = 2;
+}
+
+extend google.protobuf.MessageOptions {
+    SSMsgId ss_msg_id = 10100;
+}
+
+message LoginReq {
+    option (ss_msg_id) = SS_MSG_ID_LOGIN_REQ;
+    string value = 1;
+}
+
+message LoginRes {
+    option (ss_msg_id) = SS_MSG_ID_LOGIN_RES;
+    string value = 1;
+}

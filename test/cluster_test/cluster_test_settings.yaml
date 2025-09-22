@@ -28,10 +28,11 @@ logger:
 
 
 cluster:
-    services:
-        - TestAService:
-            endpoints:
-                - 127.0.0.1:8001
-        - TestBService:
-            endpoints:
-                - 127.0.0.1:8002
+    services: 
+        million.comm.module.ModuleId.MODULE_ID_TEST:
+            million.ss.test.ServiceNameId.SERVICE_NAME_ID_TEST_A:
+                endpoints:
+                    - 127.0.0.1:8001
+            million.ss.test.ServiceNameId.SERVICE_NAME_ID_TEST_B:
+                endpoints:
+                    - 127.0.0.1:8002

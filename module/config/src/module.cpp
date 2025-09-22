@@ -8,6 +8,8 @@
 
 #include <config/config.h>
 
+#include <config/ss_config.pb.h>
+
 MILLION_MODULE_INIT();
 
 namespace million {
@@ -24,7 +26,7 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        if (!imillion().SetServiceName(service_handle(), kConfigServiceName)) {
+        if (!imillion().SetServiceNameId(service_handle(), module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_CONFIG)) {
             return false;
         }
 

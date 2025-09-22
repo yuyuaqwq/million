@@ -13,6 +13,7 @@ public:
 
     const google::protobuf::FileDescriptor* FindFileByName(const std::string& name) const;
     const google::protobuf::Descriptor* FindMessageTypeByName(const std::string& name) const;
+    const google::protobuf::EnumDescriptor* FindEnumTypeByName(const std::string& name) const;
 
     const google::protobuf::Message* GetPrototype(const google::protobuf::Descriptor& desc) const;
 
@@ -31,8 +32,8 @@ private:
 };
 
 
-template <typename MsgExtIdT, typename SubMsgExtIdT>
-bool ProtoCodec::RegisterFile(const std::string& proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id) {
+template <typename ModuleExtIdT, typename MessageExtIdT>
+bool ProtoCodec::RegisterFile(const std::string& proto_file_name, ModuleExtIdT module_ext_id, MessageExtIdT msg_ext_id) {
     auto file_desc = proto_mgr_.FindFileByName(proto_file_name);
     if (!file_desc) {
         return false;
@@ -41,18 +42,18 @@ bool ProtoCodec::RegisterFile(const std::string& proto_file_name, MsgExtIdT msg_
     int enum_count = file_desc->enum_type_count();
     int i = 0;
 
-    MsgId msg_id_ui = 0;
+    ModuleId module_id_ui = 0;
     for (; i < enum_count; i++) {
         const auto* enum_desc = file_desc->enum_type(i);
         if (!enum_desc) continue;
         auto& enum_opts = enum_desc->options();
-        if (!enum_opts.HasExtension(msg_ext_id)) {
+        if (!enum_opts.HasExtension(module_ext_id)) {
             continue;
         }
 
-        auto msg_id = enum_opts.GetExtension(msg_ext_id);
-        msg_id_ui = static_cast<MsgId>(msg_id);
-        if (msg_id_ui > kMsgIdMax) {
+        auto module_id = enum_opts.GetExtension(module_ext_id);
+        module_id_ui = static_cast<ModuleId>(module_id);
+        if (module_id_ui > std::numeric_limits<ModuleId>::max()) {
             return false;
         }
         break;
@@ -66,17 +67,17 @@ bool ProtoCodec::RegisterFile(const std::string& proto_file_name, MsgExtIdT msg_
         const auto* desc = file_desc->message_type(j);
 
         auto& msg_opts = desc->options();
-        if (!msg_opts.HasExtension(sub_msg_ext_id)) {
+        if (!msg_opts.HasExtension(msg_ext_id)) {
             continue;
         }
 
-        auto sub_msg_id = msg_opts.GetExtension(sub_msg_ext_id);
-        auto sub_msg_id_ui = static_cast<SubMsgId>(sub_msg_id);
-        if (sub_msg_id_ui > kSubMsgIdMax) {
+        auto msg_id = msg_opts.GetExtension(msg_ext_id);
+        auto msg_id_ui = static_cast<ProtoMessageId>(msg_id);
+        if (msg_id_ui > std::numeric_limits<ProtoMessageId>::max()) {
             return false;
         }
 
-        auto key = CalcKey(msg_id_ui, sub_msg_id_ui);
+        auto key = EncodeModuleCode(module_id_ui, msg_id_ui);
         msg_desc_map_.emplace(key, desc);
         msg_id_map_.emplace(desc, key);
     }

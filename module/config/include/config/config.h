@@ -8,8 +8,6 @@
 namespace million {
 namespace config {
 
-constexpr const char* kConfigServiceName = "ConfigService";
-
 class MILLION_CONFIG_API ConfigTableWeakBase : public noncopyable {
 public:
     ConfigTableWeakBase() = default;

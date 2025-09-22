@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package million.test.cs;
+
+import "google/protobuf/descriptor.proto";
+import "module/module_id.proto";
+
+enum CSMsgId {
+    option (module.module_id) = MODULE_ID_TEST;
+    
+    CS_MSG_ID_INVALID = 0;
+
+    CS_MSG_ID_LOGIN_REQ = 1024;
+    CS_MSG_ID_LOGIN_RES = 1025;
+    
+}
+
+extend google.protobuf.MessageOptions {
+    CSMsgId cs_sub_msg_id = 10101;
+}
+
+message LoginReq {
+    option (cs_sub_msg_id) = CS_MSG_ID_LOGIN_REQ;
+    string value = 1;
+}
+
+message LoginRes {
+    option (cs_sub_msg_id) = CS_MSG_ID_LOGIN_RES;
+    string value = 1;
+}

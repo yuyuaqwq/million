@@ -4,12 +4,13 @@
 #include <million/exception.h>
 #include <million/message.h>
 #include <million/net/packet.h>
+#include <million/module_def.h>
 
 namespace million {
 
-using MsgKey = uint32_t;
-using MsgId = uint16_t;
-using SubMsgId = uint16_t;
+using ProtoMessageKey = ModuleCode;
+using ProtoMessageId = ModuleSubCode;
+constexpr ProtoMessageId kProtoMessageIdInvalid = kModuleSubCodeInvalid;
 
 class ProtoMgr;
 class MILLION_API ProtoCodec : noncopyable {
@@ -18,39 +19,33 @@ public:
         : proto_mgr_(proto_mgr) {}
 
     // 注册协议
-    template <typename MsgExtIdT, typename SubMsgExtIdT>
-    bool RegisterFile(const std::string& proto_file_name, MsgExtIdT msg_ext_id, SubMsgExtIdT sub_msg_ext_id);
+    template <typename ModuleExtIdT, typename MessageExtIdT>
+    bool RegisterFile(const std::string& proto_file_name, ModuleExtIdT module_ext_id, MessageExtIdT msg_ext_id);
 
-    std::optional<std::pair<MsgId, SubMsgId>> GetMsgId(const protobuf::Message& message) const;
+    std::optional<std::pair<ModuleId, ProtoMessageId>> FindMessageId(const protobuf::Message& message) const;
 
     std::optional<net::Packet> EncodeMessage(const protobuf::Message& message) const;
     struct DecodeRes {
-        MsgId msg_id;
-        SubMsgId sub_msg_id;
+        ModuleId module_id;
+        ProtoMessageId msg_id;
         ProtoMessageUnique msg;
     };
     std::optional<DecodeRes> DecodeMessage(net::PacketSpan packet) const;
 
-    static MsgKey CalcKey(MsgId msg_id, SubMsgId sub_msg_id);
-    static std::pair<MsgId, SubMsgId> CalcMsgId(MsgKey key);
+private:
+    const protobuf::Descriptor* FindMessageDesc(ModuleId module_id, ProtoMessageId msg_id) const;
+    std::optional<ProtoMessageKey> FindMessageKey(const protobuf::Descriptor* desc) const;
+
+    std::optional<ProtoMessageUnique> NewMessage(ModuleId module_id, ProtoMessageId msg_id) const;
+
+    uint32_t host_to_network_u32(uint32_t value) const;
+    uint32_t network_to_host_u32(uint32_t value) const;
 
 private:
-    const protobuf::Descriptor* GetMsgDesc(MsgId msg_id, SubMsgId sub_msg_id) const;
-    std::optional<MsgKey> GetMsgKey(const protobuf::Descriptor* desc) const;
-
-    std::optional<ProtoMessageUnique> NewMessage(MsgId msg_id, SubMsgId sub_msg_id) const;
-
-    uint16_t host_to_network_short(uint16_t value) const;
-    uint16_t network_to_host_short(uint16_t value) const;
-
-private:
-    constexpr static inline MsgId kMsgIdMax = std::numeric_limits<MsgId>::max();
-    constexpr static inline SubMsgId kSubMsgIdMax = std::numeric_limits<SubMsgId>::max();
-
     const ProtoMgr& proto_mgr_;
 
-    std::unordered_map<MsgKey, const protobuf::Descriptor*> msg_desc_map_;
-    std::unordered_map<const protobuf::Descriptor*, MsgKey> msg_id_map_;
+    std::unordered_map<ProtoMessageKey, const protobuf::Descriptor*> msg_desc_map_;
+    std::unordered_map<const protobuf::Descriptor*, ProtoMessageKey> msg_id_map_;
 };
 
 inline net::Packet ProtoMsgToPacket(const google::protobuf::Message& msg) {

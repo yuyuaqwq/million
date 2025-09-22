@@ -2,7 +2,7 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <ss/ss_cluster.pb.h>
+#include <cluster/ss_cluster.pb.h>
 
 #include <cluster/cluster.h>
 
@@ -60,7 +60,7 @@ public:
         , server_(imillion) { }
 
     virtual bool OnInit() override {
-        imillion().SetServiceName(service_handle(), kClusterServiceName);
+        imillion().SetServiceNameId(service_handle(), module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_CLUSTER);
 
         // io线程回调，发给work线程处理
         server_.set_on_connection([this](auto&& connection) -> asio::awaitable<void> {
@@ -128,7 +128,7 @@ public:
         header_size = *reinterpret_cast<const uint32_t*>(msg->packet.data());
         header_size = asio::detail::socket_ops::network_to_host_long(header_size);
 
-        ss::cluster::MsgBody msg_body;
+        ss::MsgBody msg_body;
         if (!msg_body.ParseFromArray(msg->packet.data() + sizeof(header_size), header_size)) {
             logger().LOG_WARN("Invalid ClusterMsg: ip: {}, port: {}", ip, port);
             node_session.Close();
@@ -136,31 +136,23 @@ public:
         }
 
         switch (msg_body.body_case()) {
-        case ss::cluster::MsgBody::BodyCase::kHandshakeReq: {
+        case ss::MsgBody::BodyCase::kHandshakeReq: {
             co_await HandleRecvHandshakeReq(std::move(msg->node_session), msg_body.handshake_req());
             break;
         }
-        case ss::cluster::MsgBody::BodyCase::kHandshakeRes: {
+        case ss::MsgBody::BodyCase::kHandshakeRes: {
             co_await HandleRecvHandshakeRes(std::move(msg->node_session), msg_body.handshake_res());
             break;
         }
-        case ss::cluster::MsgBody::BodyCase::kServiceQueryReq: {
-            co_await HandleRecvServiceQueryReq(std::move(msg->node_session), msg_body.service_query_req());
-            break;
-        }
-        case ss::cluster::MsgBody::BodyCase::kServiceQueryRes: {
-            co_await HandleRecvServiceQueryRes(std::move(msg->node_session), msg_body.service_query_res());
-            break;
-        }
-        case ss::cluster::MsgBody::BodyCase::kClusterSend: {
+        case ss::MsgBody::BodyCase::kClusterSend: {
             co_await HandleRecvClusterSend(std::move(msg->node_session), msg_body.cluster_send(), header_size, std::move(msg->packet));
             break;
         }
-        case ss::cluster::MsgBody::BodyCase::kClusterCall: {
+        case ss::MsgBody::BodyCase::kClusterCall: {
             co_await HandleRecvClusterCall(std::move(msg->node_session), msg_body.cluster_call(), header_size, std::move(msg->packet));
             break;
         }
-        case ss::cluster::MsgBody::BodyCase::kClusterReply: {
+        case ss::MsgBody::BodyCase::kClusterReply: {
             co_await HandleRecvClusterReply(std::move(msg->node_session), msg_body.cluster_reply(), header_size, std::move(msg->packet));
             break;
         }
@@ -187,7 +179,7 @@ public:
     }
 
 private:
-    Task<void> HandleRecvHandshakeReq(NodeSessionShared&& node_session, const ss::cluster::HandshakeReq& req) {
+    Task<void> HandleRecvHandshakeReq(NodeSessionShared&& node_session, const ss::HandshakeReq& req) {
         // 收到握手请求，当前是被动连接方
         node_session->set_node_id(req.src_node_id());
 
@@ -201,7 +193,7 @@ private:
         }
 
         // 能否匹配都回包
-        ss::cluster::MsgBody msg_body;
+        ss::MsgBody msg_body;
         auto* res = msg_body.mutable_handshake_res();
         res->set_target_node_id(imillion().node_id());
 
@@ -215,7 +207,7 @@ private:
         co_return;
     }
 
-    Task<void> HandleRecvHandshakeRes(NodeSessionShared&& node_session, const ss::cluster::HandshakeRes& res) {
+    Task<void> HandleRecvHandshakeRes(NodeSessionShared&& node_session, const ss::HandshakeRes& res) {
         // 收到握手响应，当前是主动连接方
 
         // 创建节点
@@ -246,71 +238,16 @@ private:
         co_return;
     }
 
-    Task<void> HandleRecvServiceQueryReq(NodeSessionShared&& node_session, const ss::cluster::ServiceQueryReq& req) {
-        auto& target_service_name = req.target_service_name();
-        auto target_service_handle = imillion().FindServiceByName(target_service_name);
-        if (!target_service_handle) {
-            auto& ep = node_session->remote_endpoint();
-            logger().LOG_WARN("Unable to find a service named {}, ip: {}, port: {}, cur_node: {}, target_node: {}",
-                target_service_name, ep.address().to_string(), ep.port(), imillion().node_id(), node_session->node_id());
-            co_return;
-        }
-        auto lock = target_service_handle->lock();
-        if (!lock) {
-            auto& ep = node_session->remote_endpoint();
-            logger().LOG_WARN("Unable to find a service named {}, ip: {}, port: {}, cur_node: {}, target_node: {}",
-                target_service_name, ep.address().to_string(), ep.port(), imillion().node_id(), node_session->node_id());
-            co_return;
-        }
-
-        // 发送响应
-        ss::cluster::MsgBody msg_body;
-        auto* res = msg_body.mutable_service_query_res();
-        res->set_target_service_id(target_service_handle->get_ptr(lock)->service_id());
-
-        auto packet = ProtoMsgToPacket(msg_body);
-        PacketHeaderInit(node_session.get(), packet, net::Packet());
-        node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
-
-        co_return;
-    }
-
-    Task<void> HandleRecvServiceQueryRes(NodeSessionShared&& node_session, const ss::cluster::ServiceQueryRes& res) {
-        auto& target_service_name_map = node_session->target_service_name_map();
-        target_service_name_map[res.target_service_name()] = res.target_service_id();
-        auto& ep = node_session->remote_endpoint();
-        logger().LOG_INFO("Update the service named {} to have a service ID of {}, ip: {}, port: {}, cur_node: {}, target_node: {}",
-            res.target_service_name(), res.target_service_id(), ep.address().to_string(), ep.port(), imillion().node_id(), node_session->node_id());
-        
-        // 发送缓存队列的包
-        auto& queue = node_session->message_queue();
-        for (auto iter = queue.begin(); iter != queue.end(); ) {
-            auto msg = iter->message().GetMutableMessage<ClusterSendMessage>();
-            if (msg->target_service_name == res.target_service_name()) {
-                co_await OnHandle(iter->sender(), iter->session_id(), std::move(iter->message()), msg);
-                queue.erase(++iter);
-            }
-            else {
-                ++iter;
-            }
-        }
-
-        co_return;
-    }
-
-    Task<void> HandleRecvClusterSend(NodeSessionShared&& node_session, const ss::cluster::ClusterSend& notify, uint32_t header_size, net::Packet&& packet) {
+    Task<void> HandleRecvClusterSend(NodeSessionShared&& node_session, const ss::ClusterSend& notify, uint32_t header_size, net::Packet&& packet) {
         // 还需要判断下，连接没有完成握手，则不允许转发包
         auto src_service_id = notify.src_service_id();
-        auto target_service_id = notify.target_service_id();
+        auto target_service_name_id = notify.target_service_name_id();
         auto session_id = notify.session_id();
-        auto target_service_handle = imillion().FindServiceById(notify.target_service_id());
+        auto target_service_handle = imillion().FindServiceByNameId(notify.target_service_name_id());
         if (!target_service_handle) {
-            // 这里需要注意有一种情况，该名字的服务被移除后重新加载，而对端节点可能依旧持有旧的服务id
-            // 出现了找不到的情况，要考虑如何处理，比如禁止删除一个命名的服务？因为命名服务就代表了该服务是需要被发现的
-            // 节点重启则不会出现这种情况，因为tcp连接会断开，对端节点也就会清除缓存的服务id，重新查询
             auto& ep = node_session->remote_endpoint();
-            logger().LOG_WARN("The target service does not exist, ep:{}:{}, src_service_id:{}, target_service_id:{}",
-                ep.address().to_string(), ep.port(), src_service_id, target_service_id);
+            logger().LOG_WARN("The target service does not exist, ep:{}:{}, src_service_id:{}, target_service_name_id:{}",
+                ep.address().to_string(), ep.port(), src_service_id, target_service_name_id);
             co_return;
         }
 
@@ -328,19 +265,25 @@ private:
         co_return;
     }
     
-    Task<void> HandleRecvClusterCall(NodeSessionShared&& node_session, const ss::cluster::ClusterCall& notify, uint32_t header_size, net::Packet&& packet) {
+    Task<void> HandleRecvClusterCall(NodeSessionShared&& node_session, const ss::ClusterCall& notify, uint32_t header_size, net::Packet&& packet) {
         // 还需要判断下，连接没有完成握手，则不允许转发包
         auto src_service_id = notify.src_service_id();
-        auto target_service_id = notify.target_service_id();
+        auto target_service_name_id = notify.target_service_name_id();
         auto session_id = notify.session_id();
-        auto target_service_handle = imillion().FindServiceById(notify.target_service_id());
+
+        auto target_service_handle = imillion().FindServiceById(notify.target_service_name_id());
         if (!target_service_handle) {
-            // 这里需要注意有一种情况，该名字的服务被移除后重新加载，而对端节点可能依旧持有旧的服务id
-            // 出现了找不到的情况，要考虑如何处理，比如禁止删除一个命名的服务？因为命名服务就代表了该服务是需要被发现的
-            // 节点重启则不会出现这种情况，因为tcp连接会断开，对端节点也就会清除缓存的服务id，重新查询
             auto& ep = node_session->remote_endpoint();
-            logger().LOG_WARN("The target service does not exist, ep:{}:{}, src_service_id:{}, target_service_id:{}",
-                ep.address().to_string(), ep.port(), src_service_id, target_service_id);
+            logger().LOG_WARN("The target service does not exist, ep:{}:{}, src_service_id:{}, target_service_name_id:{}",
+                ep.address().to_string(), ep.port(), src_service_id, target_service_name_id);
+            co_return;
+        }
+
+        auto lock = target_service_handle->lock();
+        if (!lock) {
+            auto& ep = node_session->remote_endpoint();
+            logger().LOG_WARN("The target service has been removed, ep:{}:{}, src_service_id:{}, target_service_name_id:{}",
+                ep.address().to_string(), ep.port(), src_service_id, target_service_name_id);
             co_return;
         }
 
@@ -361,12 +304,12 @@ private:
         logger().LOG_TRACE("Cluster Recv ProtoMessage: {}.", session_id);
 
         auto proto_msg = std::move(recv_msg.GetProtoMessage());
-        SendClusterReplyNotify(node_session.get(), target_service_id
+        SendClusterReplyNotify(node_session.get(), target_service_handle->get_ptr(lock)->service_id()
             , src_service_id, session_id, *proto_msg);
         co_return;
     }
 
-    Task<void> HandleRecvClusterReply(NodeSessionShared&& node_session, const ss::cluster::ClusterReply& notify, uint32_t header_size, net::Packet&& packet) {
+    Task<void> HandleRecvClusterReply(NodeSessionShared&& node_session, const ss::ClusterReply& notify, uint32_t header_size, net::Packet&& packet) {
         // 还需要判断下，连接没有完成握手，则不允许转发包
         auto src_service_id = notify.src_service_id();
         auto target_service_id = notify.target_service_id();
@@ -396,48 +339,29 @@ private:
         co_return;
     }
 
-    using SendNotifyFunction = void (ClusterService::*)(NodeSession*, ServiceId, ServiceId, SessionId, const ProtoMessage&);
+    using SendNotifyFunction = void (ClusterService::*)(NodeSession*, ServiceId, ModuleCode, SessionId, const ProtoMessage&);
     
     // send_notify_function传入成员函数指针，选择性调用SendClusterSendNotify或者SendClusterCallNotify
     Task<void> HandleClusterCallOrSendMessage(const ServiceHandle& sender, SessionId session_id, MessagePointer&& msg_,
-        const ServiceName& target_service_name, const ProtoMessageUnique& proto_msg, SendNotifyFunction send_notify_function) {
+        ModuleCode target_service_name_id, const ProtoMessageUnique& proto_msg, SendNotifyFunction send_notify_function) {
         auto sender_lock = sender.lock();
         if (!sender_lock) {
             co_return;
         }
         auto sender_ptr = sender.get_ptr(sender_lock);
 
-        // 首先尝试通过服务名找到对应的节点会话
-        auto node_session_iter = service_name_to_node_session_.find(target_service_name);
+        // 首先尝试通过服务名id找到对应的节点会话
+        auto node_session_iter = service_name_to_node_session_.find(target_service_name_id);
         if (node_session_iter != service_name_to_node_session_.end()) {
             auto node_session = node_session_iter->second;
-            auto& target_service_name_map = node_session->target_service_name_map();
-            auto service_id_iter = target_service_name_map.find(target_service_name);
-
-            // 需要向目标查询service id
-            if (service_id_iter == target_service_name_map.end()) {
-                // 缓存这条消息
-                node_session->message_queue().emplace_back(sender, session_id, std::move(msg_));
-
-                // 发送查询请求
-                ss::cluster::MsgBody msg_body;
-                auto* req = msg_body.mutable_service_query_req();
-                req->set_target_service_name(target_service_name);
-
-                auto packet = ProtoMsgToPacket(msg_body);
-                PacketHeaderInit(node_session, packet, net::Packet());
-                node_session->Send(std::move(packet), net::PacketSpan(packet), 0);
-                co_return;
-            }
-
-            (this->*send_notify_function)(node_session, sender_ptr->service_id(), service_id_iter->second, session_id, *proto_msg);
+            (this->*send_notify_function)(node_session, sender_ptr->service_id(), target_service_name_id, session_id, *proto_msg);
             co_return;
         }
 
         // 如果没有找到已连接的会话，查找服务端点配置
-        auto endpoint_opt = FindServiceEndpoint(target_service_name);
+        auto endpoint_opt = FindServiceEndpoint(target_service_name_id);
         if (!endpoint_opt) {
-            logger().LOG_ERROR("Service cannot be found: {}.", target_service_name);
+            logger().LOG_ERROR("Service cannot be found: {}.", target_service_name_id);
             co_return;
         }
 
@@ -446,12 +370,12 @@ private:
         auto res = node_session_message_queue_map_.emplace(endpoint_str, NodeSessionMessageQueue());
         if (res.second) {
             auto& io_context = imillion().NextIoContext();
-            asio::co_spawn(io_context.get_executor(), [this, target_service = target_service_name,
+            asio::co_spawn(io_context.get_executor(), [this, target_service_name_id = target_service_name_id,
                 node_msg_iter = res.first, &endpoint = *endpoint_opt]() mutable -> asio::awaitable<void>
                 {
                     auto connection = co_await server_.ConnectTo(endpoint.ip, endpoint.port);
                     if (!connection) {
-                        logger().LOG_ERROR("server_.ConnectTo failed for service {} at {}:{}.", target_service, endpoint.ip, endpoint.port);
+                        logger().LOG_ERROR("server_.ConnectTo failed for service {} at {}:{}.", target_service_name_id, endpoint.ip, endpoint.port);
 
                         {
                             auto lock = std::lock_guard(node_session_message_queue_map_mutex_);
@@ -463,12 +387,12 @@ private:
                     // 发起握手请求
                     auto node_session = std::move(std::static_pointer_cast<NodeSession>(*connection));
 
-                    auto res = service_name_to_node_session_.emplace(target_service, node_session.get());
+                    auto res = service_name_to_node_session_.emplace(target_service_name_id, node_session.get());
                     assert(res.second);
                     node_msg_iter->second.set_node_session(node_session.get());
 
                     // 与目标服务的连接未开始
-                    ss::cluster::MsgBody msg_body;
+                    ss::MsgBody msg_body;
                     auto* req = msg_body.mutable_handshake_req();
                     req->set_src_node_id(imillion().node_id());
 
@@ -496,27 +420,73 @@ private:
             return;
         }
 
-        for (const auto& service_node : services_settings) {
-            for (const auto& service_entry : service_node) {
-                std::string service_name = service_entry.first.as<std::string>();
+        for (const auto& module_node : services_settings) {
+            const std::string module_id_full_name = module_node.first.as<std::string>();
+
+            uint32_t module_id = GetEnumValueByFullName(module_id_full_name);
+
+            for (const auto& service_entry : module_node.second) {
+                const std::string service_id_full_name = service_entry.first.as<std::string>();
+
+                uint32_t service_name_id = GetEnumValueByFullName(service_id_full_name);
+
                 const auto& endpoints = service_entry.second["endpoints"];
-                
-                if (endpoints && endpoints.IsSequence()) {
-                    for (const auto& endpoint : endpoints) {
-                        std::string endpoint_str = endpoint.as<std::string>();
-                        size_t colon_pos = endpoint_str.find(':');
-                        if (colon_pos != std::string::npos) {
-                            std::string ip = endpoint_str.substr(0, colon_pos);
-                            std::string port = endpoint_str.substr(colon_pos + 1);
-                            
-                            logger().LOG_DEBUG("Registered service '{}' at {}:{}", service_name, ip, port);
-                            service_name_to_endpoints_[service_name].emplace_back(EndPoint{ std::move(ip), std::move(port) });
-                        }
+
+                if (!endpoints || !endpoints.IsSequence()) {
+                    logger().LOG_WARN("No valid endpoints found for service: {}", service_id_full_name);
+                    continue;
+                }
+
+                const ModuleCode service_name_id_combined = EncodeModuleCode(module_id, service_name_id);
+
+                for (const auto& endpoint : endpoints) {
+                    const std::string endpoint_str = endpoint.as<std::string>();
+                    const size_t colon_pos = endpoint_str.find(':');
+
+                    if (colon_pos == std::string::npos) {
+                        logger().LOG_WARN("Invalid endpoint format for service {}: {}", service_id_full_name, endpoint_str);
+                        continue;
                     }
+
+                    const std::string ip = endpoint_str.substr(0, colon_pos);
+                    const std::string port = endpoint_str.substr(colon_pos + 1);
+
+                    logger().LOG_DEBUG("Registered service '{}' (key: 0x{:08X}) at {}:{}",
+                        service_id_full_name, service_name_id_combined, ip, port);
+
+                    service_name_code_to_endpoints_[service_name_id_combined].emplace_back(EndPoint{ ip, port });
                 }
             }
         }
     }
+
+    int32_t GetEnumValueByFullName(const std::string& service_id_full_name) {
+        size_t last_dot = service_id_full_name.find_last_of('.');
+        if (last_dot == std::string::npos) {
+            logger().LOG_WARN("Invalid service name format: {}", service_id_full_name);
+            return 0;
+        }
+
+        const std::string enum_type_str = service_id_full_name.substr(0, last_dot);
+        const std::string enum_value_str = service_id_full_name.substr(last_dot + 1);
+
+        auto enum_desc = imillion().proto_mgr().FindEnumTypeByName(enum_type_str);
+        if (!enum_desc) {
+            logger().LOG_WARN("Failed to find enum descriptor for: {}", enum_type_str);
+            return 0;
+        }
+
+        const auto* value_desc =
+            enum_desc->FindValueByName(enum_value_str);
+
+        if (!value_desc) {
+            logger().LOG_WARN("Failed to find enum value: {} in enum: {}", enum_value_str, enum_type_str);
+            return 0;
+        }
+
+        return value_desc->number();
+    }
+
 
     NodeSession& CreateNodeSession(NodeSessionShared&& session, bool active) {
         auto target_node_id = session->node_id();
@@ -564,9 +534,9 @@ private:
     }
 
 
-    EndPoint* FindServiceEndpoint(ServiceName service_name) {
-        auto it = service_name_to_endpoints_.find(service_name);
-        if (it == service_name_to_endpoints_.end() || it->second.empty()) {
+    EndPoint* FindServiceEndpoint(ModuleCode service_name_code) {
+        auto it = service_name_code_to_endpoints_.find(service_name_code);
+        if (it == service_name_code_to_endpoints_.end() || it->second.empty()) {
             return nullptr;
         }
         
@@ -590,8 +560,7 @@ private:
     }
 
 
-
-    void SendClusterSendNotify(NodeSession* node_session, ServiceId src_service_id, ServiceId target_service_id, SessionId session_id, const ProtoMessage& msg) {
+    void SendClusterSendNotify(NodeSession* node_session, ServiceId src_service_id, ModuleCode target_service_name_id, SessionId session_id, const ProtoMessage& msg) {
         auto packet_opt = imillion().proto_mgr().codec().EncodeMessage(msg);
         if (!packet_opt) {
             return;
@@ -599,10 +568,10 @@ private:
         auto packet = std::move(*packet_opt);
 
         // 追加集群头部
-        ss::cluster::MsgBody msg_body;
+        ss::MsgBody msg_body;
         auto* header = msg_body.mutable_cluster_send();
         header->set_src_service_id(src_service_id);
-        header->set_target_service_id(target_service_id);
+        header->set_target_service_name_id(target_service_name_id);
         header->set_session_id(session_id);
         auto header_packet = ProtoMsgToPacket(msg_body);
         
@@ -615,7 +584,7 @@ private:
         node_session->Send(std::move(packet), span, 0);
     }
     
-    void SendClusterCallNotify(NodeSession* node_session, ServiceId src_service_id, ServiceId target_service_id, SessionId session_id, const ProtoMessage& msg) {
+    void SendClusterCallNotify(NodeSession* node_session, ServiceId src_service_id, ModuleCode target_service_name_id, SessionId session_id, const ProtoMessage& msg) {
         auto packet_opt = imillion().proto_mgr().codec().EncodeMessage(msg);
         if (!packet_opt) {
             return;
@@ -623,10 +592,10 @@ private:
         auto packet = std::move(*packet_opt);
 
         // 追加集群头部
-        ss::cluster::MsgBody msg_body;
+        ss::MsgBody msg_body;
         auto* header = msg_body.mutable_cluster_call();
         header->set_src_service_id(src_service_id);
-        header->set_target_service_id(target_service_id);
+        header->set_target_service_name_id(target_service_name_id);
         header->set_session_id(session_id);
         auto header_packet = ProtoMsgToPacket(msg_body);
 
@@ -647,7 +616,7 @@ private:
         auto packet = std::move(*packet_opt);
 
         // 追加集群头部
-        ss::cluster::MsgBody msg_body;
+        ss::MsgBody msg_body;
         auto* header = msg_body.mutable_cluster_reply();
         header->set_src_service_id(src_service_id);
         header->set_target_service_id(target_service_id);
@@ -666,8 +635,8 @@ private:
 private:
     ClusterServer server_;
 
-    std::unordered_map<ServiceName, std::vector<EndPoint>> service_name_to_endpoints_;
-    std::unordered_map<ServiceName, NodeSession*> service_name_to_node_session_;
+    std::unordered_map<ModuleCode, std::vector<EndPoint>> service_name_code_to_endpoints_;
+    std::unordered_map<ModuleCode, NodeSession*> service_name_to_node_session_;
 
     std::unordered_map<NodeId, NodeSessionShared> nodes_;
 

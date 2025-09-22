@@ -53,16 +53,16 @@ std::optional<ServiceHandle> IMillion::FindServiceById(ServiceId service_id) {
     return ServiceHandle(*shared);
 }
 
-bool IMillion::SetServiceName(const ServiceHandle& service, const ServiceName& name) {
+bool IMillion::SetServiceNameId(const ServiceHandle& service, ModuleCode name_id) {
     auto lock = service.lock();
     if (!lock) {
         return false;
     }
-    return impl_->SetServiceName(lock, name);
+    return impl_->SetServiceNameId(lock, name_id);
 }
 
-std::optional<ServiceHandle> IMillion::FindServiceByName(const ServiceName& name) {
-    auto shared = impl_->FindServiceByName(name);
+std::optional<ServiceHandle> IMillion::FindServiceByNameId(ModuleCode name_id) {
+    auto shared = impl_->FindServiceByNameId(name_id);
     if (!shared) {
         return std::nullopt;
     }

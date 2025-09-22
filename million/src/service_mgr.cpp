@@ -131,15 +131,15 @@ std::optional<ServiceShared> ServiceMgr::FindServiceById(ServiceId id) {
     return *iter->second;
 }
 
-bool ServiceMgr::SetServiceName(const ServiceShared& service, const ServiceName& name) {
+bool ServiceMgr::SetServiceNameId(const ServiceShared& service, ModuleCode name_id) {
     auto lock = std::lock_guard(name_map_mutex_);
-    auto res = name_map_.emplace(name, service->iter());
+    auto res = name_map_.emplace(name_id, service->iter());
     return res.second;
 }
 
-std::optional<ServiceShared> ServiceMgr::FindServiceByName(const ServiceName& name) {
+std::optional<ServiceShared> ServiceMgr::FindServiceByNameId(ModuleCode name_id) {
     auto lock = std::lock_guard(name_map_mutex_);
-    auto iter = name_map_.find(name);
+    auto iter = name_map_.find(name_id);
     if (iter == name_map_.end()) {
         return std::nullopt;
     }

@@ -7,6 +7,8 @@
 #include <list>
 #include <queue>
 
+#include <million/module_def.h>
+
 #include "service_core.h"
 
 namespace million {
@@ -35,8 +37,8 @@ public:
 
     std::optional<ServiceShared> FindServiceById(ServiceId id);
 
-    bool SetServiceName(const ServiceShared& handle, const ServiceName& name);
-    std::optional<ServiceShared> FindServiceByName(const ServiceName& name);
+    bool SetServiceNameId(const ServiceShared& handle, ModuleCode name_id);
+    std::optional<ServiceShared> FindServiceByNameId(ModuleCode name_id);
 
     bool Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MessagePointer msg);
     
@@ -53,7 +55,7 @@ private:
     std::list<ServiceShared> services_;
     
     std::mutex name_map_mutex_;
-    std::unordered_map<ServiceName, std::list<ServiceShared>::iterator> name_map_;
+    std::unordered_map<ModuleCode, std::list<ServiceShared>::iterator> name_map_;
 
     std::mutex id_map_mutex_;
     std::unordered_map<ServiceId, std::list<ServiceShared>::iterator> id_map_;

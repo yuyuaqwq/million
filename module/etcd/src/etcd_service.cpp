@@ -1,6 +1,8 @@
 #include "etcd_service.h"
 #include <yaml-cpp/yaml.h>
 
+#include <etcd/ss_etcd.pb.h>
+
 namespace million {
 namespace etcd {
 
@@ -8,7 +10,7 @@ bool EtcdService::OnInit() {
     logger().LOG_INFO("EtcdService Init");
 
     // 设置服务名并启用独立工作线程
-    imillion().SetServiceName(service_handle(), kEtcdServiceName);
+    imillion().SetServiceNameId(service_handle(), module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_ETCD);
     imillion().EnableSeparateWorker(service_handle());
 
     // 读取配置

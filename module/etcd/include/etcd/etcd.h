@@ -11,9 +11,6 @@
 namespace million {
 namespace etcd {
 
-constexpr const char* kEtcdServiceName = "EtcdService";
-#define MILLION_ETCD_SERVICE_NAME "EtcdService"
-
 // ETCD 基础操作请求和响应
 MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdGetReq, (std::string) key);
 MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, EtcdGetResp, (bool) success, (std::optional<std::string>) value, (std::string) error_message);

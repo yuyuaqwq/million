@@ -4,6 +4,8 @@
 
 #include <agent/api.h>
 
+#include <agent/ss_agent.pb.h>
+
 #include "agent_mgr_service.h"
 
 MILLION_MODULE_INIT();
@@ -17,7 +19,7 @@ extern "C" MILLION_AGENT_API bool MillionModuleInit(IMillion* imillion) {
 }
 
 extern "C" MILLION_AGENT_API void MillionModuleStart(IMillion* imillion) {
-    auto handle = imillion->FindServiceByName(kAgentMgrServiceName);
+    auto handle = imillion->FindServiceByNameId(module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_AGENT_MANAGER);
     if (handle) {
         imillion->StartService(*handle, nullptr);
     }

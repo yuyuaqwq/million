@@ -12,9 +12,6 @@
 namespace million {
 namespace etcd {
 
-constexpr const char* kConfigDiscoveryServiceName = "ConfigDiscoveryService";
-#define MILLION_CONFIG_DISCOVERY_SERVICE_NAME "ConfigDiscoveryService"
-
 // 配置发现请求和响应
 MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, ConfigGetReq, (std::string) config_path);
 MILLION_MESSAGE_DEFINE(MILLION_ETCD_API, ConfigGetResp, (bool) success, (std::optional<std::string>) config_value, (std::string) error_message);

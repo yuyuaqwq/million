@@ -24,6 +24,6 @@ add_library(${MILLION_GATEWAY_LIB_TARGET} SHARED ${SRC} ${PRIVATE_HEADERS} ${PUB
 target_include_directories(${MILLION_GATEWAY_LIB_TARGET} PUBLIC ${MILLION_GATEWAY_INCLUDE_DIR})
 target_include_directories(${MILLION_GATEWAY_LIB_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(${MILLION_GATEWAY_LIB_TARGET} PUBLIC million::core)
+target_link_libraries(${MILLION_GATEWAY_LIB_TARGET} PUBLIC million::core million::protogen)
 
 add_library(million::gateway ALIAS ${MILLION_GATEWAY_LIB_TARGET})

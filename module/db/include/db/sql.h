@@ -10,9 +10,6 @@
 namespace million {
 namespace db {
 
-constexpr const char* kSqlServiceName = "SqlService";
-#define MILLION_SQL_SERVICE_NAME "SqlService"
-
 MILLION_MESSAGE_DEFINE(MILLION_DB_API, SqlTableInitReq, (const google::protobuf::Descriptor&) desc)
 MILLION_MESSAGE_DEFINE(MILLION_DB_API, SqlTableInitResp, (bool) success)
 

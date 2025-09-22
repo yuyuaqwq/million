@@ -15,8 +15,10 @@
 #include <db/cache.h>
 #include <db/sql.h>
 
+#include <test/db_example.pb.h>
+
 #include <db/db_options.pb.h>
-#include <db/db_example.pb.h>
+#include <db/ss_db.pb.h>
 
 namespace million {
 namespace db {
@@ -60,18 +62,18 @@ public:
     virtual bool OnInit() override {
         logger().LOG_INFO("DBService Init");
 
-        imillion().SetServiceName(service_handle(), kDBServiceName);
+        imillion().SetServiceNameId(service_handle(), module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_DB);
 
-        auto handle = imillion().FindServiceByName(kSqlServiceName);
+        auto handle = imillion().FindServiceByNameId(module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_SQL);
         if (!handle) {
             logger().LOG_ERROR("Unable to find SqlService.");
             return false;
         }
         sql_service_ = *handle;
 
-        handle = imillion().FindServiceByName(kCacheServiceName);
+        handle = imillion().FindServiceByNameId(module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_CACHE);
         if (!handle) {
-            logger().LOG_ERROR("Unable to find SqlService.");
+            logger().LOG_ERROR("Unable to find CacheService.");
             return false;
         }
         cache_service_ = *handle;

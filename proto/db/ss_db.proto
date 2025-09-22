@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package million.db.ss;
+
+import "module/module_id.proto";
+
+enum ServiceNameId {
+    option (module.module_id) = MODULE_ID_DB;
+
+    SERVICE_NAME_ID_INVALID = 0;
+    SERVICE_NAME_ID_SQL = 1;
+    SERVICE_NAME_ID_CACHE = 2;
+    SERVICE_NAME_ID_DB = 3;
+}

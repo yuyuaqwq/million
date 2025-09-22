@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package million.db.example;
+package million.example.db;
 
 import "google/protobuf/descriptor.proto";
 import "db/db_options.proto";
 
-option (db) = {
+option (million.db.db) = {
 };
 
 message RoleInfo {
@@ -16,7 +16,7 @@ message UserEx {
 }
 
 message User {
-    option (table) = {
+    option (million.db.table) = {
         name: "user"               // 表名
         sync_tick: 1000            // Tick入库时间，10s
         primary_key: 1
@@ -38,50 +38,50 @@ message User {
         }
     };
 
-    int64 id = 1 [(column) = {
+    int64 id = 1 [(million.db.column) = {
         sql: { index: PRIMARY_KEY, auto_increment: true, not_null: true }
         cache: { }
     }];
 
-    string name = 2 [(column) = {
+    string name = 2 [(million.db.column) = {
         sql: { index: UNIQUE, str_len: 32 }
     }];
 
-    string email = 3 [(column) = {
+    string email = 3 [(million.db.column) = {
         sql: { index: UNIQUE, str_len: 256, not_null: true }
     }];
     
-    string phone_number = 4 [(column) = {
+    string phone_number = 4 [(million.db.column) = {
         sql: { index: INDEX, str_len: 256 }
     }];
 
-    RoleInfo role_info = 5 [(column) = {
+    RoleInfo role_info = 5 [(million.db.column) = {
         sql: { }
     }];
 
-    string password_hash = 6 [(column) = {
+    string password_hash = 6 [(million.db.column) = {
         sql: { not_null: true, str_len: -32 }
     }];
 
-    bool is_active = 7 [(column) = {
+    bool is_active = 7 [(million.db.column) = {
         sql: { default_value: "1", not_null: true, comment: "Is it an active user" }
     }];
 
-    int64 created_at = 8 [(column) = {
+    int64 created_at = 8 [(million.db.column) = {
         sql: { not_null: true, comment: "create time" }
     }];
 
-    int64 updated_at = 9 [(column) = {
+    int64 updated_at = 9 [(million.db.column) = {
         sql: { index: PRIMARY_KEY, not_null: true, comment: "update time" }
     }];
     
-    UserEx user_ex = 10 [(column) = {
+    UserEx user_ex = 10 [(million.db.column) = {
         sql: { comment: "extended fields" }
     }];
-    int64 add_test = 11 [(column) = {
+    int64 add_test = 11 [(million.db.column) = {
         sql: { index: UNIQUE, comment: "add_test" }
     }];
-    string add_test2 = 12 [(column) = {
+    string add_test2 = 12 [(million.db.column) = {
         sql: { comment: "add_test2" }
     }];
 }

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package million.module;
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.EnumOptions {
+    ModuleId module_id = 10000;
+}
+
+enum ModuleId {
+    MODULE_ID_INVALID = 0;
+    MODULE_ID_TEST = 1;
+    MODULE_ID_CLUSTER = 2;
+    MODULE_ID_AGETN = 3;
+    MODULE_ID_GATEWAY = 4;
+    MODULE_ID_NODE = 5;
+    MODULE_ID_ETCD = 6;
+    MODULE_ID_AGENT = 7;
+    MODULE_ID_CONFIG = 8;
+    MODULE_ID_DB = 9;
+}

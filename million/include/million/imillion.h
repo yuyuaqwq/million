@@ -80,8 +80,39 @@ public:
 
     std::optional<ServiceHandle> FindServiceById(ServiceId id);
 
-    bool SetServiceName(const ServiceHandle& service, const ServiceName& name);
-    std::optional<ServiceHandle> FindServiceByName(const ServiceName& name);
+    template <typename ModuleExtIdT, typename ServiceNameIdT>
+    bool SetServiceNameId(const ServiceHandle& service, ModuleExtIdT module_ext_id, const google::protobuf::EnumDescriptor* enum_descriptor, ServiceNameIdT name_id) {
+        if (name_id > std::numeric_limits<ServiceNameId>::max()) {
+            return false;
+        }
+
+        auto& options = enum_descriptor->options();
+        auto module_id = options.GetExtension(module_ext_id);
+        auto module_id_ui = static_cast<ModuleId>(module_id);
+        if (module_id_ui > std::numeric_limits<ModuleId>::max()) {
+            return false;
+        }
+
+        return SetServiceNameId(service, static_cast<ModuleCode>((module_id << 16) | (name_id & 0xffff)));
+    }
+    bool SetServiceNameId(const ServiceHandle& service, ModuleCode name_id);
+
+    template <typename ModuleExtIdT, typename ServiceNameIdT>
+    std::optional<ServiceHandle> FindServiceByNameId(ModuleExtIdT module_ext_id, const google::protobuf::EnumDescriptor* enum_descriptor, ServiceNameIdT name_id) {
+        if (name_id > std::numeric_limits<ServiceNameId>::max()) {
+            return std::nullopt;
+        }
+        
+        auto& options = enum_descriptor->options();
+        auto module_id = options.GetExtension(module_ext_id);
+        auto module_id_ui = static_cast<ModuleId>(module_id);
+        if (module_id_ui > std::numeric_limits<ModuleId>::max()) {
+            return std::nullopt;
+        }
+        
+        return FindServiceByNameId(static_cast<ModuleCode>((module_id << 16) | (name_id & 0xffff)));
+    }
+    std::optional<ServiceHandle> FindServiceByNameId(ModuleCode name_id);
 
     SessionId NewSession();
 
@@ -145,7 +176,6 @@ protected:
 
 private:
     std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice);
-
 private:
     Million* impl_;
 };
@@ -155,11 +185,11 @@ inline std::optional<SessionId> IService::Send(const ServiceHandle& target, Mess
 }
 
 inline bool IService::SendTo(const ServiceHandle& target, SessionId session_id, MessagePointer msg) {
-    return imillion_->SendTo(service_handle_, target, session_id, std::move(msg)) != kSessionInvalidId;
+    return imillion_->SendTo(service_handle_, target, session_id, std::move(msg)) != kSessionIdInvalid;
 }
 
 inline bool IService::Reply(const ServiceHandle& target, SessionId session_id, MessagePointer msg) {
-    return imillion_->SendTo(service_handle_, target, SessionSendToReplyId(session_id), std::move(msg)) != kSessionInvalidId;
+    return imillion_->SendTo(service_handle_, target, SessionSendToReplyId(session_id), std::move(msg)) != kSessionIdInvalid;
 }
 
 inline void IService::Timeout(uint32_t tick, MessagePointer msg) {

@@ -9,6 +9,9 @@
 #include <agent/api.h>
 #include <agent/agent.h>
 
+#include <agent/ss_agent.pb.h>
+#include <node/ss_node.pb.h>
+
 namespace million {
 namespace agent {
 
@@ -20,20 +23,20 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        imillion().SetServiceName(service_handle(), kAgentMgrServiceName);
+        imillion().SetServiceNameId(service_handle(), module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_AGENT);
         return true;
     }
 
     virtual Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
-        auto handle = imillion().FindServiceByName("NodeMgrService");
-        TaskAssert(handle, "NodeMgrService not found.");
+        auto handle = imillion().FindServiceByNameId(module::module_id, ss::ServiceNameId_descriptor(), node::ss::SERVICE_NAME_ID_NODE_MANAGER);
+        TaskAssert(handle, "Node Manager Service not found.");
         
         node_mgr_ = *handle;
 
-        handle = imillion().FindServiceByName(gateway::kGatewayServiceName);
-        TaskAssert(handle, "GatewayService not found.");
+        // handle = imillion().FindServiceByNameId(gateway::kGatewayServiceName);
+        // TaskAssert(handle, "GatewayService not found.");
         
-        gateway_ = *handle;
+        // gateway_ = *handle;
         co_return nullptr;
     }
 

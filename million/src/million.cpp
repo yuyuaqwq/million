@@ -253,12 +253,12 @@ std::optional<ServiceShared> Million::FindServiceById(ServiceId id) {
     return service_mgr_->FindServiceById(id);
 }
 
-bool Million::SetServiceName(const ServiceShared& service, const ServiceName& name) {
-    return service_mgr_->SetServiceName(service, name);
+bool Million::SetServiceNameId(const ServiceShared& service, ModuleCode name_id) {
+    return service_mgr_->SetServiceNameId(service, name_id);
 }
 
-std::optional<ServiceShared> Million::FindServiceByName(const ServiceName& name) {
-    return service_mgr_->FindServiceByName(name);
+std::optional<ServiceShared> Million::FindServiceByNameId(ModuleCode name_id) {
+    return service_mgr_->FindServiceByNameId(name_id);
 }
 
 

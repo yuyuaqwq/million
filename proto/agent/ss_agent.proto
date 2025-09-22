@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package million.agent.ss;
+
+import "module/module_id.proto";
+
+enum ServiceNameId {
+    option (module.module_id) = MODULE_ID_AGENT;
+
+    SERVICE_NAME_ID_INVALID = 0;
+    SERVICE_NAME_ID_AGENT = 1;
+    SERVICE_NAME_ID_AGENT_MANAGER = 2;
+}

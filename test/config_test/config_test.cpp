@@ -7,6 +7,8 @@
 #include <config/config.h>
 #include <config/cfg_example.pb.h>
 
+#include <ss/ss_config.pb.h>
+
 MILLION_MODULE_INIT();
 
 namespace protobuf = google::protobuf;
@@ -24,7 +26,7 @@ public:
         : Base(imillion) {}
 
     virtual bool OnInit() override {
-        auto handle = imillion().FindServiceByName(config::kConfigServiceName);
+        auto handle = imillion().FindServiceByNameId(million::comm::module::million_module_id, million::ss::config::ServiceNameId_descriptor(), million::ss::config::SERVICE_NAME_ID_CONFIG);
         if (!handle) {
             logger().LOG_ERROR("Unable to find ConfigService.");
             return false;

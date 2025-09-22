@@ -34,8 +34,8 @@ public:
 
     std::optional<ServiceShared> FindServiceById(ServiceId id);
 
-    bool SetServiceName(const ServiceShared& service, const ServiceName& name);
-    std::optional<ServiceShared> FindServiceByName(const ServiceName& name);
+    bool SetServiceNameId(const ServiceShared& service, ModuleCode name_id);
+    std::optional<ServiceShared> FindServiceByNameId(ModuleCode name_id);
 
     SessionId NewSession();
 

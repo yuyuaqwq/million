@@ -4,6 +4,8 @@
 
 #include <million/imillion.h>
 
+#include <gateway/ss_gateway.pb.h>
+
 #include <gateway/api.h>
 #include <gateway/gateway.h>
 
@@ -32,7 +34,7 @@ public:
         , server_(imillion) { }
 
     virtual bool OnInit() override {
-        return imillion().SetServiceName(service_handle(), kGatewayServiceName);
+        return imillion().SetServiceNameId(service_handle(), module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_GATEWAY);
     }
 
 
