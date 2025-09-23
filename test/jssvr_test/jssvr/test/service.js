@@ -45,7 +45,7 @@ million.newservice("sbsb/service.js");
 
 export async function onMsg(msg_type, msg) {
     logger.info(`onMsg: ${msg_type}, ${msg.value}`);
-    let recv_msg = await service.call("TestService", "million.ss.test.LoginReq", {value: "test req"})
+    let recv_msg = await service.call("TestService", "million.ss.test.LoginReq", {value: "test req"});
     logger.info(`recv_msg ${recv_msg.value}`);
     return ["million.ss.test.LoginRes", {value: "test res"}];
 }

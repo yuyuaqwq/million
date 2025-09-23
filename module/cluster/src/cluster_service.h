@@ -419,18 +419,18 @@ private:
         for (const auto& module_node : services_settings) {
             const std::string module_id_full_name = module_node.first.as<std::string>();
 
-            uint32_t module_id = GetEnumValueByFullName(module_id_full_name);
+            uint32_t module_id = imillion().proto_mgr().FindEnumValueByFullName(module_id_full_name);
             if (module_id == 0) {
-                logger().LOG_WARN("Invalid module name: {}", module_id_full_name);
+                logger().LOG_WARN("Invalid module id full name: {}", module_id_full_name);
                 continue;
             }
 
             for (const auto& service_entry : module_node.second) {
                 const std::string service_id_full_name = service_entry.first.as<std::string>();
 
-                uint32_t service_name_id = GetEnumValueByFullName(service_id_full_name);
+                uint32_t service_name_id = imillion().proto_mgr().FindEnumValueByFullName(service_id_full_name);
                 if (service_name_id == 0) {
-                    logger().LOG_WARN("Invalid service name: {}", service_id_full_name);
+                    logger().LOG_WARN("Invalid service id full name: {}", service_id_full_name);
                     continue;
                 }
 
@@ -462,33 +462,6 @@ private:
                 }
             }
         }
-    }
-
-    int32_t GetEnumValueByFullName(const std::string& service_id_full_name) {
-        size_t last_dot = service_id_full_name.find_last_of('.');
-        if (last_dot == std::string::npos) {
-            logger().LOG_WARN("Invalid service name format: {}", service_id_full_name);
-            return 0;
-        }
-
-        const std::string enum_type_str = service_id_full_name.substr(0, last_dot);
-        const std::string enum_value_str = service_id_full_name.substr(last_dot + 1);
-
-        auto enum_desc = imillion().proto_mgr().FindEnumTypeByName(enum_type_str);
-        if (!enum_desc) {
-            logger().LOG_WARN("Failed to find enum descriptor for: {}", enum_type_str);
-            return 0;
-        }
-
-        const auto* value_desc =
-            enum_desc->FindValueByName(enum_value_str);
-
-        if (!value_desc) {
-            logger().LOG_WARN("Failed to find enum value: {} in enum: {}", enum_value_str, enum_type_str);
-            return 0;
-        }
-
-        return value_desc->number();
     }
 
 
@@ -645,8 +618,8 @@ private:
     std::unordered_map<NodeId, NodeSessionShared> nodes_;
 
     // 握手阶段，待发送的消息队列
-    std::unordered_map<std::string, NodeSessionMessageQueue> node_session_message_queue_map_;
     std::mutex node_session_message_queue_map_mutex_;
+    std::unordered_map<std::string, NodeSessionMessageQueue> node_session_message_queue_map_;
 };
 
 } // namespace cluster

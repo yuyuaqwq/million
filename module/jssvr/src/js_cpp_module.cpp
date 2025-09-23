@@ -4,6 +4,8 @@
 
 #include <config/ss_config.pb.h>
 
+#include <jssvr/ss_jssvr.pb.h>
+
 #include <jssvr/jssvr.h>
 
 #include "js_service.h"
@@ -62,7 +64,7 @@ mjs::Value ServiceModuleObject::Send(mjs::Context* context, uint32_t par_count, 
 
 mjs::Value ServiceModuleObject::Call(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
     auto& service = GetJSService(context);
-    if (par_count < 3) {
+    if (par_count < 4) {
         return mjs::Error::Throw(context, "Send requires 2 parameter.");
     }
 
@@ -70,13 +72,27 @@ mjs::Value ServiceModuleObject::Call(mjs::Context* context, uint32_t par_count, 
         return mjs::Error::Throw(context, "The service name is not a string.");
     }
     if (!stack.get(1).IsString()) {
+        return mjs::Error::Throw(context, "The service name is not a string.");
+    }
+    if (!stack.get(2).IsString()) {
         return mjs::Error::Throw(context, "The message name is not a string.");
     }
-    if (!stack.get(2).IsObject()) {
+    if (!stack.get(3).IsObject()) {
         return mjs::Error::Throw(context, "The message is not an object.");
     }
 
-    auto target = service.imillion().FindServiceByNameId(stack.get(0).string_view());
+
+    uint32_t module_id = service.imillion().proto_mgr().FindEnumValueByFullName(stack.get(0).string_view());
+    if (module_id == 0) {
+        return mjs::Error::Throw(context, "Invalid module id full name: {}", stack.get(0).string_view());
+    }
+
+    uint32_t service_name_id = service.imillion().proto_mgr().FindEnumValueByFullName(stack.get(1).string_view());
+    if (service_name_id == 0) {
+        return mjs::Error::Throw(context, "Invalid service id full name: {}", stack.get(1).string_view());
+    }
+
+    auto target = service.imillion().FindServiceByNameId(module_id);
     if (!target) {
         return mjs::Value();
     }
@@ -294,7 +310,7 @@ JSConfigService::~JSConfigService() = default;
 
 bool JSConfigService::OnInit() {
     // 获取配置服务句柄
-    auto config_service_opt = imillion().FindServiceByNameId();
+    auto config_service_opt = imillion().FindServiceByNameId(module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_JS_CONFIG);
     if (!config_service_opt) {
         logger().LOG_ERROR("Config service not found.");
         return false;

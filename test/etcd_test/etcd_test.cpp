@@ -8,10 +8,11 @@
 #include <etcd/etcd.h>
 #include <etcd/config_discovery.h>
 
-#include <ss/ss_etcd.pb.h>
+#include <etcd/ss_etcd.pb.h>
 
 MILLION_MODULE_INIT();
 
+namespace module = million::module;
 namespace etcd = million::etcd;
 
 // 测试消息定义
@@ -27,7 +28,7 @@ public:
 
     virtual bool OnInit() override {
         // 获取 EtcdService
-        auto etcd_handle = imillion().FindServiceByNameId(million::comm::module::million_module_id, million::ss::etcd::ServiceNameId_descriptor(), million::ss::etcd::SERVICE_NAME_ID_ETCD);
+        auto etcd_handle = imillion().FindServiceByNameId(module::module_id, etcd::ss::ServiceNameId_descriptor(), etcd::ss::SERVICE_NAME_ID_ETCD);
         if (!etcd_handle) {
             logger().LOG_ERROR("无法找到 EtcdService.");
             return false;
@@ -35,7 +36,7 @@ public:
         etcd_service_ = *etcd_handle;
 
         // 获取 ConfigDiscoveryService
-        auto config_handle = imillion().FindServiceByNameId(million::comm::module::million_module_id, million::ss::etcd::ServiceNameId_descriptor(), million::ss::etcd::SERVICE_NAME_ID_CONFIG_DISCOVERY);
+        auto config_handle = imillion().FindServiceByNameId(module::module_id, etcd::ss::ServiceNameId_descriptor(), etcd::ss::SERVICE_NAME_ID_CONFIG_DISCOVERY);
         if (!config_handle) {
             logger().LOG_ERROR("无法找到 ConfigDiscoveryService.");
             return false;

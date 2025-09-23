@@ -14,6 +14,7 @@ public:
     const google::protobuf::FileDescriptor* FindFileByName(const std::string& name) const;
     const google::protobuf::Descriptor* FindMessageTypeByName(const std::string& name) const;
     const google::protobuf::EnumDescriptor* FindEnumTypeByName(const std::string& name) const;
+    int32_t FindEnumValueByFullName(const std::string& service_id_full_name);
 
     const google::protobuf::Message* GetPrototype(const google::protobuf::Descriptor& desc) const;
 

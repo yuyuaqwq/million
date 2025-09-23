@@ -1,3 +1,6 @@
+node:
+    id: 1
+
 # 0表示按cpu核数创建工作器
 worker_mgr:
     num: 0
@@ -9,8 +12,8 @@ module_mgr:
     - 
         dir: ../../build/lib/Debug
         loads:
-            - logger
-            - jssvr
+            - million_logger
+            - million_jssvr
 
 timer:
     ms_per_tick: 10

@@ -19,4 +19,5 @@ enum ModuleId {
     MODULE_ID_AGENT = 7;
     MODULE_ID_CONFIG = 8;
     MODULE_ID_DB = 9;
+    MODULE_ID_JSSVR = 10;
 }

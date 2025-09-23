@@ -49,6 +49,31 @@ const google::protobuf::EnumDescriptor* ProtoMgr::FindEnumTypeByName(const std::
     return desc_pool().FindEnumTypeByName(name);
 }
 
+int32_t ProtoMgr::FindEnumValueByFullName(const std::string& service_id_full_name) {
+    size_t last_dot = service_id_full_name.find_last_of('.');
+    if (last_dot == std::string::npos) {
+        return 0;
+    }
+
+    const std::string enum_type_str = service_id_full_name.substr(0, last_dot);
+    const std::string enum_value_str = service_id_full_name.substr(last_dot + 1);
+
+    auto enum_desc = FindEnumTypeByName(enum_type_str);
+    if (!enum_desc) {
+        return 0;
+    }
+
+    const auto* value_desc =
+        enum_desc->FindValueByName(enum_value_str);
+
+    if (!value_desc) {
+        return 0;
+    }
+
+    return value_desc->number();
+}
+
+
 const google::protobuf::Message* ProtoMgr::GetPrototype(const google::protobuf::Descriptor& desc) const {
     return msg_factory().GetPrototype(&desc);
 }
