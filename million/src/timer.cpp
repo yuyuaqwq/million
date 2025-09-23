@@ -30,6 +30,7 @@ void Timer::Start() {
 
 void Timer::Stop() {
     run_ = false;
+    // 需要唤醒一下
     thread_.reset();
 }
 

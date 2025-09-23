@@ -21,6 +21,7 @@ void IoContext::Start() {
 }
 
 void IoContext::Stop() {
+    io_context_.stop();
     work_.reset();
     thread_.reset();
 }

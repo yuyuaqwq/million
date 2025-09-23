@@ -86,7 +86,6 @@ int main() {
     }
     else {
         test_app->SetServiceNameId(service_handle, module::module_id, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_B);
-
     }
 
     getchar();
@@ -103,6 +102,23 @@ int main() {
             million::EncodeModuleCode(module::module_id, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_A),
             std::move(req));
     }
-   
+
+    getchar();
+
+    req = million::make_proto_message<test::ss::LoginReq>("LoginReq req");
+
+    if (settings["node"]["id"].as<int>() == 1) {
+        test_app->Send<TestMsg>(service_handle, service_handle,
+            million::EncodeModuleCode(module::module_id, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_B),
+            std::move(req));
+    }
+    else {
+        test_app->Send<TestMsg>(service_handle, service_handle,
+            million::EncodeModuleCode(module::module_id, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_A),
+            std::move(req));
+    }
+
+    getchar();
+
     return 0;
 }

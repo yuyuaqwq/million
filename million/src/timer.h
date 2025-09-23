@@ -33,8 +33,8 @@ private:
         ServiceShared service;
         MessagePointer msg;
     };
-    internal::HeapTimer<TimedMsg> tasks_;
-    //internal::WheelTimer<TimedMsg> tasks_;
+    //internal::HeapTimer<TimedMsg> tasks_;    //目前Stop时不方便唤醒
+    internal::WheelTimer<TimedMsg> tasks_;
     std::atomic_bool run_ = false;
 };
 
