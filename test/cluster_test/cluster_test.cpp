@@ -14,7 +14,7 @@ namespace module = million::module;
 namespace cluster = million::cluster;
 namespace protobuf = google::protobuf;
 
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(, TestMsg, (million::NodeId) target_node_id, (million::ProtoMessageUnique) req);
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(, TestMsg, (million::ModuleCode) target_service_name_id, (million::ProtoMessageUnique) req);
 
 class TestService : public million::IService {
     MILLION_SERVICE_DEFINE(TestService);
@@ -29,15 +29,13 @@ public:
     //    , Base(imillion) {}
 
     virtual bool OnInit() override {
-        imillion().SetServiceNameId(service_handle(), module::MODULE_ID_TEST, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_A);
-
-        auto handle = imillion().FindServiceByNameId(module::MODULE_ID_CLUSTER, cluster::ss::ServiceNameId_descriptor(), cluster::ss::SERVICE_NAME_ID_CLUSTER);
+        auto handle = imillion().FindServiceByNameId(module::module_id, cluster::ss::ServiceNameId_descriptor(), cluster::ss::SERVICE_NAME_ID_CLUSTER);
         if (!handle) {
             return false;
         }
         cluster_ = *handle;
 
-        imillion().proto_mgr().codec().RegisterFile("ss/ss_test.proto", module::MODULE_ID_TEST, test::ss::ss_msg_id);
+        imillion().proto_mgr().codec().RegisterFile("test/ss_test.proto", module::module_id, test::ss::ss_msg_id);
 
         return true;
     }
@@ -49,15 +47,11 @@ public:
         co_return million::make_proto_message<test::ss::LoginRes>("LoginRes res");
     }
 
-    MILLION_MESSAGE_HANDLE(test::ss::LoginRes, res) {
-        logger().LOG_INFO("test::ss::LoginRes, value:{}", res->value());
-        co_return nullptr;
-    }
-
     MILLION_MESSAGE_HANDLE(TestMsg, msg) {
-        Send<million::cluster::ClusterSend>(cluster_
-            , "TestService", msg->target_node, "TestService"
-            , std::move(msg->req));
+        auto res = co_await Call<million::cluster::ClusterCallMessage, test::ss::LoginRes>(cluster_,
+            msg->target_service_name_id,
+            std::move(msg->req));
+        logger().LOG_INFO("test::ss::LoginRes, value:{}", res->value());
         co_return nullptr;
     }
 
@@ -77,9 +71,7 @@ int main() {
     }
     test_app->Start();
 
-
-
-    test_app->proto_mgr().codec().RegisterFile("ss/ss_test.proto", module::MODULE_ID_TEST, test::ss::ss_msg_id);
+    // test_app->proto_mgr().codec().RegisterFile("ss/ss_test.proto", module::module_id, test::ss::ss_msg_id);
 
     auto service_opt = test_app->NewService<TestService>();
     if (!service_opt) {
@@ -87,16 +79,29 @@ int main() {
     }
     auto service_handle = *service_opt;
 
+    const auto& settings = test_app->YamlSettings();
+    if (settings["node"]["id"].as<int>() == 1) {
+        test_app->SetServiceNameId(service_handle, module::module_id, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_A);
+
+    }
+    else {
+        test_app->SetServiceNameId(service_handle, module::module_id, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_B);
+
+    }
+
     getchar();
 
     auto req = million::make_proto_message<test::ss::LoginReq>("LoginReq req");
 
-    const auto& settings = test_app->YamlSettings();
-    if (settings["cluster"]["name"].as<std::string>() == "node1") {
-        test_app->Send<TestMsg>(service_handle, service_handle, "node2", std::move(req));
+    if (settings["node"]["id"].as<int>() == 1) {
+        test_app->Send<TestMsg>(service_handle, service_handle,
+            million::EncodeModuleCode(module::module_id, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_B),
+            std::move(req));
     }
     else {
-        test_app->Send<TestMsg>(service_handle, service_handle, "node1", std::move(req));
+        test_app->Send<TestMsg>(service_handle, service_handle,
+            million::EncodeModuleCode(module::module_id, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_A),
+            std::move(req));
     }
    
     return 0;

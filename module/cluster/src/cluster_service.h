@@ -165,14 +165,14 @@ public:
     }
 
     MILLION_MESSAGE_HANDLE(ClusterSendMessage, msg) {
-        const auto& target_service_name = msg->target_service_name;
+        const auto& target_service_name = msg->target_service_name_id;
         const auto& proto_msg = msg->proto_msg;
         HandleClusterCallOrSendMessage(sender, session_id, std::move(msg_), target_service_name, proto_msg, &ClusterService::SendClusterSendNotify);
         co_return nullptr;
     }
 
     MILLION_MESSAGE_HANDLE(ClusterCallMessage, msg) {
-        const auto& target_service_name = msg->target_service_name;
+        const auto& target_service_name = msg->target_service_name_id;
         const auto& proto_msg = msg->proto_msg;
         HandleClusterCallOrSendMessage(sender, session_id, std::move(msg_), target_service_name, proto_msg, &ClusterService::SendClusterCallNotify);
         co_return nullptr;
@@ -219,20 +219,19 @@ private:
         {
             auto lock = std::lock_guard(node_session_message_queue_map_mutex_);
             decltype(node_session_message_queue_map_)::iterator msg_queue_iter;
-            for (msg_queue_iter = node_session_message_queue_map_.begin(); msg_queue_iter != node_session_message_queue_map_.end(); ) {
+            for (msg_queue_iter = node_session_message_queue_map_.begin(); msg_queue_iter != node_session_message_queue_map_.end(); ++msg_queue_iter) {
                 if (msg_queue_iter->second.node_session() == &new_node_session) {
                     break;
                 }
             }
-            assert(msg_queue_iter == node_session_message_queue_map_.end());
+            assert(msg_queue_iter != node_session_message_queue_map_.end());
             queue = std::move(msg_queue_iter->second);
             node_session_message_queue_map_.erase(msg_queue_iter);
         }
 
         auto& queue_vector = queue.vector();
         for (auto iter = queue_vector.begin(); iter != queue_vector.end(); ++iter) {
-            auto msg = iter->message().GetMutableMessage<ClusterSendMessage>();
-            co_await OnHandle(iter->sender(), iter->session_id(), std::move(iter->message()), msg);
+            co_await MessageDispatch(iter->sender(), iter->session_id(), std::move(iter->message()));
         }
 
         co_return;
@@ -271,7 +270,7 @@ private:
         auto target_service_name_id = notify.target_service_name_id();
         auto session_id = notify.session_id();
 
-        auto target_service_handle = imillion().FindServiceById(notify.target_service_name_id());
+        auto target_service_handle = imillion().FindServiceByNameId(notify.target_service_name_id());
         if (!target_service_handle) {
             auto& ep = node_session->remote_endpoint();
             logger().LOG_WARN("The target service does not exist, ep:{}:{}, src_service_id:{}, target_service_name_id:{}",
@@ -316,9 +315,6 @@ private:
         auto session_id = notify.session_id();
         auto target_service_handle = imillion().FindServiceById(notify.target_service_id());
         if (!target_service_handle) {
-            // 这里需要注意有一种情况，该名字的服务被移除后重新加载，而对端节点可能依旧持有旧的服务id
-            // 出现了找不到的情况，要考虑如何处理，比如禁止删除一个命名的服务？因为命名服务就代表了该服务是需要被发现的
-            // 节点重启则不会出现这种情况，因为tcp连接会断开，对端节点也就会清除缓存的服务id，重新查询
             auto& ep = node_session->remote_endpoint();
             logger().LOG_WARN("The target service does not exist, ep:{}:{}, src_service_id:{}, target_service_id:{}",
                 ep.address().to_string(), ep.port(), src_service_id, target_service_id);
@@ -424,11 +420,19 @@ private:
             const std::string module_id_full_name = module_node.first.as<std::string>();
 
             uint32_t module_id = GetEnumValueByFullName(module_id_full_name);
+            if (module_id == 0) {
+                logger().LOG_WARN("Invalid module name: {}", module_id_full_name);
+                continue;
+            }
 
             for (const auto& service_entry : module_node.second) {
                 const std::string service_id_full_name = service_entry.first.as<std::string>();
 
                 uint32_t service_name_id = GetEnumValueByFullName(service_id_full_name);
+                if (service_name_id == 0) {
+                    logger().LOG_WARN("Invalid service name: {}", service_id_full_name);
+                    continue;
+                }
 
                 const auto& endpoints = service_entry.second["endpoints"];
 

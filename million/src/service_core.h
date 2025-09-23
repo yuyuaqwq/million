@@ -29,11 +29,11 @@ public:
      * \param service_mgr 服务管理器指针
      * \param iservice 服务接口的唯一指针
      */
-ServiceCore(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
+    ServiceCore(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
     /** \brief 析构函数
      * 清理服务资源并释放相关内存
      */
-~ServiceCore();
+    ~ServiceCore();
 
     /** \brief 推送消息到服务的消息队列
      * \param sender 发送方服务共享指针
@@ -41,29 +41,29 @@ ServiceCore(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
      * \param msg 消息指针
      * \return 成功推送返回true，否则返回false
      */
-bool PushMsg(const ServiceShared& sender, SessionId session_id, MessagePointer msg);
+    bool PushMsg(const ServiceShared& sender, SessionId session_id, MessagePointer msg);
     /** \brief 从消息队列弹出一条消息
      * \return 包含消息元素的optional，如果队列为空则返回nullopt
      */
-std::optional<MessageElementWithStrongSender> PopMsg();
+    std::optional<MessageElementWithStrongSender> PopMsg();
     /** \brief 检查消息队列是否为空
      * \return 队列为空返回true，否则返回false
      */
-bool MsgQueueIsEmpty();
+    bool MsgQueueIsEmpty();
 
     /** \brief 处理单条消息
      * \param msg 要处理的消息元素
      */
-void ProcessMsg(MessageElementWithStrongSender msg);
+    void ProcessMsg(MessageElementWithStrongSender msg);
     /** \brief 处理多条消息
      * \param count 最多处理的消息数量
      */
-void ProcessMsgs(size_t count);
+    void ProcessMsgs(size_t count);
     
     /** \brief 检查任务执行器是否为空
      * \return 为空返回true，否则返回false
      */
-bool TaskExecutorIsEmpty() const;
+    bool TaskExecutorIsEmpty() const;
 
     /** \brief 启用独立工作线程
      * 
@@ -96,6 +96,9 @@ bool TaskExecutorIsEmpty() const;
 
     bool in_queue() const { return in_queue_; }
     void set_in_queue(bool in_queue) { in_queue_ = in_queue; }
+
+    ServiceId service_id() { return service_id_; }
+    void set_service_id(ServiceId service_id) { service_id_ = service_id; }
 
     /** \brief 获取服务接口引用
      * \return IService接口引用
@@ -150,6 +153,7 @@ private:
 
 private:
     ServiceMgr* service_mgr_;
+    ServiceId service_id_;
     std::list<ServiceShared>::iterator iter_; ///< 服务迭代器
 
     // std::optional<Task<>> on_start_task_;
@@ -190,5 +194,9 @@ private:
     };
     std::unique_ptr<SeparateWorker> separate_worker_; ///< 独立工作线程实例指针
 };
+
+inline ServiceId IService::service_id() {
+    return service_shared_->service_id();
+}
 
 } // namespace million

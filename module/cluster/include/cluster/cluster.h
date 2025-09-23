@@ -12,8 +12,8 @@
 namespace million {
 namespace cluster {
 
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterSendMessage, (ModuleCode) target_service_name, (ProtoMessageUnique) proto_msg);
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterCallMessage, (ModuleCode) target_service_name, (ProtoMessageUnique) proto_msg);
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterSendMessage, (ModuleCode) target_service_name_id, (ProtoMessageUnique) proto_msg);
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CLUSTER_API, ClusterCallMessage, (ModuleCode) target_service_name_id, (ProtoMessageUnique) proto_msg);
 
 // Cluster.Call返回一个Task<ProtoMsgUnique>，通过co_return 将proto_msg返回回来
 // Cluster.Call内部：

@@ -82,35 +82,21 @@ public:
 
     template <typename ModuleExtIdT, typename ServiceNameIdT>
     bool SetServiceNameId(const ServiceHandle& service, ModuleExtIdT module_ext_id, const google::protobuf::EnumDescriptor* enum_descriptor, ServiceNameIdT name_id) {
-        if (name_id > std::numeric_limits<ServiceNameId>::max()) {
+        auto id = EncodeModuleCode(module_ext_id, enum_descriptor, name_id);
+        if (id == kModuleCodeInvalid) {
             return false;
         }
-
-        auto& options = enum_descriptor->options();
-        auto module_id = options.GetExtension(module_ext_id);
-        auto module_id_ui = static_cast<ModuleId>(module_id);
-        if (module_id_ui > std::numeric_limits<ModuleId>::max()) {
-            return false;
-        }
-
-        return SetServiceNameId(service, static_cast<ModuleCode>((module_id << 16) | (name_id & 0xffff)));
+        return SetServiceNameId(service, id);
     }
     bool SetServiceNameId(const ServiceHandle& service, ModuleCode name_id);
 
     template <typename ModuleExtIdT, typename ServiceNameIdT>
     std::optional<ServiceHandle> FindServiceByNameId(ModuleExtIdT module_ext_id, const google::protobuf::EnumDescriptor* enum_descriptor, ServiceNameIdT name_id) {
-        if (name_id > std::numeric_limits<ServiceNameId>::max()) {
+        auto id = EncodeModuleCode(module_ext_id, enum_descriptor, name_id);
+        if (id == kModuleCodeInvalid) {
             return std::nullopt;
         }
-        
-        auto& options = enum_descriptor->options();
-        auto module_id = options.GetExtension(module_ext_id);
-        auto module_id_ui = static_cast<ModuleId>(module_id);
-        if (module_id_ui > std::numeric_limits<ModuleId>::max()) {
-            return std::nullopt;
-        }
-        
-        return FindServiceByNameId(static_cast<ModuleCode>((module_id << 16) | (name_id & 0xffff)));
+        return FindServiceByNameId(id);
     }
     std::optional<ServiceHandle> FindServiceByNameId(ModuleCode name_id);
 
@@ -176,6 +162,7 @@ protected:
 
 private:
     std::optional<ServiceHandle> AddService(std::unique_ptr<IService> iservice);
+
 private:
     Million* impl_;
 };

@@ -32,8 +32,8 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
     decltype(services_)::iterator iter;
     auto service_shared = std::make_shared<ServiceCore>(this, std::move(iservice));
     auto handle = ServiceHandle(service_shared);
-    SetServiceId(service_shared, AllocServiceId());
     service_shared->iservice().set_service_handle(handle);
+    service_shared->iservice().set_service_shared(service_shared);
     auto service_ptr = service_shared.get();
     bool success = false;
     {
@@ -42,6 +42,7 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
         iter = --services_.end();
     }
     service_ptr->set_iter(iter);
+    SetServiceId(service_shared, AllocServiceId());
     try {
         success = service_shared->iservice().OnInit();
     }
@@ -64,6 +65,7 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
 void ServiceMgr::DeleteService(ServiceCore* service) {
     {
         // todo: 如果存在，先从name_map_和id_map_中移除
+        assert(0);
     }
 
     auto lock = std::lock_guard(services_mutex_);
@@ -116,9 +118,10 @@ ServiceCore* ServiceMgr::PopService() {
     return service;
 }
 
-bool ServiceMgr::SetServiceId(const ServiceShared& service, ServiceId id) {
+bool ServiceMgr::SetServiceId(const ServiceShared& service, ServiceId service_id) {
     auto lock = std::lock_guard(id_map_mutex_);
-    auto res = id_map_.emplace(id, service->iter());
+    auto res = id_map_.emplace(service_id, service->iter());
+    service->set_service_id(service_id);
     return res.second;
 }
 

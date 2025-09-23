@@ -207,7 +207,7 @@ public:
     IMillion& imillion() { return *imillion_; }
     Logger& logger();
     const ServiceHandle& service_handle() const { return service_handle_; }
-    ServiceId service_id() const { return service_id_; }
+    ServiceId service_id();
 
 protected:
     virtual bool OnInit() { return true; }
@@ -215,7 +215,6 @@ protected:
     virtual Task<MessagePointer> OnMsg(ServiceHandle sender, SessionId session_id, MessagePointer msg) { co_return co_await MessageDispatch(std::move(sender), session_id, std::move(msg)); }
     virtual Task<MessagePointer> OnStop(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) { co_return nullptr; }
     virtual void OnExit() { }
-
 
     virtual ServiceTypeKey GetTypeKey() = 0;
 
@@ -259,7 +258,7 @@ protected:
 
 private:
     void set_service_handle(const ServiceHandle& handle) { service_handle_ = handle; }
-    void set_service_id(ServiceId service_id) { service_id_ = service_id; }
+    void set_service_shared(const ServiceShared& service_shared) { service_shared_ = service_shared; }
 
 private:
     template <typename MsgT, typename ServiceT>
@@ -268,7 +267,7 @@ private:
     friend class ServiceMgr;
 
     IMillion* imillion_;
-    ServiceId service_id_;
+    ServiceShared service_shared_;
     ServiceHandle service_handle_;
 
     struct TypeIndexPair {

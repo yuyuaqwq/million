@@ -12,12 +12,12 @@ std::optional<std::pair<ModuleId, ProtoMessageId>> ProtoCodec::FindMessageId(con
 
 std::optional<net::Packet> ProtoCodec::EncodeMessage(const protobuf::Message& message) const {
     auto desc = message.GetDescriptor();
-    auto msg_key = FindMessageKey(desc);
-    if (!msg_key) {
+    auto msg_key_opt = FindMessageKey(desc);
+    if (!msg_key_opt) {
         return std::nullopt;
     }
     
-    msg_key = host_to_network_u32(*msg_key);
+    auto msg_key = host_to_network_u32(*msg_key_opt);
     auto packet = net::Packet(sizeof(msg_key) + message.ByteSize());
     size_t i = 0;
     std::memcpy(packet.data() + i, &msg_key, sizeof(msg_key));
@@ -39,12 +39,16 @@ std::optional<ProtoCodec::DecodeRes> ProtoCodec::DecodeMessage(net::PacketSpan p
     std::memcpy(&msg_key_net, packet.data() + i, sizeof(msg_key_net));
     i += sizeof(msg_key_net);
 
-    auto [module_id, msg_id] = DecodeModuleCode<ModuleId, ProtoMessageId>(msg_key_net);
+    auto msg_key = host_to_network_u32(msg_key_net);
+
+    auto [module_id, msg_id] = DecodeModuleCode<ModuleId, ProtoMessageId>(msg_key);
     res.module_id = module_id;
     res.msg_id = msg_id;
 
     auto msg_opt = NewMessage(res.module_id, res.msg_id);
-    if (!msg_opt) return {};
+    if (!msg_opt) {
+        return std::nullopt;
+    }
     res.msg = std::move(*msg_opt);
 
     auto success = res.msg->ParseFromArray(packet.data() + i, packet.size() - i);
@@ -70,7 +74,9 @@ std::optional<ProtoMessageKey> ProtoCodec::FindMessageKey(const protobuf::Descri
 
 std::optional<ProtoMessageUnique> ProtoCodec::NewMessage(ModuleId module_id, ProtoMessageId msg_id) const {
     auto desc = FindMessageDesc(module_id, msg_id);
-    if (!desc) return std::nullopt;
+    if (!desc) {
+        return std::nullopt;
+    }
     auto msg = proto_mgr_.NewMessage(*desc);
     if (!msg) {
         return std::nullopt;
