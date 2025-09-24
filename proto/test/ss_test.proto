@@ -22,7 +22,7 @@ enum SSMsgId {
 }
 
 extend google.protobuf.MessageOptions {
-    SSMsgId ss_msg_id = 11001;
+    SSMsgId ss_msg_id = 10101;
 }
 
 message LoginReq {
