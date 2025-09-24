@@ -29,6 +29,6 @@ logger:
 
 config:
     namespace: million
-    pbb_dir_path: ..\..\configgen
+    pbb_dir_path: ..\..\designer\gen
     modules:
         - example

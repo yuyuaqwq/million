@@ -13,9 +13,9 @@ cd .\table\%1
 set PACKAGE=million.config.%1
 set TOOL_PATH=..\..\tool\tabtoy
 set INDEX_PATH=Index.xlsx
-set PROTO_OUT=../../../proto/config/cfg_%1.proto
-set PBBIN_OUT=../../../configgen/%1.pbb
-set PBBIN_DIR=..\..\..\configgen\%1
+set PROTO_OUT=..\..\..\proto\test\cfg_%1.proto
+set PBBIN_OUT=..\..\gen\%1.pbb
+set PBBIN_DIR=..\..\gen\%1
 
 :: 生成 Proto 文件
 echo Generating Proto file for %PACKAGE%...
