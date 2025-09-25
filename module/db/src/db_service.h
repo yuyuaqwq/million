@@ -10,15 +10,12 @@
 #include <google/protobuf/compiler/importer.h>
 
 #include <million/imillion.h>
-
-#include <db/db.h>
-#include <db/cache.h>
-#include <db/sql.h>
-
-#include <test/db_example.pb.h>
-
-#include <db/db_options.pb.h>
-#include <db/ss_db.pb.h>
+#include <million/db/db.h>
+#include <million/db/cache.h>
+#include <million/db/sql.h>
+#include <million/db/db_options.pb.h>
+#include <million/db/ss_db.pb.h>
+#include <million/test/db_example.pb.h>
 
 namespace million {
 namespace db {

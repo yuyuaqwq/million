@@ -7,9 +7,8 @@
 #include <vector>
 
 #include <million/imillion.h>
-
-#include <etcd/config_discovery.h>
-#include <etcd/etcd.h>
+#include <million/etcd/config_discovery.h>
+#include <million/etcd/etcd.h>
 
 namespace million {
 namespace etcd {

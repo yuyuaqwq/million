@@ -5,10 +5,8 @@
 #include <yaml-cpp/yaml.h>
 
 #include <million/imillion.h>
-
-#include <config/config.h>
-
-#include <config/ss_config.pb.h>
+#include <million/config/config.h>
+#include <million/config/ss_config.pb.h>
 
 MILLION_MODULE_INIT();
 

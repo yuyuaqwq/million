@@ -6,8 +6,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <million/imillion.h>
-
-#include <jssvr/jssvr.h>
+#include <million/jssvr/jssvr.h>
 
 #include "js_service.h"
 

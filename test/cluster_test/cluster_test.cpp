@@ -4,10 +4,9 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <cluster/cluster.h>
-
-#include <test/ss_test.pb.h>
-#include <cluster/ss_cluster.pb.h>
+#include <million/cluster/cluster.h>
+#include <million/test/ss_test.pb.h>
+#include <million/cluster/ss_cluster.pb.h>
 
 namespace test = million::test;
 namespace module = million::module;

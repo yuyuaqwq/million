@@ -3,8 +3,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <million/imillion.h>
-
-#include <db/api.h>
+#include <million/db/api.h>
 
 #include "sql_service.h"
 #include "cache_service.h"

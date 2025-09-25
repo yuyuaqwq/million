@@ -1,11 +1,10 @@
 #include <iostream>
 
-#include <million/imillion.h>
-#include <jssvr/jssvr.h>
-
 #include <yaml-cpp/yaml.h>
 
-#include <test/ss_test.pb.h>
+#include <million/imillion.h>
+#include <million/jssvr/jssvr.h>
+#include <million/test/ss_test.pb.h>
 
 MILLION_MODULE_INIT();
 

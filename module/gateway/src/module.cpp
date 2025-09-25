@@ -1,8 +1,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <million/imillion.h>
-
-#include <gateway/api.h>
+#include <million/gateway/api.h>
 
 #include "gateway_service.h"
 

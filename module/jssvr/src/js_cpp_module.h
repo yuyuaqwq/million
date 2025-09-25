@@ -4,10 +4,9 @@
 #include <mjs/context.h>
 #include <mjs/object_impl/cpp_module_object.h>
 
-#include <db/db_row.h>
-#include <config/config.h>
-
 #include <million/imillion.h>
+#include <million/db/db_row.h>
+#include <million/config/config.h>
 
 namespace million {
 namespace jssvr {

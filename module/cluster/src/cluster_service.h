@@ -2,9 +2,8 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <cluster/ss_cluster.pb.h>
-
-#include <cluster/cluster.h>
+#include <million/cluster/ss_cluster.pb.h>
+#include <million/cluster/cluster.h>
 
 #include "cluster_server.h"
 

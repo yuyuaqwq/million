@@ -10,8 +10,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <million/imillion.h>
-
-#include <logger/api.h>
+#include <million/logger/api.h>
 
 MILLION_MODULE_INIT();
 

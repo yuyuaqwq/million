@@ -9,7 +9,7 @@ set(PROTOGEN_EXPORT_MACRO "MILLION_PROTOGEN_API")
 
 # 收集所有proto文件
 file(GLOB_RECURSE PROTO_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/*/*.proto"
+    "${CMAKE_CURRENT_SOURCE_DIR}/**/*.proto"
 )
 
 # 创建输出目录

@@ -16,14 +16,11 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <db/db.h>
-#include <config/config.h>
-
 #include <million/imillion.h>
-
-#include <db/ss_db.pb.h>
-
-#include <jssvr/api.h>
+#include <million/jssvr/api.h>
+#include <million/db/ss_db.pb.h>
+#include <million/db/db.h>
+#include <million/config/config.h>
 
 #include "js_util.h"
 #include "js_module_manager.h"

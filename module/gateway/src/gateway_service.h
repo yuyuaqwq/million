@@ -3,11 +3,9 @@
 #include <yaml-cpp/yaml.h>
 
 #include <million/imillion.h>
-
-#include <gateway/ss_gateway.pb.h>
-
-#include <gateway/api.h>
-#include <gateway/gateway.h>
+#include <million/gateway/ss_gateway.pb.h>
+#include <million/gateway/api.h>
+#include <million/gateway/gateway.h>
 
 #include "gateway_server.h"
 

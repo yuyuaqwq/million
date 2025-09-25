@@ -1,8 +1,7 @@
 #include <iostream>
 
 #include <million/imillion.h>
-
-#include <gateway/gateway.h>
+#include <million/gateway/gateway.h>
 
 namespace gateway = million::gateway;
 

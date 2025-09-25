@@ -1,10 +1,8 @@
 #include <yaml-cpp/yaml.h>
 
 #include <million/imillion.h>
-
-#include <agent/api.h>
-
-#include <agent/ss_agent.pb.h>
+#include <million/agent/api.h>
+#include <million/agent/ss_agent.pb.h>
 
 #include "agent_mgr_service.h"
 

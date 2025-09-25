@@ -4,8 +4,7 @@
 
 #include <million/noncopyable.h>
 #include <million/net/tcp_connection.h>
-
-#include <cluster/cluster.h>
+#include <million/cluster/cluster.h>
 
 namespace million {
 

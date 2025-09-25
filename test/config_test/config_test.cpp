@@ -4,10 +4,9 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <config/ss_config.pb.h>
-#include <test/cfg_example.pb.h>
-
-#include <config/config.h>
+#include <million/config/ss_config.pb.h>
+#include <million/test/cfg_example.pb.h>
+#include <million/config/config.h>
 
 MILLION_MODULE_INIT();
 

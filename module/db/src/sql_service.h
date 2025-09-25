@@ -14,13 +14,10 @@
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
 
-#include <db/db_options.pb.h>
-
 #include <million/imillion.h>
-
-#include <db/sql.h>
-
-#include <db/ss_db.pb.h>
+#include <million/db/sql.h>
+#include <million/db/ss_db.pb.h>
+#include <million/db/db_options.pb.h>
 
 namespace million {
 namespace db {

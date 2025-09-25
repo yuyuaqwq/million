@@ -4,8 +4,7 @@
 
 #include <million/imillion.h>
 #include <million/net/tcp_connection.h>
-
-#include <gateway/gateway.h>
+#include <million/gateway/gateway.h>
 
 #include "token.h"
 

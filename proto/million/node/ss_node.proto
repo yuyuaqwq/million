@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package million.node.ss;
+
+import "million/module/module_id.proto";
+
+enum ServiceNameId {
+    option (module.module_id) = MODULE_ID_NODE;
+
+    SERVICE_NAME_ID_INVALID = 0;
+    SERVICE_NAME_ID_NODE_MANAGER = 1;
+}

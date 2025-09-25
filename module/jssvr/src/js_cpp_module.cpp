@@ -2,11 +2,9 @@
 
 #include <shared_mutex>
 
-#include <config/ss_config.pb.h>
-
-#include <jssvr/ss_jssvr.pb.h>
-
-#include <jssvr/jssvr.h>
+#include <million/config/ss_config.pb.h>
+#include <million/jssvr/ss_jssvr.pb.h>
+#include <million/jssvr/jssvr.h>
 
 #include "js_service.h"
 #include "js_util.h"

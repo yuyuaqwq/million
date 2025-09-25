@@ -3,14 +3,11 @@
 #include <yaml-cpp/yaml.h>
 
 #include <million/imillion.h>
-
-#include <gateway/gateway.h>
-
-#include <agent/api.h>
-#include <agent/agent.h>
-
-#include <agent/ss_agent.pb.h>
-#include <node/ss_node.pb.h>
+#include <million/gateway/gateway.h>
+#include <million/agent/api.h>
+#include <million/agent/agent.h>
+#include <million/agent/ss_agent.pb.h>
+#include <million/node/ss_node.pb.h>
 
 namespace million {
 namespace agent {

@@ -1,7 +1,8 @@
 #include "etcd_service.h"
+
 #include <yaml-cpp/yaml.h>
 
-#include <etcd/ss_etcd.pb.h>
+#include <million/etcd/ss_etcd.pb.h>
 
 namespace million {
 namespace etcd {

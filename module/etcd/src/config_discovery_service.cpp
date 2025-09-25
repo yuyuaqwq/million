@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <sstream>
 
-#include <etcd/ss_etcd.pb.h>
+#include <million/etcd/ss_etcd.pb.h>
 
 namespace million {
 namespace etcd {

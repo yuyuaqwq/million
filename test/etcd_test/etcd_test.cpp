@@ -2,13 +2,12 @@
 #include <thread>
 #include <chrono>
 
-#include <million/imillion.h>
 #include <yaml-cpp/yaml.h>
 
-#include <etcd/etcd.h>
-#include <etcd/config_discovery.h>
-
-#include <etcd/ss_etcd.pb.h>
+#include <million/imillion.h>
+#include <million/etcd/etcd.h>
+#include <million/etcd/config_discovery.h>
+#include <million/etcd/ss_etcd.pb.h>
 
 MILLION_MODULE_INIT();
 

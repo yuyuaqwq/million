@@ -11,8 +11,7 @@
 #include <etcd/Watcher.hpp>
 
 #include <million/imillion.h>
-
-#include <etcd/etcd.h>
+#include <million/etcd/etcd.h>
 
 namespace million {
 namespace etcd {

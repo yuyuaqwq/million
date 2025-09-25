@@ -4,12 +4,11 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <db/db.h>
-#include <db/sql.h>
-
-#include <db/db_options.pb.h>
-#include <db/ss_db.pb.h>
-#include <test/db_example.pb.h>
+#include <million/db/db.h>
+#include <million/db/sql.h>
+#include <million/db/db_options.pb.h>
+#include <million/db/ss_db.pb.h>
+#include <million/test/db_example.pb.h>
 
 MILLION_MODULE_INIT();
 

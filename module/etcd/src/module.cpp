@@ -3,8 +3,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <million/imillion.h>
-
-#include <etcd/api.h>
+#include <million/etcd/api.h>
 
 #include "etcd_service.h"
 #include "config_discovery_service.h"

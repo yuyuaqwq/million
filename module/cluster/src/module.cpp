@@ -1,8 +1,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <million/imillion.h>
-
-#include <cluster/api.h>
+#include <million/cluster/api.h>
 
 #include "cluster_service.h"
 
