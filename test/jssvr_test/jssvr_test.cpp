@@ -26,20 +26,20 @@ public:
     virtual bool OnInit() override {
         imillion().SetServiceNameId(service_handle(), module::module_id, test::ss::ServiceNameId_descriptor(), test::ss::SERVICE_NAME_ID_TEST_A);
 
-        imillion().proto_mgr().codec().RegisterFile("test/ss_test.proto", module::module_id, test::ss::ss_msg_id);
+        imillion().proto_mgr().codec().RegisterFile("million/test/ss_test.proto", module::module_id, test::ss::message_id);
 
         return true;
     }
 
-    MILLION_MESSAGE_HANDLE(test::ss::LoginReq, req) {
-        logger().LOG_INFO("test::ss::LoginReq, value:{}", req->value());
+    MILLION_MESSAGE_HANDLE(test::ss::LoginRequest, req) {
+        logger().LOG_INFO("test::ss::LoginRequest, value:{}", req->value());
 
-        // 回一个LoginRes
-        co_return million::make_proto_message<test::ss::LoginRes>("LoginRes res");
+        // 回一个LoginResponse
+        co_return million::make_proto_message<test::ss::LoginResponse>("LoginResponse res");
     }
 
-    MILLION_MESSAGE_HANDLE(test::ss::LoginRes, res) {
-        logger().LOG_INFO("test::ss::LoginRes, value:{}", res->value());
+    MILLION_MESSAGE_HANDLE(test::ss::LoginResponse, res) {
+        logger().LOG_INFO("test::ss::LoginResponse, value:{}", res->value());
         co_return nullptr;
     }
 
@@ -55,7 +55,7 @@ int main() {
     test_app->Start();
 
     auto js_svr = million::jssvr::NewJSService(test_app.get(), "test");
-    test_app->Send<test::ss::LoginReq>(*svr, *js_svr, "test_value");
+    test_app->Send<test::ss::LoginRequest>(*svr, *js_svr, "test_value");
 
     // test_app->Send(*service, *service, );
 

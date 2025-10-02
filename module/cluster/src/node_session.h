@@ -22,7 +22,6 @@ public:
     std::list<MessageElementWithWeakSender>& message_queue() { return message_queue_; }
 
 private:
-
     NodeId node_id_ = kNodeIdInvalid;
 
     std::list<MessageElementWithWeakSender> message_queue_;

@@ -13,19 +13,19 @@ enum ServiceNameId {
 
 message MsgBody {
     oneof body {
-        HandshakeReq handshake_req = 1;
-        HandshakeRes handshake_res = 2;
+        HandshakeRequest handshake_request = 1;
+        HandshakeResponse handshake_response = 2;
         ClusterSend cluster_send = 5;
         ClusterCall cluster_call = 6;
         ClusterReply cluster_reply = 7;
     }
 }
 
-message HandshakeReq {
+message HandshakeRequest {
     uint64 src_node_id = 1;
 }
 
-message HandshakeRes {
+message HandshakeResponse {
     uint64 target_node_id = 1;
 }
 

@@ -135,12 +135,12 @@ public:
         }
 
         switch (msg_body.body_case()) {
-        case ss::MsgBody::BodyCase::kHandshakeReq: {
-            co_await HandleRecvHandshakeReq(std::move(msg->node_session), msg_body.handshake_req());
+        case ss::MsgBody::BodyCase::kHandshakeRequest: {
+            co_await HandleRecvHandshakeRequest(std::move(msg->node_session), msg_body.handshake_request());
             break;
         }
-        case ss::MsgBody::BodyCase::kHandshakeRes: {
-            co_await HandleRecvHandshakeRes(std::move(msg->node_session), msg_body.handshake_res());
+        case ss::MsgBody::BodyCase::kHandshakeResponse: {
+            co_await HandleRecvHandshakeResponse(std::move(msg->node_session), msg_body.handshake_response());
             break;
         }
         case ss::MsgBody::BodyCase::kClusterSend: {
@@ -178,7 +178,7 @@ public:
     }
 
 private:
-    Task<void> HandleRecvHandshakeReq(NodeSessionShared&& node_session, const ss::HandshakeReq& req) {
+    Task<void> HandleRecvHandshakeRequest(NodeSessionShared&& node_session, const ss::HandshakeRequest& req) {
         // 收到握手请求，当前是被动连接方
         node_session->set_node_id(req.src_node_id());
 
@@ -193,7 +193,7 @@ private:
 
         // 能否匹配都回包
         ss::MsgBody msg_body;
-        auto* res = msg_body.mutable_handshake_res();
+        auto* res = msg_body.mutable_handshake_response();
         res->set_target_node_id(imillion().node_id());
 
         auto packet = ProtoMsgToPacket(msg_body);
@@ -206,7 +206,7 @@ private:
         co_return;
     }
 
-    Task<void> HandleRecvHandshakeRes(NodeSessionShared&& node_session, const ss::HandshakeRes& res) {
+    Task<void> HandleRecvHandshakeResponse(NodeSessionShared&& node_session, const ss::HandshakeResponse& res) {
         // 收到握手响应，当前是主动连接方
 
         // 创建节点
@@ -388,7 +388,7 @@ private:
 
                     // 与目标服务的连接未开始
                     ss::MsgBody msg_body;
-                    auto* req = msg_body.mutable_handshake_req();
+                    auto* req = msg_body.mutable_handshake_request();
                     req->set_src_node_id(imillion().node_id());
 
                     auto packet = ProtoMsgToPacket(msg_body);
@@ -507,6 +507,13 @@ private:
 
     void DeleteNodeSession(NodeSessionShared&& node_session) {
         nodes_.erase(node_session->node_id());
+        for(auto it = service_name_to_node_session_.begin(); it != service_name_to_node_session_.end(); ) {
+            if (it->second == node_session.get()) {
+                it = service_name_to_node_session_.erase(it);
+            } else {
+                ++it;
+            }
+        }
     }
 
 

@@ -25,8 +25,8 @@ message TableSqlOptionsForeignKey {
   string column = 1;             // 外键列
   string referenced_table = 2;   // 被引用表名
   string referenced_column = 3;  // 被引用列名
-  string on_delete = 4;          // 外键删除策略 (e.g., CASCADE, RESTRICT, etc.)
-  string on_update = 5;          // 外键更新策略 (e.g., CASCADE, RESTRICT, etc.)
+  string on_delete = 4;          // 外键删除策略 (e.g., CASCADE, RESPONSETRICT, etc.)
+  string on_update = 5;          // 外键更新策略 (e.g., CASCADE, RESPONSETRICT, etc.)
 }
 
 message TableSqlOptionsMultiIndex {

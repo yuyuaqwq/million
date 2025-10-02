@@ -5,26 +5,26 @@ package million.test.cs;
 import "google/protobuf/descriptor.proto";
 import "million/module/module_id.proto";
 
-enum CSMsgId {
+enum MessageId {
     option (module.module_id) = MODULE_ID_TEST;
     
-    CS_MSG_ID_INVALID = 0;
+    MESSAGE_ID_INVALID = 0;
 
-    CS_MSG_ID_LOGIN_REQ = 1024;
-    CS_MSG_ID_LOGIN_RES = 1025;
+    MESSAGE_ID_LOGIN_REQUEST = 1024;
+    MESSAGE_ID_LOGIN_RESPONSE = 1025;
     
 }
 
 extend google.protobuf.MessageOptions {
-    CSMsgId cs_sub_msg_id = 10101;
+    MessageId message_id = 10102;
 }
 
-message LoginReq {
-    option (cs_sub_msg_id) = CS_MSG_ID_LOGIN_REQ;
+message LoginRequest {
+    option (message_id) = MESSAGE_ID_LOGIN_REQUEST;
     string value = 1;
 }
 
-message LoginRes {
-    option (cs_sub_msg_id) = CS_MSG_ID_LOGIN_RES;
+message LoginResponse {
+    option (message_id) = MESSAGE_ID_LOGIN_RESPONSE;
     string value = 1;
 }

@@ -13,7 +13,7 @@ namespace module = million::module;
 namespace cluster = million::cluster;
 namespace protobuf = google::protobuf;
 
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(, TestMsg, (million::ModuleCode) target_service_name_id, (million::ProtoMessageUnique) req);
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(, TestMsg, (million::ModuleCode) target_service_name_id, (million::ProtoMessageUnique) request);
 
 class TestService : public million::IService {
     MILLION_SERVICE_DEFINE(TestService);
@@ -34,23 +34,23 @@ public:
         }
         cluster_ = *handle;
 
-        imillion().proto_mgr().codec().RegisterFile("test/ss_test.proto", module::module_id, test::ss::ss_msg_id);
+        imillion().proto_mgr().codec().RegisterFile("million/test/ss_test.proto", module::module_id, test::ss::message_id);
 
         return true;
     }
 
-    MILLION_MESSAGE_HANDLE(test::ss::LoginReq, req) {
-        logger().LOG_INFO("test::ss::LoginReq, value:{}", req->value());
+    MILLION_MESSAGE_HANDLE(test::ss::LoginRequest, req) {
+        logger().LOG_INFO("test::ss::LoginRequest, value:{}", req->value());
 
         // 回复LoginRes
-        co_return million::make_proto_message<test::ss::LoginRes>("LoginRes res");
+        co_return million::make_proto_message<test::ss::LoginResponse>("LoginResponse res");
     }
 
     MILLION_MESSAGE_HANDLE(TestMsg, msg) {
-        auto res = co_await Call<million::cluster::ClusterCallMessage, test::ss::LoginRes>(cluster_,
+        auto res = co_await Call<million::cluster::ClusterCallMessage, test::ss::LoginResponse>(cluster_,
             msg->target_service_name_id,
-            std::move(msg->req));
-        logger().LOG_INFO("test::ss::LoginRes, value:{}", res->value());
+            std::move(msg->request));
+        logger().LOG_INFO("test::ss::LoginResponse, value:{}", res->value());
         co_return nullptr;
     }
 
@@ -89,7 +89,7 @@ int main() {
 
     getchar();
 
-    auto req = million::make_proto_message<test::ss::LoginReq>("LoginReq req");
+    auto req = million::make_proto_message<test::ss::LoginRequest>("LoginRequest message");
 
     if (settings["node"]["id"].as<int>() == 1) {
         test_app->Send<TestMsg>(service_handle, service_handle,
@@ -104,7 +104,7 @@ int main() {
 
     getchar();
 
-    req = million::make_proto_message<test::ss::LoginReq>("LoginReq req");
+    req = million::make_proto_message<test::ss::LoginRequest>("LoginRequest message");
 
     if (settings["node"]["id"].as<int>() == 1) {
         test_app->Send<TestMsg>(service_handle, service_handle,

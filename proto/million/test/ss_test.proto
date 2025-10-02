@@ -13,24 +13,24 @@ enum ServiceNameId {
     SERVICE_NAME_ID_TEST_B = 2;
 }
 
-enum SSMsgId {
+enum MessageId {
     option (module.module_id) = MODULE_ID_TEST;
     
-    SS_MSG_ID_INVALID = 0;
-    SS_MSG_ID_LOGIN_REQ = 1;
-    SS_MSG_ID_LOGIN_RES = 2;
+    MESSAGE_ID_INVALID = 0;
+    MESSAGE_ID_LOGIN_REQUEST = 1;
+    MESSAGE_ID_LOGIN_RESPONSE = 2;
 }
 
 extend google.protobuf.MessageOptions {
-    SSMsgId ss_msg_id = 10101;
+    MessageId message_id = 10101;
 }
 
-message LoginReq {
-    option (ss_msg_id) = SS_MSG_ID_LOGIN_REQ;
+message LoginRequest {
+    option (message_id) = MESSAGE_ID_LOGIN_REQUEST;
     string value = 1;
 }
 
-message LoginRes {
-    option (ss_msg_id) = SS_MSG_ID_LOGIN_RES;
+message LoginResponse {
+    option (message_id) = MESSAGE_ID_LOGIN_RESPONSE;
     string value = 1;
 }
