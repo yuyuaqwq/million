@@ -4,7 +4,7 @@
   "dependencies": [
     {
       "name": "protobuf",
-      "version>=": "5.29.5"
+      "version>=": "5.29.0"
     },
     {
       "name": "grpc",
@@ -19,6 +19,7 @@
       "version>=": "8.0.40"
     }
   ],
-  "overrides": [],
+  "overrides": [
+  ],
   "builtin-baseline": "5300a2a461a53b76405db4fcbe6aeb0eea43935d"
 }
