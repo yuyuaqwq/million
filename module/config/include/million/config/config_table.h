@@ -18,9 +18,9 @@ using CompositeIndex = std::unordered_map<CompositeProtoFieldAny
 
 class MILLION_CONFIG_API ConfigTableBase : public noncopyable {
 public:
-    ConfigTableBase(ProtoMessageUnique table, const google::protobuf::Descriptor* config_descriptor)
+    ConfigTableBase(ProtoMessageUnique table)
         : table_(std::move(table))
-        , table_field_(nullptr)
+        , row_field_descriptor_(nullptr)
     {
         const auto* descriptor = table_->GetDescriptor();
         const auto* reflection = table_->GetReflection();
@@ -29,18 +29,10 @@ public:
             if (!field->is_repeated()) {
                 continue;
             }
-
-            auto sub_table_descriptor_ = field->message_type();
-
-            if (!sub_table_descriptor_) {
-                continue;
-            }
-
-            if (config_descriptor == sub_table_descriptor_) {
-                table_field_ = field;
-            }
+            row_field_descriptor_ = field;
+            break;
         }
-        TaskAssert(table_field_, "There are no matching table.");
+        TaskAssert(row_field_descriptor_, "This table has no row field: {}.", descriptor->full_name());
     }
     ~ConfigTableBase() = default;
 
@@ -53,7 +45,7 @@ public:
         size_t row_count = GetRowCount();
 
         for (size_t i = 0; i < row_count; ++i) {
-            const auto& row = reflection->GetRepeatedMessage(*table_, table_field_, i);
+            const auto& row = reflection->GetRepeatedMessage(*table_, row_field_descriptor_, i);
             if (predicate(row)) {
                 return &row;
             }
@@ -63,16 +55,16 @@ public:
     }
 
     const ProtoMessage* GetRowByIndex(size_t idx) {
-        TaskAssert(idx < GetRowCount(), "Access row out of bounds: {}.", table_field_->message_type()->full_name());
+        TaskAssert(idx < GetRowCount(), "Access row out of bounds: {}.", row_field_descriptor_->message_type()->full_name());
 
         auto reflection = table_->GetReflection();
-        const auto& row = reflection->GetRepeatedMessage(*table_, table_field_, idx);
+        const auto& row = reflection->GetRepeatedMessage(*table_, row_field_descriptor_, idx);
         return &row;
     }
 
     size_t GetRowCount() {
         auto reflection = table_->GetReflection();
-        return reflection->FieldSize(*table_, table_field_);
+        return reflection->FieldSize(*table_, row_field_descriptor_);
     }
 
     std::string DebugString() {
@@ -80,7 +72,7 @@ public:
     }
 
     void BuildIndex(int32_t field_number) {
-        const auto* row_descriptor = table_field_->message_type();
+        const auto* row_descriptor = row_field_descriptor_->message_type();
         const auto* field_desc = row_descriptor->FindFieldByNumber(field_number);
         TaskAssert(field_desc, "Field number {} not found in row descriptor", field_number);
 
@@ -89,7 +81,7 @@ public:
         size_t row_count = GetRowCount();
 
         for (size_t i = 0; i < row_count; ++i) {
-            const auto& row = reflection->GetRepeatedMessage(*table_, table_field_, i);
+            const auto& row = reflection->GetRepeatedMessage(*table_, row_field_descriptor_, i);
             const auto& field_reflection = *row.GetReflection();
 
             ProtoFieldAny key = ProtoMsgGetFieldAny(field_reflection, row, *field_desc);
@@ -121,7 +113,7 @@ public:
         CompositeIndex index;
         auto reflection = table_->GetReflection();
         size_t row_count = GetRowCount();
-        const auto* row_descriptor = table_field_->message_type();
+        const auto* row_descriptor = row_field_descriptor_->message_type();
 
         std::vector<const google::protobuf::FieldDescriptor*> field_descriptors;
         for (auto field_number : field_numbers) {
@@ -131,7 +123,7 @@ public:
         }
 
         for (size_t i = 0; i < row_count; ++i) {
-            const auto& row = reflection->GetRepeatedMessage(*table_, table_field_, i);
+            const auto& row = reflection->GetRepeatedMessage(*table_, row_field_descriptor_, i);
             CompositeProtoFieldAny composite_key;
 
             for (const auto* field_desc : field_descriptors) {
@@ -170,7 +162,7 @@ public:
 
 private:
     ProtoMessageUnique table_;
-    const google::protobuf::FieldDescriptor* table_field_;
+    const google::protobuf::FieldDescriptor* row_field_descriptor_;
 
     std::unordered_map<int32_t, Index> field_index_;
 
@@ -198,30 +190,30 @@ private:
     > composite_indices_;
 };
 
-template <typename ConfigMsgT>
+template <typename RowMessageT>
 class ConfigTable : public ConfigTableBase {
 public:
     using ConfigTableBase::ConfigTableBase;
 
 public:
-    const ConfigMsgT* FindRow(const std::function<bool(const ConfigMsgT&)>& predicate) {
-        return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRow([predicate](const ProtoMessage& row) -> bool {
-            return predicate(static_cast<const ConfigMsgT&>(row));
+    const RowMessageT* FindRow(const std::function<bool(const RowMessageT&)>& predicate) {
+        return static_cast<const RowMessageT*>(ConfigTableBase::FindRow([predicate](const ProtoMessage& row) -> bool {
+            return predicate(static_cast<const RowMessageT&>(row));
         }));
     }
 
-    const ConfigMsgT* GetRowByIndex(size_t idx) {
-        return static_cast<const ConfigMsgT*>(ConfigTableBase::GetRowByIndex(idx));
+    const RowMessageT* GetRowByIndex(size_t idx) {
+        return static_cast<const RowMessageT*>(ConfigTableBase::GetRowByIndex(idx));
     }
 
 
-    const ConfigMsgT* FindRowByIndex(int32_t field_number, const ProtoFieldAny& key) {
-        return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRowByIndex(field_number, key));
+    const RowMessageT* FindRowByIndex(int32_t field_number, const ProtoFieldAny& key) {
+        return static_cast<const RowMessageT*>(ConfigTableBase::FindRowByIndex(field_number, key));
     }
 
     template <typename... Args>
-    const ConfigMsgT* FindRowByCompositeIndex(std::initializer_list<int32_t> field_numbers, Args&&... args) {
-        return static_cast<const ConfigMsgT*>(ConfigTableBase::FindRowByCompositeIndex(std::move(field_numbers), std::forward<Args>(args)...));
+    const RowMessageT* FindRowByCompositeIndex(std::initializer_list<int32_t> field_numbers, Args&&... args) {
+        return static_cast<const RowMessageT*>(ConfigTableBase::FindRowByCompositeIndex(std::move(field_numbers), std::forward<Args>(args)...));
     }
 };
 

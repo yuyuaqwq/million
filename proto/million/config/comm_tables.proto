@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package million.config.comm;
+
+import "million/test/cfg_network.proto";
+
+import "million/config/config_options.proto";
+
+
+message Tables {
+    test.cfg.TbServer test_cfg_tbserver = 1 [(million.config.table_load) = {
+        module_name: "test",
+        pbb_file_name: "test_cfg_tbserver"
+    }];
+}

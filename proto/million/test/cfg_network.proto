@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package million.test.cfg;
+
+
+// 服务器类型
+enum ServerType {
+    // 主要
+    ServerType_main = 0;
+    // 资源下载
+    ServerType_resource_download = 1;
+}
+
+
+message Server {
+    // Id
+     int32 id = 1 ;
+    // 类型
+     test.cfg.ServerType type = 2 ;
+    // 主机
+     string host = 3 ;
+    // 端口
+     int32 port = 4 ;
+}
+
+
+message TbServer {
+    repeated test.cfg.Server data_list = 1 [packed = false];
+}
+
+

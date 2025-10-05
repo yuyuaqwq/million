@@ -7,6 +7,7 @@
 #include <million/imillion.h>
 #include <million/config/config.h>
 #include <million/config/ss_config.pb.h>
+#include <million/config/config_options.pb.h>
 
 MILLION_MODULE_INIT();
 
@@ -49,57 +50,65 @@ public:
         }
         auto namespace_ = namespace_settings.as<std::string>();
 
-        const auto& modules_settings = config_settings["modules"];
-        if (!modules_settings) {
-            logger().LOG_ERROR("cannot find 'config.modules'.");
+        const auto& tables_message_type_settings = config_settings["tables_message_type"];
+        if (!tables_message_type_settings) {
+            logger().LOG_ERROR("cannot find 'config.tables_message_type_settings'.");
             return false;
         }
-        for (auto module_settings : modules_settings) {
-            auto module_name = module_settings.as<std::string>();
-            auto table_msg_name = namespace_ + ".config." + module_name + ".Table";
-            auto table_desc = imillion().proto_mgr().FindMessageTypeByName(table_msg_name);
-            if (!table_desc) {
-                logger().LOG_ERROR("Unable to find message desc: top_msg_name -> {}.", table_msg_name);
-                return false;
-            }
-
-            for (int i = 0; i < table_desc->field_count(); ++i) {
-                auto field_desc = table_desc->field(i);
-                if (!field_desc) {
-                    logger().LOG_ERROR("table_desc->field failed: {}.{}: Unable to retrieve field description.", table_msg_name, i);
-                    continue;
-                }
-
-                if (!field_desc->is_repeated()) {
-                    logger().LOG_ERROR("table_desc->field: Field at index {} in message '{}' is not repeated. Expected a repeated field.", i, table_msg_name);
-                    continue;
-                }
-
-                if (field_desc->type() != google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
-                    continue;
-                }
-
-                const auto* config_desc = field_desc->message_type();
-                if (!config_desc) {
-                    logger().LOG_ERROR("field_desc->message_type() is nullptr: Field at index {} in message '{}'.", i, table_msg_name);
-                    continue;
-                }
-                LoadConfig(module_name, *table_desc, *config_desc);
-            }
-
+        auto tables_message_type = namespace_ + "." + tables_message_type_settings.as<std::string>();
+        auto table_desc = imillion().proto_mgr().FindMessageTypeByName(tables_message_type);
+        if (!table_desc) {
+            logger().LOG_ERROR("Unable to find message desc: tables_message_type -> {}.", tables_message_type);
+            return false;
         }
+
+        for (int i = 0; i < table_desc->field_count(); ++i) {
+            auto field_desc = table_desc->field(i);
+            if (!field_desc) {
+                logger().LOG_ERROR("table_desc->field failed: {}.{}: Unable to retrieve field description.", tables_message_type, i);
+                continue;
+            }
+
+            if (field_desc->type() != google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
+                continue;
+            }
+
+            const auto* table_desc = field_desc->message_type();
+            if (!table_desc) {
+                logger().LOG_ERROR("field_desc->message_type() is nullptr: Field at index {} in message '{}'.", i, tables_message_type);
+                continue;
+            }
+
+            std::string module_name;
+            std::string pbb_file_name;
+            const google::protobuf::FieldOptions& options = field_desc->options();
+
+            auto* table_load_extension = &million::config::table_load; // 替换为你的实际扩展
+
+            if (options.HasExtension(*table_load_extension)) {
+                const auto& table_load_options = options.GetExtension(*table_load_extension);
+                module_name = table_load_options.module_name();
+                pbb_file_name = table_load_options.pbb_file_name();
+            }
+            else {
+                logger().LOG_ERROR("Field '{}' in message '{}' does not have table_load option.",
+                    field_desc->name(), tables_message_type);
+                continue;
+            }
+
+            LoadConfig(module_name, pbb_file_name, *table_desc);
+        }
+
         return true;
     }
 
     MILLION_MESSAGE_HANDLE(ConfigQueryReq, msg) {
-        auto config_iter = config_map_.find(&msg->config_desc);
+        auto config_iter = config_map_.find(&msg->table_desc);
         if (config_iter == config_map_.end()) {
-            co_return make_message<ConfigQueryResp>(msg->config_desc, std::nullopt);
+            co_return make_message<ConfigQueryResp>(msg->table_desc, std::nullopt);
         }
 
-        
-
-        co_return make_message<ConfigQueryResp>(msg->config_desc, ConfigTableWeakBase(config_iter->second));
+        co_return make_message<ConfigQueryResp>(msg->table_desc, ConfigTableWeakBase(config_iter->second));
     }
 
     MILLION_MESSAGE_HANDLE(const ConfigUpdateReq, msg) {
@@ -130,14 +139,14 @@ private:
         return content;
     }
 
-    bool LoadConfig(const std::string module_name, const google::protobuf::Descriptor& table_desc, const google::protobuf::Descriptor& config_desc) {
+    bool LoadConfig(std::string_view module_name, std::string_view pbb_file_name, const google::protobuf::Descriptor& table_desc) {
         // 加载对应文件
         std::filesystem::path pbb_path = pbb_dir_path_;
         pbb_path /= module_name;
-        pbb_path /= config_desc.name() + ".pbb";
+        pbb_path /= std::string(pbb_file_name) + ".pbb";
         auto data = ReadPbb(pbb_path);
         if (!data) {
-            logger().LOG_ERROR("ReadPbb failed: {}.", config_desc.full_name());
+            logger().LOG_ERROR("ReadPbb failed: {}.", pbb_path.string());
             return false;
         }
 
@@ -151,9 +160,10 @@ private:
             logger().LOG_ERROR("ParseFromString failed: {}.", table_desc.full_name());
             return false;
         }
-        // logger().LOG_DEBUG("Config '{}.{}' debug string:\n {}", config_desc.full_name(), config_desc.full_name(), config_msg->DebugString());
 
-        config_map_[&config_desc] = std::make_shared<ConfigTableBase>(std::move(config_msg), &config_desc);
+        logger().LOG_DEBUG("Table '{}' loaded:\n {}", table_desc.full_name(), config_msg->DebugString());
+
+        config_map_[&table_desc] = std::make_shared<ConfigTableBase>(std::move(config_msg));
 
         return true;
     }

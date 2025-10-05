@@ -31,13 +31,13 @@ protected:
     std::weak_ptr<ConfigTableBase> weak_;
 };
 
-MILLION_MESSAGE_DEFINE(MILLION_CONFIG_API, ConfigQueryReq, (const google::protobuf::Descriptor&) config_desc)
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CONFIG_API, ConfigQueryResp, (const google::protobuf::Descriptor&) config_desc, (std::optional<ConfigTableWeakBase>) config)
+MILLION_MESSAGE_DEFINE(MILLION_CONFIG_API, ConfigQueryReq, (const google::protobuf::Descriptor&) table_desc)
+MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CONFIG_API, ConfigQueryResp, (const google::protobuf::Descriptor&) table_desc, (std::optional<ConfigTableWeakBase>) config)
 
-MILLION_MESSAGE_DEFINE(MILLION_CONFIG_API, ConfigUpdateReq, (const google::protobuf::Descriptor&) config_desc)
+MILLION_MESSAGE_DEFINE(MILLION_CONFIG_API, ConfigUpdateReq, (const google::protobuf::Descriptor&) table_desc)
 MILLION_MESSAGE_DEFINE_EMPTY(MILLION_CONFIG_API, ConfigUpdateResp)
 
-template <typename ConfigMsgT>
+template <typename RowMessageT>
 class ConfigTableWeak : public ConfigTableWeakBase {
 public:
     ConfigTableWeak() = default;
@@ -53,17 +53,17 @@ public:
         ConfigTableWeakBase::operator=(std::move(other));
     }
 
-    Task<std::shared_ptr<ConfigTable<ConfigMsgT>>> Lock(IService* this_service, const ServiceHandle& config_service) {
-        auto table_base = co_await ConfigTableWeakBase::Lock(this_service, config_service, ConfigMsgT::GetDescriptor());
-        co_return std::static_pointer_cast<ConfigTable<ConfigMsgT>>(std::move(table_base));
+    Task<std::shared_ptr<ConfigTable<RowMessageT>>> Lock(IService* this_service, const ServiceHandle& config_service) {
+        auto table_base = co_await ConfigTableWeakBase::Lock(this_service, config_service, RowMessageT::GetDescriptor());
+        co_return std::static_pointer_cast<ConfigTable<RowMessageT>>(std::move(table_base));
     }
 };
 
-template <typename ConfigMsgT>
-inline Task<ConfigTableWeak<ConfigMsgT>> QueryConfig(IService* this_service, const ServiceHandle& config_service) {
-    auto descriptor = ConfigMsgT::GetDescriptor();
+template <typename TableMessageT, typename RowMessageT>
+inline Task<ConfigTableWeak<RowMessageT>> QueryConfig(IService* this_service, const ServiceHandle& config_service) {
+    auto descriptor = TableMessageT::GetDescriptor();
     if (!descriptor) {
-        TaskAbort("Unable to obtain descriptor: {}.", typeid(ConfigMsgT).name());
+        TaskAbort("Unable to obtain descriptor: {}.", typeid(TableMessageT).name());
     }
 
     auto msg = co_await this_service->Call<ConfigQueryReq, ConfigQueryResp>(config_service, *descriptor);

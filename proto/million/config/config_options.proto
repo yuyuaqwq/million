@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package million.config;
+
+import "google/protobuf/descriptor.proto";
+
+
+message FieldOptionsTableLoad {
+    string module_name = 1;
+    string pbb_file_name = 2;
+}
+
+extend google.protobuf.FieldOptions {
+    FieldOptionsTableLoad table_load = 10800;
+}
+

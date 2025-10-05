@@ -12,8 +12,8 @@ module_mgr:
     - 
         dir: ../../build/lib/Debug
         loads:
-            - logger
-            - config
+            - million_logger
+            - million_config
 
 timer:
     ms_per_tick: 10
@@ -29,6 +29,5 @@ logger:
 
 config:
     namespace: million
-    pbb_dir_path: ..\..\designer\gen
-    modules:
-        - example
+    pbb_dir_path: ..\..\designer\data
+    tables_message_type: config.comm.Tables

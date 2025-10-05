@@ -117,7 +117,7 @@ public:
     ~JSConfigService();
 
     MILLION_MESSAGE_HANDLE(config::ConfigUpdateReq, msg) {
-        co_await UpdateConfigCache(&msg->config_desc);
+        co_await UpdateConfigCache(&msg->table_desc);
         co_return make_message<config::ConfigUpdateResp>();
     }
 

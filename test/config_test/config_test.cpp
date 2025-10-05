@@ -4,16 +4,17 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <million/config/ss_config.pb.h>
-#include <million/test/cfg_example.pb.h>
 #include <million/config/config.h>
+#include <million/config/ss_config.pb.h>
+
+#include <million/test/cfg_network.pb.h>
 
 MILLION_MODULE_INIT();
 
 namespace protobuf = google::protobuf;
 namespace config = million::config;
-namespace example = million::config::example;
 namespace module = million::module;
+namespace test = million::test;
 
 MILLION_MESSAGE_DEFINE_EMPTY(, Test1Msg)
 
@@ -37,7 +38,7 @@ public:
     }
 
     virtual million::Task<million::MessagePointer> OnStart(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer with_msg) override {
-        example_kv_config_ = co_await config::QueryConfig<example::ExampleKV>(this, config_service_);
+        tb_server_ = co_await config::QueryConfig<test::cfg::TbServer, test::cfg::Server>(this, config_service_);
         
         Send<Test1Msg>(service_handle());
 
@@ -46,37 +47,32 @@ public:
 
 
     MILLION_MESSAGE_HANDLE(Test1Msg, msg) {
-        auto config_lock = co_await example_kv_config_.Lock(this, config_service_);
+        auto config_lock = co_await tb_server_.Lock(this, config_service_);
 
         million::ProtoFieldAny f;
 
-        config_lock->BuildIndex(example::ExampleKV::kServerPortFieldNumber);
-        config_lock->BuildIndex(example::ExampleKV::kServerIPFieldNumber);
+        config_lock->BuildIndex(test::cfg::Server::kIdFieldNumber);
+        config_lock->BuildIndex(test::cfg::Server::kTypeFieldNumber);
 
-        auto aa = config_lock->FindRowByIndex(example::ExampleKV::kServerPortFieldNumber, 1024u);
-        auto bb = config_lock->FindRowByIndex(example::ExampleKV::kServerIPFieldNumber, "8.8.8.8");
+        auto aa = config_lock->FindRowByIndex(test::cfg::Server::kIdFieldNumber, 1001);
+        auto bb = config_lock->FindRowByIndex(test::cfg::Server::kTypeFieldNumber, test::cfg::ServerType::ServerType_resource_download);
 
-        config_lock->BuildCompositeIndex({ example::ExampleKV::kServerPortFieldNumber, config::example::ExampleKV::kServerIPFieldNumber });
-        auto aabb = config_lock->FindRowByCompositeIndex({ example::ExampleKV::kServerPortFieldNumber, config::example::ExampleKV::kServerIPFieldNumber }
-            , 1024u, "8.8.8.8");
+        config_lock->BuildCompositeIndex({ test::cfg::Server::kTypeFieldNumber, test::cfg::Server::kHostFieldNumber });
+        auto aabb = config_lock->FindRowByCompositeIndex({ test::cfg::Server::kTypeFieldNumber, test::cfg::Server::kHostFieldNumber }
+            , 1002, "127.0.0.1");
 
-
-        auto row = config_lock->FindRow([](const example::ExampleKV& row) -> bool {
-            return row.serverip() == "8.8.8.8";
+        auto row = config_lock->FindRow([](const test::cfg::Server& row) -> bool {
+            return row.host() == "127.0.0.1";
         });
 
-        logger().LOG_INFO("ExampleKV:\n{}", config_lock->DebugString());
-
-        auto example_data_config = co_await config::QueryConfig<example::ExampleData>(this, config_service_);
-        auto config_lock2 = co_await example_data_config.Lock(this, config_service_);
-        logger().LOG_INFO("ExampleData:\n{}", config_lock2->DebugString());
+        logger().LOG_INFO("test::cfg::Server:\n{}", config_lock->DebugString());
 
         co_return nullptr;
     }
 
 private:
     million::ServiceHandle config_service_;
-    config::ConfigTableWeak<example::ExampleKV> example_kv_config_;
+    config::ConfigTableWeak<test::cfg::Server> tb_server_;
 };
 
 class TestApp : public million::IMillion {
