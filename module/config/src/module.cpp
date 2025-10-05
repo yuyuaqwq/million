@@ -161,7 +161,7 @@ private:
             return false;
         }
 
-        logger().LOG_DEBUG("Table '{}' loaded:\n {}", table_desc.full_name(), config_msg->DebugString());
+        // logger().LOG_DEBUG("Table '{}' loaded:\n {}", table_desc.full_name(), config_msg->DebugString());
 
         config_map_[&table_desc] = std::make_shared<ConfigTableBase>(std::move(config_msg));
 
