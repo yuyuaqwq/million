@@ -30,4 +30,4 @@ logger:
 config:
     namespace: million
     pbb_dir_path: ..\..\designer\data
-    tables_message_type: config.comm.Tables
+    tables_message_type: config.cfg.Tables

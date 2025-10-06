@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package million.config.comm;
+package million.config.cfg;
 
 import "million/test/cfg_network.proto";
 
