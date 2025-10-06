@@ -342,66 +342,62 @@ Task<bool> JSConfigService::PreloadAllConfigs() {
     }
     auto namespace_ = namespace_settings.as<std::string>();
 
-    const auto& modules_settings = config_settings["modules"];
-    if (!modules_settings) {
-        logger().LOG_ERROR("cannot find 'config.modules'.");
+    const auto& tables_message_type_settings = config_settings["tables_message_type"];
+    if (!tables_message_type_settings) {
+        logger().LOG_ERROR("cannot find 'config.tables_message_type'.");
+        co_return false;
+    }
+    auto tables_message_type = namespace_ + "." + tables_message_type_settings.as<std::string>();
+    auto tables_desc = imillion().proto_mgr().FindMessageTypeByName(tables_message_type);
+    if (!tables_desc) {
+        logger().LOG_ERROR("Unable to find message desc: tables_message_type -> {}.", tables_message_type);
         co_return false;
     }
 
-    for (auto module_settings : modules_settings) {
-        auto module_name = module_settings.as<std::string>();
-        auto table_msg_name = namespace_ + ".config." + module_name + ".Table";
-        auto table_desc = imillion().proto_mgr().FindMessageTypeByName(table_msg_name);
-        if (!table_desc) {
-            logger().LOG_ERROR("Unable to find message desc: top_msg_name -> {}.", table_msg_name);
+    for (int i = 0; i < tables_desc->field_count(); ++i) {
+        auto field_desc = tables_desc->field(i);
+        if (!field_desc || field_desc->type() != google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
             continue;
         }
 
-        for (int i = 0; i < table_desc->field_count(); ++i) {
-            auto field_desc = table_desc->field(i);
-            if (!field_desc || !field_desc->is_repeated() ||
-                field_desc->type() != google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
+        const auto* table_desc = field_desc->message_type();
+        if (!table_desc) {
+            continue;
+        }
+
+        // 预加载这个配置类型
+        try {
+            auto config_resp = co_await Call<config::ConfigQueryReq, config::ConfigQueryResp>(config_service_handle_, *table_desc);
+            if (!config_resp->config) {
+                logger().LOG_ERROR("Failed to query config: {}", table_desc->full_name());
                 continue;
             }
 
-            const auto* config_desc = field_desc->message_type();
-            if (!config_desc) {
-                continue;
-            }
+            auto config_table = co_await config_resp->config->Lock(this, config_service_handle_, table_desc);
 
-            // 预加载这个配置类型
-            try {
-                auto config_resp = co_await Call<config::ConfigQueryReq, config::ConfigQueryResp>(config_service_handle_, *config_desc);
-                if (!config_resp->config) {
-                    logger().LOG_ERROR("Failed to query config: {}", config_desc->full_name());
-                    continue;
-                }
-
-                auto config_table = co_await config_resp->config->Lock(this, config_service_handle_, config_desc);
-
-                if (config_table) {
-                    // 预转换所有行为JS对象
-                    std::vector<mjs::Value> cached_rows;
-                    for (size_t row_idx = 0; row_idx < config_table->GetRowCount(); ++row_idx) {
-                        const auto* row = config_table->GetRowByIndex(row_idx);
-                        if (row) {
-                            auto js_row = JSUtil::ProtoMessageToJSObject(&js_runtime_service_->js_runtime(), *row);
-                            cached_rows.push_back(std::move(js_row));
-                        }
+            if (config_table) {
+                // 预转换所有行为JS对象
+                std::vector<mjs::Value> cached_rows;
+                for (size_t row_idx = 0; row_idx < config_table->GetRowCount(); ++row_idx) {
+                    const auto* row = config_table->GetRowByIndex(row_idx);
+                    if (row) {
+                        auto js_row = JSUtil::ProtoMessageToJSObject(&js_runtime_service_->js_runtime(), *row);
+                        cached_rows.push_back(std::move(js_row));
                     }
-
-                    logger().LOG_INFO("Preloaded config: {} with {} rows", config_desc->full_name(), cached_rows.size());
-
-                    auto cached_table = ConfigTableObject::New(&js_runtime_service_->js_runtime(), config_desc, std::move(cached_rows));
-                    cached_config_tables_[config_desc] = mjs::Value(cached_table);
-                    config_name_to_descriptor_[config_desc->full_name()] = config_desc;
                 }
-            }
-            catch (const std::exception& e) {
-                logger().LOG_ERROR("Failed to preload config {}: {}", config_desc->full_name(), e.what());
+
+                logger().LOG_INFO("Preloaded config: {} with {} rows", table_desc->full_name(), cached_rows.size());
+
+                auto cached_table = ConfigTableObject::New(&js_runtime_service_->js_runtime(), table_desc, std::move(cached_rows));
+                cached_config_tables_[table_desc] = mjs::Value(cached_table);
+                config_name_to_descriptor_[table_desc->full_name()] = table_desc;
             }
         }
+        catch (const std::exception& e) {
+            logger().LOG_ERROR("Failed to preload config {}: {}", table_desc->full_name(), e.what());
+        }
     }
+    
 
     co_return true;
 }

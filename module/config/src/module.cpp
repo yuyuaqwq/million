@@ -52,18 +52,18 @@ public:
 
         const auto& tables_message_type_settings = config_settings["tables_message_type"];
         if (!tables_message_type_settings) {
-            logger().LOG_ERROR("cannot find 'config.tables_message_type_settings'.");
+            logger().LOG_ERROR("cannot find 'config.tables_message_type'.");
             return false;
         }
         auto tables_message_type = namespace_ + "." + tables_message_type_settings.as<std::string>();
-        auto table_desc = imillion().proto_mgr().FindMessageTypeByName(tables_message_type);
-        if (!table_desc) {
+        auto tables_desc = imillion().proto_mgr().FindMessageTypeByName(tables_message_type);
+        if (!tables_desc) {
             logger().LOG_ERROR("Unable to find message desc: tables_message_type -> {}.", tables_message_type);
             return false;
         }
 
-        for (int i = 0; i < table_desc->field_count(); ++i) {
-            auto field_desc = table_desc->field(i);
+        for (int i = 0; i < tables_desc->field_count(); ++i) {
+            auto field_desc = tables_desc->field(i);
             if (!field_desc) {
                 logger().LOG_ERROR("table_desc->field failed: {}.{}: Unable to retrieve field description.", tables_message_type, i);
                 continue;
