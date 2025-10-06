@@ -4,6 +4,7 @@
 
 #include <million/imillion.h>
 #include <million/gateway/gateway.h>
+#include <million/gateway/ss_gateway.pb.h>
 #include <million/agent/api.h>
 #include <million/agent/agent.h>
 #include <million/agent/ss_agent.pb.h>
@@ -20,20 +21,20 @@ public:
     using Base::Base;
 
     virtual bool OnInit() override {
-        imillion().SetServiceNameId(service_handle(), module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_AGENT);
+        imillion().SetServiceNameId(service_handle(), module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_AGENT_MANAGER);
         return true;
     }
 
     virtual Task<MessagePointer> OnStart(ServiceHandle sender, SessionId session_id, MessagePointer with_msg) override {
-        auto handle = imillion().FindServiceByNameId(module::module_id, ss::ServiceNameId_descriptor(), node::ss::SERVICE_NAME_ID_NODE_MANAGER);
+        auto handle = imillion().FindServiceByNameId(module::module_id, node::ss::ServiceNameId_descriptor(), node::ss::SERVICE_NAME_ID_NODE_MANAGER);
         TaskAssert(handle, "Node Manager Service not found.");
         
         node_mgr_ = *handle;
 
-        // handle = imillion().FindServiceByNameId(gateway::kGatewayServiceName);
-        // TaskAssert(handle, "GatewayService not found.");
+         handle = imillion().FindServiceByNameId(module::module_id, gateway::ss::ServiceNameId_descriptor(), gateway::ss::SERVICE_NAME_ID_GATEWAY);
+         TaskAssert(handle, "Gateway Service not found.");
         
-        // gateway_ = *handle;
+         gateway_ = *handle;
         co_return nullptr;
     }
 

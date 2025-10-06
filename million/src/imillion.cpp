@@ -76,10 +76,12 @@ SessionId IMillion::NewSession() {
 std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MessagePointer msg) {
     auto sender_lock = sender.lock();
     if (!sender_lock) {
+        logger().LOG_WARN("Send failed: invalid sender.");
         return std::nullopt;
     }
     auto target_lock = target.lock();
     if (!target_lock) {
+        logger().LOG_WARN("Send failed: invalid target.");
         return std::nullopt;
     }
     return impl_->Send(sender_lock, target_lock, std::move(msg));
@@ -88,10 +90,12 @@ std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const Servi
 bool IMillion::SendTo(const ServiceHandle& sender, const ServiceHandle& target, SessionId session_id, MessagePointer msg) {
     auto sender_lock = sender.lock();
     if (!sender_lock) {
+        logger().LOG_WARN("SendTo failed: invalid sender.");
         return false;
     }
     auto target_lock = target.lock();
     if (!target_lock) {
+        logger().LOG_WARN("SendTo failed: invalid target.");
         return false;
     }
     return impl_->SendTo(sender_lock, target_lock, session_id, std::move(msg));
