@@ -137,6 +137,7 @@ std::optional<ServiceShared> ServiceMgr::FindServiceById(ServiceId id) {
 bool ServiceMgr::SetServiceNameId(const ServiceShared& service, ModuleCode name_id) {
     auto lock = std::lock_guard(name_map_mutex_);
     auto res = name_map_.emplace(name_id, service->iter());
+    TaskAssert(res.second, "service name_id duplicate: {}", name_id);
     return res.second;
 }
 

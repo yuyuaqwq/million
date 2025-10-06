@@ -11,6 +11,6 @@ message FieldOptionsTableLoad {
 }
 
 extend google.protobuf.FieldOptions {
-    FieldOptionsTableLoad table_load = 10800;
+    FieldOptionsTableLoad table_load = 10080001;
 }
 

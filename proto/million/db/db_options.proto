@@ -17,7 +17,7 @@ message FileOptionsDb {
 }
 
 extend google.protobuf.FileOptions {
-    FileOptionsDb db = 10900;
+    FileOptionsDb db = 10090001;
 }
 
 // SQL 相关选项（MySQL）
@@ -56,7 +56,7 @@ message MessageOptionsTable {
 }
 
 extend google.protobuf.MessageOptions {
-    MessageOptionsTable table = 10900;
+    MessageOptionsTable table = 10090002;
 }
 
 enum ColumnSqlOptionsIndex {
@@ -88,7 +88,7 @@ message FieldOptionsColumn {
 }
 
 extend google.protobuf.FieldOptions {
-    FieldOptionsColumn column = 10900;
+    FieldOptionsColumn column = 10090003;
 }
 
 message DbRowMeta {

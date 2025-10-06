@@ -125,7 +125,7 @@ public:
         const auto& desc = db_row.GetDescriptor();
         const auto& reflection = db_row.GetReflection();
 
-        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed: {}.", desc.full_name());
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         auto& table_name = options.name();
         TaskAssert(!table_name.empty(), "table_name is empty.");
@@ -170,7 +170,7 @@ private:
     million::Task<std::optional<DBRow>> QueryDBRow(const google::protobuf::Descriptor& desc
         , int key_field_number, ProtoFieldAny&& key, bool tick) {
 
-        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed: {}.", desc.full_name());
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         auto& table_name = options.name();
         TaskAssert(!table_name.empty(), "table_name is empty.");

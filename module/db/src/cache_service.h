@@ -178,7 +178,7 @@ private:
         const auto& desc = db_row.GetDescriptor();
         const auto& refl = db_row.GetReflection();
 
-        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed: {}.", desc.full_name());
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         const auto& table_name = options.name();
         TaskAssert(!table_name.empty(), "table_name is empty.");

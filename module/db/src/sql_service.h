@@ -92,7 +92,7 @@ public:
 
     MILLION_MESSAGE_HANDLE(SqlTableInitReq, msg) {
         const auto& desc = msg->desc;
-        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed: {}.", desc.full_name());
         
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         auto& table_name = options.name();
@@ -399,7 +399,7 @@ public:
         const auto& desc = db_row.GetDescriptor();
         const auto& reflection = db_row.GetReflection();
 
-        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed: {}.", desc.full_name());
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         if (options.has_sql()) {
             const TableSqlOptions& sql_options = options.sql();
@@ -468,7 +468,7 @@ public:
         const auto& proto_msg = db_row.get();
         const auto& desc = db_row.GetDescriptor();
         const auto& reflection = db_row.GetReflection();
-        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed.");
+        TaskAssert(desc.options().HasExtension(table), "HasExtension table failed: {}.", desc.full_name());
         const MessageOptionsTable& options = desc.options().GetExtension(table);
         if (options.has_sql()) {
             const TableSqlOptions& sql_options = options.sql();

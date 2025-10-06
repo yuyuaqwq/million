@@ -74,7 +74,7 @@ void DBRow::CopyFromDirty(const DBRow& target, bool copy_primary_key) {
     auto desc = target.proto_msg_->GetDescriptor();
     auto primary_key = 0;
     if (copy_primary_key) {
-        TaskAssert(desc->options().HasExtension(table), "{} hasExtension table failed.", desc->name());
+        TaskAssert(desc->options().HasExtension(table), "hasExtension table failed: {}.", desc->full_name());
         const MessageOptionsTable& options = desc->options().GetExtension(table);
         primary_key = options.primary_key();
     }

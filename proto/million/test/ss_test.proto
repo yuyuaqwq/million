@@ -22,7 +22,7 @@ enum MessageId {
 }
 
 extend google.protobuf.MessageOptions {
-    MessageId message_id = 10101;
+    MessageId message_id = 10010001;
 }
 
 message LoginRequest {

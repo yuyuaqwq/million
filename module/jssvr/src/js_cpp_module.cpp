@@ -308,7 +308,7 @@ JSConfigService::~JSConfigService() = default;
 
 bool JSConfigService::OnInit() {
     // 获取配置服务句柄
-    auto config_service_opt = imillion().FindServiceByNameId(module::module_id, ss::ServiceNameId_descriptor(), ss::SERVICE_NAME_ID_JS_CONFIG);
+    auto config_service_opt = imillion().FindServiceByNameId(module::module_id, config::ss::ServiceNameId_descriptor(), config::ss::SERVICE_NAME_ID_CONFIG);
     if (!config_service_opt) {
         logger().LOG_ERROR("Config service not found.");
         return false;

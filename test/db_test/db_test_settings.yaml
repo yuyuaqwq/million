@@ -12,7 +12,7 @@ module_mgr:
     - 
         dir: ../../build/lib/Debug
         loads:
-            - db
+            - million_db
 
 timer:
     ms_per_tick: 10
@@ -31,7 +31,7 @@ db:
         name: test
         host: 127.0.0.1
         user: root
-        password: root
+        password: You_Yu666
     cache:
         host: 127.0.0.1
         port: 6379
