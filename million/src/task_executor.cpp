@@ -52,7 +52,7 @@ std::optional<TaskElement> TaskExecutor::AddTask(TaskElement&& ele) {
             ele.task.rethrow_if_exception();
         }
         catch (const std::exception& e) {
-            million.logger().LOG_ERROR("Session exception: {}", e.what());
+            million.logger().LOG_ERROR("Session exception: [{}] {}", typeid(e).name(), e.what());
         }
         catch (...) {
             million.logger().LOG_ERROR("Session exception: {}", "unknown exception.");

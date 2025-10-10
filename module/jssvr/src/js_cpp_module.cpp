@@ -16,7 +16,8 @@ MillionModuleObject::MillionModuleObject(mjs::Runtime* rt)
     : CppModuleObject(rt)
 {
     AddExportMethod(rt, "newservice", NewService);
-    AddExportMethod(rt, "makemsg", MakeMsg);
+    AddExportMethod(rt, "makemsg", MakeMessage);
+    AddExportMethod(rt, "timeout", Timeout);
 }
 
 mjs::Value MillionModuleObject::NewService(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
@@ -28,15 +29,15 @@ mjs::Value MillionModuleObject::NewService(mjs::Context* context, uint32_t par_c
     return mjs::Value();
 }
 
-mjs::Value MillionModuleObject::MakeMsg(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+mjs::Value MillionModuleObject::MakeMessage(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
     if (par_count < 2) {
-        return mjs::Error::Throw(context, "MakeMsg requires 2 parameter.");
+        return mjs::Error::Throw(context, "MakeMessage requires 2 parameter.");
     }
     if (!stack.get(0).IsString()) {
-        return mjs::Error::Throw(context, "Message parameter 1 must be a string for creation.");
+        return mjs::Error::Throw(context, "MakeMessage parameter 1 must be a string for creation.");
     }
     if (!stack.get(1).IsObject()) {
-        return mjs::Error::Throw(context, "Message parameter 2 must be a object for creation.");
+        return mjs::Error::Throw(context, "MakeMessage parameter 2 must be a object for creation.");
     }
 
     auto array = mjs::ArrayObject::New(context, 2);
@@ -45,6 +46,27 @@ mjs::Value MillionModuleObject::MakeMsg(mjs::Context* context, uint32_t par_coun
 
     return mjs::Value(array);
 }
+
+mjs::Value MillionModuleObject::Timeout(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack) {
+    if (par_count < 2) {
+        return mjs::Error::Throw(context, "Timeout requires 2 parameter.");
+    }
+    if (!stack.get(0).IsNumber()) {
+        return mjs::Error::Throw(context, "Timeout parameter 1 must be a number for creation.");
+    }
+    if (!stack.get(1).IsObject()) {
+        return mjs::Error::Throw(context, "Timeout parameter 2 must be a object for creation.");
+    }
+
+    auto& service = GetJSRuntineService(&context->runtime());
+
+    auto predicate_func = stack.get(0);
+
+    service.imillion().Timeout(stack.get(0).ToUInt64().u64(), service.service_handle(), make_message<JsServiceTimeoutMessage>(stack.get(0).ToUInt64().u64(), predicate_func));
+
+    return mjs::Value();
+}
+
 
 ServiceModuleObject::ServiceModuleObject(mjs::Runtime* rt)
     : CppModuleObject(rt)
@@ -91,7 +113,7 @@ mjs::Value ServiceModuleObject::Call(mjs::Context* context, uint32_t par_count, 
         return mjs::Error::Throw(context, "Invalid service id full name: {}", stack.get(1).string_view());
     }
 
-    auto target = service.imillion().FindServiceByNameId(module_id);
+    auto target = service.imillion().FindServiceByNameId(million::EncodeModuleCode(module_id, service_name_id));
     if (!target) {
         return mjs::Value();
     }
@@ -475,8 +497,6 @@ Task<void> JSConfigService::UpdateConfigCache(const google::protobuf::Descriptor
 
     co_return;
 }
-
-
 
 
 

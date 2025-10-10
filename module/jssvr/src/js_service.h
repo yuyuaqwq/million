@@ -125,7 +125,7 @@ private:
 
 
 // JS值消息，用于在C++和JS之间传递值
-MILLION_MESSAGE_DEFINE(, JSValueMsg, (mjs::Value) value)
+MILLION_MESSAGE_DEFINE(, JSValueMessage, (mjs::Value) value)
 
 // JS服务，负责执行JS代码和处理消息
 class JSService : public IService {
@@ -139,6 +139,15 @@ public:
     {
         js_module_ = mjs::Value(mjs::String::New(package));
     }
+
+public:
+    MILLION_MESSAGE_HANDLE(JsServiceTimeoutMessage, msg) {
+        // 调用谓词函数
+        std::initializer_list<mjs::Value> args = {  };
+        auto result = js_context_.CallFunction(&msg->function, mjs::Value(), args.begin(), args.end());
+        co_return nullptr;
+    }
+
 
 private:
     // 初始化JS运行时和上下文
@@ -157,6 +166,10 @@ private:
     }
 
     million::Task<million::MessagePointer> OnMsg(million::ServiceHandle sender, million::SessionId session_id, million::MessagePointer msg) override {
+        auto handler = FindMessageHandler(msg);
+        if (handler) {
+            co_return co_await(*handler)(this, std::move(sender), session_id, std::move(msg));
+        }
         co_return co_await CallFunc(std::move(msg), "onMsg");
     }
 
@@ -222,8 +235,8 @@ private:
                         auto msg_obj = JSUtil::ProtoMessageToJSObject(&js_context_, *proto_res_msg);
                         function_call_context.promise.promise().Resolve(&js_context_, msg_obj);
                     }
-                    else if (res_msg.IsType<JSValueMsg>()) {
-                        auto msg_obj = res_msg.GetMessage<JSValueMsg>()->value;
+                    else if (res_msg.IsType<JSValueMessage>()) {
+                        auto msg_obj = res_msg.GetMessage<JSValueMessage>()->value;
                         function_call_context.promise.promise().Resolve(&js_context_, msg_obj);
                     }
 
@@ -315,7 +328,7 @@ public:
             co_return nullptr;
         }
         auto object = DBRowObject::New(&js_context_, std::move(*resp->db_row));
-        co_return make_message<JSValueMsg>(mjs::Value(object));
+        co_return make_message<JSValueMessage>(mjs::Value(object));
     }
 
 
@@ -323,7 +336,7 @@ public:
         // 直接返回缓存的JS配置表对象
         auto table_object = std::move(resp->cached_table);
         auto weak_table_object = ConfigTableWeakObject::New(&js_context_, std::move(table_object));
-        co_return make_message<JSValueMsg>(mjs::Value(weak_table_object));
+        co_return make_message<JSValueMessage>(mjs::Value(weak_table_object));
     }
 
     // 添加模块

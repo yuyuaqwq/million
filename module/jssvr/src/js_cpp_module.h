@@ -14,6 +14,7 @@ namespace jssvr {
 // JS配置查询消息
 MILLION_MESSAGE_DEFINE(, JSConfigQueryReq, (const google::protobuf::Descriptor&) config_desc)
 MILLION_MESSAGE_DEFINE(, JSConfigQueryResp, (mjs::Value) cached_table)
+MILLION_MESSAGE_DEFINE(, JsServiceTimeoutMessage, (uint64_t) tick, (mjs::Value) function)
 
 enum class CustomClassId {
     kDBRowObject = mjs::ClassId::kCustom,
@@ -28,7 +29,8 @@ private:
 
 public:
     static mjs::Value NewService(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack);
-    static mjs::Value MakeMsg(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack);
+    static mjs::Value MakeMessage(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack);
+    static mjs::Value Timeout(mjs::Context* context, uint32_t par_count, const mjs::StackFrame& stack);
 
     static MillionModuleObject* New(mjs::Runtime* runtime) {
         return new MillionModuleObject(runtime);
