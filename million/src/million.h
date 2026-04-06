@@ -9,13 +9,13 @@
 namespace million {
 
 class SeataSnowflake;
-class ServiceMgr;
-class SessionMgr;
+class ServiceManager;
+class SessionManager;
 class SessionMonitor;
-class ProtoMgr;
-class ModuleMgr;
-class WorkerMgr;
-class IoContextMgr;
+class ProtoManager;
+class ModuleManager;
+class WorkerManager;
+class IoContextManager;
 class Timer;
 class Logger;
 class Million {
@@ -39,6 +39,8 @@ public:
 
     SessionId NewSession();
 
+    SnowId NextSequenceId();
+
     bool SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MessagePointer msg);
     std::optional<SessionId> Send(const ServiceShared& sender, const ServiceShared& target, MessagePointer msg);
 
@@ -49,15 +51,15 @@ public:
 
     auto& imillion() { assert(imillion_); return *imillion_; }
     auto& node_id() { return node_id_; }
-    auto& seata_snowflake() { assert(seata_snowflake_); return *seata_snowflake_; }
-    auto& service_mgr() { assert(service_mgr_); return *service_mgr_; }
-    auto& session_mgr() { assert(session_mgr_); return *session_mgr_; }
+    auto& sequence_id_manager() { assert(sequence_id_manager_); return *sequence_id_manager_; }
+    auto& service_manager() { assert(service_manager_); return *service_manager_; }
+    auto& session_manager() { assert(session_manager_); return *session_manager_; }
     auto& session_monitor() { assert(session_monitor_); return *session_monitor_; }
     auto& logger() { assert(logger_); return *logger_; }
-    auto& proto_mgr() { assert(proto_mgr_); return *proto_mgr_; }
-    auto& module_mgr() { assert(module_mgr_); return *module_mgr_; }
-    auto& worker_mgr() { assert(worker_mgr_); return *worker_mgr_; }
-    auto& io_context_mgr() { assert(io_context_mgr_); return *io_context_mgr_; }
+    auto& proto_manager() { assert(proto_manager_); return *proto_manager_; }
+    auto& module_manager() { assert(module_manager_); return *module_manager_; }
+    auto& worker_manager() { assert(worker_manager_); return *worker_manager_; }
+    auto& io_context_manager() { assert(io_context_manager_); return *io_context_manager_; }
     auto& timer() { assert(timer_); return *timer_; }
 
 private:
@@ -74,16 +76,16 @@ private:
 
     std::unique_ptr<YAML::Node> settings_;
 
-    std::unique_ptr<ServiceMgr> service_mgr_;
-    std::unique_ptr<SessionMgr> session_mgr_;
+    std::unique_ptr<ServiceManager> service_manager_;
+    std::unique_ptr<SessionManager> session_manager_;
     std::unique_ptr<SessionMonitor> session_monitor_;
     std::unique_ptr<Logger> logger_;
-    std::unique_ptr<ProtoMgr> proto_mgr_;
-    std::unique_ptr<ModuleMgr> module_mgr_;
-    std::unique_ptr<WorkerMgr> worker_mgr_;
-    std::unique_ptr<IoContextMgr> io_context_mgr_;
+    std::unique_ptr<ProtoManager> proto_manager_;
+    std::unique_ptr<ModuleManager> module_manager_;
+    std::unique_ptr<WorkerManager> worker_manager_;
+    std::unique_ptr<IoContextManager> io_context_manager_;
     std::unique_ptr<Timer> timer_;
-    std::unique_ptr<SeataSnowflake> seata_snowflake_;
+    std::unique_ptr<SeataSnowflake> sequence_id_manager_;
 };
 
 } // namespace million

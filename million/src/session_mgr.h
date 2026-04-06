@@ -8,10 +8,10 @@
 namespace million {
 
 class Million;
-class SessionMgr : noncopyable {
+class SessionManager : noncopyable {
 public:
-    SessionMgr(Million* million);
-    ~SessionMgr();
+    SessionManager(Million* million);
+    ~SessionManager();
 
     SessionId NewSession();
 

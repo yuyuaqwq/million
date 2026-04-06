@@ -5,9 +5,9 @@
 
 namespace million {
 
-class MILLION_API ProtoMgr {
+class MILLION_API ProtoManager {
 public:
-    ProtoMgr();
+    ProtoManager();
 
     void Init();
 

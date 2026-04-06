@@ -76,10 +76,10 @@ bool Million::Init(std::string_view settings_path) {
                 return false;
             }
             node_id_ = node_settings["id"].as<uint64_t>();
-            seata_snowflake_ = std::make_unique<SeataSnowflake>(node_id_);
+            sequence_id_manager_ = std::make_unique<SeataSnowflake>(node_id_);
 
-            service_mgr_ = std::make_unique<ServiceMgr>(this);
-            session_mgr_ = std::make_unique<SessionMgr>(this);
+            service_manager_ = std::make_unique<ServiceManager>(this);
+            session_manager_ = std::make_unique<SessionManager>(this);
 
             logger().LOG_INFO("load 'worker_mgr' settings.");
 
@@ -93,7 +93,7 @@ bool Million::Init(std::string_view settings_path) {
                 return false;
             }
             auto worker_num = worker_mgr_settings["num"].as<size_t>();
-            worker_mgr_ = std::make_unique<WorkerMgr>(this, worker_num);
+            worker_manager_ = std::make_unique<WorkerManager>(this, worker_num);
 
 
             logger().LOG_INFO("load 'io_context_mgr' settings.");
@@ -108,7 +108,7 @@ bool Million::Init(std::string_view settings_path) {
                 break;
             }
             auto io_context_num = io_context_mgr_settings["num"].as<size_t>();
-            io_context_mgr_ = std::make_unique<IoContextMgr>(this, io_context_num);
+            io_context_manager_ = std::make_unique<IoContextManager>(this, io_context_num);
 
 
             logger().LOG_INFO("load 'session_monitor' settings.");
@@ -133,8 +133,8 @@ bool Million::Init(std::string_view settings_path) {
 
             logger().LOG_INFO("load 'proto_mgr' settings.");
 
-            proto_mgr_ = std::make_unique<ProtoMgr>();
-            proto_mgr_->Init();
+            proto_manager_ = std::make_unique<ProtoManager>();
+            proto_manager_->Init();
 
 
             logger().LOG_INFO("load 'timer' settings.");
@@ -159,7 +159,7 @@ bool Million::Init(std::string_view settings_path) {
                 break;
             }
 
-            module_mgr_ = std::make_unique<ModuleMgr>(this);
+            module_manager_ = std::make_unique<ModuleManager>(this);
 
             bool success = true;
             for (const auto& module_settings : module_mgr_settings) {
@@ -176,7 +176,7 @@ bool Million::Init(std::string_view settings_path) {
                 }
                 for (const auto& name_settings : loads) {
                     auto name = name_settings.as<std::string>();
-                    if (!module_mgr_->Load(module_dir, name)) {
+                    if (!module_manager_->Load(module_dir, name)) {
                         logger().LOG_ERROR("load module '{} -> {}' failed.", module_dir, name);
                         success = false;
                         break;
@@ -192,7 +192,7 @@ bool Million::Init(std::string_view settings_path) {
             if (!success) {
                 break;
             }
-            if (!module_mgr_->Init()) {
+            if (!module_manager_->Init()) {
                 logger().LOG_ERROR("module mgr init failed.");
                 break;
             }
@@ -219,60 +219,63 @@ void Million::Start() {
     if (stage_ != kReady) {
         throw std::runtime_error("Not initialized.");
     }
-    worker_mgr_->Start();
-    io_context_mgr_->Start();
+    worker_manager_->Start();
+    io_context_manager_->Start();
     session_monitor_->Start();
     timer_->Start();
-    module_mgr_->Start();
+    module_manager_->Start();
 }
 
 void Million::Stop() {
-    if (module_mgr_) module_mgr_->Stop();
+    if (module_manager_) module_manager_->Stop();
     if (timer_) timer_->Stop();
-    if (service_mgr_) service_mgr_->Stop();
+    if (service_manager_) service_manager_->Stop();
     if (session_monitor_) session_monitor_->Stop();
-    if (io_context_mgr_) io_context_mgr_->Stop();
-    if (worker_mgr_) worker_mgr_->Stop();
+    if (io_context_manager_) io_context_manager_->Stop();
+    if (worker_manager_) worker_manager_->Stop();
 }
 
 
 std::optional<ServiceShared> Million::AddService(std::unique_ptr<IService> iservice) {
-    return service_mgr_->AddService(std::move(iservice));
+    return service_manager_->AddService(std::move(iservice));
 }
 
 
 std::optional<SessionId> Million::StartService(const ServiceShared& service, MessagePointer with_msg) {
-    return service_mgr_->StartService(service, std::move(with_msg));
+    return service_manager_->StartService(service, std::move(with_msg));
 }
 
 std::optional<SessionId> Million::StopService(const ServiceShared& service, MessagePointer with_msg) {
-    return service_mgr_->StopService(service, std::move(with_msg));
+    return service_manager_->StopService(service, std::move(with_msg));
 }
 
 std::optional<ServiceShared> Million::FindServiceById(ServiceId id) {
-    return service_mgr_->FindServiceById(id);
+    return service_manager_->FindServiceById(id);
 }
 
 bool Million::SetServiceNameId(const ServiceShared& service, ModuleCode name_id) {
-    return service_mgr_->SetServiceNameId(service, name_id);
+    return service_manager_->SetServiceNameId(service, name_id);
 }
 
 std::optional<ServiceShared> Million::FindServiceByNameId(ModuleCode name_id) {
-    return service_mgr_->FindServiceByNameId(name_id);
+    return service_manager_->FindServiceByNameId(name_id);
 }
 
 
 SessionId Million::NewSession() {
-    return session_mgr_->NewSession();
+    return session_manager_->NewSession();
 }
 
+SnowId Million::NextSequenceId() {
+    return sequence_id_manager_->NextSequenceId();
+}
 
 bool Million::SendTo(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MessagePointer msg) {
-    return service_mgr_->Send(sender, target, session_id, std::move(msg));
+    return service_manager_->Send(sender, target, session_id, std::move(msg));
 }
 
 std::optional<SessionId> Million::Send(const ServiceShared& sender, const ServiceShared& target, MessagePointer msg) {
-    auto session_id = session_mgr_->NewSession();
+    auto session_id = session_manager_->NewSession();
     if (SendTo(sender, target, session_id, std::move(msg))) {
         return session_id;
     }
@@ -289,7 +292,7 @@ void Million::Timeout(uint32_t tick, const ServiceShared& service, MessagePointe
 }
 
 asio::io_context& Million::NextIoContext() {
-    return io_context_mgr_->NextIoContext().io_context();
+    return io_context_manager_->NextIoContext().io_context();
 }
 
 void Million::EnableSeparateWorker(const ServiceShared& service) {

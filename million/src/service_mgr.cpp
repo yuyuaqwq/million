@@ -7,12 +7,12 @@
 
 namespace million {
 
-ServiceMgr::ServiceMgr(Million* million)
+ServiceManager::ServiceManager(Million* million)
     : million_(million) {}
 
-ServiceMgr::~ServiceMgr() = default;
+ServiceManager::~ServiceManager() = default;
 
-void ServiceMgr::Stop() {
+void ServiceManager::Stop() {
     {
         auto lock = std::unique_lock(service_queue_mutex_);
         run_ = false;
@@ -24,11 +24,11 @@ void ServiceMgr::Stop() {
     }
 }
 
-ServiceId ServiceMgr::AllocServiceId() {
-    return million_->seata_snowflake().NextId();
+ServiceId ServiceManager::AllocServiceId() {
+    return million_->sequence_id_manager().NextSequenceId();
 }
 
-std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> iservice) {
+std::optional<ServiceShared> ServiceManager::AddService(std::unique_ptr<IService> iservice) {
     decltype(services_)::iterator iter;
     auto service_shared = std::make_shared<ServiceCore>(this, std::move(iservice));
     auto handle = ServiceHandle(service_shared);
@@ -62,7 +62,7 @@ std::optional<ServiceShared> ServiceMgr::AddService(std::unique_ptr<IService> is
     return service_shared;
 }
 
-void ServiceMgr::DeleteService(ServiceCore* service) {
+void ServiceManager::DeleteService(ServiceCore* service) {
     {
         // todo: 如果存在，先从name_map_和id_map_中移除
         assert(0);
@@ -73,20 +73,20 @@ void ServiceMgr::DeleteService(ServiceCore* service) {
 }
 
 
-std::optional<SessionId> ServiceMgr::StartService(const ServiceShared& service, MessagePointer msg) {
+std::optional<SessionId> ServiceManager::StartService(const ServiceShared& service, MessagePointer msg) {
     return service->Start(std::move(msg));
 }
 
-std::optional<SessionId> ServiceMgr::StopService(const ServiceShared& service, MessagePointer msg) {
+std::optional<SessionId> ServiceManager::StopService(const ServiceShared& service, MessagePointer msg) {
     return service->Stop(std::move(msg));
 }
 
-std::optional<SessionId> ServiceMgr::ExitService(const ServiceShared& service) {
+std::optional<SessionId> ServiceManager::ExitService(const ServiceShared& service) {
     return service->Exit();
 }
 
 
-void ServiceMgr::PushService(ServiceCore* service) {
+void ServiceManager::PushService(ServiceCore* service) {
     if (service->HasSeparateWorker()) {
         return;
     }
@@ -106,7 +106,7 @@ void ServiceMgr::PushService(ServiceCore* service) {
     }
 }
 
-ServiceCore* ServiceMgr::PopService() {
+ServiceCore* ServiceManager::PopService() {
     auto lock = std::unique_lock(service_queue_mutex_);
     while (run_ && service_queue_.empty()) {
         service_queue_cv_.wait(lock);
@@ -118,14 +118,14 @@ ServiceCore* ServiceMgr::PopService() {
     return service;
 }
 
-bool ServiceMgr::SetServiceId(const ServiceShared& service, ServiceId service_id) {
+bool ServiceManager::SetServiceId(const ServiceShared& service, ServiceId service_id) {
     auto lock = std::lock_guard(id_map_mutex_);
     auto res = id_map_.emplace(service_id, service->iter());
     service->set_service_id(service_id);
     return res.second;
 }
 
-std::optional<ServiceShared> ServiceMgr::FindServiceById(ServiceId id) {
+std::optional<ServiceShared> ServiceManager::FindServiceById(ServiceId id) {
     auto lock = std::lock_guard(id_map_mutex_);
     auto iter = id_map_.find(id);
     if (iter == id_map_.end()) {
@@ -134,14 +134,14 @@ std::optional<ServiceShared> ServiceMgr::FindServiceById(ServiceId id) {
     return *iter->second;
 }
 
-bool ServiceMgr::SetServiceNameId(const ServiceShared& service, ModuleCode name_id) {
+bool ServiceManager::SetServiceNameId(const ServiceShared& service, ModuleCode name_id) {
     auto lock = std::lock_guard(name_map_mutex_);
     auto res = name_map_.emplace(name_id, service->iter());
     TaskAssert(res.second, "service name_id duplicate: {}", name_id);
     return res.second;
 }
 
-std::optional<ServiceShared> ServiceMgr::FindServiceByNameId(ModuleCode name_id) {
+std::optional<ServiceShared> ServiceManager::FindServiceByNameId(ModuleCode name_id) {
     auto lock = std::lock_guard(name_map_mutex_);
     auto iter = name_map_.find(name_id);
     if (iter == name_map_.end()) {
@@ -150,7 +150,7 @@ std::optional<ServiceShared> ServiceMgr::FindServiceByNameId(ModuleCode name_id)
     return *iter->second;
 }
 
-bool ServiceMgr::Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MessagePointer msg) {
+bool ServiceManager::Send(const ServiceShared& sender, const ServiceShared& target, SessionId session_id, MessagePointer msg) {
     if (!target->PushMsg(sender, session_id, std::move(msg))) {
         return false;
     }

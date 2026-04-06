@@ -275,7 +275,7 @@ private:
     template <typename MessageT, typename ServiceT>
     friend class AutoRegisterMessageHandler;
     friend class ServiceCore;
-    friend class ServiceMgr;
+    friend class ServiceManager;
 
     IMillion* imillion_;
     ServiceShared service_shared_;

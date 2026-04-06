@@ -54,7 +54,7 @@ void EventMgr::Send(const ServiceHandle& sender, MessagePointer msg) {
 			services.erase(service_iter++);
 			continue;
 		}
-		imillion_->impl().Send(sender_lock, target_lock, MessagePointer(msg.Copy()));
+		imillion_->impl().Send(sender_lock, target_lock, msg.Share());
 		++service_iter;
 	}
 }
@@ -78,7 +78,7 @@ Task<> EventMgr::Call(const ServiceHandle& caller, MessagePointer msg, std::func
 			continue;
 		}
 
-		auto session_id = imillion_->impl().Send(caller_lock, target_lock, MessagePointer(msg.Copy()));
+		auto session_id = imillion_->impl().Send(caller_lock, target_lock, msg.Share());
 
 		if (msg.IsProtoMessage()) {
 			auto res = co_await imillion_->RecvOrNull<ProtoMessage>(session_id.value());

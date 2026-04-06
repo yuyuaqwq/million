@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package million.tlog;
+
+import "google/protobuf/descriptor.proto";
+import "million/module/module_id.proto";
+
+// tlog事件类型
+enum TLogEventType {
+  PLAYER_LOGIN = 0;          // 玩家登录
+  PLAYER_LOGOUT = 1;         // 玩家登出
+  PLAYER_RECHARGE = 2;       // 充值
+  ITEM_GET = 3;              // 获得道具
+  ITEM_USE = 4;              // 使用道具
+  BATTLE_START = 5;          // 战斗开始
+  BATTLE_END = 6;            // 战斗结束
+  LEVEL_UP = 7;              // 升级
+  QUEST_COMPLETE = 8;        // 任务完成
+  CHAT_MESSAGE = 9;          // 聊天消息
+}
+
+// tlog日志等级
+enum TLogLevel {
+  TLOG_LEVEL_STAT = 0;       // 统计日志（批量写入）
+  TLOG_LEVEL_INFO = 1;       // 普通日志（异步写入）
+  TLOG_LEVEL_CRITICAL = 2;   // 关键日志（同步写入+确认）
+}
+
+// tlog事件数据
+message TLogEvent {
+  uint64 event_time = 1;       // 事件时间戳（毫秒）
+  string event_type = 2;       // 事件类型名称
+  uint64 player_id = 3;        // 玩家ID
+  uint32 server_id = 4;        // 服务器ID
+  string event_data = 5;       // JSON格式的事件数据
+  string device_id = 6;        // 设备ID
+  string ip = 7;               // IP地址
+  TLogLevel level = 8;         // 日志等级
+}
+
+// tlog写入选项
+message TLogOptions {
+  bool sync = 1;               // 是否同步写入
+  bool confirm = 2;            // 是否需要确认
+}

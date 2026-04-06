@@ -1,7 +1,7 @@
 #pragma once
 
 #include <mjs/context.h>
-#include <mjs/object_impl/array_object.h>
+#include <mjs/object/array_object.h>
 
 #include <million/imillion.h>
 
@@ -10,7 +10,7 @@ namespace jssvr {
 
 class JSUtil {
 public:
-    // »ñÈ¡JSÖµ
+    // ï¿½ï¿½È¡JSÖµ
     template <typename JSContext>
     static mjs::Value GetJSValueByProtoMessageField(JSContext* context, const million::ProtoMessage& msg
         , const google::protobuf::Reflection& reflection
@@ -45,7 +45,7 @@ public:
         case google::protobuf::FieldDescriptor::TYPE_BYTES: {
             std::string bytes;
             auto bytes_ref = reflection.GetStringReference(msg, &field_desc, &bytes);
-            // TODO: ÊµÏÖ¶þ½øÖÆÊý¾Ý×ª»»
+            // TODO: Êµï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½
             return mjs::Value();
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
@@ -64,7 +64,7 @@ public:
         }
     }
 
-    // »ñÈ¡ÖØ¸´×Ö¶ÎµÄJSÖµ
+    // ï¿½ï¿½È¡ï¿½Ø¸ï¿½ï¿½Ö¶Îµï¿½JSÖµ
     template <typename JSContext>
     static mjs::Value GetJSValueByProtoMessgaeRepeatedField(JSContext* context, const million::ProtoMessage& msg
         , const google::protobuf::Reflection& reflection
@@ -100,7 +100,7 @@ public:
         case google::protobuf::FieldDescriptor::TYPE_BYTES: {
             std::string bytes;
             auto bytes_ref = reflection.GetRepeatedStringReference(msg, &field_desc, j, &bytes);
-            // TODO: ÊµÏÖ¶þ½øÖÆÊý¾Ý×ª»»
+            // TODO: Êµï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½
             return mjs::Value();
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
@@ -119,7 +119,7 @@ public:
         }
     }
 
-    // ×ª»»µ¥¸ö×Ö¶Î
+    // ×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½
     static void ProtoMessageToJSObjectOne(mjs::Context* context, const million::ProtoMessage& msg, mjs::Object* obj, const google::protobuf::FieldDescriptor& field_desc) {
         const auto desc = msg.GetDescriptor();
         const auto refl = msg.GetReflection();
@@ -148,16 +148,18 @@ public:
                 auto js_value = GetJSValueByProtoMessgaeRepeatedField(runtime, msg, *refl, field_desc, j);
                 js_array->Push(runtime, std::move(js_value));
             }
-            obj->SetProperty(runtime, field_desc.name().data(), mjs::Value(js_array));
+            auto index = runtime->global_const_pool().insert(mjs::Value(field_desc.name().data()));
+            obj->SetProperty(runtime, index, mjs::Value(js_array));
         }
         else {
             auto js_value = GetJSValueByProtoMessageField(runtime, msg, *refl, field_desc);
-            obj->SetProperty(runtime, field_desc.name().data(), std::move(js_value));
+            auto index = runtime->global_const_pool().insert(mjs::Value(field_desc.name().data()));
+            obj->SetProperty(runtime, index, std::move(js_value));
         }
     }
 
 
-    // ProtobufÏûÏ¢×ªJS¶ÔÏó
+    // Protobufï¿½ï¿½Ï¢×ªJSï¿½ï¿½ï¿½ï¿½
     template <typename JSContext>
     static mjs::Value ProtoMessageToJSObject(JSContext* context, const million::ProtoMessage& msg) {
         auto obj = mjs::Object::New(context);
@@ -173,7 +175,7 @@ public:
         return mjs::Value(obj);
     }
 
-    // ÉèÖÃÖØ¸´×Ö¶Î
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½Ö¶ï¿½
     template <typename JSContext>
     static void SetProtoMessageRepeatedFieldFromJSValue(JSContext* context, million::ProtoMessage* msg
         , const google::protobuf::Descriptor& desc
@@ -245,7 +247,7 @@ public:
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_BYTES: {
-            // TODO: ÊµÏÖ¶þ½øÖÆÊý¾Ý×ª»»
+            // TODO: Êµï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
@@ -253,19 +255,19 @@ public:
                 TaskAbort("Field {}.{} is not a string(enum).", desc.name(), field_desc.name());
             }
 
-            // »ñÈ¡Ã¶¾ÙÃèÊö·û
+            // ï¿½ï¿½È¡Ã¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             const google::protobuf::EnumDescriptor* enum_desc = field_desc.enum_type();
             if (!enum_desc) {
                 TaskAbort("Field {}.{} has no enum descriptor.", desc.name(), field_desc.name());
             }
 
-            // Í¨¹ý×Ö·û´®²éÕÒÃ¶¾ÙÖµ
+            // Í¨ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¶ï¿½ï¿½Öµ
             const google::protobuf::EnumValueDescriptor* enum_value = enum_desc->FindValueByName(repeated_value.string_view());
             if (!enum_value) {
                 TaskAbort("Field {}.{} has no enum value named {}.", desc.name(), field_desc.name(), repeated_value.string_view());
             }
 
-            // ÉèÖÃÃ¶¾ÙÖµ
+            // ï¿½ï¿½ï¿½ï¿½Ã¶ï¿½ï¿½Öµ
             reflection.AddEnum(msg, &field_desc, enum_value);
             break;
         }
@@ -284,7 +286,7 @@ public:
         }
     }
 
-    // ÉèÖÃ×Ö¶Î
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½
     template <typename JSContext>
     static void SetProtoMessageFieldFromJSValue(JSContext* context, million::ProtoMessage* msg
         , const google::protobuf::Descriptor& desc
@@ -356,7 +358,7 @@ public:
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_BYTES: {
-            // TODO: ÊµÏÖ¶þ½øÖÆÊý¾Ý×ª»»
+            // TODO: Êµï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½
             break;
         }
         case google::protobuf::FieldDescriptor::TYPE_ENUM: {
@@ -364,19 +366,19 @@ public:
                 TaskAbort("Field {}.{} is not a string(enum).", desc.name(), field_desc.name());
             }
 
-            // »ñÈ¡Ã¶¾ÙÃèÊö·û
+            // ï¿½ï¿½È¡Ã¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             const google::protobuf::EnumDescriptor* enum_desc = field_desc.enum_type();
             if (!enum_desc) {
                 TaskAbort("Field {}.{} has no enum descriptor.", desc.name(), field_desc.name());
             }
 
-            // Í¨¹ý×Ö·û´®²éÕÒÃ¶¾ÙÖµ
+            // Í¨ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¶ï¿½ï¿½Öµ
             const google::protobuf::EnumValueDescriptor* enum_value = enum_desc->FindValueByName(js_value.string_view());
             if (!enum_value) {
                 TaskAbort("Field {}.{} has no enum value named {}.", desc.name(), field_desc.name(), js_value.string_view());
             }
 
-            // ÉèÖÃÃ¶¾ÙÖµ
+            // ï¿½ï¿½ï¿½ï¿½Ã¶ï¿½ï¿½Öµ
             reflection.SetEnum(msg, &field_desc, enum_value);
             break;
         }
@@ -394,14 +396,13 @@ public:
         }
     }
 
-    // ×ª»»µ¥¸ö×Ö¶Î
-    template <typename JSContext>
-    static void JSObjectToProtoMessageOne(JSContext* context, million::ProtoMessage* msg, const mjs::Value& field_value, const google::protobuf::FieldDescriptor& field_desc) {
+    // ×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½
+    static void JSObjectToProtoMessageOne(mjs::Context* context, million::ProtoMessage* msg, const mjs::Value& field_value, const google::protobuf::FieldDescriptor& field_desc) {
         const auto desc = msg->GetDescriptor();
         const auto refl = msg->GetReflection();
 
         if (field_value.IsUndefined()) {
-            return;  // Èç¹û JS ¶ÔÏóÃ»ÓÐ¸ÃÊôÐÔ£¬ÔòÌø¹ý
+            return;  // ï¿½ï¿½ï¿½ JS ï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ð¸ï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         }
 
         if (field_desc.is_repeated()) {
@@ -412,7 +413,7 @@ public:
 
             auto len = field_value.array().length();
             for (size_t j = 0; j < len; ++j) {
-                auto repeated_value = field_value.array()[j];
+                auto repeated_value = field_value.array().At(context, j);
                 SetProtoMessageRepeatedFieldFromJSValue(context, msg, *desc, *refl, field_desc, repeated_value, j);
             }
         }
@@ -421,7 +422,7 @@ public:
         }
     }
 
-    // JS¶ÔÏó×ªProtobufÏûÏ¢
+    // JSï¿½ï¿½ï¿½ï¿½×ªProtobufï¿½ï¿½Ï¢
     static void JSObjectToProtoMessage(mjs::Context* context, million::ProtoMessage* msg, const mjs::Value& obj_val) {
         const auto desc = msg->GetDescriptor();
         const auto refl = msg->GetReflection();
@@ -437,20 +438,21 @@ public:
         }
     }
 
-    static void JSObjectToProtoMessage(mjs::Runtime* runtime, million::ProtoMessage* msg, const mjs::Value& obj_val) {
-        const auto desc = msg->GetDescriptor();
-        const auto refl = msg->GetReflection();
+    //static void JSObjectToProtoMessage(mjs::Runtime* runtime, million::ProtoMessage* msg, const mjs::Value& obj_val) {
+    //    const auto desc = msg->GetDescriptor();
+    //    const auto refl = msg->GetReflection();
 
-        auto& obj = obj_val.object();
+    //    auto& obj = obj_val.object();
 
-        for (size_t i = 0; i < desc->field_count(); ++i) {
-            const auto field_desc = desc->field(i);
-            mjs::Value field_value;
-            if (obj.GetProperty(runtime, field_desc->name().c_str(), &field_value)) {
-                JSObjectToProtoMessageOne(runtime, msg, field_value, *field_desc);
-            }
-        }
-    }
+    //    for (size_t i = 0; i < desc->field_count(); ++i) {
+    //        const auto field_desc = desc->field(i);
+    //        mjs::Value field_value;
+    //        auto index = runtime->global_const_pool().insert(mjs::Value(field_desc->name().c_str()));
+    //        if (obj.GetProperty(runtime, index, &field_value)) {
+    //            JSObjectToProtoMessageOne(runtime, msg, field_value, *field_desc);
+    //        }
+    //    }
+    //}
 };
 
 } // namespace jssvr

@@ -32,7 +32,7 @@ protected:
 };
 
 MILLION_MESSAGE_DEFINE(MILLION_CONFIG_API, ConfigQueryReq, (const google::protobuf::Descriptor&) table_desc)
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_CONFIG_API, ConfigQueryResp, (const google::protobuf::Descriptor&) table_desc, (std::optional<ConfigTableWeakBase>) config)
+MILLION_MESSAGE_DEFINE(MILLION_CONFIG_API, ConfigQueryResp, (const google::protobuf::Descriptor&) table_desc, (std::optional<ConfigTableWeakBase>) config)
 
 MILLION_MESSAGE_DEFINE(MILLION_CONFIG_API, ConfigUpdateReq, (const google::protobuf::Descriptor&) table_desc)
 MILLION_MESSAGE_DEFINE_EMPTY(MILLION_CONFIG_API, ConfigUpdateResp)

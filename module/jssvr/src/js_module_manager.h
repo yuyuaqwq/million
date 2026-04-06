@@ -18,7 +18,7 @@ public:
     void ClearModuleCache() override;
 
 private:
-    // ¶ÁÈ¡Ä£¿é½Å±¾
+    // è¯»å–æ¨¡å—è„šæœ¬
     std::optional<std::string> ReadModuleScript(const std::filesystem::path& module_path);
     mjs::Value LoadJSModule(JSService* js_service, std::string_view module_name);
     mjs::Value FindJSModule(JSService* js_service, std::filesystem::path path);

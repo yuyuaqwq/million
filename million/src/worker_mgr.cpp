@@ -4,7 +4,7 @@
 
 namespace million {
 
-WorkerMgr::WorkerMgr(Million* million, size_t worker_num)
+WorkerManager::WorkerManager(Million* million, size_t worker_num)
     : million_(million) {
     if (worker_num == 0) {
         worker_num = std::thread::hardware_concurrency();
@@ -15,15 +15,15 @@ WorkerMgr::WorkerMgr(Million* million, size_t worker_num)
     }
 }
 
-WorkerMgr::~WorkerMgr() = default;
+WorkerManager::~WorkerManager() = default;
 
-void WorkerMgr::Start() {
+void WorkerManager::Start() {
     for (auto& worker : workers_) {
         worker->Start();
     }
 }
 
-void WorkerMgr::Stop() {
+void WorkerManager::Stop() {
     for (auto& worker : workers_) {
         worker->Stop();
     }

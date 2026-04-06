@@ -13,7 +13,7 @@ namespace module = million::module;
 namespace cluster = million::cluster;
 namespace protobuf = google::protobuf;
 
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(, TestMsg, (million::ModuleCode) target_service_name_id, (million::ProtoMessageUnique) request);
+MILLION_MESSAGE_DEFINE(, TestMsg, (million::ModuleCode) target_service_name_id, (million::ProtoMessageUnique) request);
 
 class TestService : public million::IService {
     MILLION_SERVICE_DEFINE(TestService);

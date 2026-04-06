@@ -102,6 +102,8 @@ public:
 
     SessionId NewSession();
 
+    SnowId NextSequenceId();
+
     std::optional<SessionId> Send(const ServiceHandle& sender, const ServiceHandle& target, MessagePointer msg);
     
     template <typename MsgT, typename ...Args>
@@ -152,7 +154,7 @@ public:
     
     NodeId node_id();
     Logger& logger();
-    ProtoMgr& proto_mgr();
+    ProtoManager& proto_mgr();
     Million& impl() { return *impl_; }
 
 protected:

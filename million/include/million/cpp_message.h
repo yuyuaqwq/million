@@ -22,8 +22,6 @@ public:
 
     template<typename MsgT>
     MsgT* get() { return static_cast<MsgT*>(this); }
-
-	virtual CppMessage* Copy() const { return new CppMessage(*this); };
 };
 
 using CppMessageUnique = std::unique_ptr<CppMessage>;
@@ -131,22 +129,6 @@ inline constexpr bool is_cpp_message_v = std::is_base_of_v<CppMessage, MessageT>
 		_MILLION_FIELDS_DECL(__VA_ARGS__) \
 		virtual const std::type_info& type() const override { return type_static(); } \
 		static const std::type_info& type_static() { return typeid(NAME_); } \
-		virtual CppMessage* Copy() const override { return new NAME_(*this); } \
-		template<size_t index> struct MetaFieldData; \
-		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
-		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \
-	};
-
-#define MILLION_MESSAGE_DEFINE_NONCOPYABLE(API_, NAME_, ...) \
-    class API_ NAME_ : public ::million::CppMessage { \
-	public: \
-        NAME_() = delete; \
-		NAME_(_MILLION_CTOR_ARGS_DECL_WITH_DEFAULT(__VA_ARGS__)) \
-			: _MILLION_CTOR_INIT_LIST(__VA_ARGS__) {} \
-		_MILLION_FIELDS_DECL(__VA_ARGS__) \
-		virtual const std::type_info& type() const override { return type_static(); } \
-		static const std::type_info& type_static() { return typeid(NAME_); } \
-		virtual CppMessage* Copy() const override { throw std::runtime_error("Non copy messages."); } \
 		template<size_t index> struct MetaFieldData; \
 		constexpr static inline size_t kMetaFieldCount = META_COUNT(__VA_ARGS__); \
 		_MILLION_META_FIELD_DATAS(NAME_, __VA_ARGS__) \

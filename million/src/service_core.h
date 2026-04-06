@@ -16,7 +16,7 @@
 
 namespace million {
 
-class ServiceMgr;
+class ServiceManager;
     /** \class ServiceCore
      * \brief 服务核心实现类，管理单个服务实例的生命周期和消息处理
      * 
@@ -29,7 +29,7 @@ public:
      * \param service_mgr 服务管理器指针
      * \param iservice 服务接口的唯一指针
      */
-    ServiceCore(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice);
+    ServiceCore(ServiceManager* service_mgr, std::unique_ptr<IService> iservice);
     /** \brief 析构函数
      * 清理服务资源并释放相关内存
      */
@@ -78,7 +78,7 @@ public:
     /** \brief 获取服务管理器指针
      * \return 服务管理器指针
      */
-    ServiceMgr* service_mgr() const { return service_mgr_; }
+    ServiceManager* service_mgr() const { return service_mgr_; }
     
     /** \brief 获取服务共享指针
      * \return 服务的共享指针
@@ -152,7 +152,7 @@ private:
     void ReplyMsg(TaskElement* ele);
 
 private:
-    ServiceMgr* service_mgr_;
+    ServiceManager* service_mgr_;
     ServiceId service_id_;
     std::list<ServiceShared>::iterator iter_; ///< 服务迭代器
 

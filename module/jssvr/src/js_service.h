@@ -91,6 +91,7 @@ private:
         js_runtime_.module_manager().AddCppModule("million", MillionModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("service", ServiceModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("logger", LoggerModuleObject::New(&js_runtime_));
+        js_runtime_.module_manager().AddCppModule("tlog", TLogModuleObject::New(&js_runtime_));
 
         js_runtime_.module_manager().AddCppModule("db", DBModuleObject::New(&js_runtime_));
         js_runtime_.module_manager().AddCppModule("config", ConfigModuleObject::New(&js_runtime_));
@@ -282,7 +283,7 @@ private:
             }
 
             // 直接返回数组形式的返回值
-            auto msg_name = result.array()[0];
+            auto msg_name = result.array().At(&js_context_, 0);
             if (!msg_name.IsString()) {
                 logger().LOG_ERROR("message name must be a string.");
                 co_return nullptr;
@@ -300,7 +301,7 @@ private:
                 co_return nullptr;
             }
 
-            auto msg_obj = result.array()[1];
+            auto msg_obj = result.array().At(&js_context_, 1);
             if (!msg_obj.IsObject()) {
                 logger().LOG_ERROR("message must be an object.");
                 co_return nullptr;

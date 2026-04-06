@@ -28,7 +28,7 @@ void JSModuleManager::ClearModuleCache() {
     module_defs_.clear();
 }
 
-// ¶ÁÈ¡Ä£¿é½Å±¾
+// è¯»å–æ¨¡å—è„šæœ¬
 std::optional<std::string> JSModuleManager::ReadModuleScript(const std::filesystem::path& module_path) {
     auto file = std::ifstream(module_path);
     if (!file) {
@@ -50,14 +50,14 @@ mjs::Value JSModuleManager::LoadJSModule(JSService* js_service, std::string_view
 
         path = cur_module_path.parent_path();
         assert(path.is_absolute());
-        // ´ÓÄ£¿éËùÔÚÂ·¾¶ÕÒÄ£¿é
+        // ä»æ¨¡å—æ‰€åœ¨è·¯å¾„æ‰¾æ¨¡å—
         path /= module_name;
         path = path.lexically_normal();
         module = FindJSModule(js_service, path);
     }
 
     if (module.IsUndefined()) {
-        // µ±Ç°Â·¾¶ÕÒ²»µ½£¬È¥ÅäÖÃÂ·¾¶ÕÒ
+        // å½“å‰è·¯å¾„æ‰¾ä¸åˆ°ï¼Œå»é…ç½®è·¯å¾„æ‰¾
         auto& jssvr_dirs = js_service->js_runtime_service().jssvr_dirs();
         for (const auto& dir : jssvr_dirs) {
             path = fs::absolute(dir);
@@ -91,14 +91,14 @@ mjs::Value JSModuleManager::FindJSModule(JSService* js_service, std::filesystem:
         return mjs::Value();
     }
 
-    // ÕÒContext»º´æÊÇ·ñ´æÔÚ´ËÄ£¿é
+    // æ‰¾Contextç¼“å­˜æ˜¯å¦å­˜åœ¨æ­¤æ¨¡å—
     auto& context_cache = js_service->js_module_cache();
     auto iter = context_cache.find(path);
     if (iter != context_cache.end()) {
         return iter->second;
     }
 
-    // ÕÒRuntime»º´æµÄÄ£¿é¶¨Òå
+    // æ‰¾Runtimeç¼“å­˜çš„æ¨¡å—å®šä¹‰
     iter = module_defs_.find(path);
     if (iter != module_defs_.end()) {
         return iter->second;

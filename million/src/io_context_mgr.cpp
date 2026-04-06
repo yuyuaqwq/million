@@ -4,7 +4,7 @@
 
 namespace million {
 
-IoContextMgr::IoContextMgr(Million* million, size_t io_context_num)
+IoContextManager::IoContextManager(Million* million, size_t io_context_num)
     : million_(million) {
     if (io_context_num == 0) {
         io_context_num = std::thread::hardware_concurrency();
@@ -15,21 +15,21 @@ IoContextMgr::IoContextMgr(Million* million, size_t io_context_num)
     }
 }
 
-IoContextMgr::~IoContextMgr() = default;
+IoContextManager::~IoContextManager() = default;
 
-void IoContextMgr::Start() {
+void IoContextManager::Start() {
     for (auto& io_context : io_contexts_) {
         io_context->Start();
     }
 }
 
-void IoContextMgr::Stop() {
+void IoContextManager::Stop() {
     for (auto& io_context : io_contexts_) {
         io_context->Stop();
     }
 }
 
-IoContext& IoContextMgr::NextIoContext() {
+IoContext& IoContextManager::NextIoContext() {
     auto index = ++index_;
     if (index == 0) {
         throw std::runtime_error("io index rolled back.");

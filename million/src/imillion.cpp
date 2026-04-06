@@ -73,6 +73,10 @@ SessionId IMillion::NewSession() {
     return impl_->NewSession();
 }
 
+SessionId IMillion::NextSequenceId() {
+    return impl_->NextSequenceId();
+}
+
 std::optional<SessionId> IMillion::Send(const ServiceHandle& sender, const ServiceHandle& target, MessagePointer msg) {
     auto sender_lock = sender.lock();
     if (!sender_lock) {
@@ -126,8 +130,8 @@ Logger& IMillion::logger() {
     return impl_->logger();
 }
 
-ProtoMgr& IMillion::proto_mgr() {
-    return impl_->proto_mgr();
+ProtoManager& IMillion::proto_mgr() {
+    return impl_->proto_manager();
 }
 
 void IMillion::EnableSeparateWorker(const ServiceHandle& handle) {

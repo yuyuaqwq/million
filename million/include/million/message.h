@@ -183,25 +183,23 @@ public:
         return nullptr;
     }
 
-    MessagePointer Copy() const {
+    // 如果是UniquePtr，会提升为SharedPtr，再进行复制
+    MessagePointer Share() {
         if (IsProtoMessageUnique()) {
-            auto proto_msg = GetProtoMessage();
-            auto new_msg = proto_msg->New();
-            if (!new_msg) throw std::bad_alloc();
-            new_msg->CopyFrom(*proto_msg);
-            return MessagePointer(ProtoMessageUnique(new_msg));
-        }
-        else if (IsProtoMessageShared()) {
-            return MessagePointer(GetProtoMessageShared());
+            auto cpp_msg = GetProtoMessageUnique().release();
+            message_ptr_ = ProtoMessageShared(cpp_msg);
+            return GetProtoMessageShared();
         }
         else if (IsCppMessageUnique()) {
-            auto cpp_msg = GetCppMessage();
-            auto new_msg = cpp_msg->Copy();
-            if (!new_msg) throw std::bad_alloc();
-            return MessagePointer(CppMessageUnique(new_msg));
+            auto cpp_msg = GetCppMessageUnique().release();
+            message_ptr_ = CppMessageShared(cpp_msg);
+            return GetCppMessageShared();
+        }
+        else if (IsProtoMessageShared()) {
+            return GetProtoMessageShared();
         }
         else if (IsCppMessageShared()) {
-            return MessagePointer(GetCppMessageShared());
+            return GetCppMessageShared();
         }
         throw std::bad_variant_access();
     }

@@ -18,7 +18,7 @@ constexpr BatchId kBatchIdNull = 0;
 MILLION_MESSAGE_DEFINE(MILLION_DB_API, DBRowExistReq, (const google::protobuf::Descriptor&) table_desc, (int32_t) key_field_number, (ProtoFieldAny) key);
 MILLION_MESSAGE_DEFINE(MILLION_DB_API, DBRowExistResp, (bool) exist);
 
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(MILLION_DB_API, DBRowCreateReq, (ProtoMessageUnique) row_msg);
+MILLION_MESSAGE_DEFINE(MILLION_DB_API, DBRowCreateReq, (ProtoMessageUnique) row_msg);
 MILLION_MESSAGE_DEFINE(MILLION_DB_API, DBRowCreateResp, (bool) success);
 
 MILLION_MESSAGE_DEFINE(MILLION_DB_API, DBRowQueryReq

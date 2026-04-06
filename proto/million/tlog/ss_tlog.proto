@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package million.tlog.ss;
+
+import "google/protobuf/descriptor.proto";
+import "million/module/module_id.proto";
+import "million/tlog/tlog.proto";
+
+enum MessageId {
+    option (module.module_id) = MODULE_ID_TLOG;
+
+    MESSAGE_ID_INVALID = 0;
+
+    MESSAGE_ID_TLOG_WRITE = 2048;
+    MESSAGE_ID_TLOG_WRITE_ACK = 2049;
+    MESSAGE_ID_TLOG_FLUSH = 2050;
+    MESSAGE_ID_TLOG_GET_STATS = 2051;
+    MESSAGE_ID_TLOG_GET_STATS_RESP = 2052;
+}
+
+extend google.protobuf.MessageOptions {
+    MessageId message_id = 10010003;
+}
+
+// 写入tlog
+message TLogWrite {
+    option (message_id) = MESSAGE_ID_TLOG_WRITE;
+
+    million.tlog.TLogEvent event = 1;
+    uint64 sequence_id = 2;    // 序列ID（用于ACK确认）
+}
+
+// 写入确认
+message TLogWriteAck {
+    option (message_id) = MESSAGE_ID_TLOG_WRITE_ACK;
+
+    uint64 sequence_id = 1;
+    bool success = 2;
+    string error_msg = 3;
+}
+
+// 强制刷新缓冲区
+message TLogFlush {
+    option (message_id) = MESSAGE_ID_TLOG_FLUSH;
+}
+
+// 获取统计信息
+message TLogGetStats {
+    option (message_id) = MESSAGE_ID_TLOG_GET_STATS;
+}
+
+message TLogGetStatsResp {
+    option (message_id) = MESSAGE_ID_TLOG_GET_STATS_RESP;
+
+    uint64 buffer_size = 1;       // 当前缓冲区大小（字节）
+    uint32 pending_files = 2;     // 未上传文件数
+    uint64 wal_size = 3;          // WAL文件大小（字节）
+    uint64 last_flush_time = 4;   // 最后刷盘时间戳
+    uint32 write_speed = 5;       // 写入速度（条/秒）
+    uint32 upload_speed = 6;      // 上传速度（条/秒）
+}

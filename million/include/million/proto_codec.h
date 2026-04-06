@@ -12,10 +12,10 @@ using ProtoMessageKey = ModuleCode;
 using ProtoMessageId = ModuleSubCode;
 constexpr ProtoMessageId kProtoMessageIdInvalid = kModuleSubCodeInvalid;
 
-class ProtoMgr;
+class ProtoManager;
 class MILLION_API ProtoCodec : noncopyable {
 public:
-    ProtoCodec(const ProtoMgr& proto_mgr)
+    ProtoCodec(const ProtoManager& proto_mgr)
         : proto_mgr_(proto_mgr) {}
 
     // 注册协议
@@ -42,7 +42,7 @@ private:
     uint32_t network_to_host_u32(uint32_t value) const;
 
 private:
-    const ProtoMgr& proto_mgr_;
+    const ProtoManager& proto_mgr_;
 
     std::unordered_map<ProtoMessageKey, const protobuf::Descriptor*> msg_desc_map_;
     std::unordered_map<const protobuf::Descriptor*, ProtoMessageKey> msg_id_map_;

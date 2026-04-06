@@ -35,7 +35,7 @@ public:
 
     ~SeataSnowflake() = default;
 
-    SnowId NextId() {
+    SnowId NextSequenceId() {
         auto next = ++seq_;
         next &= kTimeAndSeqMask;
         return worker_id_ | next;

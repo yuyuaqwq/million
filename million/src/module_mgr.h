@@ -9,9 +9,9 @@
 namespace million {
 
 class Million;
-class ModuleMgr {
+class ModuleManager {
 public:
-    ModuleMgr(Million* million);
+    ModuleManager(Million* million);
 
     bool Load(const std::string& module_dir, const std::string& module_name);
 

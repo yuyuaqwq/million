@@ -2,10 +2,10 @@
 
 namespace million {
 
-ProtoMgr::ProtoMgr()
+ProtoManager::ProtoManager()
     : codec_(*this) {}
 
-void ProtoMgr::Init() {
+void ProtoManager::Init() {
     // 目前无意义，调试用，protogen dll可能延迟加载，所以这里没有定义属于正常现象
     // 保证所有使用protobuf的模块，都通过dll加载同一个protobuf
     // 即可确保google::protobuf::DescriptorPool::generated_pool()等接口获取的都是同一个对象
@@ -22,34 +22,34 @@ void ProtoMgr::Init() {
     }
 }
 
-const google::protobuf::DescriptorPool& ProtoMgr::desc_pool() {
+const google::protobuf::DescriptorPool& ProtoManager::desc_pool() {
     static auto desc_pool = google::protobuf::DescriptorPool::generated_pool();
     return *desc_pool;
 }
 
-google::protobuf::DescriptorDatabase& ProtoMgr::desc_db() {
+google::protobuf::DescriptorDatabase& ProtoManager::desc_db() {
     static auto desc_db = desc_pool().internal_generated_database();
     return *desc_db;
 }
 
-google::protobuf::MessageFactory& ProtoMgr::msg_factory() {
+google::protobuf::MessageFactory& ProtoManager::msg_factory() {
     static auto msg_factory = google::protobuf::MessageFactory::generated_factory();
     return *msg_factory;
 }
 
-const google::protobuf::FileDescriptor* ProtoMgr::FindFileByName(const std::string& name) const {
+const google::protobuf::FileDescriptor* ProtoManager::FindFileByName(const std::string& name) const {
     return desc_pool().FindFileByName(name);
 }
 
-const google::protobuf::Descriptor* ProtoMgr::FindMessageTypeByName(const std::string& name) const {
+const google::protobuf::Descriptor* ProtoManager::FindMessageTypeByName(const std::string& name) const {
     return desc_pool().FindMessageTypeByName(name);
 }
 
-const google::protobuf::EnumDescriptor* ProtoMgr::FindEnumTypeByName(const std::string& name) const {
+const google::protobuf::EnumDescriptor* ProtoManager::FindEnumTypeByName(const std::string& name) const {
     return desc_pool().FindEnumTypeByName(name);
 }
 
-int32_t ProtoMgr::FindEnumValueByFullName(const std::string& service_id_full_name) {
+int32_t ProtoManager::FindEnumValueByFullName(const std::string& service_id_full_name) {
     size_t last_dot = service_id_full_name.find_last_of('.');
     if (last_dot == std::string::npos) {
         return 0;
@@ -74,11 +74,11 @@ int32_t ProtoMgr::FindEnumValueByFullName(const std::string& service_id_full_nam
 }
 
 
-const google::protobuf::Message* ProtoMgr::GetPrototype(const google::protobuf::Descriptor& desc) const {
+const google::protobuf::Message* ProtoManager::GetPrototype(const google::protobuf::Descriptor& desc) const {
     return msg_factory().GetPrototype(&desc);
 }
 
-ProtoMessageUnique ProtoMgr::NewMessage(const google::protobuf::Descriptor& desc) const {
+ProtoMessageUnique ProtoManager::NewMessage(const google::protobuf::Descriptor& desc) const {
     auto prototype = GetPrototype(desc);
     if (!prototype) return nullptr;
     return ProtoMessageUnique(prototype->New());

@@ -9,10 +9,10 @@ namespace million {
 
 class Million;
 class IoContext;
-class IoContextMgr : noncopyable {
+class IoContextManager : noncopyable {
 public:
-    IoContextMgr(Million* million, size_t io_context_num);
-    ~IoContextMgr();
+    IoContextManager(Million* million, size_t io_context_num);
+    ~IoContextManager();
 
     void Start();
     void Stop();

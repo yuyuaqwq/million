@@ -90,10 +90,11 @@ public:
                 logger().LOG_ERROR("SqlUpdate Timeout.");
             }
             else if (!res->success) {
-                // todo: 这里未来考虑优化，比如发一个消息让原始服务得知指定行的db需要重新拉取版本
+                // todo: 这里未来考虑优化，比如发一个消息让原始服务得知指定行的db需要重新拉取版本(可能需要断开用户的连接，就是强制登出)
 
                 // 这里不匹配的原因，可能是其他节点回写了这行的数据到SQL，一般是应用设计问题
                 // 比如某玩家的基本数据，被两个节点的服务同时load，不是一个常见的场景
+                // 理论上应该保证只有一个节点能够持有所有权
                 TaskAbort("Sql tick sync failed, check the db version: {} -> {}.", msg->cache->sql_db_version, db_version);
             }
             else {

@@ -10,7 +10,7 @@
 
 namespace million {
 
-ServiceCore::ServiceCore(ServiceMgr* service_mgr, std::unique_ptr<IService> iservice)
+ServiceCore::ServiceCore(ServiceManager* service_mgr, std::unique_ptr<IService> iservice)
     : service_mgr_(service_mgr)
     , iservice_(std::move(iservice))
     , excutor_(this) {}

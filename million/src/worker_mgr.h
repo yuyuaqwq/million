@@ -9,10 +9,10 @@ namespace million {
 
 class Million;
 class Worker;
-class WorkerMgr : noncopyable {
+class WorkerManager : noncopyable {
 public:
-    WorkerMgr(Million* million, size_t worker_num);
-    ~WorkerMgr();
+    WorkerManager(Million* million, size_t worker_num);
+    ~WorkerManager();
 
     void Start();
     void Stop();

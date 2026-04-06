@@ -4,10 +4,10 @@
 
 namespace million {
 
-ModuleMgr::ModuleMgr(Million* million)
+ModuleManager::ModuleManager(Million* million)
     : million_(million) {}
 
-bool ModuleMgr::Load(const std::string& module_dir, const std::string& module_name) {
+bool ModuleManager::Load(const std::string& module_dir, const std::string& module_name) {
     std::filesystem::path path = module_dir;
 #ifdef __linux__
     path /= module_name + ".so";
@@ -33,7 +33,7 @@ bool ModuleMgr::Load(const std::string& module_dir, const std::string& module_na
     return true;
 }
 
-bool ModuleMgr::Init() {
+bool ModuleManager::Init() {
     for (auto& module : modules_) {
         if (!module.second->Init()) {
             million_->logger().LOG_ERROR("module init '{}' failed.", module.first);
@@ -43,13 +43,13 @@ bool ModuleMgr::Init() {
     return true;
 }
 
-void ModuleMgr::Start() {
+void ModuleManager::Start() {
     for (auto& module : modules_) {
         module.second->Start();
     }
 }
 
-void ModuleMgr::Stop() {
+void ModuleManager::Stop() {
     for (auto& module : modules_) {
         // module.second->Stop();
     }

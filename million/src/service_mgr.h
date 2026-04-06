@@ -13,15 +13,15 @@
 
 namespace million {
 
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(, ServiceStartMsg, (MessagePointer) with_msg);
-MILLION_MESSAGE_DEFINE_NONCOPYABLE(, ServiceStopMsg, (MessagePointer) with_msg);
+MILLION_MESSAGE_DEFINE(, ServiceStartMsg, (MessagePointer) with_msg);
+MILLION_MESSAGE_DEFINE(, ServiceStopMsg, (MessagePointer) with_msg);
 MILLION_MESSAGE_DEFINE_EMPTY(, ServiceExitMsg);
 
 class Million;
-class ServiceMgr {
+class ServiceManager {
 public:
-    ServiceMgr(Million* million);
-    ~ServiceMgr();
+    ServiceManager(Million* million);
+    ~ServiceManager();
 
     void Stop();
 
