@@ -16,6 +16,7 @@ public:
 	void Subscribe(MessageTypeKey key, const ServiceHandle& subscriber, uint32_t priority = 0);
 	bool Unsubscribe(MessageTypeKey key, const ServiceHandle& subscriber);
 
+	// 消息广播时，回调的MessagePointer会被Share，修改会影响其他回调传入的MessagePointer
 	void Send(const ServiceHandle& sender, MessagePointer msg);
 	Task<> Call(const ServiceHandle& caller, MessagePointer msg, std::function<bool(MessagePointer)> res_handle);
 
