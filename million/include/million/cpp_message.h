@@ -120,6 +120,7 @@ inline constexpr bool is_cpp_message_v = std::is_base_of_v<CppMessage, MessageT>
 #define _MILLION_META_FIELD_DATAS(name, ...) META_FOR(_MILLION_DEF_META_FIELD_DATA_IMPL, 0, META_COUNT(__VA_ARGS__), name, __VA_ARGS__)
 
 // 数据定义的主宏
+// 定义消息避免成员中包含MessagePointer或者Shared类，否则可能引发循环引用内存泄漏
 #define MILLION_MESSAGE_DEFINE(API_, NAME_, ...) \
     class API_ NAME_ : public ::million::CppMessage { \
 	public: \
