@@ -40,6 +40,10 @@ public:
         message_ptr_ = std::move(other.message_ptr_);
     }
 
+    MessagePointer(const MessagePointer& other) = delete;
+
+    void operator=(const MessagePointer& other) = delete;
+
     template <typename T>
         requires is_proto_message_v<T>
     MessagePointer(std::unique_ptr<T>&& other) noexcept
