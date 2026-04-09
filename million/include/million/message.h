@@ -177,15 +177,15 @@ public:
     }
 
 
-    void* Release() {
-        if (IsProtoMessageUnique()) {
-            return GetProtoMessageUnique().release();
-        }
-        else if (IsCppMessageUnique()) {
-            return GetCppMessageUnique().release();
-        }
-        return nullptr;
-    }
+    //void* Release() {
+    //    if (IsProtoMessageUnique()) {
+    //        return GetProtoMessageUnique().release();
+    //    }
+    //    else if (IsCppMessageUnique()) {
+    //        return GetCppMessageUnique().release();
+    //    }
+    //    return nullptr;
+    //}
 
     // 如果是UniquePtr，会提升为SharedPtr，再进行复制
     MessagePointer Share() {
@@ -293,5 +293,16 @@ inline MessagePointer make_message(Args&&... args) {
             "Unsupported message type.");
     }
 }
+
+template <typename MessageT>
+class MessagePointerT : public MessagePointer {
+public:
+    explicit MessagePointerT(MessagePointer message_pointer) :
+        MessagePointer(std::move(message_pointer)) {}
+
+    MessageT* operator->() { return GetMutableMessage<MessageT>(); }
+
+    const MessageT* operator->() const { return GetMessage<MessageT>(); }
+};
 
 }// namespace million

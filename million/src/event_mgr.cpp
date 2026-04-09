@@ -82,13 +82,13 @@ Task<> EventMgr::Call(const ServiceHandle& caller, MessagePointer msg, std::func
 
 		if (msg.IsProtoMessage()) {
 			auto res = co_await imillion_->RecvOrNull<ProtoMessage>(session_id.value());
-			if (res && !res_handle(MessagePointer(std::move(res)))) {
+			if (res && !res_handle(std::move(res))) {
 				break;
 			}
 		}
 		else if (msg.IsCppMessage()) {
 			auto res = co_await imillion_->RecvOrNull<CppMessage>(session_id.value());
-			if (res && !res_handle(MessagePointer(std::move(res)))) {
+			if (res && !res_handle(std::move(res))) {
 				break;
 			}
 		}

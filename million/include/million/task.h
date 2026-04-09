@@ -115,7 +115,7 @@ template <typename MsgT>
 struct SessionAwaiter : public SessionAwaiterBase {
     using SessionAwaiterBase::SessionAwaiterBase;
 
-    std::unique_ptr<MsgT> await_resume() {
+    MessagePointerT<MsgT> await_resume() {
         auto msg = SessionAwaiterBase::await_resume();
         // 如果是基类，说明外部希望自己转换，不做类型检查
         if (msg) {
@@ -129,7 +129,7 @@ struct SessionAwaiter : public SessionAwaiterBase {
                 TaskAssert(msg.IsType<MsgT>(), "Mismatched type: {}.", typeid(MsgT).name());
             }
         }
-        return std::unique_ptr<MsgT>(static_cast<MsgT*>(msg.Release()));
+        return MessagePointerT<MsgT>(std::move(msg));
     }
 };
 
